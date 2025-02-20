@@ -1,7 +1,7 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
 client_id = "12e4a9a47ee6beaf4ee3f4775eb80fba"
-application_url = "https://joshua-press-manufacturers-amazing.trycloudflare.com"
+application_url = "https://magnet-experience-fall-marshall.trycloudflare.com"
 embedded = true
 name = "yespo-app"
 handle = "yespo-app"
@@ -27,9 +27,9 @@ scopes = "write_products"
 
 [auth]
 redirect_urls = [
-  "https://joshua-press-manufacturers-amazing.trycloudflare.com/auth/callback",
-  "https://joshua-press-manufacturers-amazing.trycloudflare.com/auth/shopify/callback",
-  "https://joshua-press-manufacturers-amazing.trycloudflare.com/api/auth/callback"
+  "https://magnet-experience-fall-marshall.trycloudflare.com/auth/callback",
+  "https://magnet-experience-fall-marshall.trycloudflare.com/auth/shopify/callback",
+  "https://magnet-experience-fall-marshall.trycloudflare.com/api/auth/callback"
 ]
 
 [pos]
