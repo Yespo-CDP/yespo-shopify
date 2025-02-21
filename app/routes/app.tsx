@@ -1,9 +1,11 @@
+import { useEffect } from "react";
 import type { HeadersFunction, LoaderFunctionArgs } from "@remix-run/node";
 import { Link, Outlet, useLoaderData, useRouteError } from "@remix-run/react";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { AppProvider } from "@shopify/shopify-app-remix/react";
-import { NavMenu } from "@shopify/app-bridge-react";
+import { NavMenu, useAppBridge } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
+import { useTranslation } from "react-i18next";
 
 import { authenticate } from "../shopify.server";
 
@@ -17,6 +19,14 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export default function App() {
   const { apiKey } = useLoaderData<typeof loader>();
+  const { i18n } = useTranslation();
+  const appBridge = useAppBridge();
+
+  useEffect(() => {
+    if (appBridge?.config?.locale) {
+      i18n.changeLanguage(appBridge.config.locale);
+    }
+  }, []);
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
