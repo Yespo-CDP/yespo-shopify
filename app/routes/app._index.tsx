@@ -2,7 +2,8 @@ import type { LoaderFunctionArgs } from "@remix-run/node";
 import { Page, Layout, Card, BlockStack, Text } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
 
-import { authenticate } from "../shopify.server";
+import UnsupportedMarketsSection from "~/components/UnsupportedMarketsSection";
+import { authenticate } from "~/shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -16,6 +17,9 @@ export default function Index() {
     <Page>
       <BlockStack gap="500">
         <Layout>
+          <Layout.Section>
+            <UnsupportedMarketsSection />
+          </Layout.Section>
           <Layout.Section>
             <BlockStack gap="300">
               <Text as="h1" variant="heading3xl" fontWeight="medium">
