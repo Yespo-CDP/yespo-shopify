@@ -20,5 +20,21 @@
       "invalidApiKey": "API key zaktualizowany",
       "emptyApiKey": "API Key jest wymagany"
     }
+  },
+  "ConnectionStatusSection": {
+    "title": "Status połączenia",
+    "helpText": "Aktualny status połączenia skryptu",
+    "banner": {
+      "connected": "Skrypt Yespo połączony",
+      "disconnected": "Skrypt Yespo odłączony"
+    },
+    "button": {
+      "connect": "Połącz",
+      "disconnect": "Odłącz"
+    },
+    "success": "Skrypt został pomyślnie połączony..",
+    "errors": {
+      "connectionError": "Błąd podczas łączenia skryptu"
+    }
   }
 }

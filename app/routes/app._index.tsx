@@ -7,6 +7,7 @@ import { useEffect } from "react";
 
 import UnsupportedMarketsSection from "~/components/UnsupportedMarketsSection";
 import AccountConnectionSection from "~/components/AccountConnectionSection";
+import ConnectionStatusSection from "~/components/ConnectionStatusSection";
 import { shopRepository } from "~/repositories/repositories.server";
 import getMarkets from "~/services/markets.server";
 import { authenticate } from "~/shopify.server";
@@ -25,8 +26,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const t = await i18n.getFixedT(request);
   const formData = await request.formData();
   const intent = formData.get("intent");
-  const errors: { apiKey?: string } = {};
-  const success: { apiKey?: boolean } = {};
+  const errors: { apiKey?: string; script?: string } = {};
+  const success: { apiKey?: boolean; script?: boolean } = {};
 
   if (intent === "account-connection") {
     const apiKey = formData.get("apiKey")?.toString();
@@ -40,6 +41,18 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     await shopRepository.updateShop(session.shop, { apiKey });
     success.apiKey = true;
+  }
+
+  if (intent === "connection-status") {
+    // if (Object.keys(errors).length > 0) {
+    //   return { success, errors };
+    // }
+
+    const status = formData.get("connectionStatus")?.toString();
+    await shopRepository.updateShop(session.shop, {
+      isScriptActive: status === "true",
+    });
+    success.script = true;
   }
 
   return { success, errors };
@@ -57,6 +70,10 @@ export default function Index() {
   useEffect(() => {
     if (actionData?.success?.apiKey) {
       shopify.toast.show(t("AccountConnectionSection.success"), {
+        duration: 2000,
+      });
+    } else if (actionData?.success?.script) {
+      shopify.toast.show(t("ConnectionStatusSection.success"), {
         duration: 2000,
       });
     } else if (Object.values(actionData?.errors ?? {}).length > 0) {
@@ -93,7 +110,11 @@ export default function Index() {
             />
           </Layout.Section>
           <Layout.Section>
-            <Card>Script connection status section</Card>
+            <ConnectionStatusSection
+              isScriptActive={!!shop?.isScriptActive}
+              errors={actionData?.errors}
+              disabled={isMarketsOverflowing || isSubmitting || !shop?.apiKey}
+            />
           </Layout.Section>
           <Layout.Section>
             <Card>Useful links section</Card>

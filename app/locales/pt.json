@@ -20,5 +20,21 @@
       "invalidApiKey": "API Key inválida",
       "emptyApiKey": "API Key é obrigatório"
     }
+  },
+  "ConnectionStatusSection": {
+    "title": "Status da conexão",
+    "helpText": "Status atual da conexão do script",
+    "banner": {
+      "connected": "Script Yespo conectado",
+      "disconnected": "Script Yespo desconectado"
+    },
+    "button": {
+      "connect": "Conectar",
+      "disconnect": "Desconectar"
+    },
+    "success": "O script foi conectado com sucesso.",
+    "errors": {
+      "connectionError": "Erro ao conectar o script"
+    }
   }
 }
