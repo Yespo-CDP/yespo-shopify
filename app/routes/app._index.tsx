@@ -1,6 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { useActionData, useLoaderData, useNavigation } from "@remix-run/react";
-import { Page, Layout, Card, BlockStack, Text } from "@shopify/polaris";
+import { Page, Layout, BlockStack, Text } from "@shopify/polaris";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
@@ -8,6 +8,7 @@ import { useEffect } from "react";
 import UnsupportedMarketsSection from "~/components/UnsupportedMarketsSection";
 import AccountConnectionSection from "~/components/AccountConnectionSection";
 import ConnectionStatusSection from "~/components/ConnectionStatusSection";
+import UsefulLinksSection from "~/components/UsefulLinksSection";
 import { shopRepository } from "~/repositories/repositories.server";
 import getMarkets from "~/services/markets.server";
 import { authenticate } from "~/shopify.server";
@@ -117,7 +118,7 @@ export default function Index() {
             />
           </Layout.Section>
           <Layout.Section>
-            <Card>Useful links section</Card>
+            <UsefulLinksSection />
           </Layout.Section>
         </Layout>
       </BlockStack>

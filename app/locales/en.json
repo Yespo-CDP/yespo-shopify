@@ -36,5 +36,9 @@
     "errors": {
       "connectionError": "Error connecting script"
     }
+  },
+  "UsefulLinksSection": {
+    "title": "Useful links",
+    "helpText": "Useful links and documentation"
   }
 }

@@ -35,6 +35,10 @@
     "success": "Skrypt został pomyślnie połączony..",
     "errors": {
       "connectionError": "Błąd podczas łączenia skryptu"
+    },
+    "UsefulLinksSection": {
+      "title": "Przydatne linki",
+      "helpText": "Przydatne linki i dokumentacja"
     }
   }
 }

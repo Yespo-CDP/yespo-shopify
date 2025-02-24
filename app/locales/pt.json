@@ -35,6 +35,10 @@
     "success": "O script foi conectado com sucesso.",
     "errors": {
       "connectionError": "Erro ao conectar o script"
+    },
+    "UsefulLinksSection": {
+      "title": "Links úteis",
+      "helpText": "Links úteis e documentação"
     }
   }
 }
