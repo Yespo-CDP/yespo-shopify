@@ -7,5 +7,18 @@
     "title": "Uwaga!",
     "description": "Aplikacja obsługuje tylko jeden aktywny rynek.",
     "button": "Przejdź do ustawień"
+  },
+  "AccountConnectionSection": {
+    "title": "Połączenie konta",
+    "helpText": "Twój Yespo API Key",
+    "button": {
+      "validate": "Zweryfikuj",
+      "revalidate": "Ponownie zweryfikować"
+    },
+    "success": "API key atualizado",
+    "errors": {
+      "invalidApiKey": "API key zaktualizowany",
+      "emptyApiKey": "API Key jest wymagany"
+    }
   }
 }

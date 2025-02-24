@@ -7,5 +7,18 @@
     "title": "Atenção!",
     "description": "O app suporta apenas um mercado ativo.",
     "button": "Vá para as definições"
+  },
+  "AccountConnectionSection": {
+    "title": "Conexão da conta",
+    "helpText": "Sua Yespo API Key",
+    "button": {
+      "validate": "Validar",
+      "revalidate": "Revalidar"
+    },
+    "success": "API key atualizado",
+    "errors": {
+      "invalidApiKey": "API Key inválida",
+      "emptyApiKey": "API Key é obrigatório"
+    }
   }
 }
