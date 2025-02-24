@@ -8,7 +8,7 @@ const UnsupportedMarketsSection: FC = () => {
     <Banner title={t("UnsupportedMarketsSection.title")} tone="warning">
       <BlockStack inlineAlign="start" gap="200">
         {t("UnsupportedMarketsSection.description")}
-        <Button variant="primary">
+        <Button variant="primary" url="shopify://admin/settings/markets">
           {t("UnsupportedMarketsSection.button")}
         </Button>
       </BlockStack>

@@ -1,25 +1,32 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
+import { useLoaderData } from "@remix-run/react";
 import { Page, Layout, Card, BlockStack, Text } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
 
 import UnsupportedMarketsSection from "~/components/UnsupportedMarketsSection";
+import getMarkets from "~/services/markets.server";
 import { authenticate } from "~/shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
-  return null;
+  const { admin } = await authenticate.admin(request);
+  const markets = await getMarkets({ admin, count: 200 });
+  const activeMarkets = markets.filter((market) => market.enabled);
+  return { isMarketsOverflowing: activeMarkets?.length > 1 };
 };
 
 export default function Index() {
   const { t } = useTranslation();
+  const { isMarketsOverflowing } = useLoaderData<typeof loader>();
 
   return (
     <Page>
       <BlockStack gap="500">
         <Layout>
-          <Layout.Section>
-            <UnsupportedMarketsSection />
-          </Layout.Section>
+          {isMarketsOverflowing && (
+            <Layout.Section>
+              <UnsupportedMarketsSection />
+            </Layout.Section>
+          )}
           <Layout.Section>
             <BlockStack gap="300">
               <Text as="h1" variant="heading3xl" fontWeight="medium">
