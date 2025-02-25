@@ -15,6 +15,7 @@
       "validate": "Validate",
       "revalidate": "Revalidate"
     },
+    "link": "https://docs.yespo.io/reference/api-keys",
     "success": "API Key updated",
     "errors": {
       "invalidApiKey": "Invalid api Key",

@@ -15,6 +15,7 @@
       "validate": "Zweryfikuj",
       "revalidate": "Ponownie zweryfikować"
     },
+    "link": "https://docs.yespo.io/reference/api-keys",
     "success": "API key atualizado",
     "errors": {
       "invalidApiKey": "API key zaktualizowany",

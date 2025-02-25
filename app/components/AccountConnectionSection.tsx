@@ -50,7 +50,7 @@ const AccountConnectionSection: FC<AccountConnectionSectionProps> = ({
                 <p>
                   {t("AccountConnectionSection.helpText")}{" "}
                   <Link
-                    url="https://docs.yespo.io/reference/api-keys"
+                    url={t("AccountConnectionSection.link")}
                     target="_blank"
                   >
                     docs.yespo.io
