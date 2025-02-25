@@ -45,10 +45,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   if (intent === "connection-status") {
-    // if (Object.keys(errors).length > 0) {
-    //   return { success, errors };
-    // }
-
     const status = formData.get("connectionStatus")?.toString();
     await shopRepository.updateShop(session.shop, {
       isScriptActive: status === "true",
