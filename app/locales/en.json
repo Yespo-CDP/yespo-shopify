@@ -18,8 +18,9 @@
     "link": "https://docs.yespo.io/reference/api-keys",
     "success": "API Key updated",
     "errors": {
-      "invalidApiKey": "Invalid api Key",
-      "emptyApiKey": "API Key is required"
+      "invalidApiKey": "Invalid API Key",
+      "emptyApiKey": "API Key is required",
+      "unknownError": "Unknown error"
     }
   },
   "ConnectionStatusSection": {

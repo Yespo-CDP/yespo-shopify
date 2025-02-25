@@ -10,6 +10,7 @@ import AccountConnectionSection from "~/components/AccountConnectionSection";
 import ConnectionStatusSection from "~/components/ConnectionStatusSection";
 import UsefulLinksSection from "~/components/UsefulLinksSection";
 import { shopRepository } from "~/repositories/repositories.server";
+import getAccountInfo from "~/services/account.service";
 import getMarkets from "~/services/markets.server";
 import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
@@ -34,23 +35,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const apiKey = formData.get("apiKey")?.toString();
     if (!apiKey) {
       errors.apiKey = t("AccountConnectionSection.errors.emptyApiKey");
-    }
-
-    if (Object.keys(errors).length > 0) {
       return { success, errors };
     }
 
-    await shopRepository.updateShop(session.shop, { apiKey });
-    success.apiKey = true;
+    try {
+      await getAccountInfo({ apiKey });
+      await shopRepository.updateShop(session.shop, { apiKey });
+      success.apiKey = true;
+    } catch (error: any) {
+      errors.apiKey = t(`AccountConnectionSection.errors.${error.message}`);
+      return { success, errors };
+    }
   }
 
   if (intent === "connection-status") {
     const status = formData.get("connectionStatus")?.toString();
     if (status !== "true" && status !== "false") {
       errors.script = t("ConnectionStatusSection.errors.emptyConnectionStatus");
-    }
-
-    if (Object.keys(errors).length > 0) {
       return { success, errors };
     }
 

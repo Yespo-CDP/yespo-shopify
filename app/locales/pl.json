@@ -19,7 +19,8 @@
     "success": "API key atualizado",
     "errors": {
       "invalidApiKey": "API key zaktualizowany",
-      "emptyApiKey": "API Key jest wymagany"
+      "emptyApiKey": "API Key jest wymagany",
+      "unknownError": "Nieznany błąd"
     }
   },
   "ConnectionStatusSection": {
