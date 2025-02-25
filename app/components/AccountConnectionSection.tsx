@@ -1,4 +1,4 @@
-import { useCallback, useState, type FC } from "react";
+import { useCallback, useEffect, useState, type FC } from "react";
 import {
   Button,
   Card,
@@ -25,6 +25,10 @@ const AccountConnectionSection: FC<AccountConnectionSectionProps> = ({
   const [value, setValue] = useState(apiKey || "");
 
   const handleValueChange = useCallback((value: string) => setValue(value), []);
+
+  useEffect(() => {
+    setValue(apiKey || "");
+  }, [apiKey]);
 
   return (
     <Card>
