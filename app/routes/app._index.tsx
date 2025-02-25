@@ -19,6 +19,7 @@ import UsefulLinksSection from "~/components/UsefulLinksSection";
 import { shopRepository } from "~/repositories/repositories.server";
 import getAccountInfo from "~/services/account.service";
 import getMarkets from "~/services/markets.server";
+import getScript from "~/services/script.service";
 import createDomain from "~/services/domain.service";
 import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
@@ -32,7 +33,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { session } = await authenticate.admin(request);
+  const { session, admin } = await authenticate.admin(request);
   const t = await i18n.getFixedT(request);
   const formData = await request.formData();
   const intent = formData.get("intent");
@@ -74,6 +75,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         await createDomain({
           apiKey: shop.apiKey,
           domain: shop.domain,
+        });
+
+        await getScript({
+          apiKey: shop.apiKey,
+          shopId: shop.shopId,
+          admin,
         });
       }
 

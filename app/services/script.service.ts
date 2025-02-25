@@ -1,6 +1,15 @@
 import { getAuthHeader } from "~/utils/auth";
+import createMetafield from "~/helpers/create-metafield";
 
-const getScript = async ({ apiKey }: { apiKey: string }): Promise<string> => {
+const getScript = async ({
+  shopId,
+  apiKey,
+  admin,
+}: {
+  shopId: string;
+  apiKey: string;
+  admin: any;
+}): Promise<string> => {
   const url = `${process.env.API_URL}/site/script`;
   const authHeader = getAuthHeader(apiKey);
   const options = {
@@ -18,6 +27,13 @@ const getScript = async ({ apiKey }: { apiKey: string }): Promise<string> => {
     if (!response.ok) {
       throw new Error("requestScriptError");
     }
+
+    await createMetafield({
+      shopId,
+      admin,
+      value: responseParse,
+      key: process.env.METAFIELD_KEY ?? "pixel-script",
+    });
 
     return responseParse;
   } catch (error: any) {

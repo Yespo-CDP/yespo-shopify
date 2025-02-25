@@ -1,6 +1,7 @@
 import type { Session } from "@shopify/shopify-api";
 
 import type { ShopDataResponse } from "~/@types/shop";
+import createDefinition from "~/helpers/create-definition";
 import { shopRepository } from "~/repositories/repositories.server";
 import shopify from "~/shopify.server";
 
@@ -54,6 +55,11 @@ const afterAuth = async ({
       domain: shop?.primaryDomain?.host,
     });
   }
+
+  await createDefinition({
+    admin,
+    key: process.env.METAFIELD_KEY ?? "pixel-script",
+  });
 
   shopify.registerWebhooks({ session });
 };
