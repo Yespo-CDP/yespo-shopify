@@ -34,7 +34,8 @@
     },
     "success": "Skrypt został pomyślnie połączony..",
     "errors": {
-      "connectionError": "Błąd podczas łączenia skryptu"
+      "connectionError": "Błąd podczas łączenia skryptu",
+      "emptyConnectionStatus": "Status połączenia jest wymagany"
     },
     "UsefulLinksSection": {
       "title": "Przydatne linki",

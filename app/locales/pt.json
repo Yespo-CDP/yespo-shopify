@@ -34,7 +34,8 @@
     },
     "success": "O script foi conectado com sucesso.",
     "errors": {
-      "connectionError": "Erro ao conectar o script"
+      "connectionError": "Erro ao conectar o script",
+      "emptyConnectionStatus": "Status da conexão é obrigatório"
     },
     "UsefulLinksSection": {
       "title": "Links úteis",

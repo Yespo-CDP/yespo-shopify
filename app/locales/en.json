@@ -34,7 +34,8 @@
     },
     "success": "Script has been successfully connected.",
     "errors": {
-      "connectionError": "Error connecting script"
+      "connectionError": "Error connecting script",
+      "emptyConnectionStatus": "Connection status is required"
     }
   },
   "UsefulLinksSection": {
