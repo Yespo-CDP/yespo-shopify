@@ -1,6 +1,5 @@
 import type { Account } from "~/@types/account";
-
-const username = "yespo-app";
+import { getAuthHeader } from "~/utils/auth";
 
 const getAccountInfo = async ({
   apiKey,
@@ -8,7 +7,7 @@ const getAccountInfo = async ({
   apiKey: string;
 }): Promise<Account> => {
   const url = `${process.env.API_URL}/account/info`;
-  const authHeader = `Basic ${Buffer.from(`${username}:${apiKey}`).toString("base64")}`;
+  const authHeader = getAuthHeader(apiKey);
   const options = {
     method: "GET",
     headers: {

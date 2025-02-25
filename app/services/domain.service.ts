@@ -1,4 +1,4 @@
-const username = "yespo-app";
+import { getAuthHeader } from "~/utils/auth";
 
 const createDomain = async ({
   apiKey,
@@ -8,7 +8,7 @@ const createDomain = async ({
   domain: string;
 }): Promise<{ result: string }> => {
   const url = `${process.env.API_URL}/site/domains`;
-  const authHeader = `Basic ${Buffer.from(`${username}:${apiKey}`).toString("base64")}`;
+  const authHeader = getAuthHeader(apiKey);
   const options = {
     method: "POST",
     headers: {
