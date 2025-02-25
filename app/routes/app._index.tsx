@@ -1,6 +1,13 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { useActionData, useLoaderData, useNavigation } from "@remix-run/react";
-import { Page, Layout, BlockStack, Text } from "@shopify/polaris";
+import {
+  Page,
+  Layout,
+  BlockStack,
+  Text,
+  Image,
+  InlineStack,
+} from "@shopify/polaris";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
@@ -122,9 +129,12 @@ export default function Index() {
           )}
           <Layout.Section>
             <BlockStack gap="300">
-              <Text as="h1" variant="heading3xl" fontWeight="medium">
-                {t("WelcomeSection.title")}
-              </Text>
+              <InlineStack gap="300" blockAlign="center">
+                <Image source="./logo.png" alt="logo" height={48} />
+                <Text as="h1" variant="heading3xl" fontWeight="medium">
+                  {t("WelcomeSection.title")}
+                </Text>
+              </InlineStack>
               <Text as="p">{t("WelcomeSection.description")}</Text>
             </BlockStack>
           </Layout.Section>
