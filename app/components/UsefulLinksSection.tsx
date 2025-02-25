@@ -56,12 +56,14 @@ const UsefulLinksSection: FC = () => {
           {t("UsefulLinksSection.helpText")}
         </Text>
         <List type="bullet">
-          {links.map((link) => (
-            <List.Item key={link.url}>
+          {links.map((link, index) => (
+            <List.Item key={`${link.url}-${index}`}>
               <Box paddingBlockEnd="200">
                 <InlineStack gap="100" wrap={false}>
                   <div style={{ textWrap: "nowrap" }}>
-                    <Link url={link.url} target="_blank">{link.title}</Link>
+                    <Link url={link.url} target="_blank">
+                      {link.title}
+                    </Link>
                   </div>
                   {"ꟷ"}
                   <Text as="p">{link.description}</Text>
