@@ -12,6 +12,7 @@ import UsefulLinksSection from "~/components/UsefulLinksSection";
 import { shopRepository } from "~/repositories/repositories.server";
 import getAccountInfo from "~/services/account.service";
 import getMarkets from "~/services/markets.server";
+import createDomain from "~/services/domain.service";
 import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
 
@@ -55,10 +56,29 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       return { success, errors };
     }
 
-    await shopRepository.updateShop(session.shop, {
-      isScriptActive: status === "true",
-    });
-    success.script = true;
+    try {
+      const shop = await shopRepository.getShop(session.shop);
+      if (!shop || !shop?.apiKey) {
+        errors.script = t("AccountConnectionSection.errors.emptyApiKey");
+        return { success, errors };
+      }
+
+      if (status === "true") {
+        await createDomain({
+          apiKey: shop.apiKey,
+          domain: shop.domain,
+        });
+      }
+
+      await shopRepository.updateShop(session.shop, {
+        isScriptActive: status === "true",
+      });
+
+      success.script = true;
+    } catch (error: any) {
+      errors.script = t(`ConnectionStatusSection.errors.${error.message}`);
+      return { success, errors };
+    }
   }
 
   return { success, errors };

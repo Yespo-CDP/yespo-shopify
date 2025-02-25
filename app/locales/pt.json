@@ -34,8 +34,9 @@
       "connect": "Conectar",
       "disconnect": "Desconectar"
     },
-    "success": "O script foi conectado com sucesso.",
+    "success": "Atualizado com sucesso.",
     "errors": {
+      "createDomainError": "Erro ao criar domínio",
       "connectionError": "Erro ao conectar o script",
       "emptyConnectionStatus": "Status da conexão é obrigatório"
     },

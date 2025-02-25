@@ -34,8 +34,9 @@
       "connect": "Połącz",
       "disconnect": "Odłącz"
     },
-    "success": "Skrypt został pomyślnie połączony..",
+    "success": "Zaktualizowano pomyślnie.",
     "errors": {
+      "createDomainError": "Błąd podczas tworzenia domeny",
       "connectionError": "Błąd podczas łączenia skryptu",
       "emptyConnectionStatus": "Status połączenia jest wymagany"
     },

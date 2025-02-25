@@ -34,8 +34,9 @@
       "connect": "Connect",
       "disconnect": "Disconnect"
     },
-    "success": "Script has been successfully connected.",
+    "success": "Updated successfully.",
     "errors": {
+      "createDomainError": "Error creating domain",
       "connectionError": "Error connecting script",
       "emptyConnectionStatus": "Connection status is required"
     }

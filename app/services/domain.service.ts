@@ -1,0 +1,36 @@
+const username = "yespo-app";
+
+const createDomain = async ({
+  apiKey,
+  domain,
+}: {
+  apiKey: string;
+  domain: string;
+}): Promise<{ result: string }> => {
+  const url = `${process.env.API_URL}/site/domains`;
+  const authHeader = `Basic ${Buffer.from(`${username}:${apiKey}`).toString("base64")}`;
+  const options = {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      Authorization: authHeader,
+    },
+    body: JSON.stringify({ domain }),
+  };
+
+  try {
+    const response = await fetch(url, options);
+    const responseParse = (await response.json()) as { result: string };
+
+    if (!response.ok) {
+      throw new Error("createDomainError");
+    }
+
+    return responseParse;
+  } catch (error: any) {
+    const message = error?.message ?? "createDomainError";
+    throw new Error(message);
+  }
+};
+
+export default createDomain;
