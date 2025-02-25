@@ -26,7 +26,7 @@ export default function App() {
     if (appBridge?.config?.locale) {
       i18n.changeLanguage(appBridge.config.locale);
     }
-  }, []);
+  }, [i18n, appBridge]);
 
   return (
     <AppProvider isEmbeddedApp apiKey={apiKey}>
