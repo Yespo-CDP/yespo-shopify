@@ -36,6 +36,7 @@
     },
     "success": "Zaktualizowano pomyślnie.",
     "errors": {
+      "requestScriptError": "Błąd podczas pobierania skryptu",
       "createDomainError": "Błąd podczas tworzenia domeny",
       "connectionError": "Błąd podczas łączenia skryptu",
       "emptyConnectionStatus": "Status połączenia jest wymagany"

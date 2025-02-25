@@ -36,6 +36,7 @@
     },
     "success": "Atualizado com sucesso.",
     "errors": {
+      "requestScriptError": "Erro ao solicitar o script",
       "createDomainError": "Erro ao criar domínio",
       "connectionError": "Erro ao conectar o script",
       "emptyConnectionStatus": "Status da conexão é obrigatório"

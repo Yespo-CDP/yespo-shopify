@@ -28,8 +28,7 @@ const createDomain = async ({
 
     return responseParse;
   } catch (error: any) {
-    const message = error?.message ?? "createDomainError";
-    throw new Error(message);
+    throw new Error("createDomainError");
   }
 };
 
