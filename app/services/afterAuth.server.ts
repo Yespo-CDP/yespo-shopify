@@ -58,7 +58,7 @@ const afterAuth = async ({
 
   await createDefinition({
     admin,
-    key: process.env.METAFIELD_KEY ?? "pixel-script",
+    key: process.env.SCRIPT_HANDLE ?? "yespo-script",
   });
 
   shopify.registerWebhooks({ session });

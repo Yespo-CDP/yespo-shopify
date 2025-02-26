@@ -1,0 +1,13 @@
+{%- assign yespo_script = shop.metafields['$app'].yespo-script -%}
+
+{% if yespo_script != blank %}
+  {{ yespo_script }}
+{% endif %}
+
+{% schema %}
+{
+  "name": "Yespo script",
+  "target": "head",
+}
+{% endschema %}
+

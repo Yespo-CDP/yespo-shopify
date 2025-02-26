@@ -33,7 +33,7 @@ async function createMetafield({
         metafields: [
           {
             key,
-            namespace: process.env.METAFIELD_NAMESPACE,
+            namespace: "$app",
             type: "single_line_text_field",
             value: value.replace(/\n/g, "").replace(/\s+/g, " ").trim(),
             ownerId: shopId,

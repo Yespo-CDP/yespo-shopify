@@ -32,7 +32,7 @@ const getScript = async ({
       shopId,
       admin,
       value: responseParse,
-      key: process.env.METAFIELD_KEY ?? "pixel-script",
+      key: process.env.SCRIPT_HANDLE ?? "yespo-script",
     });
 
     return responseParse;
