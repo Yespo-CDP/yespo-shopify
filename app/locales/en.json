@@ -38,8 +38,7 @@
     "errors": {
       "requestScriptError": "Error requesting script",
       "createDomainError": "Error creating domain",
-      "connectionError": "Error connecting script",
-      "emptyConnectionStatus": "Connection status is required"
+      "connectionError": "Error connecting script"
     }
   },
   "UsefulLinksSection": {

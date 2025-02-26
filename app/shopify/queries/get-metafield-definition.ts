@@ -1,14 +1,9 @@
-import type {
-  MetafieldDefinition,
-  MetafieldOwnerType,
-} from "~/@types/metafield";
+import type { MetafieldDefinition } from "~/@types/metafield";
 
 const getMetafieldDefinition = async ({
   admin,
-  ownerType,
 }: {
   admin: any;
-  ownerType: MetafieldOwnerType;
 }): Promise<MetafieldDefinition | null> => {
   try {
     const response = await admin.graphql(
@@ -35,7 +30,7 @@ const getMetafieldDefinition = async ({
       }`,
       {
         variables: {
-          ownerType,
+          ownerType: "SHOP",
         },
       },
     );

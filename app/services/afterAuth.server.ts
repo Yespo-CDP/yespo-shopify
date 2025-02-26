@@ -4,6 +4,8 @@ import createMetafieldDefinition from "~/shopify/mutations/create-metafield-defi
 import { shopRepository } from "~/repositories/repositories.server";
 import getShop from "~/shopify/queries/get-shop.server";
 import shopify from "~/shopify.server";
+import getMetafieldDefinition from "~/shopify/queries/get-metafield-definition";
+import deleteMetafieldDefinition from "~/shopify/mutations/delete-metafield-definition.server";
 
 const afterAuth = async ({
   session,
@@ -35,6 +37,14 @@ const afterAuth = async ({
       email: shop.email,
       domain: shop?.primaryDomain?.host,
     });
+  }
+
+  const definition = await getMetafieldDefinition({
+    admin,
+  });
+
+  if (definition) {
+    await deleteMetafieldDefinition({ admin, id: definition?.id });
   }
 
   await createMetafieldDefinition({

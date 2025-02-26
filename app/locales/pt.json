@@ -38,8 +38,7 @@
     "errors": {
       "requestScriptError": "Erro ao solicitar o script",
       "createDomainError": "Erro ao criar domínio",
-      "connectionError": "Erro ao conectar o script",
-      "emptyConnectionStatus": "Status da conexão é obrigatório"
+      "connectionError": "Erro ao conectar o script"
     },
     "UsefulLinksSection": {
       "title": "Links úteis",
