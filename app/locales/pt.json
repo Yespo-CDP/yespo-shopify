@@ -10,7 +10,7 @@
   },
   "AccountConnectionSection": {
     "title": "Conexão da conta",
-    "helpText": "Sua Yespo API Key",
+    "helpText": "Se você precisar de ajuda",
     "button": {
       "validate": "Validar",
       "revalidate": "Revalidar"

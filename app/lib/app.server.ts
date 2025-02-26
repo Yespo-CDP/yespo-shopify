@@ -2,22 +2,24 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 
 import { shopRepository } from "~/repositories/repositories.server";
 import getAccountInfoService from "~/services/get-account-info.server";
-import getScript from "~/services/script.server";
 import createDomain from "~/services/domain.server";
-import checkThemeExtensionService from "~/services/check-theme-extension.server";
+import connectScriptService from "~/services/connect-script.server";
 import checkMarketsService from "~/services/check-markets.server";
+import checkScriptConnectionService from "~/services/check-script-connection.server";
 import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
+import getMetafield from "~/shopify/queries/get-metafield";
 
 export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
   const shop = await shopRepository.getShop(session.shop);
   const isMarketsOverflowing = await checkMarketsService({ admin });
-  const themeExtensionStatus = await checkThemeExtensionService({ admin });
+  const scriptConnectionStatus = await checkScriptConnectionService({ admin });
+  await getMetafield({ admin, key: "yespo-script" });
 
   return {
     shop,
-    themeExtensionStatus,
+    scriptConnectionStatus,
     isMarketsOverflowing,
   };
 };
@@ -28,7 +30,14 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
   const formData = await request.formData();
   const intent = formData.get("intent");
   const errors: { apiKey?: string; script?: string } = {};
-  const success: { apiKey?: boolean; script?: boolean } = {};
+  const success: {
+    apiKey?: boolean;
+    connection?: {
+      ok?: boolean;
+      isScriptExist?: boolean;
+      isThemeExtensionActive?: boolean;
+    };
+  } = {};
 
   if (intent === "account-connection") {
     const apiKey = formData.get("apiKey")?.toString();
@@ -48,12 +57,6 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
   }
 
   if (intent === "connection-status") {
-    const status = formData.get("connectionStatus")?.toString();
-    if (status !== "true" && status !== "false") {
-      errors.script = t("ConnectionStatusSection.errors.emptyConnectionStatus");
-      return { success, errors };
-    }
-
     try {
       const shop = await shopRepository.getShop(session.shop);
       if (!shop || !shop?.apiKey) {
@@ -61,24 +64,19 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         return { success, errors };
       }
 
-      if (status === "true") {
-        await createDomain({
-          apiKey: shop.apiKey,
-          domain: shop.domain,
-        });
-
-        await getScript({
-          apiKey: shop.apiKey,
-          shopId: shop.shopId,
-          admin,
-        });
-      }
-
-      await shopRepository.updateShop(session.shop, {
-        isScriptActive: status === "true",
+      await createDomain({
+        apiKey: shop.apiKey,
+        domain: shop.domain,
       });
 
-      success.script = true;
+      success.connection = await connectScriptService({
+        apiKey: shop.apiKey,
+        shopId: shop.shopId,
+        admin,
+      });
+
+      success.connection = success.connection ?? {};
+      success.connection.ok = true;
     } catch (error: any) {
       errors.script = t(`ConnectionStatusSection.errors.${error.message}`);
       return { success, errors };

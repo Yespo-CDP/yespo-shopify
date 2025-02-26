@@ -1,3 +1,5 @@
+import type { Metafield } from "~/@types/metafield";
+
 async function createMetafield({
   admin,
   shopId,
@@ -8,27 +10,28 @@ async function createMetafield({
   shopId: string;
   key: string;
   value: string;
-}) {
+}): Promise<Metafield | null> {
   try {
-    await admin.graphql(
+    const response = await admin.graphql(
       `
-    #graphql
-    mutation metafieldsSet($metafields: [MetafieldsSetInput!]!) {
-      metafieldsSet(metafields: $metafields) {
-        metafields {
-          id
-          key
-          value
-          namespace
-          type
-        }
-        userErrors {
-          field
-          message
+      #graphql
+      mutation metafieldsSet($metafields: [MetafieldsSetInput!]!) {
+        metafieldsSet(metafields: $metafields) {
+          metafields {
+            id
+            key
+            value
+            ownerType
+            namespace
+            type
+          }
+          userErrors {
+            field
+            message
+          }
         }
       }
-    }
-  `,
+    `,
       {
         variables: {
           metafields: [
@@ -43,8 +46,17 @@ async function createMetafield({
         },
       },
     );
+
+    const responseParse = await response.json();
+    const metafieldData = responseParse?.data as {
+      metafieldsSet: { metafields: Metafield[] };
+    };
+    const metafield = metafieldData?.metafieldsSet?.metafields[0];
+
+    return metafield ?? null;
   } catch (error) {
     console.error(error);
+    return null;
   }
 }
 

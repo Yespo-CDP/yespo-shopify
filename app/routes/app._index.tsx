@@ -1,4 +1,9 @@
-import { useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import {
+  useActionData,
+  useLoaderData,
+  useNavigation,
+  useRevalidator,
+} from "@remix-run/react";
 import {
   Page,
   Layout,
@@ -25,8 +30,10 @@ export default function Index() {
   const shopify = useAppBridge();
   const loaderData = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
-  const { shop, isMarketsOverflowing } = loaderData;
+  const { shop, isMarketsOverflowing, scriptConnectionStatus } = loaderData;
   const navigation = useNavigation();
+  const revalidator = useRevalidator();
+  const isLoading = revalidator.state === "loading";
   const isSubmitting = navigation.state === "submitting";
 
   useEffect(() => {
@@ -34,7 +41,13 @@ export default function Index() {
       shopify.toast.show(t("AccountConnectionSection.success"), {
         duration: 2000,
       });
-    } else if (actionData?.success?.script) {
+    } else if (actionData?.success?.connection?.ok) {
+      if (!actionData?.success?.connection?.isThemeExtensionActive) {
+        window.open(
+          `https://${shopify.config.shop}/admin/themes/current/editor?context=apps`,
+          "_blank",
+        );
+      }
       shopify.toast.show(t("ConnectionStatusSection.success"), {
         duration: 2000,
       });
@@ -71,14 +84,19 @@ export default function Index() {
             <AccountConnectionSection
               apiKey={shop?.apiKey ?? ""}
               errors={actionData?.errors}
-              disabled={isMarketsOverflowing || isSubmitting}
+              disabled={isMarketsOverflowing || isSubmitting || isLoading}
             />
           </Layout.Section>
           <Layout.Section>
             <ConnectionStatusSection
-              isScriptActive={!!shop?.isScriptActive}
+              isScriptActive={scriptConnectionStatus.isActive}
               errors={actionData?.errors}
-              disabled={isMarketsOverflowing || isSubmitting || !shop?.apiKey}
+              disabled={
+                isMarketsOverflowing ||
+                isSubmitting ||
+                isLoading ||
+                !shop?.apiKey
+              }
             />
           </Layout.Section>
           <Layout.Section>
