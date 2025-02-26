@@ -11,6 +11,17 @@ export interface Metafield {
   value: any;
 }
 
+export interface MetafieldDefinition {
+  id: string;
+  name: string;
+  description: string;
+  key: string;
+  namespace: string;
+  ownerType: MetafieldOwnerType;
+  type: { name: MetafieldType };
+  access: { admin: string; storefront: string };
+}
+
 export interface MetafieldResponse {
   shop: {
     metafield: Metafield;

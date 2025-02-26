@@ -32,14 +32,14 @@ model Session {
 }
 
 model Shop {
-  id             Int       @id @default(autoincrement())
-  shopId         String    @unique
-  shopUrl        String    @unique
-  email          String
-  name           String
-  domain         String    @unique @default("")
-  apiKey         String?
-  isScriptActive Boolean?  @default(false)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime? @updatedAt
+  id        Int       @id @default(autoincrement())
+  shopId    String    @unique
+  shopUrl   String    @unique
+  email     String
+  name      String
+  domain    String    @unique @default("")
+  apiKey    String?
+  active    Boolean?  @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
 }

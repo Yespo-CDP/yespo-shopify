@@ -7,7 +7,7 @@ CREATE TABLE "Shop" (
     "name" TEXT NOT NULL,
     "domain" TEXT NOT NULL DEFAULT '',
     "apiKey" TEXT,
-    "isScriptActive" BOOLEAN DEFAULT false,
+    "active" BOOLEAN DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3),
 

@@ -25,6 +25,7 @@ const afterAuth = async ({
       name: shop.name,
       email: shop.email,
       domain: shop?.primaryDomain?.host,
+      active: true,
     });
   } else {
     await shopRepository.createShop({
