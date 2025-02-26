@@ -9,8 +9,9 @@ async function createMetafield({
   key: string;
   value: string;
 }) {
-  await admin.graphql(
-    `
+  try {
+    await admin.graphql(
+      `
     #graphql
     mutation metafieldsSet($metafields: [MetafieldsSetInput!]!) {
       metafieldsSet(metafields: $metafields) {
@@ -28,20 +29,23 @@ async function createMetafield({
       }
     }
   `,
-    {
-      variables: {
-        metafields: [
-          {
-            key,
-            namespace: "$app",
-            type: "single_line_text_field",
-            value: value.replace(/\n/g, "").replace(/\s+/g, " ").trim(),
-            ownerId: shopId,
-          },
-        ],
+      {
+        variables: {
+          metafields: [
+            {
+              key,
+              namespace: "$app",
+              type: "single_line_text_field",
+              value: value.replace(/\n/g, "").replace(/\s+/g, " ").trim(),
+              ownerId: shopId,
+            },
+          ],
+        },
       },
-    },
-  );
+    );
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 export default createMetafield;

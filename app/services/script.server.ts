@@ -1,5 +1,5 @@
 import { getAuthHeader } from "~/utils/auth";
-import createMetafield from "~/helpers/create-metafield";
+import createMetafield from "~/shopify/mutations/create-metafield.server";
 
 const getScript = async ({
   shopId,

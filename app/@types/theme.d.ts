@@ -23,9 +23,7 @@ export interface Theme {
 }
 
 export interface ThemesResponse {
-  data: {
-    themes: {
-      nodes: Theme[];
-    };
+  themes: {
+    nodes: Theme[];
   };
 }

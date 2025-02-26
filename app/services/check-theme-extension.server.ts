@@ -1,33 +1,13 @@
 import commentJSON from "comment-json";
 
-import type { ThemesResponse } from "~/@types/theme";
+import getThemes from "~/shopify/queries/get-themes";
 
-async function checkThemeExtension({ admin }: { admin: any }) {
-  const response = await admin.graphql(
-    `#graphql
-    query {
-      themes(first: 10) {
-        nodes {
-          id
-          name
-          role
-          files(first: 200, filenames: "config/settings_data.json") {
-            nodes {
-              filename
-              body {
-                ... on OnlineStoreThemeFileBodyText {
-                  content
-                }
-              }
-            }
-          }
-        }
-      }
-    }`,
-  );
-  const responseParse = (await response.json()) as ThemesResponse;
-
-  const themes = responseParse.data.themes?.nodes;
+async function checkThemeExtensionService({
+  admin,
+}: {
+  admin: any;
+}): Promise<boolean> {
+  const themes = await getThemes({ admin });
   const publishedTheme = themes?.find((theme) => theme.role === "MAIN");
 
   if (!publishedTheme) {
@@ -51,8 +31,8 @@ async function checkThemeExtension({ admin }: { admin: any }) {
   const antlaBlock = appBlocks.find(({ type }) =>
     type.includes(process.env.SCRIPT_HANDLE ?? "yespo-script"),
   );
-  
+
   return antlaBlock ? !antlaBlock?.disabled : false;
 }
 
-export default checkThemeExtension;
+export default checkThemeExtensionService;

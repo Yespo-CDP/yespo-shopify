@@ -1,8 +1,8 @@
 import type { Session } from "@shopify/shopify-api";
 
-import type { ShopDataResponse } from "~/@types/shop";
-import createDefinition from "~/helpers/create-definition";
+import createMetafieldDefinition from "~/shopify/mutations/create-metafield-definition.server";
 import { shopRepository } from "~/repositories/repositories.server";
+import getShop from "~/shopify/queries/get-shop.server";
 import shopify from "~/shopify.server";
 
 const afterAuth = async ({
@@ -12,27 +12,7 @@ const afterAuth = async ({
   session: Session;
   admin: any;
 }): Promise<void> => {
-  const response = await admin.graphql(`
-    #graphql
-    query {
-      shop {
-        id
-        myshopifyDomain
-        contactEmail
-        email
-        name
-        url
-        primaryDomain {
-          id
-          host
-        }
-      }
-    }
-  `);
-
-  const responseParse = await response.json();
-  const shopData = responseParse?.data as ShopDataResponse;
-  const shop = shopData?.shop;
+  const shop = await getShop({ admin });
 
   if (!shop) {
     throw new Error("Shop not found");
@@ -56,7 +36,7 @@ const afterAuth = async ({
     });
   }
 
-  await createDefinition({
+  await createMetafieldDefinition({
     admin,
     key: process.env.SCRIPT_HANDLE ?? "yespo-script",
   });

@@ -1,7 +1,7 @@
 import type { Account } from "~/@types/account";
 import { getAuthHeader } from "~/utils/auth";
 
-const getAccountInfo = async ({
+const getAccountInfoService = async ({
   apiKey,
 }: {
   apiKey: string;
@@ -35,4 +35,4 @@ const getAccountInfo = async ({
   }
 };
 
-export default getAccountInfo;
+export default getAccountInfoService;

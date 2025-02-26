@@ -1,19 +1,25 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 
 import { shopRepository } from "~/repositories/repositories.server";
-import getAccountInfo from "~/services/account.service";
-import getMarkets from "~/services/markets.server";
-import getScript from "~/services/script.service";
-import createDomain from "~/services/domain.service";
+import getAccountInfoService from "~/services/get-account-info.server";
+import getScript from "~/services/script.server";
+import createDomain from "~/services/domain.server";
+import checkThemeExtensionService from "~/services/check-theme-extension.server";
+import checkMarketsService from "~/services/check-markets.server";
 import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
 
 export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
-  const markets = await getMarkets({ admin, count: 200 });
   const shop = await shopRepository.getShop(session.shop);
-  const activeMarkets = markets.filter((market) => market.enabled);
-  return { shop, isMarketsOverflowing: activeMarkets?.length > 1 };
+  const isMarketsOverflowing = await checkMarketsService({ admin });
+  const themeExtensionStatus = await checkThemeExtensionService({ admin });
+
+  return {
+    shop,
+    themeExtensionStatus,
+    isMarketsOverflowing,
+  };
 };
 
 export const actionHandler = async ({ request }: ActionFunctionArgs) => {
@@ -32,7 +38,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     }
 
     try {
-      await getAccountInfo({ apiKey });
+      await getAccountInfoService({ apiKey });
       await shopRepository.updateShop(session.shop, { apiKey });
       success.apiKey = true;
     } catch (error: any) {
