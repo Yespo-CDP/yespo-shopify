@@ -6,7 +6,9 @@ import {
   Text,
   BlockStack,
   Link,
+  InlineStack,
 } from "@shopify/polaris";
+import { ViewIcon, HideIcon } from "@shopify/polaris-icons";
 import { Form } from "@remix-run/react";
 import { useTranslation } from "react-i18next";
 
@@ -23,8 +25,10 @@ const AccountConnectionSection: FC<AccountConnectionSectionProps> = ({
 }) => {
   const { t } = useTranslation();
   const [value, setValue] = useState(apiKey || "");
+  const [show, setShow] = useState(false);
 
   const handleValueChange = useCallback((value: string) => setValue(value), []);
+  const handleShowChange = useCallback(() => setShow(!show), [show]);
 
   useEffect(() => {
     setValue(apiKey || "");
@@ -42,7 +46,7 @@ const AccountConnectionSection: FC<AccountConnectionSectionProps> = ({
             value={value}
             name="apiKey"
             label="Api Key"
-            type="text"
+            type={show ? "text" : "password"}
             autoComplete="off"
             onChange={handleValueChange}
             helpText={
@@ -60,6 +64,16 @@ const AccountConnectionSection: FC<AccountConnectionSectionProps> = ({
             }
             error={errors?.apiKey}
             disabled={disabled}
+            suffix={
+              <InlineStack blockAlign="center">
+                <Button
+                  variant="plain"
+                  disabled={disabled}
+                  icon={show ? HideIcon : ViewIcon}
+                  onClick={handleShowChange}
+                />
+              </InlineStack>
+            }
             connectedRight={
               <Button size="large" variant="primary" disabled={disabled} submit>
                 {apiKey
