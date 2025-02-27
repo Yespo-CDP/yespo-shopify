@@ -24,4 +24,10 @@ export default class ShopRepositoryImpl implements IShopRepository {
       data,
     });
   }
+
+  async deleteShop(shopUrl: string): Promise<Shop> {
+    return this.database.shop.delete({
+      where: { shopUrl },
+    });
+  }
 }

@@ -32,5 +32,9 @@ redirect_urls = [
   "https://lately-exotic-bluebird.ngrok-free.app/api/auth/callback"
 ]
 
+[[webhooks.subscriptions]]
+compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+uri = "/webhooks/app/gdpr"
+
 [pos]
 embedded = false
