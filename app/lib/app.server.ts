@@ -1,5 +1,6 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 
+import type { Account } from "~/@types/account";
 import { shopRepository } from "~/repositories/repositories.server";
 import getAccountInfoService from "~/services/get-account-info.server";
 import createDomain from "~/services/domain.server";
@@ -16,6 +17,17 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const shop = await shopRepository.getShop(session.shop);
   const isMarketsOverflowing = await checkMarketsService({ admin });
   const scriptConnectionStatus = await checkScriptConnectionService({ admin });
+
+  let account: Account | null = null;
+  if (shop?.apiKey) {
+    try {
+      account = await getAccountInfoService({ apiKey: shop.apiKey });
+    } catch (error) {
+      console.error(error);
+      account = null;
+    }
+  }
+
   await getMetafield({
     admin,
     key: process.env.SCRIPT_HANDLE ?? "yespo-script",
@@ -23,6 +35,7 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
 
   return {
     shop,
+    account,
     scriptConnectionStatus,
     isMarketsOverflowing,
   };

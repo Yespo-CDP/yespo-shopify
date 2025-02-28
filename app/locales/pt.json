@@ -11,6 +11,11 @@
   "AccountConnectionSection": {
     "title": "Conexão da conta",
     "helpText": "Se você precisar de ajuda",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "account": "Account",
     "button": {
       "validate": "Validar",
       "revalidate": "Revalidar"

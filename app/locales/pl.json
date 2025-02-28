@@ -11,6 +11,11 @@
   "AccountConnectionSection": {
     "title": "Połączenie konta",
     "helpText": "Jeśli potrzebujesz pomocy",
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "account": "Account",
     "button": {
       "validate": "Zweryfikuj",
       "revalidate": "Ponownie zweryfikować"
