@@ -30,7 +30,12 @@
   },
   "ConnectionStatusSection": {
     "title": "Status da conexão",
-    "helpText": "Status atual da conexão do script",
+    "refresh": "Refresh",
+    "list": {
+      "apiKey": "Yespo API Key – Enter your Yespo API Key in the 'Account connection' section",
+      "script": "Yespo script – Get your Yespo script, click 'connect'",
+      "extension": "App extension – Enable the Yespo app extension in your theme settings"
+    },
     "banner": {
       "connected": "Script Yespo conectado",
       "disconnected": "Script Yespo desconectado"

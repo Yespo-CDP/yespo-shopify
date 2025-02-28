@@ -10,7 +10,12 @@
   },
   "AccountConnectionSection": {
     "title": "Połączenie konta",
-    "helpText": "Jeśli potrzebujesz pomocy",
+    "refresh": "Refresh",
+    "list": {
+      "apiKey": "Yespo API Key – Enter your Yespo API Key in the 'Account connection' section",
+      "script": "Yespo script – Get your Yespo script, click 'connect'",
+      "extension": "App extension – Enable the Yespo app extension in your theme settings"
+    },
     "status": {
       "active": "Active",
       "inactive": "Inactive"

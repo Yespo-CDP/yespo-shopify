@@ -11,6 +11,7 @@ import {
   Text,
   Image,
   InlineStack,
+  Box,
 } from "@shopify/polaris";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { useTranslation } from "react-i18next";
@@ -63,49 +64,55 @@ export default function Index() {
 
   return (
     <Page>
-      <BlockStack gap="500">
-        <Layout>
-          {isMarketsOverflowing && (
+      <Box paddingBlockEnd="500">
+        <BlockStack gap="500">
+          <Layout>
+            {isMarketsOverflowing && (
+              <Layout.Section>
+                <UnsupportedMarketsSection />
+              </Layout.Section>
+            )}
             <Layout.Section>
-              <UnsupportedMarketsSection />
+              <BlockStack gap="300">
+                <InlineStack gap="300" blockAlign="center">
+                  <Image source="./logo.png" alt="logo" height={48} />
+                  <Text as="h1" variant="heading3xl" fontWeight="medium">
+                    {t("WelcomeSection.title")}
+                  </Text>
+                </InlineStack>
+                <Text as="p">{t("WelcomeSection.description")}</Text>
+              </BlockStack>
             </Layout.Section>
-          )}
-          <Layout.Section>
-            <BlockStack gap="300">
-              <InlineStack gap="300" blockAlign="center">
-                <Image source="./logo.png" alt="logo" height={48} />
-                <Text as="h1" variant="heading3xl" fontWeight="medium">
-                  {t("WelcomeSection.title")}
-                </Text>
-              </InlineStack>
-              <Text as="p">{t("WelcomeSection.description")}</Text>
-            </BlockStack>
-          </Layout.Section>
-          <Layout.Section>
-            <AccountConnectionSection
-              apiKey={shop?.apiKey ?? ""}
-              account={account}
-              errors={actionData?.errors}
-              disabled={isMarketsOverflowing || isSubmitting || isLoading}
-            />
-          </Layout.Section>
-          <Layout.Section>
-            <ConnectionStatusSection
-              isScriptActive={scriptConnectionStatus.isActive}
-              errors={actionData?.errors}
-              disabled={
-                isMarketsOverflowing ||
-                isSubmitting ||
-                isLoading ||
-                !shop?.apiKey
-              }
-            />
-          </Layout.Section>
-          <Layout.Section>
-            <UsefulLinksSection />
-          </Layout.Section>
-        </Layout>
-      </BlockStack>
+            <Layout.Section>
+              <AccountConnectionSection
+                apiKey={shop?.apiKey ?? ""}
+                account={account}
+                errors={actionData?.errors}
+                disabled={isMarketsOverflowing || isSubmitting || isLoading}
+              />
+            </Layout.Section>
+            <Layout.Section>
+              <ConnectionStatusSection
+                isApiKeyActive={!!account}
+                isScriptActive={scriptConnectionStatus.isScriptExist}
+                isAppExtensionActive={
+                  scriptConnectionStatus.isThemeExtensionActive
+                }
+                errors={actionData?.errors}
+                disabled={
+                  isMarketsOverflowing ||
+                  isSubmitting ||
+                  isLoading ||
+                  !shop?.apiKey
+                }
+              />
+            </Layout.Section>
+            <Layout.Section>
+              <UsefulLinksSection />
+            </Layout.Section>
+          </Layout>
+        </BlockStack>
+      </Box>
     </Page>
   );
 }

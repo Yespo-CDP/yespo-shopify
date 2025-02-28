@@ -12,15 +12,20 @@ import {
 import { Form, useRevalidator } from "@remix-run/react";
 import { RefreshIcon } from "@shopify/polaris-icons";
 import { useTranslation } from "react-i18next";
+import ConnectionStatusList from "./ConnectionStatusList";
 
 export interface ConnectionStatusSectionProps {
+  isApiKeyActive?: boolean;
   isScriptActive?: boolean;
+  isAppExtensionActive?: boolean;
   errors?: { [key: string]: string };
   disabled?: boolean;
 }
 
 const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
+  isApiKeyActive,
   isScriptActive,
+  isAppExtensionActive,
   errors,
   disabled,
 }) => {
@@ -36,16 +41,29 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
 
   return (
     <Card>
-      <BlockStack gap="200">
-        <Text as="h2" variant="headingMd">
-          {t("ConnectionStatusSection.title")}
-        </Text>
-        <Text as="p" variant="bodyMd">
-          {t("ConnectionStatusSection.helpText")}
-        </Text>
+      <BlockStack gap="300">
+        <InlineStack gap="200">
+          <Text as="h2" variant="headingMd">
+            {t("ConnectionStatusSection.title")}
+          </Text>
+          <Button
+            icon={RefreshIcon}
+            size="micro"
+            variant="plain"
+            onClick={() => revalidator.revalidate()}
+            disabled={disabled}
+          >
+            {t("ConnectionStatusSection.refresh")}
+          </Button>
+        </InlineStack>
+        <ConnectionStatusList
+          isApiKeyActive={isApiKeyActive}
+          isScriptActive={isScriptActive}
+          isAppExtensionActive={isAppExtensionActive}
+        />
         <InlineStack wrap={false} gap="100" blockAlign="center">
           <Box width="100%">
-            {isScriptActive ? (
+            {isApiKeyActive && isScriptActive && isAppExtensionActive ? (
               <Banner tone="success">
                 {t("ConnectionStatusSection.banner.connected")}
               </Banner>
@@ -79,13 +97,6 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
               </Button>
             )}
           </Form>
-          <Button
-            size="large"
-            variant="primary"
-            onClick={() => revalidator.revalidate()}
-            disabled={disabled}
-            icon={RefreshIcon}
-          />
         </InlineStack>
         {errors?.script && (
           <InlineError message={errors?.script} fieldID="fieldID" />
