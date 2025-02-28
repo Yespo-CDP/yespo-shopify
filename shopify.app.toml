@@ -21,6 +21,10 @@ api_version = "2025-01"
   topics = [ "app/scopes_update" ]
   uri = "/webhooks/app/scopes_update"
 
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/gdpr"
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
 scopes = "read_markets,read_themes"
@@ -31,10 +35,6 @@ redirect_urls = [
   "https://lately-exotic-bluebird.ngrok-free.app/auth/shopify/callback",
   "https://lately-exotic-bluebird.ngrok-free.app/api/auth/callback"
 ]
-
-[[webhooks.subscriptions]]
-compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
-uri = "/webhooks/app/gdpr"
 
 [pos]
 embedded = false

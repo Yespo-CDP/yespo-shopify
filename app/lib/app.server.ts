@@ -9,13 +9,17 @@ import checkScriptConnectionService from "~/services/check-script-connection.ser
 import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
 import getMetafield from "~/shopify/queries/get-metafield";
+import deleteMetafield from "~/shopify/mutations/delete-metafield.server";
 
 export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
   const shop = await shopRepository.getShop(session.shop);
   const isMarketsOverflowing = await checkMarketsService({ admin });
   const scriptConnectionStatus = await checkScriptConnectionService({ admin });
-  await getMetafield({ admin, key: "yespo-script" });
+  await getMetafield({
+    admin,
+    key: process.env.SCRIPT_HANDLE ?? "yespo-script",
+  });
 
   return {
     shop,
@@ -49,6 +53,14 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     try {
       await getAccountInfoService({ apiKey });
       await shopRepository.updateShop(session.shop, { apiKey });
+      const shop = await shopRepository.getShop(session.shop);
+      if (shop?.shopId) {
+        await deleteMetafield({
+          admin,
+          ownerId: shop?.shopId,
+          key: process.env.SCRIPT_HANDLE ?? "yespo-script",
+        });
+      }
       success.apiKey = true;
     } catch (error: any) {
       errors.apiKey = t(`AccountConnectionSection.errors.${error.message}`);

@@ -11,7 +11,7 @@ const checkScriptConnectionService = async ({
   isActive: boolean;
 }> => {
   const isThemeExtensionActive = await checkThemeExtensionService({ admin });
-  const metafield = await getMetafield({ admin, key: "yespo-script" });
+  const metafield = await getMetafield({ admin, key: process.env.SCRIPT_HANDLE ?? "yespo-script" });
   const isScriptExist = !!metafield?.value;
 
   return {
