@@ -75,7 +75,7 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
           </Box>
           <Form method="post" name="connection-status">
             <input type="hidden" name="intent" value="connection-status" />
-            {isScriptActive ? (
+            {isApiKeyActive && isScriptActive && isAppExtensionActive ? (
               <Button
                 size="large"
                 variant="primary"
