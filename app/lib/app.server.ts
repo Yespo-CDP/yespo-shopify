@@ -28,11 +28,6 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
     }
   }
 
-  await getMetafield({
-    admin,
-    key: process.env.SCRIPT_HANDLE ?? "yespo-script",
-  });
-
   return {
     shop,
     account,
