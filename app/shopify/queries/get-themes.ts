@@ -5,12 +5,12 @@ async function getThemes({ admin }: { admin: any }) {
     const response = await admin.graphql(`
       #graphql
       query {
-        themes(first: 200, roles: [MAIN]) {
+        themes(first: 1, roles: [MAIN]) {
           nodes {
             id
             name
             role
-            files(first: 200, filenames: "config/settings_data.json") {
+            files(first: 1, filenames: "config/settings_data.json") {
               nodes {
                 filename
                 body {
