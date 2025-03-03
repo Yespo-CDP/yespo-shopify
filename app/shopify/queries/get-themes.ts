@@ -5,7 +5,7 @@ async function getThemes({ admin }: { admin: any }) {
     const response = await admin.graphql(`
       #graphql
       query {
-        themes(first: 200) {
+        themes(first: 200, roles: [MAIN]) {
           nodes {
             id
             name
