@@ -9,8 +9,8 @@ const getMetafieldDefinition = async ({
     const response = await admin.graphql(
       `
       #graphql
-      query getmetafieldDefinitions($ownerType: MetafieldOwnerType!) {
-        metafieldDefinitions(first: 250, ownerType: $ownerType) {
+      query getmetafieldDefinitions($ownerType: MetafieldOwnerType!, $query: String!) {
+        metafieldDefinitions(first: 200, ownerType: $ownerType, query: $query) {
           nodes {
             id
             name
@@ -31,6 +31,7 @@ const getMetafieldDefinition = async ({
       {
         variables: {
           ownerType: "SHOP",
+          query: `key:${process.env.SCRIPT_HANDLE}`,
         },
       },
     );

@@ -9,7 +9,6 @@ import checkMarketsService from "~/services/check-markets.server";
 import checkScriptConnectionService from "~/services/check-script-connection.server";
 import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
-import getMetafield from "~/shopify/queries/get-metafield";
 import deleteMetafield from "~/shopify/mutations/delete-metafield.server";
 
 export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
@@ -27,11 +26,6 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
       account = null;
     }
   }
-
-  await getMetafield({
-    admin,
-    key: process.env.SCRIPT_HANDLE ?? "yespo-script",
-  });
 
   return {
     shop,
