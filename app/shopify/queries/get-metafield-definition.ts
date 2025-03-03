@@ -10,7 +10,7 @@ const getMetafieldDefinition = async ({
       `
       #graphql
       query getmetafieldDefinitions($ownerType: MetafieldOwnerType!, $query: String!) {
-        metafieldDefinitions(first: 200, ownerType: $ownerType, query: $query) {
+        metafieldDefinitions(first: 1, ownerType: $ownerType, query: $query) {
           nodes {
             id
             name
