@@ -29,7 +29,7 @@ async function checkThemeExtensionService({
     ? Object.values(configParse?.current.blocks)
     : [];
   const antlaBlock = appBlocks.find(({ type }) =>
-    type.includes(process.env.SCRIPT_HANDLE ?? "yespo-script"),
+    type.includes(process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script"),
   );
 
   return antlaBlock ? !antlaBlock?.disabled : false;

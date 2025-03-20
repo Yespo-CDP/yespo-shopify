@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import ConnectionStatusList from "./ConnectionStatusList";
 
 export interface ConnectionStatusSectionProps {
+  type: "general" | "webpush";
   isApiKeyActive?: boolean;
   isScriptActive?: boolean;
   isAppExtensionActive?: boolean;
@@ -23,6 +24,7 @@ export interface ConnectionStatusSectionProps {
 }
 
 const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
+  type,
   isApiKeyActive,
   isScriptActive,
   isAppExtensionActive,
@@ -31,6 +33,8 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
 }) => {
   const revalidator = useRevalidator();
   const { t } = useTranslation();
+  const intent =
+    type === "general" ? "connection-status" : "web-push-connection-status";
 
   const handleDisconect = useCallback(() => {
     window.open(
@@ -44,7 +48,11 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
       <BlockStack gap="300">
         <InlineStack gap="200">
           <Text as="h2" variant="headingMd">
-            {t("ConnectionStatusSection.title")}
+            {t(
+              type === "general"
+                ? "ConnectionStatusSection.title"
+                : "ConnectionStatusSection.webpushTitle",
+            )}
           </Text>
           <Button
             icon={RefreshIcon}
@@ -73,8 +81,8 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
               </Banner>
             )}
           </Box>
-          <Form method="post" name="connection-status">
-            <input type="hidden" name="intent" value="connection-status" />
+          <Form method="post" name={intent}>
+            <input type="hidden" name="intent" value={intent} />
             {isApiKeyActive && isScriptActive && isAppExtensionActive ? (
               <Button
                 size="large"

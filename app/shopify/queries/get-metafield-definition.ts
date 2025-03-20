@@ -2,8 +2,10 @@ import type { MetafieldDefinition } from "~/@types/metafield";
 
 const getMetafieldDefinition = async ({
   admin,
+  key,
 }: {
   admin: any;
+  key: string;
 }): Promise<MetafieldDefinition | null> => {
   try {
     const response = await admin.graphql(
@@ -31,7 +33,7 @@ const getMetafieldDefinition = async ({
       {
         variables: {
           ownerType: "SHOP",
-          query: `key:${process.env.SCRIPT_HANDLE}`,
+          query: `key:${key}`,
         },
       },
     );
@@ -45,8 +47,7 @@ const getMetafieldDefinition = async ({
     const metafieldDefinitions =
       metafieldDefinitionsData.metafieldDefinitions?.nodes;
     const metafieldDefinition = metafieldDefinitions?.find(
-      (metafieldDefinition) =>
-        metafieldDefinition.key === process.env.SCRIPT_HANDLE,
+      (metafieldDefinition) => metafieldDefinition.key === key,
     );
 
     return metafieldDefinition ?? null;

@@ -1,17 +1,17 @@
-async function deleteMetafield({
+async function deleteMetafields({
   admin,
   ownerId,
-  key,
+  keys,
 }: {
   admin: any;
   ownerId: string;
-  key: string;
+  keys: string[];
 }) {
   try {
     await admin.graphql(
       `
       #graphql
-      mutation metafieldDelete($metafields: [MetafieldIdentifierInput!]!) {
+      mutation metafieldsDelete($metafields: [MetafieldIdentifierInput!]!) {
         metafieldsDelete(metafields: $metafields) {
           deletedMetafields {
             key
@@ -27,13 +27,11 @@ async function deleteMetafield({
     `,
       {
         variables: {
-          metafields: [
-            {
-              key,
-              ownerId,
-              namespace: "$app",
-            },
-          ],
+          metafields: keys.map((key) => ({
+            key,
+            ownerId,
+            namespace: "$app",
+          })),
         },
       },
     );
@@ -42,4 +40,4 @@ async function deleteMetafield({
   }
 }
 
-export default deleteMetafield;
+export default deleteMetafields;

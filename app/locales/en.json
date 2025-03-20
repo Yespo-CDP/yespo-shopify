@@ -30,6 +30,7 @@
   },
   "ConnectionStatusSection": {
     "title": "Connection status",
+    "webpushTitle": "Connection WebPush status",
     "refresh": "Refresh",
     "list": {
       "apiKey": "Yespo API Key – Enter your Yespo API Key in the 'Account connection' section",
@@ -48,6 +49,7 @@
     "errors": {
       "requestScriptError": "Error requesting script",
       "createDomainError": "Error creating domain",
+      "createWebPushDomainError": "Error creating webpush domain",
       "connectionError": "Error connecting script"
     }
   },
