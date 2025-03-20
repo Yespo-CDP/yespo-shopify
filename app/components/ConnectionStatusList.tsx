@@ -36,7 +36,7 @@ const ConnectionStatusList: FC<ConnectionStatusListProps> = ({
 
   return (
     <BlockStack gap="150">
-      <InlineStack align="start" gap="100">
+      <InlineStack align="start" gap="100" wrap={false}>
         <div>
           <Icon
             source={isApiKeyActive ? CheckCircleIcon : XCircleIcon}
@@ -47,7 +47,7 @@ const ConnectionStatusList: FC<ConnectionStatusListProps> = ({
           {t("ConnectionStatusSection.list.apiKey")}
         </Text>
       </InlineStack>
-      <InlineStack align="start" gap="100">
+      <InlineStack align="start" gap="100" wrap={false}>
         <div>
           <Icon
             source={isScriptActive ? CheckCircleIcon : XCircleIcon}
@@ -58,7 +58,7 @@ const ConnectionStatusList: FC<ConnectionStatusListProps> = ({
           {t("ConnectionStatusSection.list.script")}
         </Text>
       </InlineStack>
-      <InlineStack align="start" gap="100">
+      <InlineStack align="start" gap="100" wrap={false}>
         <Box>
           <Icon
             source={isAppExtensionActive ? CheckCircleIcon : XCircleIcon}

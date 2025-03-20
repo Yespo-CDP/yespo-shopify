@@ -35,6 +35,7 @@
   },
   "ConnectionStatusSection": {
     "title": "Status połączenia",
+    "webpushTitle": "Connection WebPush status",
     "helpText": "Aktualny status połączenia skryptu",
     "banner": {
       "connected": "Skrypt Yespo połączony",
@@ -48,6 +49,7 @@
     "errors": {
       "requestScriptError": "Błąd podczas pobierania skryptu",
       "createDomainError": "Błąd podczas tworzenia domeny",
+      "createWebPushDomainError": "Error creating webpush domain",
       "connectionError": "Błąd podczas łączenia skryptu"
     },
     "UsefulLinksSection": {

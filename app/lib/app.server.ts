@@ -4,12 +4,19 @@ import type { Account } from "~/@types/account";
 import { shopRepository } from "~/repositories/repositories.server";
 import getAccountInfoService from "~/services/get-account-info.server";
 import createDomain from "~/services/domain.server";
+import createWebPushDomain from "~/services/webpush-domain.server";
 import connectScriptService from "~/services/connect-script.server";
+import connectWebPushScriptService from "~/services/connect-webpush-script.server";
 import checkMarketsService from "~/services/check-markets.server";
 import checkScriptConnectionService from "~/services/check-script-connection.server";
+import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
 import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
-import deleteMetafield from "~/shopify/mutations/delete-metafield.server";
+
+const GENERAL_SCRIPT_HANDLE =
+  process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
+const WEB_PUSH_SCRIPT_HANDLE =
+  process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
 
 export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
@@ -62,10 +69,10 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await shopRepository.updateShop(session.shop, { apiKey });
       const shop = await shopRepository.getShop(session.shop);
       if (shop?.shopId) {
-        await deleteMetafield({
+        await deleteMetafields({
           admin,
           ownerId: shop?.shopId,
-          key: process.env.SCRIPT_HANDLE ?? "yespo-script",
+          keys: [GENERAL_SCRIPT_HANDLE, WEB_PUSH_SCRIPT_HANDLE],
         });
       }
       success.apiKey = true;
@@ -91,6 +98,34 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       success.connection = await connectScriptService({
         apiKey: shop.apiKey,
         shopId: shop.shopId,
+        admin,
+      });
+
+      success.connection = success.connection ?? {};
+      success.connection.ok = true;
+    } catch (error: any) {
+      errors.script = t(`ConnectionStatusSection.errors.${error.message}`);
+      return { success, errors };
+    }
+  }
+
+  if (intent === "web-push-connection-status") {
+    try {
+      const shop = await shopRepository.getShop(session.shop);
+      if (!shop || !shop?.apiKey) {
+        errors.script = t("AccountConnectionSection.errors.emptyApiKey");
+        return { success, errors };
+      }
+
+      await createWebPushDomain({
+        apiKey: shop.apiKey,
+        domain: shop.domain,
+      });
+
+      success.connection = await connectWebPushScriptService({
+        apiKey: shop.apiKey,
+        shopId: shop.shopId,
+        domain: shop.domain,
         admin,
       });
 

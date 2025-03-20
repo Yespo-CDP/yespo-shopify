@@ -1,9 +1,13 @@
 async function createMetafieldDefinition({
   admin,
   key,
+  name,
+  description,
 }: {
   admin: any;
   key: string;
+  name: string;
+  description: string;
 }) {
   try {
     await admin.graphql(
@@ -31,8 +35,8 @@ async function createMetafieldDefinition({
               storefront: "PUBLIC_READ",
             },
             key,
-            name: "Yespo script",
-            description: "This is a app metafield definition for Yespo script",
+            name,
+            description,
             namespace: "$app",
             type: "single_line_text_field",
             ownerType: "SHOP",

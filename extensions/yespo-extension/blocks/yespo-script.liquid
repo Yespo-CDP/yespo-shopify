@@ -1,7 +1,12 @@
 {%- assign yespo_script = shop.metafields['$app'].yespo-script -%}
+{%- assign yespo_web_push_script = shop.metafields['$app'].yespo-web-push-script -%}
 
 {% if yespo_script != blank %}
   {{ yespo_script }}
+{% endif %}
+
+{% if yespo_web_push_script != blank %}
+  {{ yespo_web_push_script }}
 {% endif %}
 
 {% schema %}

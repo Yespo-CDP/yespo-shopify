@@ -7,6 +7,11 @@ import shopify from "~/shopify.server";
 import getMetafieldDefinition from "~/shopify/queries/get-metafield-definition";
 import deleteMetafieldDefinition from "~/shopify/mutations/delete-metafield-definition.server";
 
+const GENERAL_SCRIPT_HANDLE =
+  process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
+const WEB_PUSH_SCRIPT_HANDLE =
+  process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
+
 const afterAuth = async ({
   session,
   admin,
@@ -39,17 +44,38 @@ const afterAuth = async ({
     });
   }
 
-  const definition = await getMetafieldDefinition({
+  const generalDefinition = await getMetafieldDefinition({
     admin,
+    key: GENERAL_SCRIPT_HANDLE,
   });
 
-  if (definition) {
-    await deleteMetafieldDefinition({ admin, id: definition?.id });
+  const webPushDefinition = await getMetafieldDefinition({
+    admin,
+    key: WEB_PUSH_SCRIPT_HANDLE,
+  });
+
+  if (generalDefinition) {
+    await deleteMetafieldDefinition({ admin, id: generalDefinition?.id });
   }
 
+  if (webPushDefinition) {
+    await deleteMetafieldDefinition({ admin, id: webPushDefinition?.id });
+  }
+
+  /* Create definition for general yespo script */
   await createMetafieldDefinition({
     admin,
-    key: process.env.SCRIPT_HANDLE ?? "yespo-script",
+    key: GENERAL_SCRIPT_HANDLE ?? "yespo-script",
+    name: "Yespo script",
+    description: "This is a app metafield definition for Yespo script",
+  });
+
+  /* Create definition for web push yespo script */
+  await createMetafieldDefinition({
+    admin,
+    key: WEB_PUSH_SCRIPT_HANDLE,
+    name: "Yespo web push script",
+    description: "This is a app metafield definition for Yespo web push script",
   });
 
   shopify.registerWebhooks({ session });
