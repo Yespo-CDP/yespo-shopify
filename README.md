@@ -15,7 +15,8 @@ Shopify app for integration Yespo with Shopify
 | **DATABASE_URL**          | **Required.** Database connect url                    | `postgresql://admin:admin@localhost:5432/database`|
 | **SCOPES**                | **Required.** Required access scopes                  | **Must be** `read_markets,read_themes`            |
 | **API_URL**               | **Required.** Yespo api url                           | **Must be** `https://yespo.io/api/v1`             |
-| **SCRIPT_HANDLE**         | **Required.** Handle for metafield and extension name | **Must be** `yespo-script`                        |
+| **GENERAL_SCRIPT_HANDLE** | **Required.** Handle for general metafield and extension name | **Must be** `yespo-script`                |
+| **WEB_PUSH_SCRIPT_HANDLE**| **Required.** Handle for webpush metafield and extension name | **Must be** `yespo-web-push-script`       |
 
 #### Install dependencies
 ```shell
@@ -38,6 +39,14 @@ npm run setup
 ```shell
 npm run build
 ```
+
+### Using
+
+- Install app in your shop
+- [Generate an API key](https://docs.yespo.io/reference/api-keys) and add it to the `Account connection` section
+- Connect general script
+- Connect webpush script
+- Enable yespo extension in your shop theme config
 
 #### Shopify deployment
 Shopify CLI required
