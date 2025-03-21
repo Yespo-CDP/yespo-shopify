@@ -64,7 +64,7 @@ const afterAuth = async ({
   }
 
   /* Create definition for web push yespo script */
-  if (webPushDefinition) {
+  if (!webPushDefinition) {
     await createMetafieldDefinition({
       admin,
       key: WEB_PUSH_SCRIPT_HANDLE,
