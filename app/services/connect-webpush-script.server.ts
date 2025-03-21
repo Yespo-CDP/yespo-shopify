@@ -19,31 +19,29 @@ const connectWebPushScriptService = async ({
   isScriptExist: boolean;
   isThemeExtensionActive: boolean;
 }> => {
-  //https://yespo.io/api/v1/site/webpush/script?domain=yespo-app-dev.myshopify.com
   const url = `${process.env.API_URL}/site/webpush/script?domain=${domain}`;
   const authHeader = getAuthHeader(apiKey);
   const options = {
     method: "GET",
     headers: {
-      accept: "text/plain",
+      accept: "application/json",
       Authorization: authHeader,
     },
   };
 
   try {
     const response = await fetch(url, options);
-    const responseParse = await response.text();
+    const responseParse = (await response.json()) as { script?: string };
+    const { script } = responseParse;
 
-    console.log("connectWebPushScriptService", response);
-
-    if (!response.ok) {
+    if (!response.ok || !script) {
       throw new Error("requestScriptError");
     }
 
     const metafield = await createMetafield({
       shopId,
       admin,
-      value: responseParse,
+      value: script,
       key: WEB_PUSH_SCRIPT_HANDLE,
     });
 
@@ -58,7 +56,6 @@ const connectWebPushScriptService = async ({
       isScriptExist: true,
     };
   } catch (error: any) {
-    console.log(error);
     throw new Error("requestScriptError");
   }
 };

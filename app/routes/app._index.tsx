@@ -102,7 +102,6 @@ export default function Index() {
                     isAppExtensionActive={
                       scriptConnectionStatus.isThemeExtensionActive
                     }
-                    errors={actionData?.errors}
                     disabled={
                       isMarketsOverflowing ||
                       isSubmitting ||
@@ -119,7 +118,6 @@ export default function Index() {
                     isAppExtensionActive={
                       scriptConnectionStatus.isThemeExtensionActive
                     }
-                    errors={actionData?.errors}
                     disabled={
                       isMarketsOverflowing ||
                       isSubmitting ||

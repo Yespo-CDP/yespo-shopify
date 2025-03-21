@@ -7,7 +7,6 @@ import {
   BlockStack,
   InlineStack,
   Box,
-  InlineError,
 } from "@shopify/polaris";
 import { Form, useRevalidator } from "@remix-run/react";
 import { RefreshIcon } from "@shopify/polaris-icons";
@@ -19,7 +18,6 @@ export interface ConnectionStatusSectionProps {
   isApiKeyActive?: boolean;
   isScriptActive?: boolean;
   isAppExtensionActive?: boolean;
-  errors?: { [key: string]: string };
   disabled?: boolean;
 }
 
@@ -28,7 +26,6 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
   isApiKeyActive,
   isScriptActive,
   isAppExtensionActive,
-  errors,
   disabled,
 }) => {
   const revalidator = useRevalidator();
@@ -106,9 +103,6 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
             )}
           </Form>
         </InlineStack>
-        {errors?.script && (
-          <InlineError message={errors?.script} fieldID="fieldID" />
-        )}
       </BlockStack>
     </Card>
   );

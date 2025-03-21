@@ -8,7 +8,7 @@ interface WebPushDomainResponse {
   success?: {
     domain: string;
     status: string;
-  }[];
+  };
 }
 
 const SERVICE_WORKER_NAME =
@@ -47,11 +47,11 @@ const createWebPushDomain = async ({
     const response = await fetch(url, options);
     const responseParse = (await response.json()) as WebPushDomainResponse;
 
-    if (!response.ok || responseParse.errors) {
-      throw new Error("createDomainError");
+    if (!response.ok) {
+      throw new Error("createWebPushDomainError");
     }
 
-    return { result: responseParse?.success?.[0].status ?? "ok" };
+    return { result: responseParse?.success?.status ?? "ok" };
   } catch (error: any) {
     throw new Error("createWebPushDomainError");
   }
