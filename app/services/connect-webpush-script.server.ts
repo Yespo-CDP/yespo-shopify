@@ -1,6 +1,5 @@
 import { getAuthHeader } from "~/utils/auth";
 import createMetafield from "~/shopify/mutations/create-metafield.server";
-import checkThemeExtensionService from "./check-theme-extension.server";
 
 const WEB_PUSH_SCRIPT_HANDLE =
   process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
@@ -15,10 +14,7 @@ const connectWebPushScriptService = async ({
   apiKey: string;
   domain: string;
   admin: any;
-}): Promise<{
-  isScriptExist: boolean;
-  isThemeExtensionActive: boolean;
-}> => {
+}) => {
   const url = `${process.env.API_URL}/site/webpush/script?domain=${domain}`;
   const authHeader = getAuthHeader(apiKey);
   const options = {
@@ -49,12 +45,7 @@ const connectWebPushScriptService = async ({
       throw new Error("requestScriptError");
     }
 
-    const isThemeExtensionActive = await checkThemeExtensionService({ admin });
-
-    return {
-      isThemeExtensionActive,
-      isScriptExist: true,
-    };
+    return true;
   } catch (error: any) {
     throw new Error("requestScriptError");
   }

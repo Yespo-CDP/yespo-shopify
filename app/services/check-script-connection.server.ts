@@ -14,7 +14,6 @@ const checkScriptConnectionService = async ({
   isThemeExtensionActive: boolean;
   isScriptExist: boolean;
   isWebPushExist: boolean;
-  isActive: boolean;
 }> => {
   const isThemeExtensionActive = await checkThemeExtensionService({ admin });
   const metafield = await getMetafield({
@@ -34,7 +33,6 @@ const checkScriptConnectionService = async ({
     isThemeExtensionActive,
     isScriptExist,
     isWebPushExist,
-    isActive: isThemeExtensionActive && isScriptExist,
   };
 };
 

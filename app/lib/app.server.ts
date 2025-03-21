@@ -9,6 +9,7 @@ import connectScriptService from "~/services/connect-script.server";
 import connectWebPushScriptService from "~/services/connect-webpush-script.server";
 import checkMarketsService from "~/services/check-markets.server";
 import checkScriptConnectionService from "~/services/check-script-connection.server";
+import checkThemeExtensionService from "~/services/check-theme-extension.server";
 import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
 import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
@@ -95,14 +96,21 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         domain: shop.domain,
       });
 
-      success.connection = await connectScriptService({
+      await connectScriptService({
         apiKey: shop.apiKey,
         shopId: shop.shopId,
         admin,
       });
 
-      success.connection = success.connection ?? {};
-      success.connection.ok = true;
+      const isThemeExtensionActive = await checkThemeExtensionService({
+        admin,
+      });
+
+      success.connection = {
+        isThemeExtensionActive,
+        isScriptExist: true,
+        ok: true,
+      };
     } catch (error: any) {
       errors.script = t(`ConnectionStatusSection.errors.${error.message}`);
       return { success, errors };
@@ -122,15 +130,22 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         domain: shop.domain,
       });
 
-      success.connection = await connectWebPushScriptService({
+      await connectWebPushScriptService({
         apiKey: shop.apiKey,
         shopId: shop.shopId,
         domain: shop.domain,
         admin,
       });
 
-      success.connection = success.connection ?? {};
-      success.connection.ok = true;
+      const isThemeExtensionActive = await checkThemeExtensionService({
+        admin,
+      });
+
+      success.connection = {
+        isThemeExtensionActive,
+        isScriptExist: true,
+        ok: true,
+      };
     } catch (error: any) {
       errors.script = t(`ConnectionStatusSection.errors.${error.message}`);
       return { success, errors };

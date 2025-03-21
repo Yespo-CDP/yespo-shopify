@@ -57,7 +57,7 @@ const afterAuth = async ({
   if (!generalDefinition) {
     await createMetafieldDefinition({
       admin,
-      key: GENERAL_SCRIPT_HANDLE ?? "yespo-script",
+      key: GENERAL_SCRIPT_HANDLE,
       name: "Yespo script",
       description: "This is a app metafield definition for Yespo script",
     });
