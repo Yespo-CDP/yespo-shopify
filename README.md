@@ -18,6 +18,16 @@ Shopify app for integration Yespo with Shopify
 | **GENERAL_SCRIPT_HANDLE** | **Required.** Handle for general metafield and extension name | **Must be** `yespo-script`                |
 | **WEB_PUSH_SCRIPT_HANDLE**| **Required.** Handle for webpush metafield and extension name | **Must be** `yespo-web-push-script`       |
 
+#### Setup App Proxy
+
+- Select yespo app in shopify partner
+- Go to `Configuration`
+- Find `App proxy` section
+- Subpath prefix: `apps`
+- Subpath: `yespo-proxy`
+- Proxy URL: `https://push.yespo.tech/`
+
+
 #### Install dependencies
 ```shell
 npm install
