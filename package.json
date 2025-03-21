@@ -24,11 +24,11 @@
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",
-    "@remix-run/dev": "^2.15.0",
-    "@remix-run/fs-routes": "^2.15.0",
-    "@remix-run/node": "^2.15.0",
-    "@remix-run/react": "^2.15.0",
-    "@remix-run/serve": "^2.15.0",
+    "@remix-run/dev": "^2.16.2",
+    "@remix-run/fs-routes": "^2.16.2",
+    "@remix-run/node": "^2.16.2",
+    "@remix-run/react": "^2.16.2",
+    "@remix-run/serve": "^2.16.2",
     "@shopify/app-bridge-react": "^4.1.6",
     "@shopify/polaris": "^12.0.0",
     "@shopify/shopify-app-remix": "^3.7.0",
@@ -44,8 +44,8 @@
     "vite-tsconfig-paths": "^5.0.1"
   },
   "devDependencies": {
-    "@remix-run/eslint-config": "^2.15.0",
-    "@remix-run/route-config": "^2.15.0",
+    "@remix-run/eslint-config": "^2.16.2",
+    "@remix-run/route-config": "^2.16.2",
     "@shopify/api-codegen-preset": "^1.1.1",
     "@types/eslint": "^9.6.1",
     "@types/node": "^22.2.0",
@@ -55,7 +55,7 @@
     "eslint-config-prettier": "^10.0.1",
     "prettier": "^3.2.4",
     "typescript": "^5.2.2",
-    "vite": "^5.1.3"
+    "vite": "^6.2.2"
   },
   "workspaces": [
     "extensions/*"
@@ -69,5 +69,5 @@
   "overrides": {
     "@graphql-tools/url-loader": "8.0.16"
   },
-  "author": "maXim"
+  "author": "developer@devit.group"
 }
