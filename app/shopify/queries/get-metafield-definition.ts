@@ -11,8 +11,8 @@ const getMetafieldDefinition = async ({
     const response = await admin.graphql(
       `
       #graphql
-      query getmetafieldDefinitions($ownerType: MetafieldOwnerType!, $query: String!) {
-        metafieldDefinitions(first: 1, ownerType: $ownerType, query: $query) {
+      query getmetafieldDefinitions($ownerType: MetafieldOwnerType!, $key: String!, $namespace: String) {
+        metafieldDefinitions(first: 1, ownerType: $ownerType, key: $key, namespace: $namespace) {
           nodes {
             id
             name
@@ -32,8 +32,9 @@ const getMetafieldDefinition = async ({
       }`,
       {
         variables: {
+          key,
+          namespace: "$app",
           ownerType: "SHOP",
-          query: `key:${key}`,
         },
       },
     );
@@ -46,9 +47,7 @@ const getMetafieldDefinition = async ({
     };
     const metafieldDefinitions =
       metafieldDefinitionsData.metafieldDefinitions?.nodes;
-    const metafieldDefinition = metafieldDefinitions?.find(
-      (metafieldDefinition) => metafieldDefinition.key === key,
-    );
+    const metafieldDefinition = metafieldDefinitions?.[0];
 
     return metafieldDefinition ?? null;
   } catch (error) {
