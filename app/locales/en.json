@@ -17,8 +17,8 @@
     },
     "account": "Account",
     "button": {
-      "validate": "Validate",
-      "revalidate": "Revalidate"
+      "connect": "Connect",
+      "disconnect": "Disconnect"
     },
     "link": "https://docs.yespo.io/reference/api-keys",
     "success": "API Key updated",
@@ -29,23 +29,23 @@
     }
   },
   "ConnectionStatusSection": {
-    "title": "Connection status",
-    "webpushTitle": "Connection WebPush status",
+    "title": "Scripts integration",
     "refresh": "Refresh",
     "list": {
       "apiKey": "Yespo API Key – Enter your Yespo API Key in the 'Account connection' section",
-      "script": "Yespo script – Get your Yespo script, click 'connect'",
+      "generalScript": "General script – Get your Genetal script, click 'connect'",
+      "webpushScript": "WebPush script – Get your WebPush script, click 'connect'",
       "extension": "App extension – Enable the Yespo app extension in your theme settings"
     },
     "banner": {
-      "connected": "Yespo script connected",
-      "disconnected": "Yespo script disconnected"
+      "connected": "Scripts are installed",
+      "incomplete": "Scripts are partially installed",
+      "disconnected": "Scripts are not installed"
     },
     "button": {
-      "connect": "Connect",
-      "disconnect": "Disconnect"
+      "configure": "Install scripts"
     },
-    "success": "Updated successfully.",
+    "success": "Installed successfully.",
     "errors": {
       "requestScriptError": "Error requesting script",
       "createDomainError": "Error creating domain",

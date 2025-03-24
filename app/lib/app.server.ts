@@ -1,23 +1,17 @@
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 
 import type { Account } from "~/@types/account";
+import { getAccountInfo } from "~/api/get-account-info.server";
 import { shopRepository } from "~/repositories/repositories.server";
-import getAccountInfoService from "~/services/get-account-info.server";
-import createDomain from "~/services/domain.server";
-import createWebPushDomain from "~/services/webpush-domain.server";
-import connectScriptService from "~/services/connect-script.server";
-import connectWebPushScriptService from "~/services/connect-webpush-script.server";
+import { connectAccountService } from "~/services/connect-account.server";
+import { disconnectAccountService } from "~/services/disconnect-account.server";
+import { connectGeneralScriptService } from "~/services/connect-general-script.server";
+import { connectWebPushScriptService } from "~/services/connect-webpush-script.server";
 import checkMarketsService from "~/services/check-markets.server";
 import checkScriptConnectionService from "~/services/check-script-connection.server";
 import checkThemeExtensionService from "~/services/check-theme-extension.server";
-import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
 import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
-
-const GENERAL_SCRIPT_HANDLE =
-  process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
-const WEB_PUSH_SCRIPT_HANDLE =
-  process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
 
 export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
@@ -28,7 +22,7 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   let account: Account | null = null;
   if (shop?.apiKey) {
     try {
-      account = await getAccountInfoService({ apiKey: shop.apiKey });
+      account = await getAccountInfo({ apiKey: shop.apiKey });
     } catch (error) {
       console.error(error);
       account = null;
@@ -53,10 +47,20 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     apiKey?: boolean;
     connection?: {
       ok?: boolean;
-      isScriptExist?: boolean;
+      isGeneralScriptExist?: boolean;
+      isWebPushScriptExist?: boolean;
       isThemeExtensionActive?: boolean;
     };
   } = {};
+
+  if (intent === "account-disconnection") {
+    try {
+      await disconnectAccountService({ session, admin });
+    } catch (error: any) {
+      errors.apiKey = t(`AccountConnectionSection.errors.${error.message}`);
+      return { success, errors };
+    }
+  }
 
   if (intent === "account-connection") {
     const apiKey = formData.get("apiKey")?.toString();
@@ -66,16 +70,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     }
 
     try {
-      await getAccountInfoService({ apiKey });
-      await shopRepository.updateShop(session.shop, { apiKey });
-      const shop = await shopRepository.getShop(session.shop);
-      if (shop?.shopId) {
-        await deleteMetafields({
-          admin,
-          ownerId: shop?.shopId,
-          keys: [GENERAL_SCRIPT_HANDLE, WEB_PUSH_SCRIPT_HANDLE],
-        });
-      }
+      await connectAccountService({ session, apiKey, admin });
       success.apiKey = true;
     } catch (error: any) {
       errors.apiKey = t(`AccountConnectionSection.errors.${error.message}`);
@@ -91,59 +86,39 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         return { success, errors };
       }
 
-      await createDomain({
-        apiKey: shop.apiKey,
-        domain: shop.domain,
-      });
+      try {
+        await connectGeneralScriptService({
+          apiKey: shop.apiKey,
+          shopId: shop.shopId,
+          domain: shop.domain,
+          admin,
+        });
 
-      await connectScriptService({
-        apiKey: shop.apiKey,
-        shopId: shop.shopId,
-        admin,
-      });
+        success.connection = {
+          isGeneralScriptExist: true,
+        };
+      } catch (_) {}
 
-      const isThemeExtensionActive = await checkThemeExtensionService({
-        admin,
-      });
+      try {
+        await connectWebPushScriptService({
+          apiKey: shop.apiKey,
+          shopId: shop.shopId,
+          domain: shop.domain,
+          admin,
+        });
 
-      success.connection = {
-        isThemeExtensionActive,
-        isScriptExist: true,
-        ok: true,
-      };
-    } catch (error: any) {
-      errors.script = t(`ConnectionStatusSection.errors.${error.message}`);
-      return { success, errors };
-    }
-  }
-
-  if (intent === "web-push-connection-status") {
-    try {
-      const shop = await shopRepository.getShop(session.shop);
-      if (!shop || !shop?.apiKey) {
-        errors.script = t("AccountConnectionSection.errors.emptyApiKey");
-        return { success, errors };
-      }
-
-      await createWebPushDomain({
-        apiKey: shop.apiKey,
-        domain: shop.domain,
-      });
-
-      await connectWebPushScriptService({
-        apiKey: shop.apiKey,
-        shopId: shop.shopId,
-        domain: shop.domain,
-        admin,
-      });
+        success.connection = {
+          isWebPushScriptExist: true,
+        };
+      } catch (_) {}
 
       const isThemeExtensionActive = await checkThemeExtensionService({
         admin,
       });
 
       success.connection = {
+        ...success.connection,
         isThemeExtensionActive,
-        isScriptExist: true,
         ok: true,
       };
     } catch (error: any) {

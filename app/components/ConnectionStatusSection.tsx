@@ -1,4 +1,4 @@
-import { useCallback, type FC } from "react";
+import { type FC } from "react";
 import {
   Button,
   Banner,
@@ -14,42 +14,30 @@ import { useTranslation } from "react-i18next";
 import ConnectionStatusList from "./ConnectionStatusList";
 
 export interface ConnectionStatusSectionProps {
-  type: "general" | "webpush";
   isApiKeyActive?: boolean;
-  isScriptActive?: boolean;
+  isGeneralScriptExist?: boolean;
+  isWebPushScriptExist?: boolean;
   isAppExtensionActive?: boolean;
   disabled?: boolean;
 }
 
 const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
-  type,
   isApiKeyActive,
-  isScriptActive,
+  isGeneralScriptExist,
+  isWebPushScriptExist,
   isAppExtensionActive,
   disabled,
 }) => {
   const revalidator = useRevalidator();
   const { t } = useTranslation();
-  const intent =
-    type === "general" ? "connection-status" : "web-push-connection-status";
-
-  const handleDisconect = useCallback(() => {
-    window.open(
-      `https://${shopify.config.shop}/admin/themes/current/editor?context=apps`,
-      "_blank",
-    );
-  }, []);
+  const intent = "connection-status";
 
   return (
     <Card>
       <BlockStack gap="300">
         <InlineStack gap="200">
           <Text as="h2" variant="headingMd">
-            {t(
-              type === "general"
-                ? "ConnectionStatusSection.title"
-                : "ConnectionStatusSection.webpushTitle",
-            )}
+            {t("ConnectionStatusSection.title")}
           </Text>
           <Button
             icon={RefreshIcon}
@@ -63,14 +51,29 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
         </InlineStack>
         <ConnectionStatusList
           isApiKeyActive={isApiKeyActive}
-          isScriptActive={isScriptActive}
+          isGeneralScriptExist={isGeneralScriptExist}
+          isWebPushScriptExist={isWebPushScriptExist}
           isAppExtensionActive={isAppExtensionActive}
         />
-        <InlineStack wrap={false} gap="100" blockAlign="center">
+        <InlineStack
+          wrap={false}
+          gap="100"
+          blockAlign="center"
+          align="space-between"
+        >
           <Box width="100%">
-            {isApiKeyActive && isScriptActive && isAppExtensionActive ? (
+            {isApiKeyActive &&
+            isGeneralScriptExist &&
+            isWebPushScriptExist &&
+            isAppExtensionActive ? (
               <Banner tone="success">
                 {t("ConnectionStatusSection.banner.connected")}
+              </Banner>
+            ) : isApiKeyActive &&
+              isAppExtensionActive &&
+              (isGeneralScriptExist || isWebPushScriptExist) ? (
+              <Banner tone="warning">
+                {t("ConnectionStatusSection.banner.incomplete")}
               </Banner>
             ) : (
               <Banner tone="critical">
@@ -80,26 +83,20 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
           </Box>
           <Form method="post" name={intent}>
             <input type="hidden" name="intent" value={intent} />
-            {isApiKeyActive && isScriptActive && isAppExtensionActive ? (
-              <Button
-                size="large"
-                variant="primary"
-                tone="critical"
-                disabled={disabled}
-                onClick={handleDisconect}
-              >
-                {t("ConnectionStatusSection.button.disconnect")}
-              </Button>
-            ) : (
-              <Button
-                size="large"
-                variant="primary"
-                tone="success"
-                disabled={disabled}
-                submit
-              >
-                {t("ConnectionStatusSection.button.connect")}
-              </Button>
+            {(!isApiKeyActive ||
+              !isGeneralScriptExist ||
+              !isWebPushScriptExist ||
+              !isAppExtensionActive) && (
+              <Box width="115px">
+                <Button
+                  size="large"
+                  variant="primary"
+                  disabled={disabled}
+                  submit
+                >
+                  {t("ConnectionStatusSection.button.configure")}
+                </Button>
+              </Box>
             )}
           </Form>
         </InlineStack>

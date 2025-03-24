@@ -5,6 +5,7 @@ import { shopRepository } from "~/repositories/repositories.server";
 import getShop from "~/shopify/queries/get-shop.server";
 import shopify from "~/shopify.server";
 import getMetafieldDefinition from "~/shopify/queries/get-metafield-definition";
+import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
 
 const GENERAL_SCRIPT_HANDLE =
   process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
@@ -71,6 +72,14 @@ const afterAuth = async ({
       name: "Yespo web push script",
       description:
         "This is a app metafield definition for Yespo web push script",
+    });
+  }
+
+  if (!shopObject?.apiKey && shop?.id) {
+    await deleteMetafields({
+      admin,
+      ownerId: shop?.id,
+      keys: [GENERAL_SCRIPT_HANDLE, WEB_PUSH_SCRIPT_HANDLE],
     });
   }
 

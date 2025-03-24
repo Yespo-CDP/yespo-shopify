@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FC } from "react";
+import { Modal, TitleBar } from "@shopify/app-bridge-react";
 import {
   Button,
   Card,
@@ -8,9 +9,10 @@ import {
   Link,
   InlineStack,
   Badge,
+  Box,
 } from "@shopify/polaris";
 import { ViewIcon, HideIcon } from "@shopify/polaris-icons";
-import { Form } from "@remix-run/react";
+import { Form, useFetcher } from "@remix-run/react";
 import { useTranslation } from "react-i18next";
 
 import type { Account } from "~/@types/account";
@@ -29,11 +31,20 @@ const AccountConnectionSection: FC<AccountConnectionSectionProps> = ({
   disabled,
 }) => {
   const { t } = useTranslation();
+  const fetcher = useFetcher();
   const [value, setValue] = useState(apiKey || "");
   const [show, setShow] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
 
   const handleValueChange = useCallback((value: string) => setValue(value), []);
   const handleShowChange = useCallback(() => setShow(!show), [show]);
+  const handleModalOpen = useCallback(() => setModalOpen(true), []);
+  const handleModalClose = useCallback(() => setModalOpen(false), []);
+
+  const handleDisconnect = useCallback(() => {
+    fetcher.submit({ intent: "account-disconnection" }, { method: "post" });
+    setModalOpen(false);
+  }, [fetcher]);
 
   useEffect(() => {
     setValue(apiKey || "");
@@ -84,7 +95,7 @@ const AccountConnectionSection: FC<AccountConnectionSectionProps> = ({
               </p>
             }
             error={errors?.apiKey}
-            disabled={disabled}
+            disabled={disabled || !!apiKey}
             suffix={
               <InlineStack blockAlign="center">
                 <Button
@@ -96,15 +107,50 @@ const AccountConnectionSection: FC<AccountConnectionSectionProps> = ({
               </InlineStack>
             }
             connectedRight={
-              <Button size="large" variant="primary" disabled={disabled} submit>
-                {apiKey
-                  ? t("AccountConnectionSection.button.revalidate")
-                  : t("AccountConnectionSection.button.validate")}
-              </Button>
+              account ? (
+                <Button
+                  size="large"
+                  variant="primary"
+                  tone="critical"
+                  onClick={handleModalOpen}
+                  loading={fetcher.state === "submitting"}
+                  disabled={disabled || fetcher.state === "submitting"}
+                >
+                  {t("AccountConnectionSection.button.disconnect")}
+                </Button>
+              ) : (
+                <Button
+                  size="large"
+                  variant="primary"
+                  loading={fetcher.state === "submitting"}
+                  disabled={disabled || !!apiKey}
+                  submit
+                >
+                  {t("AccountConnectionSection.button.connect")}
+                </Button>
+              )
             }
           />
         </Form>
       </BlockStack>
+      <Modal open={modalOpen} onHide={() => setModalOpen(false)}>
+        <Box paddingBlock="400" paddingInline="200">
+          <Text as="p">Are you sure you want to disable your account?</Text>
+        </Box>
+        <TitleBar title="Disconnect account">
+          <button
+            variant="primary"
+            tone="critical"
+            disabled={disabled && fetcher.state === "submitting"}
+            onClick={handleDisconnect}
+          >
+            Confirm
+          </button>
+          <button disabled={disabled} onClick={handleModalClose}>
+            Cancel
+          </button>
+        </TitleBar>
+      </Modal>
     </Card>
   );
 };

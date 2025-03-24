@@ -1,40 +1,30 @@
-import { getAuthHeader } from "~/utils/auth";
+import { getGeneralScript } from "~/api/get-general-script.server";
+import { createGeneralDomain } from "~/api/create-general-domain.server";
 import createMetafield from "~/shopify/mutations/create-metafield.server";
 
 const GENERAL_SCRIPT_HANDLE =
   process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
 
-const connectScriptService = async ({
+export const connectGeneralScriptService = async ({
   shopId,
   apiKey,
+  domain,
   admin,
 }: {
   shopId: string;
   apiKey: string;
+  domain: string;
   admin: any;
 }) => {
-  const url = `${process.env.API_URL}/site/script`;
-  const authHeader = getAuthHeader(apiKey);
-  const options = {
-    method: "GET",
-    headers: {
-      accept: "text/plain",
-      Authorization: authHeader,
-    },
-  };
-
   try {
-    const response = await fetch(url, options);
-    const responseParse = await response.text();
+    await createGeneralDomain({ apiKey, domain });
 
-    if (!response.ok) {
-      throw new Error("requestScriptError");
-    }
+    const script = await getGeneralScript({ apiKey });
 
     const metafield = await createMetafield({
       shopId,
       admin,
-      value: responseParse,
+      value: script,
       key: GENERAL_SCRIPT_HANDLE,
     });
 
@@ -47,5 +37,3 @@ const connectScriptService = async ({
     throw new Error("requestScriptError");
   }
 };
-
-export default connectScriptService;

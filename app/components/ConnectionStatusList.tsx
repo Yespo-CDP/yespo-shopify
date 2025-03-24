@@ -16,13 +16,15 @@ import { useTranslation } from "react-i18next";
 
 export interface ConnectionStatusListProps {
   isApiKeyActive?: boolean;
-  isScriptActive?: boolean;
+  isGeneralScriptExist?: boolean;
+  isWebPushScriptExist?: boolean;
   isAppExtensionActive?: boolean;
 }
 
 const ConnectionStatusList: FC<ConnectionStatusListProps> = ({
   isApiKeyActive,
-  isScriptActive,
+  isGeneralScriptExist,
+  isWebPushScriptExist,
   isAppExtensionActive,
 }) => {
   const { t } = useTranslation();
@@ -54,16 +56,31 @@ const ConnectionStatusList: FC<ConnectionStatusListProps> = ({
       <InlineStack align="start" blockAlign="center" gap="100" wrap={false}>
         <div>
           <Icon
-            source={isScriptActive ? CheckCircleIcon : XCircleIcon}
-            tone={isScriptActive ? "textSuccess" : "textCritical"}
+            source={isGeneralScriptExist ? CheckCircleIcon : XCircleIcon}
+            tone={isGeneralScriptExist ? "textSuccess" : "textCritical"}
           />
         </div>
         <Text
           as="p"
           variant="bodyXs"
-          tone={isScriptActive ? "subdued" : "base"}
+          tone={isGeneralScriptExist ? "subdued" : "base"}
         >
-          {t("ConnectionStatusSection.list.script")}
+          {t("ConnectionStatusSection.list.generalScript")}
+        </Text>
+      </InlineStack>
+      <InlineStack align="start" blockAlign="center" gap="100" wrap={false}>
+        <div>
+          <Icon
+            source={isWebPushScriptExist ? CheckCircleIcon : XCircleIcon}
+            tone={isWebPushScriptExist ? "textSuccess" : "textCritical"}
+          />
+        </div>
+        <Text
+          as="p"
+          variant="bodyXs"
+          tone={isGeneralScriptExist ? "subdued" : "base"}
+        >
+          {t("ConnectionStatusSection.list.webpushScript")}
         </Text>
       </InlineStack>
       <InlineStack align="start" blockAlign="center" gap="100" wrap={false}>
