@@ -15,7 +15,7 @@ const connectWebPushScriptService = async ({
   domain: string;
   admin: any;
 }) => {
-  const url = `${process.env.API_URL}/site/webpush/script?domain=${domain}`;
+  const url = `${process.env.API_URL}/site/webpush/script?domain=https://${domain}`;
   const authHeader = getAuthHeader(apiKey);
   const options = {
     method: "GET",
@@ -47,6 +47,7 @@ const connectWebPushScriptService = async ({
 
     return true;
   } catch (error: any) {
+    console.log(error);
     throw new Error("requestScriptError");
   }
 };
