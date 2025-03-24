@@ -12,8 +12,8 @@ const checkScriptConnectionService = async ({
   admin: any;
 }): Promise<{
   isThemeExtensionActive: boolean;
-  isScriptExist: boolean;
-  isWebPushExist: boolean;
+  isGeneralScriptExist: boolean;
+  isWebPushScriptExist: boolean;
 }> => {
   const isThemeExtensionActive = await checkThemeExtensionService({ admin });
   const metafield = await getMetafield({
@@ -26,13 +26,13 @@ const checkScriptConnectionService = async ({
     key: WEB_PUSH_SCRIPT_HANDLE,
   });
 
-  const isScriptExist = !!metafield?.value;
-  const isWebPushExist = !!webPushMetafield?.value;
+  const isGeneralScriptExist = !!metafield?.value;
+  const isWebPushScriptExist = !!webPushMetafield?.value;
 
   return {
     isThemeExtensionActive,
-    isScriptExist,
-    isWebPushExist,
+    isGeneralScriptExist,
+    isWebPushScriptExist,
   };
 };
 

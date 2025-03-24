@@ -1,10 +1,11 @@
-import { getAuthHeader } from "~/utils/auth";
+import { getWebpushScript } from "~/api/get-webpush-script.server";
+import { createWebPushDomain } from "~/api/create-webpush-domain.server";
 import createMetafield from "~/shopify/mutations/create-metafield.server";
 
 const WEB_PUSH_SCRIPT_HANDLE =
   process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
 
-const connectWebPushScriptService = async ({
+export const connectWebPushScriptService = async ({
   shopId,
   apiKey,
   domain,
@@ -15,24 +16,10 @@ const connectWebPushScriptService = async ({
   domain: string;
   admin: any;
 }) => {
-  const url = `${process.env.API_URL}/site/webpush/script?domain=https://${domain}`;
-  const authHeader = getAuthHeader(apiKey);
-  const options = {
-    method: "GET",
-    headers: {
-      accept: "application/json",
-      Authorization: authHeader,
-    },
-  };
-
   try {
-    const response = await fetch(url, options);
-    const responseParse = (await response.json()) as { script?: string };
-    const { script } = responseParse;
+    await createWebPushDomain({ apiKey, domain });
 
-    if (!response.ok || !script) {
-      throw new Error("requestScriptError");
-    }
+    const script = await getWebpushScript({ apiKey, domain });
 
     const metafield = await createMetafield({
       shopId,
@@ -47,9 +34,6 @@ const connectWebPushScriptService = async ({
 
     return true;
   } catch (error: any) {
-    console.log(error);
     throw new Error("requestScriptError");
   }
 };
-
-export default connectWebPushScriptService;

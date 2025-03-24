@@ -14,24 +14,23 @@ import { useTranslation } from "react-i18next";
 import ConnectionStatusList from "./ConnectionStatusList";
 
 export interface ConnectionStatusSectionProps {
-  type: "general" | "webpush";
   isApiKeyActive?: boolean;
-  isScriptActive?: boolean;
+  isGeneralScriptExist?: boolean;
+  isWebPushScriptExist?: boolean;
   isAppExtensionActive?: boolean;
   disabled?: boolean;
 }
 
 const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
-  type,
   isApiKeyActive,
-  isScriptActive,
+  isGeneralScriptExist,
+  isWebPushScriptExist,
   isAppExtensionActive,
   disabled,
 }) => {
   const revalidator = useRevalidator();
   const { t } = useTranslation();
-  const intent =
-    type === "general" ? "connection-status" : "web-push-connection-status";
+  const intent = "connection-status";
 
   const handleDisconect = useCallback(() => {
     window.open(
@@ -45,11 +44,7 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
       <BlockStack gap="300">
         <InlineStack gap="200">
           <Text as="h2" variant="headingMd">
-            {t(
-              type === "general"
-                ? "ConnectionStatusSection.title"
-                : "ConnectionStatusSection.webpushTitle",
-            )}
+            {t("ConnectionStatusSection.title")}
           </Text>
           <Button
             icon={RefreshIcon}
@@ -63,14 +58,24 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
         </InlineStack>
         <ConnectionStatusList
           isApiKeyActive={isApiKeyActive}
-          isScriptActive={isScriptActive}
+          isGeneralScriptExist={isGeneralScriptExist}
+          isWebPushScriptExist={isWebPushScriptExist}
           isAppExtensionActive={isAppExtensionActive}
         />
         <InlineStack wrap={false} gap="100" blockAlign="center">
           <Box width="100%">
-            {isApiKeyActive && isScriptActive && isAppExtensionActive ? (
+            {isApiKeyActive &&
+            isGeneralScriptExist &&
+            isWebPushScriptExist &&
+            isAppExtensionActive ? (
               <Banner tone="success">
                 {t("ConnectionStatusSection.banner.connected")}
+              </Banner>
+            ) : isApiKeyActive &&
+              isAppExtensionActive &&
+              (isGeneralScriptExist || isWebPushScriptExist) ? (
+              <Banner tone="warning">
+                {t("ConnectionStatusSection.banner.incomplete")}
               </Banner>
             ) : (
               <Banner tone="critical">
@@ -80,7 +85,10 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
           </Box>
           <Form method="post" name={intent}>
             <input type="hidden" name="intent" value={intent} />
-            {isApiKeyActive && isScriptActive && isAppExtensionActive ? (
+            {isApiKeyActive &&
+            isGeneralScriptExist &&
+            isWebPushScriptExist &&
+            isAppExtensionActive ? (
               <Button
                 size="large"
                 variant="primary"

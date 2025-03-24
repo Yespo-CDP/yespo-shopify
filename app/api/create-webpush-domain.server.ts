@@ -16,7 +16,7 @@ const SERVICE_WORKER_NAME =
 const SERVICE_WORKER_PATH =
   process.env.SERVICE_WORKER_PATH ?? "/apps/yespo-proxy/";
 
-const createWebPushDomain = async ({
+export const createWebPushDomain = async ({
   apiKey,
   domain,
 }: {
@@ -53,8 +53,7 @@ const createWebPushDomain = async ({
 
     return { result: responseParse?.success?.status ?? "ok" };
   } catch (error: any) {
+    console.error(error);
     throw new Error("createWebPushDomainError");
   }
 };
-
-export default createWebPushDomain;

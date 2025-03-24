@@ -12,7 +12,6 @@ import {
   Image,
   InlineStack,
   Box,
-  Grid,
 } from "@shopify/polaris";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { useTranslation } from "react-i18next";
@@ -93,40 +92,20 @@ export default function Index() {
               />
             </Layout.Section>
             <Layout.Section>
-              <Grid>
-                <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 3, lg: 6, xl: 6 }}>
-                  <ConnectionStatusSection
-                    type="general"
-                    isApiKeyActive={!!account}
-                    isScriptActive={scriptConnectionStatus.isScriptExist}
-                    isAppExtensionActive={
-                      scriptConnectionStatus.isThemeExtensionActive
-                    }
-                    disabled={
-                      isMarketsOverflowing ||
-                      isSubmitting ||
-                      isLoading ||
-                      !shop?.apiKey
-                    }
-                  />
-                </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 3, lg: 6, xl: 6 }}>
-                  <ConnectionStatusSection
-                    type="webpush"
-                    isApiKeyActive={!!account}
-                    isScriptActive={scriptConnectionStatus.isWebPushExist}
-                    isAppExtensionActive={
-                      scriptConnectionStatus.isThemeExtensionActive
-                    }
-                    disabled={
-                      isMarketsOverflowing ||
-                      isSubmitting ||
-                      isLoading ||
-                      !shop?.apiKey
-                    }
-                  />
-                </Grid.Cell>
-              </Grid>
+              <ConnectionStatusSection
+                isApiKeyActive={!!account}
+                isGeneralScriptExist={scriptConnectionStatus?.isGeneralScriptExist}
+                isWebPushScriptExist={scriptConnectionStatus?.isWebPushScriptExist}
+                isAppExtensionActive={
+                  scriptConnectionStatus.isThemeExtensionActive
+                }
+                disabled={
+                  isMarketsOverflowing ||
+                  isSubmitting ||
+                  isLoading ||
+                  !shop?.apiKey
+                }
+              />
             </Layout.Section>
             <Layout.Section>
               <UsefulLinksSection />

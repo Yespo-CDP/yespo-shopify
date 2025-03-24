@@ -1,6 +1,6 @@
 import { getAuthHeader } from "~/utils/auth";
 
-const createDomain = async ({
+export const createGeneralDomain = async ({
   apiKey,
   domain,
 }: {
@@ -31,5 +31,3 @@ const createDomain = async ({
     throw new Error("createDomainError");
   }
 };
-
-export default createDomain;

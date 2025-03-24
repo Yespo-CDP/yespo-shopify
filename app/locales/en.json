@@ -30,16 +30,17 @@
   },
   "ConnectionStatusSection": {
     "title": "Connection status",
-    "webpushTitle": "Connection WebPush status",
     "refresh": "Refresh",
     "list": {
       "apiKey": "Yespo API Key – Enter your Yespo API Key in the 'Account connection' section",
-      "script": "Yespo script – Get your Yespo script, click 'connect'",
+      "generalScript": "General script – Get your Genetal script, click 'connect'",
+      "webpushScript": "WebPush script – Get your WebPush script, click 'connect'",
       "extension": "App extension – Enable the Yespo app extension in your theme settings"
     },
     "banner": {
-      "connected": "Yespo script connected",
-      "disconnected": "Yespo script disconnected"
+      "connected": "Yespo scripts connected",
+      "incomplete": "Yespo scripts incomplete",
+      "disconnected": "Yespo scripts disconnected"
     },
     "button": {
       "connect": "Connect",
