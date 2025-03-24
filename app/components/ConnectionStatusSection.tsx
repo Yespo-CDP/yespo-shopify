@@ -1,4 +1,4 @@
-import { useCallback, type FC } from "react";
+import { type FC } from "react";
 import {
   Button,
   Banner,
@@ -32,13 +32,6 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
   const { t } = useTranslation();
   const intent = "connection-status";
 
-  const handleDisconect = useCallback(() => {
-    window.open(
-      `https://${shopify.config.shop}/admin/themes/current/editor?context=apps`,
-      "_blank",
-    );
-  }, []);
-
   return (
     <Card>
       <BlockStack gap="300">
@@ -62,7 +55,12 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
           isWebPushScriptExist={isWebPushScriptExist}
           isAppExtensionActive={isAppExtensionActive}
         />
-        <InlineStack wrap={false} gap="100" blockAlign="center">
+        <InlineStack
+          wrap={false}
+          gap="100"
+          blockAlign="center"
+          align="space-between"
+        >
           <Box width="100%">
             {isApiKeyActive &&
             isGeneralScriptExist &&
@@ -85,29 +83,20 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
           </Box>
           <Form method="post" name={intent}>
             <input type="hidden" name="intent" value={intent} />
-            {isApiKeyActive &&
-            isGeneralScriptExist &&
-            isWebPushScriptExist &&
-            isAppExtensionActive ? (
-              <Button
-                size="large"
-                variant="primary"
-                tone="critical"
-                disabled={disabled}
-                onClick={handleDisconect}
-              >
-                {t("ConnectionStatusSection.button.disconnect")}
-              </Button>
-            ) : (
-              <Button
-                size="large"
-                variant="primary"
-                tone="success"
-                disabled={disabled}
-                submit
-              >
-                {t("ConnectionStatusSection.button.connect")}
-              </Button>
+            {(!isApiKeyActive ||
+              !isGeneralScriptExist ||
+              !isWebPushScriptExist ||
+              !isAppExtensionActive) && (
+              <Box width="115px">
+                <Button
+                  size="large"
+                  variant="primary"
+                  disabled={disabled}
+                  submit
+                >
+                  {t("ConnectionStatusSection.button.configure")}
+                </Button>
+              </Box>
             )}
           </Form>
         </InlineStack>

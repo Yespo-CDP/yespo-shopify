@@ -5,56 +5,56 @@
   },
   "UnsupportedMarketsSection": {
     "title": "Uwaga!",
-    "description": "Aplikacja obsługuje tylko jeden aktywny rynek.",
-    "button": "Przejdź do ustawień"
+    "description": "App obsługuje tylko jeden aktywny rynek.",
+    "button": "Idź do ustawień"
   },
   "AccountConnectionSection": {
     "title": "Połączenie konta",
-    "refresh": "Refresh",
-    "list": {
-      "apiKey": "Yespo API Key – Enter your Yespo API Key in the 'Account connection' section",
-      "script": "Yespo script – Get your Yespo script, click 'connect'",
-      "extension": "App extension – Enable the Yespo app extension in your theme settings"
-    },
+    "helpText": "Jeśli potrzebujesz pomocy",
     "status": {
-      "active": "Active",
-      "inactive": "Inactive"
+      "active": "Aktywne",
+      "inactive": "Nieaktywne"
     },
-    "account": "Account",
+    "account": "Konto",
     "button": {
-      "validate": "Zweryfikuj",
-      "revalidate": "Ponownie zweryfikować"
+      "connect": "Połącz",
+      "disconnect": "Odłącz"
     },
     "link": "https://docs.yespo.io/reference/api-keys",
-    "success": "API key atualizado",
+    "success": "API key zaktualizowany",
     "errors": {
-      "invalidApiKey": "API key zaktualizowany",
-      "emptyApiKey": "API Key jest wymagany",
+      "invalidApiKey": "Nieprawidłowy klucz API",
+      "emptyApiKey": "Klucz API jest wymagany",
       "unknownError": "Nieznany błąd"
     }
   },
   "ConnectionStatusSection": {
     "title": "Status połączenia",
-    "webpushTitle": "Connection WebPush status",
-    "helpText": "Aktualny status połączenia skryptu",
+    "refresh": "Odśwież",
+    "list": {
+      "apiKey": "Klucz API Yespo – Wpisz swój klucz API w sekcji 'Połączenie konta'",
+      "generalScript": "Skrypt ogólny – Pobierz swój skrypt, kliknij 'Połącz'",
+      "webpushScript": "Skrypt WebPush – Pobierz skrypt WebPush, kliknij 'Połącz'",
+      "extension": "Rozszerzenie app – Włącz rozszerzenie Yespo w ustawieniach motywu"
+    },
     "banner": {
-      "connected": "Skrypt Yespo połączony",
-      "disconnected": "Skrypt Yespo odłączony"
+      "connected": "Skrypty Yespo połączone",
+      "incomplete": "Niekompletne skrypty Yespo",
+      "disconnected": "Skrypty Yespo odłączone"
     },
     "button": {
-      "connect": "Połącz",
-      "disconnect": "Odłącz"
+      "configure": "Konfiguruj"
     },
     "success": "Zaktualizowano pomyślnie.",
     "errors": {
-      "requestScriptError": "Błąd podczas pobierania skryptu",
-      "createDomainError": "Błąd podczas tworzenia domeny",
-      "createWebPushDomainError": "Error creating webpush domain",
-      "connectionError": "Błąd podczas łączenia skryptu"
-    },
-    "UsefulLinksSection": {
-      "title": "Przydatne linki",
-      "helpText": "Przydatne linki i dokumentacja"
+      "requestScriptError": "Błąd pobierania skryptu",
+      "createDomainError": "Błąd tworzenia domeny",
+      "createWebPushDomainError": "Błąd tworzenia domeny WebPush",
+      "connectionError": "Błąd połączenia skryptu"
     }
+  },
+  "UsefulLinksSection": {
+    "title": "Przydatne linki",
+    "helpText": "Przydatne linki i dokumentacja"
   }
 }

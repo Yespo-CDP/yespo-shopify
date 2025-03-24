@@ -1,45 +1,46 @@
 {
   "WelcomeSection": {
-    "title": "Bem-vindo à Yespo App",
+    "title": "Bem-vindo ao Yespo App",
     "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc efficitur orci vel lacus pharetra, vitae gravida arcu facilisis. Maecenas ipsum dui, efficitur in pharetra ac, luctus id urna. In diam purus, lobortis sollicitudin feugiat sit amet, blandit sit amet nunc. Sed molestie id ex vitae viverra. Nulla cursus viverra ipsum eu luctus. Duis non elit ornare, vestibulum sem nec, commodo lectus."
   },
   "UnsupportedMarketsSection": {
     "title": "Atenção!",
     "description": "O app suporta apenas um mercado ativo.",
-    "button": "Vá para as definições"
+    "button": "Ir para configurações"
   },
   "AccountConnectionSection": {
-    "title": "Conexão da conta",
-    "helpText": "Se você precisar de ajuda",
+    "title": "Conexão de conta",
+    "helpText": "Se precisar de ajuda",
     "status": {
-      "active": "Active",
-      "inactive": "Inactive"
+      "active": "Ativo",
+      "inactive": "Inativo"
     },
-    "account": "Account",
+    "account": "Conta",
     "button": {
       "validate": "Validar",
-      "revalidate": "Revalidar"
+      "disconnect": "Desconectar"
     },
     "link": "https://docs.yespo.io/reference/api-keys",
-    "success": "API key atualizado",
+    "success": "API Key atualizada",
     "errors": {
       "invalidApiKey": "API Key inválida",
-      "emptyApiKey": "API Key é obrigatório",
+      "emptyApiKey": "API Key obrigatória",
       "unknownError": "Erro desconhecido"
     }
   },
   "ConnectionStatusSection": {
     "title": "Status da conexão",
-    "webpushTitle": "Connection WebPush status",
-    "refresh": "Refresh",
+    "refresh": "Atualizar",
     "list": {
-      "apiKey": "Yespo API Key – Enter your Yespo API Key in the 'Account connection' section",
-      "script": "Yespo script – Get your Yespo script, click 'connect'",
-      "extension": "App extension – Enable the Yespo app extension in your theme settings"
+      "apiKey": "Chave API Yespo – Insira sua chave API na seção 'Conexão de conta'",
+      "generalScript": "Script geral – Obtenha seu script, clique em 'Conectar'",
+      "webpushScript": "Script WebPush – Obtenha seu script WebPush, clique em 'Conectar'",
+      "extension": "Extensão do app – Ative a extensão Yespo nas configurações do tema"
     },
     "banner": {
-      "connected": "Script Yespo conectado",
-      "disconnected": "Script Yespo desconectado"
+      "connected": "Scripts Yespo conectados",
+      "incomplete": "Scripts Yespo incompletos",
+      "disconnected": "Scripts Yespo desconectados"
     },
     "button": {
       "connect": "Conectar",
@@ -47,14 +48,14 @@
     },
     "success": "Atualizado com sucesso.",
     "errors": {
-      "requestScriptError": "Erro ao solicitar o script",
+      "requestScriptError": "Erro ao solicitar script",
       "createDomainError": "Erro ao criar domínio",
-      "createWebPushDomainError": "Error creating webpush domain",
-      "connectionError": "Erro ao conectar o script"
-    },
-    "UsefulLinksSection": {
-      "title": "Links úteis",
-      "helpText": "Links úteis e documentação"
+      "createWebPushDomainError": "Erro ao criar domínio WebPush",
+      "connectionError": "Erro ao conectar script"
     }
+  },
+  "UsefulLinksSection": {
+    "title": "Links úteis",
+    "helpText": "Links úteis e documentação"
   }
 }

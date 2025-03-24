@@ -4,6 +4,7 @@ import type { Account } from "~/@types/account";
 import { getAccountInfo } from "~/api/get-account-info.server";
 import { shopRepository } from "~/repositories/repositories.server";
 import { connectAccountService } from "~/services/connect-account.server";
+import { disconnectAccountService } from "~/services/disconnect-account.server";
 import { connectGeneralScriptService } from "~/services/connect-general-script.server";
 import { connectWebPushScriptService } from "~/services/connect-webpush-script.server";
 import checkMarketsService from "~/services/check-markets.server";
@@ -51,6 +52,15 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       isThemeExtensionActive?: boolean;
     };
   } = {};
+
+  if (intent === "account-disconnection") {
+    try {
+      await disconnectAccountService({ session, admin });
+    } catch (error: any) {
+      errors.apiKey = t(`AccountConnectionSection.errors.${error.message}`);
+      return { success, errors };
+    }
+  }
 
   if (intent === "account-connection") {
     const apiKey = formData.get("apiKey")?.toString();
