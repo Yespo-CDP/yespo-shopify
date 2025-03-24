@@ -34,7 +34,7 @@ const createWebPushDomain = async ({
     body: JSON.stringify({
       domains: [
         {
-          domain,
+          domain: `https://${domain}`,
           serviceWorkerName: SERVICE_WORKER_NAME,
           serviceWorkerPath: SERVICE_WORKER_PATH,
           serviceWorkerScope: SERVICE_WORKER_PATH,
