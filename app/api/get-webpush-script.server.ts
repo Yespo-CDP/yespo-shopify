@@ -28,7 +28,7 @@ export const getWebpushScript = async ({
 
     return script;
   } catch (error: any) {
-    console.log(error);
+    console.error("Error fetching webpush script:", error);
     throw new Error("requestScriptError");
   }
 };

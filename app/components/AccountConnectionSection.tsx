@@ -42,8 +42,12 @@ const AccountConnectionSection: FC<AccountConnectionSectionProps> = ({
   const handleModalClose = useCallback(() => setModalOpen(false), []);
 
   const handleDisconnect = useCallback(() => {
-    fetcher.submit({ intent: "account-disconnection" }, { method: "post" });
-    setModalOpen(false);
+    try {
+      fetcher.submit({ intent: "account-disconnection" }, { method: "post" });
+      setModalOpen(false);
+    } catch (error) {
+      console.error("Error during account disconnection:", error);
+    }
   }, [fetcher]);
 
   useEffect(() => {

@@ -54,7 +54,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       break;
     default:
       console.warn(`❌ Unhandled webhook topic: ${topic}`);
-      return new Response("Unhandled webhook topic", { status: 400 });
+      return new Response(`Unhandled webhook topic: ${topic}`, { status: 400 });
   }
 
   return new Response("Success", { status: 200 });
