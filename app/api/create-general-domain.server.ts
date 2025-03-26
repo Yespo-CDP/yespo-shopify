@@ -28,6 +28,7 @@ export const createGeneralDomain = async ({
 
     return responseParse;
   } catch (error: any) {
+    console.error("Error creating general domain:", error);
     throw new Error("createDomainError");
   }
 };

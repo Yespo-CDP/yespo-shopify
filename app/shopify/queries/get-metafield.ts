@@ -31,6 +31,11 @@ const getMetafield = async ({
       },
     );
 
+    if (!response) {
+      console.error("Response is null or undefined");
+      return null;
+    }
+
     const responseParse = await response.json();
     const metafieldData = responseParse?.data as MetafieldResponse;
     const metafield = metafieldData?.shop?.metafield;
