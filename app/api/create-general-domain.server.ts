@@ -1,4 +1,5 @@
 import { getAuthHeader } from "~/utils/auth";
+import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 
 export const createGeneralDomain = async ({
   apiKey,
@@ -19,16 +20,15 @@ export const createGeneralDomain = async ({
   };
 
   try {
-    const response = await fetch(url, options);
-    const responseParse = (await response.json()) as { result: string };
+    const response = await fetchWithErrorHandling(url, options);
 
-    if (!response.ok) {
-      throw new Error("createDomainError");
-    }
-
-    return responseParse;
+    return response;
   } catch (error: any) {
-    console.error("Error creating general domain:", error);
-    throw new Error("createDomainError");
+    console.error("Error creating general domain:", error?.message);
+    if (error?.message?.includes("Domain is already registered")) {
+      throw new Error("domainAlreadyRegisteredError");
+    } else {
+      throw new Error("createGeneralDomainError");
+    }
   }
 };

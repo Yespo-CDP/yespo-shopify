@@ -1,4 +1,5 @@
 import { getAuthHeader } from "~/utils/auth";
+import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 
 export const getWebpushScript = async ({
   apiKey,
@@ -18,11 +19,12 @@ export const getWebpushScript = async ({
   };
 
   try {
-    const response = await fetch(url, options);
-    const responseParse = (await response.json()) as { script?: string };
-    const { script } = responseParse;
+    const response = (await fetchWithErrorHandling(url, options)) as {
+      script?: string;
+    };
+    const { script } = response;
 
-    if (!response.ok || !script) {
+    if (!script) {
       throw new Error("requestScriptError");
     }
 

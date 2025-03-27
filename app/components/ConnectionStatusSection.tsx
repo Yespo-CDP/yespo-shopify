@@ -6,18 +6,24 @@ import {
   Text,
   BlockStack,
   InlineStack,
+  InlineError,
   Box,
+  Link,
 } from "@shopify/polaris";
 import { Form, useRevalidator } from "@remix-run/react";
 import { RefreshIcon } from "@shopify/polaris-icons";
 import { useTranslation } from "react-i18next";
 import ConnectionStatusList from "./ConnectionStatusList";
 
+const SUPPORT_LINK =
+  process.env.SUPPORT_LINK ?? "https://docs.yespo.io/docs/what-is-yespo";
+
 export interface ConnectionStatusSectionProps {
   isApiKeyActive?: boolean;
   isGeneralScriptExist?: boolean;
   isWebPushScriptExist?: boolean;
   isAppExtensionActive?: boolean;
+  errors?: { [key: string]: string };
   disabled?: boolean;
 }
 
@@ -26,6 +32,7 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
   isGeneralScriptExist,
   isWebPushScriptExist,
   isAppExtensionActive,
+  errors,
   disabled,
 }) => {
   const revalidator = useRevalidator();
@@ -100,6 +107,24 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
             )}
           </Form>
         </InlineStack>
+        {errors?.script && (
+          <InlineError
+            message={
+              <BlockStack>
+                <Text as="p">{errors.script}</Text>
+                <InlineStack gap="100">
+                  <Text as="p">
+                    {t("ConnectionStatusSection.errors.support")}
+                  </Text>
+                  <Link url={SUPPORT_LINK} target="_blank">
+                    {SUPPORT_LINK}
+                  </Link>
+                </InlineStack>
+              </BlockStack>
+            }
+            fieldID="fieldID"
+          />
+        )}
       </BlockStack>
     </Card>
   );

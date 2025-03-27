@@ -35,6 +35,10 @@ export const connectGeneralScriptService = async ({
     return true;
   } catch (error: any) {
     console.error(`Error connecting general script: ${error.message}`);
-    throw new Error("requestScriptError");
+    if (error?.message) {
+      throw new Error(error.message);
+    } else {
+      throw new Error("requestScriptError");
+    }
   }
 };

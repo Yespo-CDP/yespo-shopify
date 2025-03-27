@@ -5,8 +5,8 @@
   },
   "UnsupportedMarketsSection": {
     "title": "Uwaga!",
-    "description": "App obsługuje tylko jeden aktywny rynek.",
-    "button": "Idź do ustawień"
+    "description": "Aplikacja obsługuje tylko jeden aktywny rynek.",
+    "button": "Przejdź do ustawień"
   },
   "AccountConnectionSection": {
     "title": "Połączenie konta",
@@ -21,36 +21,37 @@
       "disconnect": "Odłącz"
     },
     "link": "https://docs.yespo.io/reference/api-keys",
-    "success": "API key zaktualizowany",
+    "success": "API Key zaktualizowany",
     "errors": {
-      "invalidApiKey": "Nieprawidłowy klucz API",
-      "emptyApiKey": "Klucz API jest wymagany",
+      "invalidApiKey": "Nieprawidłowy API Key",
+      "emptyApiKey": "API Key jest wymagany",
       "unknownError": "Nieznany błąd"
     }
   },
   "ConnectionStatusSection": {
-    "title": "Status połączenia",
+    "title": "Integracja skryptów",
     "refresh": "Odśwież",
     "list": {
-      "apiKey": "Klucz API Yespo – Wpisz swój klucz API w sekcji 'Połączenie konta'",
-      "generalScript": "Skrypt ogólny – Pobierz swój skrypt, kliknij 'Połącz'",
-      "webpushScript": "Skrypt WebPush – Pobierz skrypt WebPush, kliknij 'Połącz'",
-      "extension": "Rozszerzenie app – Włącz rozszerzenie Yespo w ustawieniach motywu"
+      "apiKey": "Klucz Yespo API – wpisz swój klucz Yespo API w sekcji 'Połączenie konta'",
+      "generalScript": "Główny skrypt – pobierz swój skrypt, klikając 'Połącz'",
+      "webpushScript": "Skrypt WebPush – pobierz swój skrypt WebPush, klikając 'Połącz'",
+      "extension": "Rozszerzenie aplikacji – włącz rozszerzenie Yespo w ustawieniach motywu"
     },
     "banner": {
-      "connected": "Skrypty Yespo połączone",
-      "incomplete": "Niekompletne skrypty Yespo",
-      "disconnected": "Skrypty Yespo odłączone"
+      "connected": "Skrypty zainstalowane",
+      "incomplete": "Skrypty częściowo zainstalowane",
+      "disconnected": "Skrypty niezainstalowane"
     },
     "button": {
-      "configure": "Konfiguruj"
+      "configure": "Zainstaluj skrypty"
     },
-    "success": "Zaktualizowano pomyślnie.",
+    "success": "Pomyślnie zainstalowano.",
     "errors": {
-      "requestScriptError": "Błąd pobierania skryptu",
-      "createDomainError": "Błąd tworzenia domeny",
+      "requestScriptError": "Błąd podczas pobierania skryptu",
+      "createGeneralDomainError": "Błąd tworzenia głównej domeny",
       "createWebPushDomainError": "Błąd tworzenia domeny WebPush",
-      "connectionError": "Błąd połączenia skryptu"
+      "domainAlreadyRegisteredError": "Domena już zarejestrowana.",
+      "support": "Skontaktuj się z pomocą techniczną Yespo."
     }
   },
   "UsefulLinksSection": {

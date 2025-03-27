@@ -17,7 +17,7 @@
     },
     "account": "Conta",
     "button": {
-      "validate": "Validar",
+      "connect": "Conectar",
       "disconnect": "Desconectar"
     },
     "link": "https://docs.yespo.io/reference/api-keys",
@@ -29,29 +29,29 @@
     }
   },
   "ConnectionStatusSection": {
-    "title": "Status da conexão",
+    "title": "Integração de scripts",
     "refresh": "Atualizar",
     "list": {
-      "apiKey": "Chave API Yespo – Insira sua chave API na seção 'Conexão de conta'",
-      "generalScript": "Script geral – Obtenha seu script, clique em 'Conectar'",
-      "webpushScript": "Script WebPush – Obtenha seu script WebPush, clique em 'Conectar'",
-      "extension": "Extensão do app – Ative a extensão Yespo nas configurações do tema"
+      "apiKey": "Chave Yespo API – insira sua chave Yespo API na seção 'Conexão de conta'",
+      "generalScript": "Script geral – obtenha seu script clicando em 'Conectar'",
+      "webpushScript": "Script WebPush – obtenha seu script WebPush clicando em 'Conectar'",
+      "extension": "Extensão do app – ative a extensão Yespo nas configurações do tema"
     },
     "banner": {
-      "connected": "Scripts Yespo conectados",
-      "incomplete": "Scripts Yespo incompletos",
-      "disconnected": "Scripts Yespo desconectados"
+      "connected": "Scripts instalados",
+      "incomplete": "Scripts parcialmente instalados",
+      "disconnected": "Scripts não instalados"
     },
     "button": {
-      "connect": "Conectar",
-      "disconnect": "Desconectar"
+      "configure": "Instalar scripts"
     },
-    "success": "Atualizado com sucesso.",
+    "success": "Instalado com sucesso.",
     "errors": {
       "requestScriptError": "Erro ao solicitar script",
-      "createDomainError": "Erro ao criar domínio",
+      "createGeneralDomainError": "Erro ao criar domínio geral",
       "createWebPushDomainError": "Erro ao criar domínio WebPush",
-      "connectionError": "Erro ao conectar script"
+      "domainAlreadyRegisteredError": "Domínio já registrado.",
+      "support": "Entre em contato com o suporte da Yespo."
     }
   },
   "UsefulLinksSection": {

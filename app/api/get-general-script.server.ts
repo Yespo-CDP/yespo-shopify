@@ -1,4 +1,5 @@
 import { getAuthHeader } from "~/utils/auth";
+import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 
 export const getGeneralScript = async ({ apiKey }: { apiKey: string }) => {
   const url = `${process.env.API_URL}/site/script`;
@@ -12,15 +13,11 @@ export const getGeneralScript = async ({ apiKey }: { apiKey: string }) => {
   };
 
   try {
-    const response = await fetch(url, options);
-    const responseParse = await response.text();
+    const response = await fetchWithErrorHandling(url, options);
 
-    if (!response.ok) {
-      throw new Error("requestScriptError");
-    }
-
-    return responseParse;
+    return response;
   } catch (error: any) {
+    console.error("Error fetching general script:", error);
     throw new Error("requestScriptError");
   }
 };

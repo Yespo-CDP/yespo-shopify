@@ -48,9 +48,10 @@
     "success": "Installed successfully.",
     "errors": {
       "requestScriptError": "Error requesting script",
-      "createDomainError": "Error creating domain",
+      "createGeneralDomainError": "Error creating general domain",
       "createWebPushDomainError": "Error creating webpush domain",
-      "connectionError": "Error connecting script"
+      "domainAlreadyRegisteredError": "Domain is already registered.",
+      "support": "Рlease contact Yespo support."
     }
   },
   "UsefulLinksSection": {

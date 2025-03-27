@@ -86,31 +86,27 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         return { success, errors };
       }
 
-      try {
-        await connectGeneralScriptService({
-          apiKey: shop.apiKey,
-          shopId: shop.shopId,
-          domain: shop.domain,
-          admin,
-        });
+      await connectGeneralScriptService({
+        apiKey: shop.apiKey,
+        shopId: shop.shopId,
+        domain: shop.domain,
+        admin,
+      });
 
-        success.connection = {
-          isGeneralScriptExist: true,
-        };
-      } catch (_) {}
+      success.connection = {
+        isGeneralScriptExist: true,
+      };
 
-      try {
-        await connectWebPushScriptService({
-          apiKey: shop.apiKey,
-          shopId: shop.shopId,
-          domain: shop.domain,
-          admin,
-        });
+      await connectWebPushScriptService({
+        apiKey: shop.apiKey,
+        shopId: shop.shopId,
+        domain: shop.domain,
+        admin,
+      });
 
-        success.connection = {
-          isWebPushScriptExist: true,
-        };
-      } catch (_) {}
+      success.connection = {
+        isWebPushScriptExist: true,
+      };
 
       const isThemeExtensionActive = await checkThemeExtensionService({
         admin,

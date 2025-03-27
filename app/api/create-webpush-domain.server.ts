@@ -1,4 +1,5 @@
 import { getAuthHeader } from "~/utils/auth";
+import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 
 interface WebPushDomainResponse {
   errors?: {
@@ -44,16 +45,18 @@ export const createWebPushDomain = async ({
   };
 
   try {
-    const response = await fetch(url, options);
-    const responseParse = (await response.json()) as WebPushDomainResponse;
+    const response = (await fetchWithErrorHandling(
+      url,
+      options,
+    )) as WebPushDomainResponse;
 
-    if (!response.ok) {
+    return { result: response?.success?.status ?? "ok" };
+  } catch (error: any) {
+    console.error("Error creating webpush domain:", error?.message);
+    if (error?.message?.includes("Domain is already registered")) {
+      throw new Error("domainAlreadyRegisteredError");
+    } else {
       throw new Error("createWebPushDomainError");
     }
-
-    return { result: responseParse?.success?.status ?? "ok" };
-  } catch (error: any) {
-    console.error(error);
-    throw new Error("createWebPushDomainError");
   }
 };

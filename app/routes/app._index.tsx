@@ -94,11 +94,16 @@ export default function Index() {
             <Layout.Section>
               <ConnectionStatusSection
                 isApiKeyActive={!!account}
-                isGeneralScriptExist={scriptConnectionStatus?.isGeneralScriptExist}
-                isWebPushScriptExist={scriptConnectionStatus?.isWebPushScriptExist}
+                isGeneralScriptExist={
+                  scriptConnectionStatus?.isGeneralScriptExist
+                }
+                isWebPushScriptExist={
+                  scriptConnectionStatus?.isWebPushScriptExist
+                }
                 isAppExtensionActive={
                   scriptConnectionStatus.isThemeExtensionActive
                 }
+                errors={actionData?.errors}
                 disabled={
                   isMarketsOverflowing ||
                   isSubmitting ||
