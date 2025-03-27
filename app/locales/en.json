@@ -51,6 +51,7 @@
       "createGeneralDomainError": "Error creating general domain",
       "createWebPushDomainError": "Error creating webpush domain",
       "domainAlreadyRegisteredError": "Domain is already registered.",
+      "domainCantBeReachedError": "Domain can't be reached.",
       "support": "Рlease contact Yespo support."
     }
   },

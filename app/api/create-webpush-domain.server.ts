@@ -55,6 +55,8 @@ export const createWebPushDomain = async ({
     console.error("Error creating webpush domain:", error?.message);
     if (error?.message?.includes("Domain is already registered")) {
       throw new Error("domainAlreadyRegisteredError");
+    } else if (error?.message?.includes("Domain can't be reached")) {
+      throw new Error("domainCantBeReachedError");
     } else {
       throw new Error("createWebPushDomainError");
     }

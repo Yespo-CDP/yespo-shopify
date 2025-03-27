@@ -51,6 +51,7 @@
       "createGeneralDomainError": "Erro ao criar domínio geral",
       "createWebPushDomainError": "Erro ao criar domínio WebPush",
       "domainAlreadyRegisteredError": "Domínio já registrado.",
+      "domainCantBeReachedError": "O domínio não pode ser acessado.",
       "support": "Entre em contato com o suporte da Yespo."
     }
   },

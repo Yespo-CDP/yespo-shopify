@@ -51,6 +51,7 @@
       "createGeneralDomainError": "Błąd tworzenia głównej domeny",
       "createWebPushDomainError": "Błąd tworzenia domeny WebPush",
       "domainAlreadyRegisteredError": "Domena już zarejestrowana.",
+      "domainCantBeReachedError": "Domena jest nieosiągalna.",
       "support": "Skontaktuj się z pomocą techniczną Yespo."
     }
   },
