@@ -31,7 +31,7 @@ export default function Index() {
   const shopify = useAppBridge();
   const loaderData = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
-  const { shop, account, isMarketsOverflowing, scriptConnectionStatus } =
+  const { shop, account, isMarketsOverflowing, scriptConnectionStatus, ENV } =
     loaderData;
   const navigation = useNavigation();
   const revalidator = useRevalidator();
@@ -104,6 +104,7 @@ export default function Index() {
                   scriptConnectionStatus.isThemeExtensionActive
                 }
                 errors={actionData?.errors}
+                supportLink={ENV.SUPPORT_LINK}
                 disabled={
                   isMarketsOverflowing ||
                   isSubmitting ||

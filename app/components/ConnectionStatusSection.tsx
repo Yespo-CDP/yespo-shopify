@@ -15,14 +15,12 @@ import { RefreshIcon } from "@shopify/polaris-icons";
 import { useTranslation } from "react-i18next";
 import ConnectionStatusList from "./ConnectionStatusList";
 
-const SUPPORT_LINK =
-  process.env.SUPPORT_LINK ?? "https://docs.yespo.io/docs/what-is-yespo";
-
 export interface ConnectionStatusSectionProps {
   isApiKeyActive?: boolean;
   isGeneralScriptExist?: boolean;
   isWebPushScriptExist?: boolean;
   isAppExtensionActive?: boolean;
+  supportLink: string;
   errors?: { [key: string]: string };
   disabled?: boolean;
 }
@@ -32,6 +30,7 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
   isGeneralScriptExist,
   isWebPushScriptExist,
   isAppExtensionActive,
+  supportLink,
   errors,
   disabled,
 }) => {
@@ -116,8 +115,8 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
                   <Text as="p">
                     {t("ConnectionStatusSection.errors.support")}
                   </Text>
-                  <Link url={SUPPORT_LINK} target="_blank">
-                    {SUPPORT_LINK}
+                  <Link url={supportLink} target="_blank">
+                    {supportLink}
                   </Link>
                 </InlineStack>
               </BlockStack>

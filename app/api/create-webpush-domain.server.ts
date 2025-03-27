@@ -5,7 +5,7 @@ interface WebPushDomainResponse {
   errors?: {
     domain: string;
     message: string;
-  }[];
+  };
   success?: {
     domain: string;
     status: string;
@@ -49,6 +49,10 @@ export const createWebPushDomain = async ({
       url,
       options,
     )) as WebPushDomainResponse;
+
+    if (response?.errors?.message?.includes("Domain can't be reached")) {
+      throw new Error("Domain can't be reached");
+    }
 
     return { result: response?.success?.status ?? "ok" };
   } catch (error: any) {

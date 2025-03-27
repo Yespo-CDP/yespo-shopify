@@ -34,6 +34,11 @@ export const connectWebPushScriptService = async ({
 
     return true;
   } catch (error: any) {
-    throw new Error("requestScriptError");
+    console.error(`Error connecting webpush script: ${error.message}`);
+    if (error?.message) {
+      throw new Error(error.message);
+    } else {
+      throw new Error("requestScriptError");
+    }
   }
 };
