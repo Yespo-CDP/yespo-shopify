@@ -11,12 +11,13 @@ Shopify app for integration Yespo with Shopify
 | **SHOPIFY_API_KEY**       | **Required.** Your shopify app Client ID              | `12e4a9a4*****************eb80fba`                |
 | **SHOPIFY_API_SECRET**    | **Required.** Your shopify app Client secret          | `f7725*********************420ad06`               |
 | **SHOPIFY_APP_URL**       | **Required.** Your shopify app url                    | `https://your-domain.com`                         |
-| **SHOPIFY_YESPO_EXTENSION_ID**    | **Required.** Extension ID (Auto generated after run `deploy` command) | `c10***ff-****-48cc-****-f882b***fa8e` |
+| **SHOPIFY_YESPO_EXTENSION_ID** | **Required.** Extension ID (Auto generated after run `deploy` command) | `c10***ff-****-48cc-****-f882b***fa8e` |
 | **DATABASE_URL**          | **Required.** Database connect url                    | `postgresql://admin:admin@localhost:5432/database`|
 | **SCOPES**                | **Required.** Required access scopes                  | **Must be** `read_markets,read_themes`            |
 | **API_URL**               | **Required.** Yespo api url                           | **Must be** `https://yespo.io/api/v1`             |
 | **GENERAL_SCRIPT_HANDLE** | **Required.** Handle for general metafield and extension name | **Must be** `yespo-script`                |
 | **WEB_PUSH_SCRIPT_HANDLE**| **Required.** Handle for webpush metafield and extension name | **Must be** `yespo-web-push-script`       |
+|**SUPPORT_LINK**           | Yespo support link                                    |`https://docs.yespo.io/docs/what-is-yespo`         |
 
 #### Setup App Proxy
 
