@@ -17,7 +17,8 @@ Shopify app for integration Yespo with Shopify
 | **API_URL**               | **Required.** Yespo api url                           | **Must be** `https://yespo.io/api/v1`             |
 | **GENERAL_SCRIPT_HANDLE** | **Required.** Handle for general metafield and extension name | **Must be** `yespo-script`                |
 | **WEB_PUSH_SCRIPT_HANDLE**| **Required.** Handle for webpush metafield and extension name | **Must be** `yespo-web-push-script`       |
-|**SUPPORT_LINK**           | Yespo support link                                    |`https://docs.yespo.io/docs/what-is-yespo`         |
+| **DOCK_URL**              | Yespo dock link                                        |`https://docs.yespo.io`                           |
+| **PLATFORM_URL**          | Yespo platform link                                    |`https://my.yespo.io`                             |
 
 #### Setup App Proxy
 
