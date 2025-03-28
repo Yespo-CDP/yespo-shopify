@@ -32,10 +32,10 @@
     "title": "Integracja skryptów",
     "refresh": "Odśwież",
     "list": {
-      "first": "Connect your Yespo account using the Full Access API key. You can find the key in your Yespo account: <apiKeysLink>Yespo API Keys</apiKeysLink>.",
-      "second": "Once the account is connected, you need to install the scripts. To do this, click the corresponding button and activate the extension for the theme.",
-      "third": "After the scripts are installed, you can proceed to Yespo for further configuration.",
-      "more": "For more detailed information, follow this <detailedLink>link</detailedLink> or contact Yespo support: <supportLink>Yespo Documentation</supportLink>."
+      "first": "Połącz swoje konto Yespo, używając klucza API z pełnym dostępem. Klucz znajdziesz w swoim koncie Yespo: <apiKeysLink>Yespo API Keys</apiKeysLink>.",
+      "second": "Po połączeniu konta musisz zainstalować skrypty. Aby to zrobić, kliknij odpowiedni przycisk i aktywuj rozszerzenie dla motywu.",
+      "third": "Po zainstalowaniu skryptów możesz przejść do Yespo w celu dalszej konfiguracji.",
+      "more": "Aby uzyskać bardziej szczegółowe informacje, skorzystaj z tego <detailedLink>linku</detailedLink> lub skontaktuj się z pomocą techniczną Yespo: <supportLink>Dokumentacja Yespo</supportLink>."
     },
     "banner": {
       "connected": "Skrypty zainstalowane",

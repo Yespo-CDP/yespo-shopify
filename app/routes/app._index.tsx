@@ -104,7 +104,8 @@ export default function Index() {
                   scriptConnectionStatus.isThemeExtensionActive
                 }
                 errors={actionData?.errors}
-                supportLink={ENV.SUPPORT_LINK}
+                dockUrl={ENV.DOCK_URL}
+                platformUrl={ENV.PLATFORM_URL}
                 disabled={
                   isMarketsOverflowing ||
                   isSubmitting ||

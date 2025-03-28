@@ -20,7 +20,8 @@ export interface ConnectionStatusSectionProps {
   isGeneralScriptExist?: boolean;
   isWebPushScriptExist?: boolean;
   isAppExtensionActive?: boolean;
-  supportLink: string;
+  dockUrl: string;
+  platformUrl: string;
   errors?: { [key: string]: string };
   disabled?: boolean;
 }
@@ -30,7 +31,8 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
   isGeneralScriptExist,
   isWebPushScriptExist,
   isAppExtensionActive,
-  supportLink,
+  dockUrl,
+  platformUrl,
   errors,
   disabled,
 }) => {
@@ -60,8 +62,8 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
           isGeneralScriptExist={isGeneralScriptExist}
           isWebPushScriptExist={isWebPushScriptExist}
           isAppExtensionActive={isAppExtensionActive}
-          supportLink={supportLink}
-          apiKeysLink="https://my.yespo.io/settings-ui/#/api-keys-list"
+          dockUrl={dockUrl}
+          platformUrl={platformUrl}
         />
         <InlineStack
           wrap={false}
@@ -117,8 +119,8 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
                   <Text as="p">
                     {t("ConnectionStatusSection.errors.support")}
                   </Text>
-                  <Link url={supportLink} target="_blank">
-                    {supportLink}
+                  <Link url={`${dockUrl}/docs/what-is-yespo`} target="_blank">
+                    {`${dockUrl}/docs/what-is-yespo`}
                   </Link>
                 </InlineStack>
               </BlockStack>

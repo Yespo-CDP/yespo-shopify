@@ -15,8 +15,8 @@ export interface ConnectionStatusListProps {
   isGeneralScriptExist?: boolean;
   isWebPushScriptExist?: boolean;
   isAppExtensionActive?: boolean;
-  supportLink: string;
-  apiKeysLink: string;
+  dockUrl: string;
+  platformUrl: string;
 }
 
 const ConnectionStatusList: FC<ConnectionStatusListProps> = ({
@@ -24,8 +24,8 @@ const ConnectionStatusList: FC<ConnectionStatusListProps> = ({
   isGeneralScriptExist,
   isWebPushScriptExist,
   isAppExtensionActive,
-  supportLink,
-  apiKeysLink,
+  dockUrl,
+  platformUrl,
 }) => {
   const { t } = useTranslation();
 
@@ -50,7 +50,12 @@ const ConnectionStatusList: FC<ConnectionStatusListProps> = ({
             i18nKey="ConnectionStatusSection.list.first"
             t={t}
             components={{
-              apiKeysLink: <Link url={apiKeysLink} target="_blank" />,
+              apiKeysLink: (
+                <Link
+                  url={`${platformUrl}/settings-ui/#/api-keys-list`}
+                  target="_blank"
+                />
+              ),
             }}
           />
         </Text>
@@ -79,8 +84,15 @@ const ConnectionStatusList: FC<ConnectionStatusListProps> = ({
             i18nKey="ConnectionStatusSection.list.more"
             t={t}
             components={{
-              supportLink: <Link url={supportLink} target="_blank" />,
-              detailedLink: <Link url={supportLink} target="_blank" />,
+              supportLink: (
+                <Link url={`${dockUrl}/docs/what-is-yespo`} target="_blank" />
+              ),
+              detailedLink: (
+                <Link
+                  url={`${dockUrl}/docs/integrating-with-shopify`}
+                  target="_blank"
+                />
+              ),
             }}
           />
         </Text>

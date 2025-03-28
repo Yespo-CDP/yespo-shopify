@@ -35,8 +35,8 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
     scriptConnectionStatus,
     isMarketsOverflowing,
     ENV: {
-      SUPPORT_LINK:
-        process.env.SUPPORT_LINK ?? "https://docs.yespo.io/docs/what-is-yespo",
+      DOCK_URL: process.env.DOCK_URL ?? "https://docs.yespo.io",
+      PLATFORM_URL: process.env.PLATFORM_URL ?? "https://my.yespo.io",
     },
   };
 };
