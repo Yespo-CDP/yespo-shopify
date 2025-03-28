@@ -12,9 +12,10 @@ import {
   Image,
   InlineStack,
   Box,
+  Link,
 } from "@shopify/polaris";
 import { useAppBridge } from "@shopify/app-bridge-react";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { useEffect } from "react";
 
 import UnsupportedMarketsSection from "~/components/UnsupportedMarketsSection";
@@ -80,7 +81,20 @@ export default function Index() {
                     {t("WelcomeSection.title")}
                   </Text>
                 </InlineStack>
-                <Text as="p">{t("WelcomeSection.description")}</Text>
+                <Text as="p">
+                  <Trans
+                    i18nKey="WelcomeSection.description"
+                    t={t}
+                    components={{
+                      supportLink: (
+                        <Link
+                          url={`${ENV.DOCK_URL}/docs/integrating-with-shopify`}
+                          target="_blank"
+                        />
+                      ),
+                    }}
+                  />
+                </Text>
               </BlockStack>
             </Layout.Section>
             <Layout.Section>

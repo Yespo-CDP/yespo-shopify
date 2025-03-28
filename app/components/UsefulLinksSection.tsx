@@ -12,39 +12,11 @@ import { useTranslation } from "react-i18next";
 
 const UsefulLinksSection: FC = () => {
   const { t } = useTranslation();
-
-  const links = [
-    {
-      title: "Yespo documentation",
-      url: "https://yespo.io/support/integration-with-api",
-      description:
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc efficitur orci vel lacus p",
-    },
-    {
-      title: "Yespo documentation",
-      url: "https://yespo.io/support/integration-with-api",
-      description:
-        "n feugiat sit amet, blandit sit amet nunc. Sed molestie id ex vitae viverra. Nulla cu",
-    },
-    {
-      title: "Yespo documentation",
-      url: "https://yespo.io/support/integration-with-api",
-      description:
-        " dolor sit amet, consectetur adipiscing elit. Nunc efficitur orci vel lacus pharetra, vitae gravida arcu facilisis. Maecenas ipsum dui, efficitur in pharetra ac, luctus id urna. In dia",
-    },
-    {
-      title: "Yespo documentation",
-      url: "https://yespo.io/support/integration-with-api",
-      description:
-        "ollicitudin feugiat sit amet, blandit sit amet nunc. Sed molestie id ex vitae viverra. Nulla cursus viverra ipsum eu luctus. Duis non elit ornare, vestibulum sem nec, commodo lectus",
-    },
-    {
-      title: "Yespo documentation",
-      url: "https://yespo.io/support/integration-with-api",
-      description:
-        "sit amet, consectetur adipiscing elit. Nunc efficitur orci vel lacus pharetra, vitae gravida arcu facilisis. Maecenas ipsum dui, efficitur in pharetra ac, luctus id urna. In diam purus",
-    },
-  ];
+  const links = t("UsefulLinksSection.links", { returnObjects: true }) as {
+    description: string;
+    label: string;
+    url: string;
+  }[];
 
   return (
     <Card>
@@ -55,17 +27,17 @@ const UsefulLinksSection: FC = () => {
         <Text as="p" variant="bodyMd">
           {t("UsefulLinksSection.helpText")}
         </Text>
-        <List type="bullet">
+        <List type="bullet" gap="extraTight">
           {links.map((link, index) => (
             <List.Item key={`${link.url}-${index}`}>
               <Box paddingBlockEnd="200">
                 <InlineStack gap="100" wrap={false}>
                   <div style={{ textWrap: "nowrap" }}>
                     <Link url={link.url} target="_blank">
-                      {link.title}
+                      {link.label}
                     </Link>
                   </div>
-                  {"ꟷ"}
+                  {"—"}
                   <Text as="p">{link.description}</Text>
                 </InlineStack>
               </Box>

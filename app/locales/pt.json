@@ -1,7 +1,7 @@
 {
   "WelcomeSection": {
     "title": "Bem-vindo ao Yespo App",
-    "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nunc efficitur orci vel lacus pharetra, vitae gravida arcu facilisis. Maecenas ipsum dui, efficitur in pharetra ac, luctus id urna. In diam purus, lobortis sollicitudin feugiat sit amet, blandit sit amet nunc. Sed molestie id ex vitae viverra. Nulla cursus viverra ipsum eu luctus. Duis non elit ornare, vestibulum sem nec, commodo lectus."
+    "description": "Estamos felizes em ter você aqui! O Yespo foi criado para fornecer às lojas de comércio eletrônico um conjunto completo de ferramentas para automação de marketing. Se tiver alguma dúvida sobre o uso do nosso aplicativo, nosso <supportLink>artigo</supportLink> cobre tudo o que você precisa. Se ainda precisar de ajuda, não hesite em nos enviar um e-mail. Bem-vindo a bordo!"
   },
   "UnsupportedMarketsSection": {
     "title": "Atenção!",
@@ -57,6 +57,48 @@
   },
   "UsefulLinksSection": {
     "title": "Links úteis",
-    "helpText": "Links úteis e documentação"
+    "helpText": "Aqui estão alguns links para ajudá-lo a se familiarizar rapidamente com nosso software:",
+    "links": [
+      {
+        "description": "Explore todos os recursos do Yespo CDP, incluindo IA avançada e 9 canais de marketing.",
+        "label": "https://yespo.io",
+        "url": "https://yespo.io"
+      },
+      {
+        "description": "Guia de Início Rápido",
+        "label": "https://docs.yespo.io/docs/support",
+        "url": "https://docs.yespo.io/docs/support"
+      },
+      {
+        "description": "Configurações do Web Push",
+        "label": "https://docs.yespo.io/docs/web-push",
+        "url": "https://docs.yespo.io/docs/web-push"
+      },
+      {
+        "description": "Configurações de widgets",
+        "label": "https://docs.yespo.io/docs/widgets",
+        "url": "https://docs.yespo.io/docs/widgets"
+      },
+      {
+        "description": "Dados de conformidade com a GDPR",
+        "label": "https://docs.yespo.io/docs/gdpr-compliance",
+        "url": "https://docs.yespo.io/docs/gdpr-compliance"
+      },
+      {
+        "description": "Rastreamento de eventos e comportamento",
+        "label": "https://docs.yespo.io/docs/gdpr-compliance",
+        "url": "https://docs.yespo.io/docs/gdpr-compliance"
+      },
+      {
+        "description": "Guia do Desenvolvedor",
+        "label": "https://docs.yespo.io/reference/getting-started-with-your-api",
+        "url": "https://docs.yespo.io/reference/getting-started-with-your-api"
+      },
+      {
+        "description": "Contato por e-mail",
+        "label": "support@yespo.io",
+        "url": "mailto:support@yespo.io"
+      }
+    ]
   }
 }
