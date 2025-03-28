@@ -1,24 +1,22 @@
-import { useCallback, type FC } from "react";
+import type { FC } from "react";
 import {
   BlockStack,
+  Text,
+  Link,
+  Box,
   InlineStack,
   Icon,
-  Text,
-  Box,
-  Button,
 } from "@shopify/polaris";
-import {
-  CheckCircleIcon,
-  SettingsIcon,
-  XCircleIcon,
-} from "@shopify/polaris-icons";
-import { useTranslation } from "react-i18next";
+import { CheckCircleIcon, XCircleIcon } from "@shopify/polaris-icons";
+import { Trans, useTranslation } from "react-i18next";
 
 export interface ConnectionStatusListProps {
   isApiKeyActive?: boolean;
   isGeneralScriptExist?: boolean;
   isWebPushScriptExist?: boolean;
   isAppExtensionActive?: boolean;
+  supportLink: string;
+  apiKeysLink: string;
 }
 
 const ConnectionStatusList: FC<ConnectionStatusListProps> = ({
@@ -26,82 +24,66 @@ const ConnectionStatusList: FC<ConnectionStatusListProps> = ({
   isGeneralScriptExist,
   isWebPushScriptExist,
   isAppExtensionActive,
+  supportLink,
+  apiKeysLink,
 }) => {
   const { t } = useTranslation();
 
-  const handleExtensionConfig = useCallback(() => {
-    window.open(
-      `https://${shopify.config.shop}/admin/themes/current/editor?context=apps`,
-      "_blank",
-    );
-  }, []);
+  const isScriptsActive =
+    isApiKeyActive &&
+    isGeneralScriptExist &&
+    isWebPushScriptExist &&
+    isAppExtensionActive &&
+    isAppExtensionActive;
 
   return (
     <BlockStack gap="150">
       <InlineStack align="start" blockAlign="center" gap="100" wrap={false}>
-        <div>
+        <Box>
           <Icon
             source={isApiKeyActive ? CheckCircleIcon : XCircleIcon}
             tone={isApiKeyActive ? "textSuccess" : "textCritical"}
           />
-        </div>
-        <Text
-          as="p"
-          variant="bodyXs"
-          tone={isApiKeyActive ? "subdued" : "base"}
-        >
-          {t("ConnectionStatusSection.list.apiKey")}
-        </Text>
-      </InlineStack>
-      <InlineStack align="start" blockAlign="center" gap="100" wrap={false}>
-        <div>
-          <Icon
-            source={isGeneralScriptExist ? CheckCircleIcon : XCircleIcon}
-            tone={isGeneralScriptExist ? "textSuccess" : "textCritical"}
+        </Box>
+        <Text as="p">
+          <Trans
+            i18nKey="ConnectionStatusSection.list.first"
+            t={t}
+            components={{
+              apiKeysLink: <Link url={apiKeysLink} target="_blank" />,
+            }}
           />
-        </div>
-        <Text
-          as="p"
-          variant="bodyXs"
-          tone={isGeneralScriptExist ? "subdued" : "base"}
-        >
-          {t("ConnectionStatusSection.list.generalScript")}
-        </Text>
-      </InlineStack>
-      <InlineStack align="start" blockAlign="center" gap="100" wrap={false}>
-        <div>
-          <Icon
-            source={isWebPushScriptExist ? CheckCircleIcon : XCircleIcon}
-            tone={isWebPushScriptExist ? "textSuccess" : "textCritical"}
-          />
-        </div>
-        <Text
-          as="p"
-          variant="bodyXs"
-          tone={isGeneralScriptExist ? "subdued" : "base"}
-        >
-          {t("ConnectionStatusSection.list.webpushScript")}
         </Text>
       </InlineStack>
       <InlineStack align="start" blockAlign="center" gap="100" wrap={false}>
         <Box>
           <Icon
-            source={isAppExtensionActive ? CheckCircleIcon : XCircleIcon}
-            tone={isAppExtensionActive ? "textSuccess" : "textCritical"}
+            source={isScriptsActive ? CheckCircleIcon : XCircleIcon}
+            tone={isScriptsActive ? "textSuccess" : "textCritical"}
           />
         </Box>
-        <Text
-          as="p"
-          variant="bodyXs"
-          tone={isAppExtensionActive ? "subdued" : "base"}
-        >
-          {t("ConnectionStatusSection.list.extension")}
+        <Text as="p">{t("ConnectionStatusSection.list.second")}</Text>
+      </InlineStack>
+      <InlineStack align="start" blockAlign="center" gap="100" wrap={false}>
+        <Box>
+          <Icon
+            source={isScriptsActive ? CheckCircleIcon : XCircleIcon}
+            tone={isScriptsActive ? "textSuccess" : "textCritical"}
+          />
+        </Box>
+        <Text as="p">{t("ConnectionStatusSection.list.third")}</Text>
+      </InlineStack>
+      <InlineStack align="start" blockAlign="center" gap="100" wrap={false}>
+        <Text as="p">
+          <Trans
+            i18nKey="ConnectionStatusSection.list.more"
+            t={t}
+            components={{
+              supportLink: <Link url={supportLink} target="_blank" />,
+              detailedLink: <Link url={supportLink} target="_blank" />,
+            }}
+          />
         </Text>
-        <Button
-          variant="plain"
-          icon={SettingsIcon}
-          onClick={handleExtensionConfig}
-        />
       </InlineStack>
     </BlockStack>
   );

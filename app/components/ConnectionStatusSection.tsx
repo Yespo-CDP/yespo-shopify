@@ -60,6 +60,8 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
           isGeneralScriptExist={isGeneralScriptExist}
           isWebPushScriptExist={isWebPushScriptExist}
           isAppExtensionActive={isAppExtensionActive}
+          supportLink={supportLink}
+          apiKeysLink="https://my.yespo.io/settings-ui/#/api-keys-list"
         />
         <InlineStack
           wrap={false}

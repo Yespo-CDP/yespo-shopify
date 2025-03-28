@@ -32,10 +32,10 @@
     "title": "Integração de scripts",
     "refresh": "Atualizar",
     "list": {
-      "apiKey": "Chave Yespo API – insira sua chave Yespo API na seção 'Conexão de conta'",
-      "generalScript": "Script geral – obtenha seu script clicando em 'Conectar'",
-      "webpushScript": "Script WebPush – obtenha seu script WebPush clicando em 'Conectar'",
-      "extension": "Extensão do app – ative a extensão Yespo nas configurações do tema"
+      "first": "Connect your Yespo account using the Full Access API key. You can find the key in your Yespo account: <apiKeysLink>Yespo API Keys</apiKeysLink>.",
+      "second": "Once the account is connected, you need to install the scripts. To do this, click the corresponding button and activate the extension for the theme.",
+      "third": "After the scripts are installed, you can proceed to Yespo for further configuration.",
+      "more": "For more detailed information, follow this <detailedLink>link</detailedLink> or contact Yespo support: <supportLink>Yespo Documentation</supportLink>."
     },
     "banner": {
       "connected": "Scripts instalados",
