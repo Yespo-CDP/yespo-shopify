@@ -46,10 +46,7 @@ export default function Index() {
       });
     } else if (actionData?.success?.connection?.ok) {
       if (!actionData?.success?.connection?.isThemeExtensionActive) {
-        window.open(
-          `https://${shopify.config.shop}/admin/themes/current/editor?context=apps`,
-          "_blank",
-        );
+        open("shopify://admin/themes/current/editor?context=apps", "_top");
       }
       shopify.toast.show(t("ConnectionStatusSection.success"), {
         duration: 2000,
