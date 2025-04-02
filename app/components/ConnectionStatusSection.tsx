@@ -7,7 +7,6 @@ import {
   BlockStack,
   InlineStack,
   InlineError,
-  Box,
   Link,
 } from "@shopify/polaris";
 import { Form, useRevalidator } from "@remix-run/react";
@@ -65,13 +64,8 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
           dockUrl={dockUrl}
           platformUrl={platformUrl}
         />
-        <InlineStack
-          wrap={false}
-          gap="100"
-          blockAlign="center"
-          align="space-between"
-        >
-          <Box width="100%">
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <div style={{ flex: 1 }}>
             {isApiKeyActive &&
             isGeneralScriptExist &&
             isWebPushScriptExist &&
@@ -90,26 +84,24 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
                 {t("ConnectionStatusSection.banner.disconnected")}
               </Banner>
             )}
-          </Box>
+          </div>
           <Form method="post" name={intent}>
             <input type="hidden" name="intent" value={intent} />
             {(!isApiKeyActive ||
               !isGeneralScriptExist ||
               !isWebPushScriptExist ||
               !isAppExtensionActive) && (
-              <Box width="115px">
-                <Button
-                  size="large"
-                  variant="primary"
-                  disabled={disabled}
-                  submit
-                >
-                  {t("ConnectionStatusSection.button.configure")}
-                </Button>
-              </Box>
+              <Button
+                size="large"
+                variant="primary"
+                disabled={disabled}
+                submit
+              >
+                {t("ConnectionStatusSection.button.configure")}
+              </Button>
             )}
           </Form>
-        </InlineStack>
+        </div>
         {errors?.script && (
           <InlineError
             message={
