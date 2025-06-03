@@ -45,7 +45,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       break;
     case "CUSTOMERS_REDACT":
       console.log('CUSTOMERS_REDACT')
-      await deleteContactService(payload.customer.id.toString(), store.apiKey)
+      await deleteContactService(payload.customer.id.toString(), store.apiKey, true)
       break;
     case "SHOP_REDACT":
       const shopData = await shopRepository.getShop(shop);

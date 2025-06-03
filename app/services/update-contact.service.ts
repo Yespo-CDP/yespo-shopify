@@ -16,6 +16,11 @@ export const updateContactService = async (payload: any, apiKey: string) => {
       type: 'sms',
       value: payload.phone,
     })
+  } else if (payload.default_address.phone) {
+    channels.push({
+      type: 'sms',
+      value: ayload.default_address.phone,
+    })
   }
 
   if (payload.default_address) {
@@ -27,8 +32,8 @@ export const updateContactService = async (payload: any, apiKey: string) => {
   }
 
   const contactData = {
-    firstName: payload.first_name,
-    lastName: payload.last_name,
+    firstName: payload.first_name || '',
+    lastName: payload.last_name || '',
     channels,
     externalCustomerId: payload.id.toString(),
     address: address

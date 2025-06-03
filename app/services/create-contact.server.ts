@@ -18,8 +18,8 @@ export const createContactService = async (payload: any, apiKey: string) => {
   }
 
   const contactData = {
-    firstName: payload.first_name,
-    lastName: payload.last_name,
+    firstName: payload.first_name || '',
+    lastName: payload.last_name || '',
     channels,
     externalCustomerId: payload.id.toString(),
   }

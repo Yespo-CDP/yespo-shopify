@@ -10,6 +10,7 @@ export const deleteContact = async ({
   externalCustomerId: string,
   erase: boolean
 }): Promise<{ result: string }> => {
+  console.log('DELETE CONTACT REQUEST EXTERNAL ID', externalCustomerId )
   const url = `${process.env.API_URL}/contact?externalCustomerId=${externalCustomerId}&erase=${erase}`;
   const authHeader = getAuthHeader(apiKey);
   const options = {
@@ -22,6 +23,7 @@ export const deleteContact = async ({
 
   try {
     const response = await fetchWithErrorHandling(url, options);
+    console.log('DELETE CONTACT RESPONSE DATA',  JSON.stringify(response, null, 2));
     return response;
   } catch (error: any) {
     console.error("Error deleting contact:", error?.message);
