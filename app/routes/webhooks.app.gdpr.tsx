@@ -11,7 +11,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const signature = request.headers.get("x-shopify-hmac-sha256");
   const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
 
-  const { shop, topic } = await authenticate.webhook(requestClone);
+  const { shop, topic, payload } = await authenticate.webhook(requestClone);
   console.log(`Received ${topic} webhook for ${shop}`);
 
   if (!SHOPIFY_API_SECRET) {
@@ -31,6 +31,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return new Response("Webhook HMAC validation failed", { status: 401 });
   }
 
+  const store = await shopRepository.getShop(shop);
+
+  if (!store || !store?.apiKey) {
+    return new Response("Success", {status: 200});
+  }
+
   switch (topic) {
     case "CUSTOMERS_DATA_REQUEST":
       console.log(
@@ -38,9 +44,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       );
       break;
     case "CUSTOMERS_REDACT":
-      console.log(
-        `📌 No customer data stored. Ignoring redaction request for shop: ${shop}`,
-      );
+      console.log('CUSTOMERS_REDACT')
+      await deleteContactService(payload.customer.id.toString(), store.apiKey)
       break;
     case "SHOP_REDACT":
       const shopData = await shopRepository.getShop(shop);
