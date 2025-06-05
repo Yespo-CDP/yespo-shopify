@@ -6,9 +6,9 @@ import {updateContactService} from "~/services/update-contact.service";
 import {deleteContactService} from "~/services/delete-contact.service";
 
 export const action = async ({request}: ActionFunctionArgs) => {
-  const { topic, session, payload } =
+  const { topic, session, payload, webhookId } =
     await authenticate.webhook(request)
-  console.log(`Received ${topic} webhook for ${session.shop}`);
+  console.log(`Received ${topic} webhook for ${session.shop} webhookId ${webhookId}`);
 
   const shop = await shopRepository.getShop(session.shop);
 

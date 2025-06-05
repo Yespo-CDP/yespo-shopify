@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 
 import { shopRepository } from "~/repositories/repositories.server";
 import { authenticate } from "../shopify.server";
+import {deleteContactService} from "~/services/delete-contact.service";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const requestClone = request.clone();
