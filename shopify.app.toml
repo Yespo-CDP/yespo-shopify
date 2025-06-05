@@ -8,7 +8,7 @@ embedded = true
 
 [build]
 automatically_update_urls_on_dev = true
-dev_store_url = "yespo-dev-store.myshopify.com"
+dev_store_url = "yespo-dev-store-2.myshopify.com"
 include_config_on_deploy = true
 
 [access_scopes]
