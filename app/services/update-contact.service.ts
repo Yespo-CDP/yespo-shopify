@@ -1,8 +1,9 @@
 import {updateContact} from "~/api/update-contact";
+import type {Contact} from "~/@types/contact";
 
 export const updateContactService = async (payload: any, apiKey: string) => {
   const channels = []
-  let address = {}
+  let address = undefined
 
   if (payload.email) {
     channels.push({
@@ -31,7 +32,7 @@ export const updateContactService = async (payload: any, apiKey: string) => {
     }
   }
 
-  const contactData = {
+  const contactData: Contact = {
     firstName: payload.first_name || '',
     lastName: payload.last_name || '',
     channels,

@@ -27,6 +27,12 @@ export const updateContact = async ({
     return response;
   } catch (error: any) {
     console.error("Error updating contact:", error?.message);
-    throw new Error(error.message);
+    if (error?.message?.includes('Duplicated request')) {
+      return {
+        result: "Duplicated request",
+      }
+    } else {
+      throw new Error(error.message);
+    }
   }
 };

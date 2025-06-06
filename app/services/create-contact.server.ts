@@ -29,7 +29,7 @@ export const createContactService = async (payload: any, apiKey: string) => {
       apiKey,
       contactData
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
   }
 }

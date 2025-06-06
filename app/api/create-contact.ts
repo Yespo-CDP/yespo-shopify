@@ -27,6 +27,12 @@ export const createContact = async ({
     return response;
   } catch (error: any) {
     console.error("Error creating contact:", error?.message);
-    throw new Error(error.message);
+    if (error?.message?.includes('Duplicated request')) {
+      return {
+        result: "Duplicated request",
+      }
+    } else {
+      throw new Error(error.message);
+    }
   }
 };
