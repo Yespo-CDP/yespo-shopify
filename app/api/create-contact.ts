@@ -8,7 +8,7 @@ export const createContact = async ({
                                           }: {
   apiKey: string;
   contactData: Contact
-}): Promise<{ result: string }> => {
+}): Promise<void> => {
   console.log('CREATE CONTACT REQUEST DATA', JSON.stringify(contactData, null, 2));
   const url = `${process.env.API_URL}/contact`;
   const authHeader = getAuthHeader(apiKey);
@@ -27,11 +27,7 @@ export const createContact = async ({
     return response;
   } catch (error: any) {
     console.error("Error creating contact:", error?.message);
-    if (error?.message?.includes('Duplicated request')) {
-      return {
-        result: "Duplicated request",
-      }
-    } else {
+    if (!error?.message?.includes('Duplicated request')) {
       throw new Error(error.message);
     }
   }
