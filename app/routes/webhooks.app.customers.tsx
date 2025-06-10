@@ -3,7 +3,6 @@ import { authenticate } from '../shopify.server'
 import {shopRepository} from "~/repositories/repositories.server";
 import {createContactService} from "~/services/create-contact.server";
 import {updateContactService} from "~/services/update-contact.service";
-import {deleteContactService} from "~/services/delete-contact.service";
 
 export const action = async ({request}: ActionFunctionArgs) => {
   const { topic, session, payload, webhookId } =
@@ -27,10 +26,6 @@ export const action = async ({request}: ActionFunctionArgs) => {
       await updateContactService(payload, shop.apiKey)
       break;
 
-    case "CUSTOMERS_DELETE":
-      console.log(`CUSTOMERS_DELETE`);
-      await deleteContactService(payload.id.toString(), shop.apiKey, false)
-      break;
     default:
       console.warn(`❌ Unhandled webhook topic: ${topic}`);
       return new Response(`Unhandled webhook topic: ${topic}`, {status: 400});
