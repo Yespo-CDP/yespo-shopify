@@ -39,7 +39,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
   switch (topic) {
     case "CUSTOMERS_DATA_REQUEST":
-      console.log('CUSTOMERS_DATA_REQUEST', JSON.stringify(payload, null, 2))
       const customerDataRequest = {
         webhookId,
         topic,
