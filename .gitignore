@@ -19,6 +19,8 @@ database.sqlite
 
 
 /extensions/*/dist
+# JetBrains IDE
+.idea/
 
 # Ignore shopify files created during app dev
 .shopify/*
