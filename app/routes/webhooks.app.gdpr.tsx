@@ -1,8 +1,9 @@
 import type { ActionFunctionArgs } from "@remix-run/node";
 import crypto from "node:crypto";
 
-import { shopRepository } from "~/repositories/repositories.server";
+import {customerDataRepository, shopRepository} from "~/repositories/repositories.server";
 import { authenticate } from "../shopify.server";
+import {deleteContactService} from "~/services/delete-contact.service";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   const requestClone = request.clone();
@@ -11,8 +12,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const signature = request.headers.get("x-shopify-hmac-sha256");
   const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
 
-  const { shop, topic } = await authenticate.webhook(requestClone);
+  const { shop, topic, payload, webhookId } = await authenticate.webhook(requestClone);
   console.log(`Received ${topic} webhook for ${shop}`);
+  console.log('payload', JSON.stringify(payload, null, 2))
 
   if (!SHOPIFY_API_SECRET) {
     console.error(
@@ -30,17 +32,28 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     console.error("Webhook HMAC validation failed: signature does not match.");
     return new Response("Webhook HMAC validation failed", { status: 401 });
   }
+  const store = await shopRepository.getShop(shop);
 
+  if (!store || !store?.apiKey) {
+    return new Response("Success", {status: 200});
+  }
   switch (topic) {
     case "CUSTOMERS_DATA_REQUEST":
-      console.log(
-        `📌 No customer data stored. Responding to data request for shop: ${shop}`,
-      );
+      const customerDataRequest = {
+        webhookId,
+        topic,
+        payload: JSON.stringify(payload),
+        shop: {
+          connect: {
+            id: store.id
+          }
+        }
+      }
+      await customerDataRepository.createCustomerDataRequest(customerDataRequest)
       break;
     case "CUSTOMERS_REDACT":
-      console.log(
-        `📌 No customer data stored. Ignoring redaction request for shop: ${shop}`,
-      );
+      console.log('CUSTOMERS_REDACT')
+      await deleteContactService(payload.customer.id.toString(), store.apiKey, true)
       break;
     case "SHOP_REDACT":
       const shopData = await shopRepository.getShop(shop);

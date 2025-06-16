@@ -42,4 +42,18 @@ model Shop {
   active    Boolean?  @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime? @updatedAt
+
+  customerDataRequests GdprCustomerDataRequest[]
+}
+
+model GdprCustomerDataRequest{
+  id                    Int       @id @default(autoincrement())
+  webhookId             String    @unique
+  topic                 String
+  payload               Json
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime? @updatedAt
+
+  shop                  Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopId                Int
 }
