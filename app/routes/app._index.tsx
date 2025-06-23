@@ -23,6 +23,7 @@ import AccountConnectionSection from "~/components/AccountConnectionSection";
 import ConnectionStatusSection from "~/components/ConnectionStatusSection";
 import UsefulLinksSection from "~/components/UsefulLinksSection";
 import { loaderHandler, actionHandler } from "~/lib/app.server";
+import WebTrackingSection from "~/components/WebTrackingSection";
 
 export const loader = loaderHandler;
 export const action = actionHandler;
@@ -124,6 +125,9 @@ export default function Index() {
                   !shop?.apiKey
                 }
               />
+            </Layout.Section>
+            <Layout.Section>
+              <WebTrackingSection webTrackerEnabled={shop?.isWebTrackingEnabled ?? false} disabled={isMarketsOverflowing || isSubmitting || isLoading || !account}/>
             </Layout.Section>
             <Layout.Section>
               <UsefulLinksSection />

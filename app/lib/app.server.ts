@@ -12,6 +12,7 @@ import checkScriptConnectionService from "~/services/check-script-connection.ser
 import checkThemeExtensionService from "~/services/check-theme-extension.server";
 import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
+import {toggleWebTrackingServer} from "~/services/toggleWebTracking.server";
 
 export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
@@ -46,7 +47,11 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
   const t = await i18n.getFixedT(request);
   const formData = await request.formData();
   const intent = formData.get("intent");
-  const errors: { apiKey?: string; script?: string } = {};
+  const errors: {
+    apiKey?: string;
+    script?: string;
+    webTracking?: string
+  } = {};
   const success: {
     apiKey?: boolean;
     connection?: {
@@ -123,6 +128,46 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       };
     } catch (error: any) {
       errors.script = t(`ConnectionStatusSection.errors.${error.message}`);
+      return { success, errors };
+    }
+  }
+
+  if (intent === 'tracking-enable') {
+    try {
+      const shop = await shopRepository.getShop(session.shop);
+      if (!shop) {
+        errors.webTracking = t("General.errors.shopNotFound");
+        return { success, errors };
+      }
+
+      await toggleWebTrackingServer({
+        shopId: shop.shopId,
+        domain: shop.domain,
+        enabled: true,
+        admin
+      })
+    } catch (error: any) {
+      errors.webTracking = t("WebTrackingSection.errors.notEnabled");
+      return { success, errors };
+    }
+  }
+
+  if (intent === 'tracking-disable') {
+    try {
+      const shop = await shopRepository.getShop(session.shop);
+      if (!shop) {
+        errors.webTracking = t("General.errors.shopNotFound");
+        return { success, errors };
+      }
+
+      await toggleWebTrackingServer({
+        shopId: shop.shopId,
+        domain: shop.domain,
+        enabled: false,
+        admin
+      })
+    } catch (error: any) {
+      errors.webTracking = t("WebTrackingSection.errors.notDisabled");
       return { success, errors };
     }
   }

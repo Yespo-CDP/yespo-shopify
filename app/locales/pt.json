@@ -28,6 +28,20 @@
       "unknownError": "Erro desconhecido"
     }
   },
+  "WebTrackingSection": {
+    "title": "Rastreamento da Web",
+    "description": "O rastreamento da Web permite analisar o comportamento do usuário em seu site",
+    "enable": "Habilitar",
+    "disable": "Desativar",
+    "status": {
+      "enabled": "Habilitado",
+      "disabled": "Desabilitado"
+    },
+    "errors": {
+      "notEnabled": "Rastreamento da Web não ativado",
+      "notDisabled": "Rastreamento da Web não desativado"
+    }
+  },
   "ConnectionStatusSection": {
     "title": "Integração de scripts",
     "refresh": "Atualizar",
@@ -100,5 +114,10 @@
         "url": "mailto:support@yespo.io"
       }
     ]
+  },
+  "General": {
+    "errors": {
+      "shopNotFound": "A loja não encontrada"
+    }
   }
 }
