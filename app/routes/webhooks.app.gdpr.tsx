@@ -49,7 +49,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           }
         }
       }
-      console.log('customerDataRequest', JSON.stringify(customerDataRequest, null, 2))
       await customerDataRepository.createCustomerDataRequest(customerDataRequest)
       break;
     case "CUSTOMERS_REDACT":
