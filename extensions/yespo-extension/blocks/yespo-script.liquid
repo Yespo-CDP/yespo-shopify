@@ -1,5 +1,6 @@
 {%- assign yespo_script = shop.metafields['$app'].yespo-script -%}
 {%- assign yespo_web_push_script = shop.metafields['$app'].yespo-web-push-script -%}
+{%- assign yespo_web_tracking_enabled = shop.metafields['$app'].web-tracking-enabled -%}
 
 {% if yespo_script != blank %}
   {{ yespo_script }}
@@ -7,6 +8,18 @@
 
 {% if yespo_web_push_script != blank %}
   {{ yespo_web_push_script }}
+{% endif %}
+
+
+<script>
+  const trackingEnabled = "{{ yespo_web_tracking_enabled }}";
+  console.log("Web tracking enabled:", trackingEnabled);
+</script>
+
+{% if yespo_web_tracking_enabled %}
+  <script>
+    console.log('ENABLED')
+  </script>
 {% endif %}
 
 {% schema %}

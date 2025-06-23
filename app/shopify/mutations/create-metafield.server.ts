@@ -5,11 +5,13 @@ async function createMetafield({
   shopId,
   key,
   value,
+  type = "single_line_text_field"
 }: {
   admin: any;
   shopId: string;
   key: string;
   value: string;
+  type?: string
 }): Promise<Metafield | null> {
   try {
     const response = await admin.graphql(
@@ -38,7 +40,7 @@ async function createMetafield({
             {
               key,
               namespace: "$app",
-              type: "single_line_text_field",
+              type: type,
               value: value.replace(/\n/g, "").replace(/\s+/g, " ").trim(),
               ownerId: shopId,
             },
@@ -51,6 +53,7 @@ async function createMetafield({
     const metafieldData = responseParse?.data as {
       metafieldsSet: { metafields: Metafield[] };
     };
+    console.log('metafieldData', JSON.stringify(metafieldData, null, 2))
     const metafield = metafieldData?.metafieldsSet?.metafields[0];
 
     return metafield ?? null;

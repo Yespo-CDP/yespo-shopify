@@ -11,6 +11,8 @@ const GENERAL_SCRIPT_HANDLE =
   process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
 const WEB_PUSH_SCRIPT_HANDLE =
   process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
+const WEB_TRACKING_ENABLED =
+  process.env.WEB_TRACKING_ENABLED ?? "web-tracking-enabled";
 
 const afterAuth = async ({
   session,
@@ -54,6 +56,11 @@ const afterAuth = async ({
     key: WEB_PUSH_SCRIPT_HANDLE,
   });
 
+  const webTrackingDefinition = await getMetafieldDefinition({
+    admin,
+    key: WEB_TRACKING_ENABLED,
+  });
+
   /* Create definition for general yespo script */
   if (!generalDefinition) {
     await createMetafieldDefinition({
@@ -75,11 +82,22 @@ const afterAuth = async ({
     });
   }
 
+  if (!webTrackingDefinition) {
+    await createMetafieldDefinition({
+      admin,
+      key: WEB_TRACKING_ENABLED,
+      name: "Web tracking enabled",
+      type: "boolean",
+      description:
+        "This is a app metafield definition for Yespo web tracking capability",
+    });
+  }
+
   if (!shopObject?.apiKey && shop?.id) {
     await deleteMetafields({
       admin,
       ownerId: shop?.id,
-      keys: [GENERAL_SCRIPT_HANDLE, WEB_PUSH_SCRIPT_HANDLE],
+      keys: [GENERAL_SCRIPT_HANDLE, WEB_PUSH_SCRIPT_HANDLE, WEB_TRACKING_ENABLED],
     });
   }
 
