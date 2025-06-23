@@ -26,20 +26,20 @@ redirect_urls = [
 api_version = "2025-01"
 
   [[webhooks.subscriptions]]
-  uri = "/webhooks/app/gdpr"
+  uri = "//webhooks/app/gdpr"
   compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
 
   [[webhooks.subscriptions]]
   topics = [ "customers/create", "customers/update" ]
-  uri = "/webhooks/app/customers"
+  uri = "///webhooks/app/customers"
 
   [[webhooks.subscriptions]]
   topics = [ "app/scopes_update" ]
-  uri = "/webhooks/app/scopes_update"
+  uri = "///webhooks/app/scopes_update"
 
   [[webhooks.subscriptions]]
   topics = [ "app/uninstalled" ]
-  uri = "/webhooks/app/uninstalled"
+  uri = "///webhooks/app/uninstalled"
 
 [app_proxy]
 url = "https://bobcat-noted-moose.ngrok-free.app"
