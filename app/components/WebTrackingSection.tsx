@@ -5,15 +5,26 @@ import {useCallback} from "react";
 
 export interface WebTrackingSectionProps {
   disabled?: boolean;
-  webTrackerEnabled?: boolean
+  webTrackerEnabled?: boolean;
+  isGeneralScriptExist?: boolean;
+  isWebPushScriptExist?: boolean;
+  isAppExtensionActive?: boolean;
 }
 
 const WebTrackingSection = ({
   disabled,
-  webTrackerEnabled = false
+  webTrackerEnabled = false,
+  isGeneralScriptExist,
+  isWebPushScriptExist,
+  isAppExtensionActive
 }: WebTrackingSectionProps) => {
   const {t} = useTranslation();
   const fetcher = useFetcher();
+
+  const isScriptsActive =
+    isGeneralScriptExist &&
+    isWebPushScriptExist &&
+    isAppExtensionActive;
 
   const handleTrackingToggle = useCallback(
     (intent: "tracking-enable" | "tracking-disable") => {
@@ -34,7 +45,7 @@ const WebTrackingSection = ({
             <Text as="h2" variant="headingMd">
               {t("WebTrackingSection.title")}
             </Text>
-            {webTrackerEnabled ? (
+            {webTrackerEnabled && isScriptsActive ? (
               <Badge tone="success" progress="complete">
                 {t("WebTrackingSection.status.enabled")}
               </Badge>
@@ -50,7 +61,7 @@ const WebTrackingSection = ({
         </BlockStack>
 
         {
-          webTrackerEnabled ? (
+          webTrackerEnabled && isScriptsActive ? (
             <Button
               size="large"
               variant="primary"
@@ -68,7 +79,7 @@ const WebTrackingSection = ({
               tone="success"
               onClick={() => handleTrackingToggle("tracking-enable")}
               loading={fetcher.state === "submitting"}
-              disabled={disabled || fetcher.state === "submitting"}
+              disabled={disabled || !isScriptsActive || fetcher.state === "submitting"}
             >
               {t("WebTrackingSection.enable")}
             </Button>
