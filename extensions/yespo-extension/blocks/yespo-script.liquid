@@ -10,6 +10,12 @@
   {{ yespo_web_push_script }}
 {% endif %}
 
+<script id="data" type="application/json">
+  {
+    "pageTemplate": "{{ template.name }}"
+  }
+</script>
+
 
 <script>
   const trackingEnabled = "{{ yespo_web_tracking_enabled }}";
@@ -20,6 +26,7 @@
   <script>
     console.log('ENABLED')
   </script>
+  <script src="{{ "web-tracking.js" | asset_url }}" defer></script>
 {% endif %}
 
 {% schema %}
