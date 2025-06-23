@@ -127,7 +127,19 @@ export default function Index() {
               />
             </Layout.Section>
             <Layout.Section>
-              <WebTrackingSection webTrackerEnabled={shop?.isWebTrackingEnabled ?? false} disabled={isMarketsOverflowing || isSubmitting || isLoading || !account}/>
+              <WebTrackingSection
+                isGeneralScriptExist={
+                  scriptConnectionStatus?.isGeneralScriptExist
+                }
+                isWebPushScriptExist={
+                  scriptConnectionStatus?.isWebPushScriptExist
+                }
+                isAppExtensionActive={
+                  scriptConnectionStatus.isThemeExtensionActive
+                }
+                webTrackerEnabled={shop?.isWebTrackingEnabled ?? false}
+
+                disabled={isMarketsOverflowing || isSubmitting || isLoading || !account}/>
             </Layout.Section>
             <Layout.Section>
               <UsefulLinksSection />
