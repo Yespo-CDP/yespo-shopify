@@ -13,7 +13,20 @@
 <script id="data" type="application/json">
   {
     "pageTemplate": "{{ template.name }}",
-    "product": {{ product | json }}
+    "product": {{ product | json }},
+    "customer":
+      {% if customer %}
+        {
+          "id": {{ customer.id | json }},
+          "email": "{{ customer.email }}",
+          "firstName": "{{ customer.first_name }}",
+          "lastName": "{{ customer.last_name }}",
+          "phone": {{ customer.phone | json }},
+          "city": "{{ customer.default_address.city | default: "" }}"
+        }
+      {% else %}
+        null
+      {% endif %}
   }
 </script>
 
@@ -26,10 +39,8 @@
       email: "{{ customer.email }}",
       firstName: "{{ customer.first_name }}",
       lastName: "{{ customer.last_name }}",
-      tags: {{ customer.tags | json }},
-      ordersCount: {{ customer.orders_count }},
-      totalSpent: {{ customer.total_spent | json }},
-      phone: {{ customer.phone | json }}
+      phone: {{ customer.phone | json }},
+      city: "{{ customer.default_address.city }}"
     };
   console.log('CUSTOMER',customerData )
 </script>
