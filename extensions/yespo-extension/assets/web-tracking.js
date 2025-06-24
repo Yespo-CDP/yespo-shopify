@@ -1,3 +1,5 @@
+const HOST = 'https://bobcat-noted-moose.ngrok-free.app'
+
 function sendPage404Event(eS, pageTemplate) {
   if (pageTemplate === '404') {
     console.log('404 PAGE')
@@ -39,7 +41,42 @@ function sendCustomerEvent(eS, customer) {
   }
 }
 
-function processEvents (d,s) {
+function getCartToken() {
+  return fetch('/cart.js')
+    .then(res => res.json())
+    .then(cart => {
+      console.log("Updated cart token:", cart.token);
+      return cart.token
+    });
+}
+
+function getCookieValue(cookie, name) {
+  const match = cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  return match ? match[2] : null;
+}
+
+async function sendTrackingData(domain, cookie) {
+  const sc = getCookieValue(cookie, 'sc')
+  const cartToken = await getCartToken()
+
+  fetch(`${HOST}/public/event-data`, {
+    method: 'POST',
+    body: JSON.stringify({
+      shop: domain,
+      sc,
+      cartToken
+    }),
+  })
+    .then(res => res.json())
+    .then(data => {
+      console.log('✅ Tracking sent:', data);
+    })
+    .catch(err => {
+      console.error('❌ Tracking failed:', err);
+    });
+}
+
+async function processEvents (d,s) {
   window.eS = window.eS || function () {
     (window.eS.q = window.eS.q || []).push(arguments);
   };
@@ -53,8 +90,9 @@ function processEvents (d,s) {
   sendMainPageEvent(window.eS, data.pageTemplate)
   sendProductPageEvent(window.eS, data.pageTemplate, data.product)
   sendCustomerEvent(window.eS, data.customer)
+  await sendTrackingData(data.domain, d.cookie)
 }
-(function(d,s){
+(async function(d,s){
   console.log("EVENT SCRIPT STARTED")
-  processEvents(d, s)
+  await processEvents(d, s)
 })(document, 'script');

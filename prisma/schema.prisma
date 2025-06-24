@@ -45,6 +45,7 @@ model Shop {
   updatedAt              DateTime? @updatedAt
 
   customerDataRequests GdprCustomerDataRequest[]
+  eventsData            EventData[]
 }
 
 model GdprCustomerDataRequest{
@@ -57,4 +58,15 @@ model GdprCustomerDataRequest{
 
   shop                  Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   shopId                Int
+}
+
+model EventData {
+   cartToken             String   @id
+   sc                    String
+   ttl                   DateTime
+   createdAt             DateTime  @default(now())
+   updatedAt             DateTime? @updatedAt
+
+   shop                  Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+   shopId                Int
 }
