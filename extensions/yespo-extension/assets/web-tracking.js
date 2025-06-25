@@ -41,13 +41,39 @@ function sendCustomerEvent(eS, customer) {
   }
 }
 
-function getCartToken() {
+function getCart() {
   return fetch('/cart.js')
     .then(res => res.json())
-    .then(cart => {
-      console.log("Updated cart token:", cart.token);
-      return cart.token
+    .then(cart => cart);
+}
+function updateCart() {
+  return fetch('/cart/update.js', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ })
+  })
+    .then(response => {
+      return response.json();
+    })
+    .then(cart => cart)
+    .catch((error) => {
+      console.error('Error:', error);
     });
+}
+
+async function getCartToken() {
+  const cart = await getCart()
+
+  if (!cart.token.includes('?key')) {
+    const updatedCart = await updateCart()
+    console.log('UPDATE CART', updatedCart)
+    return updatedCart.token
+  }
+
+  console.log('CART', cart)
+  return cart.token
 }
 
 function getCookieValue(cookie, name) {
@@ -58,13 +84,14 @@ function getCookieValue(cookie, name) {
 async function sendTrackingData(domain, cookie) {
   const sc = getCookieValue(cookie, 'sc')
   const cartToken = await getCartToken()
+  const token = cartToken.split('?')
 
   fetch(`${HOST}/public/event-data`, {
     method: 'POST',
     body: JSON.stringify({
       shop: domain,
       sc,
-      cartToken
+      cartToken: token[0]
     }),
   })
     .then(res => res.json())

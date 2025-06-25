@@ -13,7 +13,7 @@ include_config_on_deploy = true
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "read_customers,read_markets,read_themes,write_app_proxy"
+scopes = "read_customers,read_markets,read_orders,read_themes,write_app_proxy"
 
 [auth]
 redirect_urls = [
@@ -28,6 +28,10 @@ api_version = "2025-01"
   [[webhooks.subscriptions]]
   uri = "/webhooks/app/gdpr"
   compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+
+  [[webhooks.subscriptions]]
+  topics = [ "carts/update" ]
+  uri = "/webhooks/app/carts"
 
   [[webhooks.subscriptions]]
   topics = [ "customers/create", "customers/update" ]
