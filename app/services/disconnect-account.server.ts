@@ -13,7 +13,7 @@ export const disconnectAccountService = async ({
   session: any;
   admin: any;
 }) => {
-  await shopRepository.updateShop(session.shop, { apiKey: "" });
+  await shopRepository.updateShop(session.shop, { apiKey: "", isWebTrackingEnabled: false });
   const shop = await shopRepository.getShop(session.shop);
   if (shop?.shopId) {
     await deleteMetafields({
