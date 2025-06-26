@@ -105,7 +105,7 @@ This project uses **Git Flow** workflow:
 1. **Fork the Repository**
    ```bash
    # Fork on GitHub, then clone your fork
-   git clone https://github.com/YOUR_USERNAME/yespo-shopify.git
+   git clone git@github.com:ardas/yespo-shopify.git
    cd yespo-shopify
    # Switch to development branch
    git checkout dev
