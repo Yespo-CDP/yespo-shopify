@@ -311,15 +311,6 @@ Include:
 - 📧 Contact us at support@yespo.io
 - 🐛 Report bugs through GitHub Issues
 
-
-
-### 🎉 Recognition
-
-Contributors are recognized in:
-- 📜 Release notes for significant contributions
-- 🌟 GitHub contributors section
-- 💬 Social media mentions for major features
-
 ## 📊 Issue Management
 
 ### 🏷️ Labels We Use
