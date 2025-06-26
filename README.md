@@ -93,6 +93,13 @@ This template uses [Remix](https://remix.run). The following Shopify tools are a
 
 We welcome contributions to the Yespo Shopify App! Whether you're fixing bugs, improving documentation, or adding new features, your contributions are appreciated.
 
+### 🌿 Branch Structure
+
+This project uses **Git Flow** workflow:
+- **`main`** - Production-ready code, stable releases
+- **`dev`** - Active development branch, all PRs should target this branch
+- **Feature branches** - Created from `dev` for new features or fixes
+
 ### 🚀 Quick Start
 
 1. **Fork the Repository**
@@ -100,6 +107,8 @@ We welcome contributions to the Yespo Shopify App! Whether you're fixing bugs, i
    # Fork on GitHub, then clone your fork
    git clone https://github.com/YOUR_USERNAME/yespo-shopify.git
    cd yespo-shopify
+   # Switch to development branch
+   git checkout dev
    ```
 
 2. **Set Up Development Environment**
@@ -126,8 +135,10 @@ docs(readme): update installation instructions
 
 #### Pull Request Process
 
-1. **Create a Feature Branch**
+1. **Create a Feature Branch from `dev`**
    ```bash
+   git checkout dev
+   git pull origin dev
    git checkout -b feature/your-feature-name
    ```
 
@@ -141,9 +152,9 @@ docs(readme): update installation instructions
    npm run build       # Ensure project builds correctly
    ```
 
-4. **Submit Pull Request**
+4. **Submit Pull Request to `dev`**
    - Push to your fork: `git push origin feature/your-feature-name`
-   - Create a Pull Request with:
+   - Create a Pull Request **targeting the `dev` branch** with:
      - **Clear title** describing the change
      - **Detailed description** explaining:
        - What problem does this solve?
