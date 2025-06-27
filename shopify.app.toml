@@ -1,0 +1,50 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "12e4a9a47ee6beaf4ee3f4775eb80fba"
+name = "yespo-app"
+handle = "yespo-app-dev"
+application_url = "https://bobcat-noted-moose.ngrok-free.app"
+embedded = true
+
+[build]
+automatically_update_urls_on_dev = true
+dev_store_url = "yespo-dev-store-2.myshopify.com"
+include_config_on_deploy = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_customers,read_markets,read_themes,write_app_proxy"
+
+[auth]
+redirect_urls = [
+  "https://bobcat-noted-moose.ngrok-free.app/auth/callback",
+  "https://bobcat-noted-moose.ngrok-free.app/auth/shopify/callback",
+  "https://bobcat-noted-moose.ngrok-free.app/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2025-01"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/gdpr"
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+
+  [[webhooks.subscriptions]]
+  topics = [ "customers/create", "customers/update" ]
+  uri = "/webhooks/app/customers"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+[app_proxy]
+url = "https://bobcat-noted-moose.ngrok-free.app"
+subpath = "yespo-proxy"
+prefix = "apps"
+
+[pos]
+embedded = false
