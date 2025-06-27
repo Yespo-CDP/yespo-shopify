@@ -281,7 +281,7 @@ Use the GitHub feature request template when suggesting new features. It include
 #### Reporting Security Issues
 **Do not report security vulnerabilities through public GitHub issues.**
 
-Instead, please email us directly at: **security@yespo.io**
+Instead, please email us directly at: **support@yespo.io**
 
 Include:
 - Description of the vulnerability
@@ -351,7 +351,7 @@ Each template includes specific sections to help us understand and address your 
 - **❓ Need help?** → [Ask a Question](https://github.com/ardas/yespo-shopify/issues/new?template=question.md)
 - **📚 Check documentation** → [docs.yespo.io](https://docs.yespo.io)
 - **📧 Direct support** → support@yespo.io
-- **🔒 Security issues** → security@yespo.io (private)
+- **🔒 Security issues** → support@yespo.io
 
 ---
 

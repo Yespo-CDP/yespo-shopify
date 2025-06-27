@@ -7,7 +7,7 @@ contact_links:
     url: https://github.com/ardas/yespo-shopify/discussions
     about: Ask questions and discuss ideas with the community
   - name: 🔒 Security Issues
-    url: mailto:security@yespo.io
+    url: mailto:support@yespo.io
     about: Report security vulnerabilities privately via email
   - name: 📧 Direct Support
     url: mailto:support@yespo.io
