@@ -12,18 +12,17 @@
 
 <script id="data" type="application/json">
   {
-    "pageTemplate": "{{ template.name }}",
-    "domain":  "{{ shop.domain }}",
+    "pageTemplate": {{ template.name | json }},
+    "domain":  {{ shop.domain | json }},
     "product": {{ product | json }},
     "customer":
       {% if customer %}
         {
           "id": {{ customer.id | json }},
-          "email": "{{ customer.email }}",
-          "firstName": "{{ customer.first_name }}",
-          "lastName": "{{ customer.last_name }}",
-          "phone": {{ customer.phone | json }},
-          "city": "{{ customer.default_address.city | default: "" }}"
+          "email": {{ customer.email | json }},
+          "firstName": {{ customer.first_name | json }},
+          "lastName": {{ customer.last_name | json }},
+          "phone": {{ customer.phone | json }}
         }
       {% else %}
         null
@@ -33,7 +32,9 @@
 
 
 <script>
+  const pageTemplate =  "{{ template.name }}";
   const trackingEnabled = "{{ yespo_web_tracking_enabled }}";
+  console.log("pageTemplate", pageTemplate)
   console.log("Web tracking enabled:", trackingEnabled);
    const customerData = {
       id: {{ customer.id | json }},
