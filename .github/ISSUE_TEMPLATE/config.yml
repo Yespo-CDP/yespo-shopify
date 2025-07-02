@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://docs.yespo.io
+    about: Check our documentation for setup guides and API reference
+  - name: 💬 General Questions
+    url: https://github.com/ardas/yespo-shopify/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 🔒 Security Issues
+    url: mailto:support@yespo.io
+    about: Report security vulnerabilities privately via email
+  - name: 📧 Direct Support
+    url: mailto:support@yespo.io
+    about: Get direct support from the Yespo team
