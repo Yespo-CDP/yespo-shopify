@@ -61,11 +61,11 @@ Yespo API methods:
 - [Shopify App Bridge](https://shopify.dev/docs/apps/tools/app-bridge) allows your app to seamlessly integrate your app within Shopify's Admin.
 - [App extensions](https://shopify.dev/docs/apps/build/app-extensions) - Theme app extensions allow the Yespo app to 
 seamlessly inject scripts into a merchant’s theme without manual code edits.
-  You can find the extension code in the `./extension/yespo-extension` directory.
+  You can find the extension code in the `./extensions/yespo-extension` directory.
   This extension includes:
   - `blocks/` – Contains Liquid files that act as entry points for injecting Yespo scripts into the theme. These blocks can be enabled via the Shopify theme editor.
 - [Polaris](https://polaris.shopify.com/): Design system that enables apps to create Shopify-like experiences
-- [Webhooks](https://shopify.dev/docs/api/webhooks?reference=toml) - to listen for customer-related changes
+- [Webhooks](https://shopify.dev/docs/api/webhooks?reference=toml) - to receive notifications about particular events in a shop such as customer-related changes.
 - [Metafields](https://shopify.dev/docs/apps/build/online-store/theme-app-extensions/configuration#metafield-namespaces) - 
 used for storing tracking and scripts configurations (custom namespace: $app)
 
@@ -110,7 +110,6 @@ Create a `.env` file with the following:
 | **PLATFORM_URL**          | Yespo platform link                                                                                     |`https://my.yespo.io`                            |
 | **SERVICE_WORKER_NAME**   | **Required.** Web push service worker file name, in *.js format                                         | **Must be** `service-worker.js`                  |
 | **SERVICE_WORKER_PATH**   | **Required.** Relative path on site, where service worker will be stored. Must start and end with slash | `/apps/yespo-proxy/`|
-| **WEB_TRACKING_ENABLED**   | **Required.** Handle for enabled metafield and extension name                                           | **Must be** `web-tracking-enabled`                         |
 
 
 #### Required Shopify Scopes
@@ -141,7 +140,6 @@ Shopify webhooks (API version: 2025-01) used by the app:
 | **customers/update**       | Triggered when an existing customer’s data is updated.                        | `/webhooks/app/customers`             |
 | **app/scopes_update**      | Triggered when the app's permission scopes are updated by the merchant.       | `/webhooks/app/scopes_update`         |
 | **app/uninstalled**        | Triggered when a merchant uninstalls the app.                                 | `/webhooks/app/uninstalled`           |
-
 
 
 #### Setup App Proxy
@@ -195,31 +193,40 @@ npm run start
 ```
 
 ### App Deployment
-#### Hosting and source code deployment
+#### Hosting & Source Code Deployment
 
-Firstly you need to deploy source code to hosting. We provide example of hosting to Heroku with using [Procfile](https://devcenter.heroku.com/articles/procfile).
-1. Create a Heroku App
+You’ll first need to deploy the app’s source code to your hosting provider. This example uses Heroku, and the 
+repository includes a [Procfile](https://devcenter.heroku.com/articles/procfile) for Heroku compatibility.
+Steps to deploy to Heroku:
+1. Login and create a new Heroku app:
 ```shell
 heroku login
 heroku create your-app-name
 ```
-2. [Set Environment Variables](https://devcenter.heroku.com/articles/config-vars) on Heroku
-3. Set up [Postgres](https://devcenter.heroku.com/articles/heroku-postgresql). We recommend to use plan with Storage Capacity at least 10 GB.
-4. Add a Procfile if needed. Our repo already has Procfile.
-4. Commit Changes and Push to Heroku
+2. [Set Environment Variables](https://devcenter.heroku.com/articles/config-vars) in the Heroku dashboard or via CLI.
+3. Add [PostgreSQL](https://devcenter.heroku.com/articles/heroku-postgresql):
+  - Use the Heroku Postgres add-on
+  - Recommended: A plan with at least 10 GB storage
+4. Ensure the Procfile is present. The repository already includes one, so no action should be needed here.
+5. Commit your changes and push to Heroku:
 ```shell
 git add .
 git commit -m "Prepare for Heroku deployment"
 git push heroku main
 ```
 
-#### Deployment of Theme extension and .toml file
-After deployment source code you need to deploy Theme extension and .toml file configuration. 
-Use the next command to deploy your app with Shopify CLI.
+#### Deployment of Theme Extension & .toml Configuration
+After deploying your app backend, you need to deploy the Shopify theme extension and app configuration (shopify.app.toml).
+Use the Shopify CLI to deploy both:
 ```shell
 npm run deploy
 ```
+This command will:
+- Deploy the Theme App Extension
+- Sync the .toml configuration file to Shopify
+- Link and register app blocks automatically
 
+Make sure you're authenticated via Shopify CLI and connected to the correct Partner organization and store.
 
 ### Using the App
 
