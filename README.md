@@ -232,5 +232,4 @@ Make sure you're authenticated via Shopify CLI and connected to the correct Part
 
 - Install the app in your Shopify store
 - [Generate an API key](https://docs.yespo.io/reference/api-keys) and add it to the `Account connection` section
-- Connect general script
-- Connect webpush script
+- Connect general and webpush scripts
