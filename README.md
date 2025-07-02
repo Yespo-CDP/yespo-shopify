@@ -1,13 +1,82 @@
-# Yespo App
+# Yespo Shopify App
 
 Shopify app for integration Yespo with Shopify
 
-## 🚀 Features
-- Automatically injects Yespo General Script on all store pages
-- Installs Yespo Web Push Script and adds the Service Worker file
-- Enables Web Tracking to personalize user experience
-- Transfer of creation, update, deletion of contacts
-- Sends tracking events like MainPage, 404 Page, ProductPage from your store to Yespo
+## Purpose
+The app allows merchants to:
+- Sync customer data (create, update, delete) from Shopify to Yespo
+- Automatically register their store domain in Yespo (to get site and web push scripts)
+- Inject site and push scripts into the storefront via Theme App Extensions
+- Install the service worker file for web push notifications using a Shopify App Proxy
+
+
+## Features and Implementation Details
+
+### Widgets
+
+Purpose: Register the store domain and inject the Yespo site script into the storefront automatically.
+
+Implementation:
+- [Registers](https://docs.esputnik.com/reference/createdomain) the current store domain in Yespo
+- [Retrieves](https://docs.esputnik.com/reference/getscript) the Yespo site script
+- Stores the script content in a Shopify metafield: yespo-script
+- Injects the script into the storefront using a Theme App Extension (./extensions/yespo-extension)
+
+### Web Push Subscription
+
+Purpose: Enable customer subscriptions to web push notifications by registering the domain and injecting required scripts.
+
+Implementation:
+- [Registers](https://docs.esputnik.com/reference/addwebpushdomain) the current store domain in Yespo
+- [Retrieves](https://docs.esputnik.com/reference/getscript) the push script and service worker content
+- Stores the push script in the yespo-web-push-script metafield
+- Injects the push script into the storefront using the same Theme App Extension
+
+Service Worker Installation:
+- A Shopify App Proxy is used to serve the service worker content dynamically from Yespo
+- The worker file is exposed at a predefined path (/apps/yespo/sw.js) to comply with browser requirements
+
+### Contact Sync (Shopify → Yespo)
+Purpose: Automatically sync new, updated, and deleted customers from Shopify to Yespo as contacts.
+
+Implementation:
+- App requests access to the following scopes:
+  - read_customers
+  - write_customers
+- Shopify webhooks used:
+  - customers/create → creates a new contact in Yespo
+  - customers/update → updates existing contact data
+  - customers/redact → removes contact in Yespo
+
+Deduplication in Yespo: Contacts are matched using externalCustomerId, email, and phone. If a contact exists, it is updated instead of duplicated.
+
+Yespo API methods:
+- [POST /contact](https://docs.esputnik.com/reference/addcontact-1) – create or update contact
+- [DELETE /contact](https://docs.esputnik.com/reference/deletecontact-1) (erase=true) – remove contact
+
+
+## Technologies and Shopify Tools Used
+
+- [Shopify App Remix](https://shopify.dev/docs/api/shopify-app-remix) provides authentication and methods for interacting with Shopify APIs.
+- [Shopify App Bridge](https://shopify.dev/docs/apps/tools/app-bridge) allows your app to seamlessly integrate your app within Shopify's Admin.
+- [App extensions](https://shopify.dev/docs/apps/build/app-extensions) - Theme app extensions allow the Yespo app to 
+seamlessly inject scripts into a merchant’s theme without manual code edits.
+  You can find the extension code in the `./extension/yespo-extension` directory.
+  This extension includes:
+  - `blocks/` – Contains Liquid files that act as entry points for injecting Yespo scripts into the theme. These blocks can be enabled via the Shopify theme editor.
+- [Polaris](https://polaris.shopify.com/): Design system that enables apps to create Shopify-like experiences
+- [Webhooks](https://shopify.dev/docs/api/webhooks?reference=toml) - to listen for customer-related changes
+- [Metafields](https://shopify.dev/docs/apps/build/online-store/theme-app-extensions/configuration#metafield-namespaces) - 
+used for storing tracking and scripts configurations (custom namespace: $app)
+
+## Yespo API Authentication
+
+The app uses a Yespo API key, provided by the merchant during onboarding, to authorize all API requests. The key is stored securely and used for:
+- Contact sync
+- Domain registration
+- Script retrieval
+
+Full API documentation: https://docs.yespo.io/docs/integration-with-api
 
 
 ## Quick start
@@ -145,15 +214,12 @@ git push heroku main
 ```
 
 #### Deployment of Theme extension and .toml file
-After deployment source code you need to deploy Theme extension and .toml file configuration.
-
-
-#### Shopify App Deployment
-1. Ensure your shopify.app.toml is configured
-2. Deploy with:
+After deployment source code you need to deploy Theme extension and .toml file configuration. 
+Use the next command to deploy your app with Shopify CLI.
 ```shell
 npm run deploy
 ```
+
 
 ### Using the App
 
@@ -161,48 +227,3 @@ npm run deploy
 - [Generate an API key](https://docs.yespo.io/reference/api-keys) and add it to the `Account connection` section
 - Connect general script
 - Connect webpush script
-- Enable yespo extension in your shop theme config
-
-
-## Tech Stack
-
-This template uses [Remix](https://remix.run). The following Shopify tools are also included to ease app development:
-
-- [Shopify App Remix](https://shopify.dev/docs/api/shopify-app-remix) provides authentication and methods for interacting with Shopify APIs.
-- [Shopify App Bridge](https://shopify.dev/docs/apps/tools/app-bridge) allows your app to seamlessly integrate your app within Shopify's Admin.
-- [App extensions](https://shopify.dev/docs/apps/build/app-extensions) an app extension enables you to add your app's functionality to Shopify user interfaces.
-- [Polaris](https://polaris.shopify.com/): Design system that enables apps to create Shopify-like experiences
-- [Yespo Doc](https://docs.yespo.io/docs/integration-with-api): Yespo API documentation
-
-## APIs and Tools Used 🛠️
-
-### Metafields
-Metafields allow you to store custom data for Shopify resources. In this app, we use metafields to manage script settings and enable tracking functionality.
-
-The following metafields are used (within the $app namespace):
-- `yespo-script` - Stores the configuration for the general Yespo script
-- `yespo-web-push-script` - Stores the configuration for the Yespo web push script
-- `web-tracking-enabled` - Flag to enable or disable Yespo web tracking in the theme
-
-*for more information on Metafields*, [check out guide](https://shopify.dev/docs/apps/build/online-store/theme-app-extensions/configuration#metafield-namespaces)
-
-### Theme App Extensions
-Theme app extensions allow the Yespo app to seamlessly inject scripts into a merchant’s theme without manual code edits.
-
-You can find the extension code in the `./extension/yespo-extension` directory.
-
-This extension includes:
-- `blocks/` – Contains Liquid files that act as entry points for injecting Yespo scripts into the theme. These blocks can be enabled via the Shopify theme editor.
-- `assets/` – Contains JavaScript files that track and send specific page events (like 404 Page and Main Page) to Yespo for analytics and customer behavior tracking.
-
-These extensions ensure scripts are added in a structured, upgrade-safe way and can be toggled directly from the store's theme settings.
-
-### Yespo
-This app uses the Yespo API to sync customer data, track events, and manage communication workflows.
-
-The API allows the app to:
-- Create, update, and delete contacts in Yespo based on Shopify customer data
-- Send web tracking events (e.g. MainPage, ProductPage, 404 Page)
-- Authenticate requests using a generated API key from your Yespo account
-
-Refer to the official [Yespo API Documentation](https://docs.yespo.io/docs/integration-with-api) for detailed request/response formats and usage examples.
