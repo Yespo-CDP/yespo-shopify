@@ -63,8 +63,8 @@ Yespo API methods:
 seamlessly inject scripts into a merchant’s theme without manual code edits.
   You can find the extension code in the `./extensions/yespo-extension` directory.
   This extension includes:
-  - `blocks/` – Contains Liquid files that act as entry points for injecting Yespo scripts into the theme. These blocks can be enabled via the Shopify theme editor.
-- [Polaris](https://polaris.shopify.com/): Design system that enables apps to create Shopify-like experiences
+  - `blocks/` – сontains Liquid files that act as entry points for injecting Yespo scripts into the theme. These blocks can be enabled via the Shopify theme editor.
+- [Polaris](https://polaris.shopify.com/) - designs system that enables apps to create Shopify-like experiences
 - [Webhooks](https://shopify.dev/docs/api/webhooks?reference=toml) - to receive notifications about particular events in a shop such as customer-related changes.
 - [Metafields](https://shopify.dev/docs/apps/build/online-store/theme-app-extensions/configuration#metafield-namespaces) - 
 used for storing tracking and scripts configurations (custom namespace: $app)
