@@ -39,6 +39,7 @@ model Shop {
   name                  String
   domain                String    @unique @default("")
   apiKey                String?
+  siteId                String?
   isWebTrackingEnabled  Boolean?  @default(false)
   active                Boolean?  @default(true)
   createdAt             DateTime  @default(now())
