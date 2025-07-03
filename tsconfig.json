@@ -21,11 +21,5 @@
     },
     "types": ["node"],
     //"typeRoots": ["./app/@types", "./node_modules"]
-  },
-  "typedocOptions": {
-    "entryPoints": [
-      "app/**/*" // <--- take everything from this location
-    ],
-    "out": "docs/typedoc" // <--- output directory
   }
 }

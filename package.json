@@ -17,7 +17,9 @@
     "prisma": "prisma",
     "graphql-codegen": "graphql-codegen",
     "vite": "vite",
-    "docs": "typedoc"
+    "docs:html": "typedoc --options typedoc.html.json",
+    "docs:md": "typedoc --options typedoc.md.json",
+    "docs": "npm run docs:html && npm run docs:md"
   },
   "type": "module",
   "engines": {
