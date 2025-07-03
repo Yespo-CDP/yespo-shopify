@@ -1,6 +1,7 @@
 import type {ActionFunctionArgs} from "@remix-run/node";
 import {authenticate} from "~/shopify.server";
 import {shopRepository} from "~/repositories/repositories.server";
+import {sendStatusCartService} from "~/services/send-status-cart.server";
 
 export const action = async ({request}: ActionFunctionArgs) => {
   const { topic, session, payload, webhookId } =
@@ -14,7 +15,7 @@ export const action = async ({request}: ActionFunctionArgs) => {
 
   switch (topic) {
     case "CARTS_UPDATE":
-      console.log('CARTS_UPDATE', JSON.stringify(payload, null, 2));
+      await sendStatusCartService(payload, shop)
       break;
 
     default:

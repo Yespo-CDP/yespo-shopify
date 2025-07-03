@@ -112,6 +112,7 @@ class EventTracker {
     const sc = this.getCookieValue('sc');
     const cartTokenRaw = await this.getCartToken();
     const token = cartTokenRaw ? cartTokenRaw.split('?')[0] : null;
+    const customer = this.data.customer;
 
     try {
       const res = await fetch(`${this.HOST}/public/event-data`, {
@@ -119,7 +120,8 @@ class EventTracker {
         body: JSON.stringify({
           shop: this.data.domain,
           sc,
-          cartToken: token
+          cartToken: token,
+          customer
         }),
         keepalive: true
       });

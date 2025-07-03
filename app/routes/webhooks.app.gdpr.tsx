@@ -1,7 +1,7 @@
 import type { ActionFunctionArgs } from "@remix-run/node";
 import crypto from "node:crypto";
 
-import {customerDataRepository, shopRepository} from "~/repositories/repositories.server";
+import {gdprCustomerDataRepository, shopRepository} from "~/repositories/repositories.server";
 import { authenticate } from "../shopify.server";
 import {deleteContactService} from "~/services/delete-contact.service";
 
@@ -49,7 +49,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           }
         }
       }
-      await customerDataRepository.createCustomerDataRequest(customerDataRequest)
+      await gdprCustomerDataRepository.createGdprCustomerDataRequest(customerDataRequest)
       break;
     case "CUSTOMERS_REDACT":
       console.log('CUSTOMERS_REDACT')

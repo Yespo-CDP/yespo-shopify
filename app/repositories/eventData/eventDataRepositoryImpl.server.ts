@@ -5,6 +5,17 @@ import type {EventDataCreate, EventDataRequest} from "~/@types/eventData";
 export default class EventDataRepositoryImpl implements IEventDataRepository {
   constructor(readonly database: PrismaClient) {}
 
+  async getEventData(cartToken: string): Promise<EventDataRequest | null>{
+    return this.database.eventData.findFirst({
+      where: {
+        cartToken
+      },
+      include: {
+        customer: true
+      }
+    })
+  }
+
   async createEventData(data: EventDataCreate): Promise<EventDataRequest> {
     return this.database.eventData.upsert({
       where: {
@@ -14,7 +25,8 @@ export default class EventDataRepositoryImpl implements IEventDataRepository {
         ...data
       },
       update: {
-        sc: data.sc
+        sc: data.sc,
+        customer: data.customer
       }
     })
   }

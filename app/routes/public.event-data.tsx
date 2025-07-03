@@ -1,6 +1,6 @@
 import type {ActionFunctionArgs} from "@remix-run/node";
 import {addDays} from "date-fns";
-import {eventDataRepository, shopRepository} from "~/repositories/repositories.server";
+import {customerRepository, eventDataRepository, shopRepository} from "~/repositories/repositories.server";
 
 // Shared CORS headers
 const CORS_HEADERS = {
@@ -34,6 +34,9 @@ export const action = async ({request}: ActionFunctionArgs) => {
       return jsonResponse({ success: true }); // silently accept even if shop not found
     }
 
+    const { id, ...customerWithoutId } = data.customer || {};
+    const customer = data.customer ? await customerRepository.upsertCustomer({ customerId: data.customer.id.toString(), ...customerWithoutId }) : null
+
     await eventDataRepository.createEventData({
       cartToken: data.cartToken,
       sc: data.sc,
@@ -41,6 +44,15 @@ export const action = async ({request}: ActionFunctionArgs) => {
       shop: {
         connect: { id: shop.id },
       },
+      ...(customer
+        ? {
+          customer: {
+            connect: {
+              customerId: customer.customerId,
+            },
+          },
+        }
+        : {}),
     });
 
     return jsonResponse({ success: true });
