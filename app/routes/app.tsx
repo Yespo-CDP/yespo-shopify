@@ -34,7 +34,6 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
  *
  * Syncs the localization with Shopify App Bridge locale.
  *
- * @component
  * @returns {JSX.Element} The app wrapper component.
  */
 export default function App() {

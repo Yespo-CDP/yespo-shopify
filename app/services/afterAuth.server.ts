@@ -20,7 +20,6 @@ const WEB_PUSH_SCRIPT_HANDLE =
  * - Deletes Yespo-related metafields if the shop has no API key
  * - Registers webhooks
  *
- * @async
  * @function afterAuth
  * @param {Object} params - Parameters object
  * @param {Session} params.session - Shopify session object

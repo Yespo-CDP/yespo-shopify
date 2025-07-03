@@ -8,7 +8,6 @@ import { useTranslation } from "react-i18next";
  *
  * It includes a description and a button linking to Shopify's markets settings page.
  *
- * @component
  * @returns {JSX.Element} The warning banner UI element.
  *
  * @example

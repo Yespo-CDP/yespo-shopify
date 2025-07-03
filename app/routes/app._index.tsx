@@ -51,7 +51,6 @@ export const action = actionHandler;
  *
  * Uses Shopify App Bridge for toast notifications.
  *
- * @component
  * @returns {JSX.Element} The rendered page component.
  */
 export default function Index() {

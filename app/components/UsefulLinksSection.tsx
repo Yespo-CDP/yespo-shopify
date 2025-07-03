@@ -19,7 +19,6 @@ import { useTranslation } from "react-i18next";
  * The links are displayed as a bulleted list with each item containing a clickable
  * link and accompanying description.
  *
- * @component
  * @returns {JSX.Element} The rendered Useful Links section UI.
  *
  * @example

@@ -1,0 +1,13 @@
+{
+  "entryPoints": ["./app"],
+  "entryPointStrategy": "expand",
+  "out": "docs/typedoc",
+  "plugin": [],
+  "exclude": ["**/*.test.ts", "**/*.spec.ts"],
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "includeVersion": true,
+  "readme": "README.md",
+  "hideGenerator": true,
+  "theme": "default"
+}
