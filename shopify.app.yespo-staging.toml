@@ -1,0 +1,48 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "b6fc35a47b72a8f3b679f6a42b7337dd"
+name = "yespo-staging"
+handle = "yespo-staging"
+application_url = "https://yespo-app.dev-test.pro/"
+embedded = true
+
+[build]
+include_config_on_deploy = true
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_customers,read_markets,read_themes,write_app_proxy"
+
+[auth]
+redirect_urls = [
+  "https://yespo-app.dev-test.pro/auth/callback",
+  "https://yespo-app.dev-test.pro/auth/shopify/callback",
+  "https://yespo-app.dev-test.pro/api/auth/callback"
+]
+
+[webhooks]
+api_version = "2025-01"
+
+  [[webhooks.subscriptions]]
+  uri = "/webhooks/app/gdpr"
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+
+  [[webhooks.subscriptions]]
+  topics = [ "customers/create", "customers/update" ]
+  uri = "/webhooks/app/customers"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/scopes_update" ]
+  uri = "/webhooks/app/scopes_update"
+
+  [[webhooks.subscriptions]]
+  topics = [ "app/uninstalled" ]
+  uri = "/webhooks/app/uninstalled"
+
+[app_proxy]
+url = "https://push.yespo.tech/"
+subpath = "yespo-proxy"
+prefix = "apps"
+
+[pos]
+embedded = false

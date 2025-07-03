@@ -16,7 +16,8 @@
     "shopify": "shopify",
     "prisma": "prisma",
     "graphql-codegen": "graphql-codegen",
-    "vite": "vite"
+    "vite": "vite",
+    "docs": "jsdoc -a all -c jsdoc.json -r -R README.md ./build/server/index.js -d docs/jsdoc && jsdoc2md --files ./build/server/index.js > docs/API.md"
   },
   "type": "module",
   "engines": {
@@ -51,8 +52,11 @@
     "@types/node": "^22.2.0",
     "@types/react": "^18.2.31",
     "@types/react-dom": "^18.2.14",
+    "docdash": "^2.0.2",
     "eslint": "^8.42.0",
     "eslint-config-prettier": "^10.0.1",
+    "jsdoc": "^4.0.4",
+    "jsdoc-to-markdown": "^9.1.1",
     "prettier": "^3.2.4",
     "typescript": "^5.2.2",
     "vite": "^6.2.2"

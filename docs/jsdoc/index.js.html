@@ -1,0 +1,2122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>index.js - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    <input type="text" id="nav-search" placeholder="Search" />
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="CustomerDataRepositoryImpl.html">CustomerDataRepositoryImpl</a><ul class='methods'><li data-type='method' style='display: none;'><a href="CustomerDataRepositoryImpl.html#createCustomerDataRequest">createCustomerDataRequest</a></li></ul></li><li><a href="FetchError.html">FetchError</a></li><li><a href="ShopRepositoryImpl.html">ShopRepositoryImpl</a><ul class='methods'><li data-type='method' style='display: none;'><a href="ShopRepositoryImpl.html#createShop">createShop</a></li><li data-type='method' style='display: none;'><a href="ShopRepositoryImpl.html#deleteShop">deleteShop</a></li><li data-type='method' style='display: none;'><a href="ShopRepositoryImpl.html#getShop">getShop</a></li><li data-type='method' style='display: none;'><a href="ShopRepositoryImpl.html#updateShop">updateShop</a></li></ul></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">index.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>var __defProp = Object.defineProperty;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
+var _a;
+import { jsx, jsxs } from "react/jsx-runtime";
+import { PassThrough } from "stream";
+import { renderToPipeableStream } from "react-dom/server";
+import { RemixServer, Meta, Links, Outlet, ScrollRestoration, Scripts, useLoaderData, useActionData, Form, Link, useRouteError, useFetcher, useRevalidator, useNavigation } from "@remix-run/react";
+import { createCookie, createReadableStreamFromReadable, redirect } from "@remix-run/node";
+import { isbot } from "isbot";
+import { initReactI18next, I18nextProvider, useTranslation, Trans } from "react-i18next";
+import { createInstance } from "i18next";
+import "@shopify/shopify-app-remix/adapters/node";
+import { shopifyApp, AppDistribution, ApiVersion, LoginErrorType, boundary } from "@shopify/shopify-app-remix/server";
+import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
+import { PrismaClient } from "@prisma/client";
+import { RemixI18Next } from "remix-i18next/server";
+import crypto from "node:crypto";
+import { useState, useEffect, useCallback } from "react";
+import { AppProvider, Page, Card, FormLayout, Text, TextField, Button, Banner, BlockStack, InlineStack, Badge, Link as Link$1, Box, Icon, InlineError, List, Layout, Image } from "@shopify/polaris";
+import { AppProvider as AppProvider$1 } from "@shopify/shopify-app-remix/react";
+import { useAppBridge, NavMenu, Modal, TitleBar } from "@shopify/app-bridge-react";
+import { HideIcon, ViewIcon, CheckCircleIcon, XCircleIcon, RefreshIcon } from "@shopify/polaris-icons";
+import commentJSON from "comment-json";
+if (process.env.NODE_ENV !== "production") {
+  if (!global.prisma) {
+    global.prisma = new PrismaClient();
+  }
+}
+const prisma = global.prisma || new PrismaClient();
+async function createMetafieldDefinition({
+  admin,
+  key,
+  name,
+  description
+}) {
+  try {
+    await admin.graphql(
+      `
+    #graphql
+    mutation metafieldDefinitionCreate($definition: MetafieldDefinitionInput!) {
+      metafieldDefinitionCreate(definition: $definition) {
+        createdDefinition {
+          access {
+            storefront
+          }
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `,
+      {
+        variables: {
+          definition: {
+            access: {
+              admin: "MERCHANT_READ",
+              storefront: "PUBLIC_READ"
+            },
+            key,
+            name,
+            description,
+            namespace: "$app",
+            type: "single_line_text_field",
+            ownerType: "SHOP"
+          }
+        }
+      }
+    );
+  } catch (error) {
+    console.error(error);
+  }
+}
+class ShopRepositoryImpl {
+  /**
+   * Creates a new ShopRepositoryImpl instance.
+   *
+   * @param {PrismaClient} database - The Prisma client instance used for database operations.
+   */
+  constructor(database) {
+    this.database = database;
+  }
+  /**
+   * Retrieves a shop by its URL.
+   *
+   * @param {string} shopUrl - The unique URL identifier of the shop.
+   * @returns {Promise&lt;Shop | null>} A promise that resolves to the Shop object if found, or null otherwise.
+   */
+  async getShop(shopUrl) {
+    return this.database.shop.findFirst({
+      where: { shopUrl }
+    });
+  }
+  /**
+   * Creates a new shop record.
+   *
+   * @param {ShopCreate} data - The data used to create the shop.
+   * @returns {Promise&lt;Shop>} A promise that resolves to the newly created Shop object.
+   */
+  async createShop(data) {
+    return this.database.shop.create({
+      data
+    });
+  }
+  /**
+   * Updates an existing shop by its URL.
+   *
+   * @param {string} shopUrl - The unique URL identifier of the shop to update.
+   * @param {ShopUpdate} data - The data used to update the shop.
+   * @returns {Promise&lt;Shop>} A promise that resolves to the updated Shop object.
+   */
+  async updateShop(shopUrl, data) {
+    return this.database.shop.update({
+      where: { shopUrl },
+      data
+    });
+  }
+  /**
+   * Deletes a shop by its URL.
+   *
+   * @param {string} shopUrl - The unique URL identifier of the shop to delete.
+   * @returns {Promise&lt;Shop>} A promise that resolves to the deleted Shop object.
+   */
+  async deleteShop(shopUrl) {
+    return this.database.shop.delete({
+      where: { shopUrl }
+    });
+  }
+}
+class CustomerDataRepositoryImpl {
+  /**
+   * Creates a new instance of CustomerDataRepositoryImpl.
+   *
+   * @param {PrismaClient} database - The Prisma client instance for database operations.
+   */
+  constructor(database) {
+    this.database = database;
+  }
+  /**
+   * Creates a new GDPR customer data request record in the database.
+   *
+   * @param {CustomerDataRequestCreate} data - The data required to create the GDPR customer data request.
+   * @returns {Promise&lt;GdprCustomerDataRequest>} A promise that resolves to the created GDPR customer data request entity.
+   */
+  async createCustomerDataRequest(data) {
+    return this.database.gdprCustomerDataRequest.create({
+      data
+    });
+  }
+}
+const shopRepository = new ShopRepositoryImpl(prisma);
+const customerDataRepository = new CustomerDataRepositoryImpl(prisma);
+const getShop = async ({ admin }) => {
+  try {
+    const response = await admin.graphql(`
+      #graphql
+      query {
+        shop {
+          id
+          myshopifyDomain
+          contactEmail
+          email
+          name
+          url
+          primaryDomain {
+            id
+            host
+          }
+        }
+      }
+    `);
+    const responseParse = await response.json();
+    const shopData = responseParse == null ? void 0 : responseParse.data;
+    return (shopData == null ? void 0 : shopData.shop) ?? null;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+};
+const getMetafieldDefinition = async ({
+  admin,
+  key
+}) => {
+  var _a2;
+  try {
+    const response = await admin.graphql(
+      `
+      #graphql
+      query getmetafieldDefinitions($ownerType: MetafieldOwnerType!, $key: String!, $namespace: String) {
+        metafieldDefinitions(first: 1, ownerType: $ownerType, key: $key, namespace: $namespace) {
+          nodes {
+            id
+            name
+            description
+            key
+            namespace
+            ownerType
+            type {
+              name
+            }
+            access {
+              admin
+              storefront
+            }
+          }
+        }
+      }`,
+      {
+        variables: {
+          key,
+          namespace: "$app",
+          ownerType: "SHOP"
+        }
+      }
+    );
+    const responseParse = await response.json();
+    const metafieldDefinitionsData = responseParse == null ? void 0 : responseParse.data;
+    const metafieldDefinitions = (_a2 = metafieldDefinitionsData.metafieldDefinitions) == null ? void 0 : _a2.nodes;
+    const metafieldDefinition = metafieldDefinitions == null ? void 0 : metafieldDefinitions[0];
+    return metafieldDefinition ?? null;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+};
+async function deleteMetafields({
+  admin,
+  ownerId,
+  keys
+}) {
+  try {
+    await admin.graphql(
+      `
+      #graphql
+      mutation metafieldsDelete($metafields: [MetafieldIdentifierInput!]!) {
+        metafieldsDelete(metafields: $metafields) {
+          deletedMetafields {
+            key
+            namespace
+            ownerId
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `,
+      {
+        variables: {
+          metafields: keys.map((key) => ({
+            key,
+            ownerId,
+            namespace: "$app"
+          }))
+        }
+      }
+    );
+  } catch (error) {
+    console.error(error);
+  }
+}
+const GENERAL_SCRIPT_HANDLE$5 = process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
+const WEB_PUSH_SCRIPT_HANDLE$4 = process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
+const afterAuth = async ({
+  session,
+  admin
+}) => {
+  var _a2, _b;
+  const shop = await getShop({ admin });
+  if (!shop) {
+    throw new Error("Shop not found");
+  }
+  const shopObject = await shopRepository.getShop(session == null ? void 0 : session.shop);
+  if (shopObject) {
+    await shopRepository.updateShop(session.shop, {
+      name: shop.name,
+      email: shop.email,
+      domain: (_a2 = shop == null ? void 0 : shop.primaryDomain) == null ? void 0 : _a2.host,
+      active: true
+    });
+  } else {
+    await shopRepository.createShop({
+      shopUrl: shop.myshopifyDomain,
+      shopId: shop.id,
+      name: shop.name,
+      email: shop.email,
+      domain: (_b = shop == null ? void 0 : shop.primaryDomain) == null ? void 0 : _b.host
+    });
+  }
+  const generalDefinition = await getMetafieldDefinition({
+    admin,
+    key: GENERAL_SCRIPT_HANDLE$5
+  });
+  const webPushDefinition = await getMetafieldDefinition({
+    admin,
+    key: WEB_PUSH_SCRIPT_HANDLE$4
+  });
+  if (!generalDefinition) {
+    await createMetafieldDefinition({
+      admin,
+      key: GENERAL_SCRIPT_HANDLE$5,
+      name: "Yespo script",
+      description: "This is a app metafield definition for Yespo script"
+    });
+  }
+  if (!webPushDefinition) {
+    await createMetafieldDefinition({
+      admin,
+      key: WEB_PUSH_SCRIPT_HANDLE$4,
+      name: "Yespo web push script",
+      description: "This is a app metafield definition for Yespo web push script"
+    });
+  }
+  if (!(shopObject == null ? void 0 : shopObject.apiKey) &amp;&amp; (shop == null ? void 0 : shop.id)) {
+    await deleteMetafields({
+      admin,
+      ownerId: shop == null ? void 0 : shop.id,
+      keys: [GENERAL_SCRIPT_HANDLE$5, WEB_PUSH_SCRIPT_HANDLE$4]
+    });
+  }
+  shopify.registerWebhooks({ session });
+};
+const shopify = shopifyApp({
+  apiKey: process.env.SHOPIFY_API_KEY,
+  apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
+  apiVersion: ApiVersion.January25,
+  scopes: (_a = process.env.SCOPES) == null ? void 0 : _a.split(","),
+  appUrl: process.env.SHOPIFY_APP_URL || "",
+  authPathPrefix: "/auth",
+  sessionStorage: new PrismaSessionStorage(prisma),
+  distribution: AppDistribution.AppStore,
+  hooks: {
+    afterAuth
+  },
+  future: {
+    unstable_newEmbeddedAuthStrategy: true,
+    removeRest: true
+  },
+  ...process.env.SHOP_CUSTOM_DOMAIN ? { customShopDomains: [process.env.SHOP_CUSTOM_DOMAIN] } : {}
+});
+ApiVersion.January25;
+const addDocumentResponseHeaders = shopify.addDocumentResponseHeaders;
+const authenticate = shopify.authenticate;
+shopify.unauthenticated;
+const login = shopify.login;
+shopify.registerWebhooks;
+shopify.sessionStorage;
+const WelcomeSection$2 = { "title": "Welcome To The Yespo App", "description": "We’re glad to have you here! Yespo was created to provide ecommerce stores with a complete toolset for marketing automation. If you have any questions about using our app, our support &lt;supportLink>article&lt;/supportLink> covers everything you need. If you still need help, don’t hesitate to email us. Welcome aboard!" };
+const UnsupportedMarketsSection$3 = { "title": "Attention!", "description": "The app supports only one active market.", "button": "Go to settings" };
+const AccountConnectionSection$3 = { "title": "Account connection", "helpText": "If you need help", "status": { "active": "Active", "inactive": "Inactive" }, "account": "Account", "button": { "connect": "Connect", "disconnect": "Disconnect" }, "link": "https://docs.yespo.io/reference/api-keys", "success": "API Key updated", "errors": { "invalidApiKey": "Invalid API Key", "emptyApiKey": "API Key is required", "unknownError": "Unknown error" } };
+const ConnectionStatusSection$3 = { "title": "Scripts integration", "refresh": "Refresh", "list": { "first": "Connect your Yespo account using the Full Access API key. You can find the key in your Yespo account: &lt;apiKeysLink>Yespo API Keys&lt;/apiKeysLink>.", "second": "Once the account is connected, you need to install the scripts. To do this, click the corresponding button and activate the extension for the theme.", "third": "After the scripts are installed, you can proceed to Yespo for further configuration.", "more": "For more detailed information, follow this &lt;detailedLink>link&lt;/detailedLink> or contact Yespo support: &lt;supportLink>Yespo Documentation&lt;/supportLink>." }, "banner": { "connected": "Scripts are installed", "incomplete": "Scripts are partially installed", "disconnected": "Scripts are not installed" }, "button": { "configure": "Install scripts" }, "success": "Installed successfully.", "errors": { "requestScriptError": "Error requesting script", "createGeneralDomainError": "Error creating general domain", "createWebPushDomainError": "Error creating webpush domain", "domainAlreadyRegisteredError": "Domain is already registered.", "domainCantBeReachedError": "Domain can't be reached.", "support": "Рlease contact Yespo support." } };
+const UsefulLinksSection$3 = { "title": "Useful links", "helpText": "Here are some links to help you get up to speed on our software:", "links": [{ "description": "Explore all features of Yespo CDP, including advanced AI features and 9 marketing channels.", "label": "https://yespo.io", "url": "https://yespo.io" }, { "description": "The Quickstart Guide", "label": "https://docs.yespo.io/docs/support", "url": "https://docs.yespo.io/docs/support" }, { "description": "Web Push Settings", "label": "https://docs.yespo.io/docs/web-push", "url": "https://docs.yespo.io/docs/web-push" }, { "description": "Widgets Settings", "label": "https://docs.yespo.io/docs/widgets", "url": "https://docs.yespo.io/docs/widgets" }, { "description": "GDPR Compliance Data", "label": "https://docs.yespo.io/docs/gdpr-compliance", "url": "https://docs.yespo.io/docs/gdpr-compliance" }, { "description": "Events and Behavior Tracking", "label": "https://docs.yespo.io/docs/gdpr-compliance", "url": "https://docs.yespo.io/docs/gdpr-compliance" }, { "description": "The Developer Guide", "label": "https://docs.yespo.io/reference/getting-started-with-your-api", "url": "https://docs.yespo.io/reference/getting-started-with-your-api" }, { "description": "Contact Email", "label": "support@yespo.io", "url": "mailto:support@yespo.io" }] };
+const en = {
+  WelcomeSection: WelcomeSection$2,
+  UnsupportedMarketsSection: UnsupportedMarketsSection$3,
+  AccountConnectionSection: AccountConnectionSection$3,
+  ConnectionStatusSection: ConnectionStatusSection$3,
+  UsefulLinksSection: UsefulLinksSection$3
+};
+const WelcomeSection$1 = { "title": "Witamy w Yespo App", "description": "Cieszymy się, że jesteś z nami! Yespo zostało stworzone, aby zapewnić sklepom e-commerce kompletny zestaw narzędzi do automatyzacji marketingu. Jeśli masz jakiekolwiek pytania dotyczące korzystania z naszej aplikacji, nasz &lt;supportLink>artykuł&lt;/supportLink> zawiera wszystkie potrzebne informacje. Jeśli nadal potrzebujesz pomocy, nie wahaj się do nas napisać. Witamy na pokładzie!" };
+const UnsupportedMarketsSection$2 = { "title": "Uwaga!", "description": "Aplikacja obsługuje tylko jeden aktywny rynek.", "button": "Przejdź do ustawień" };
+const AccountConnectionSection$2 = { "title": "Połączenie konta", "helpText": "Jeśli potrzebujesz pomocy", "status": { "active": "Aktywne", "inactive": "Nieaktywne" }, "account": "Konto", "button": { "connect": "Połącz", "disconnect": "Odłącz" }, "link": "https://docs.yespo.io/reference/api-keys", "success": "API Key zaktualizowany", "errors": { "invalidApiKey": "Nieprawidłowy API Key", "emptyApiKey": "API Key jest wymagany", "unknownError": "Nieznany błąd" } };
+const ConnectionStatusSection$2 = { "title": "Integracja skryptów", "refresh": "Odśwież", "list": { "first": "Połącz swoje konto Yespo, używając klucza API z pełnym dostępem. Klucz znajdziesz w swoim koncie Yespo: &lt;apiKeysLink>Yespo API Keys&lt;/apiKeysLink>.", "second": "Po połączeniu konta musisz zainstalować skrypty. Aby to zrobić, kliknij odpowiedni przycisk i aktywuj rozszerzenie dla motywu.", "third": "Po zainstalowaniu skryptów możesz przejść do Yespo w celu dalszej konfiguracji.", "more": "Aby uzyskać bardziej szczegółowe informacje, skorzystaj z tego &lt;detailedLink>linku&lt;/detailedLink> lub skontaktuj się z pomocą techniczną Yespo: &lt;supportLink>Dokumentacja Yespo&lt;/supportLink>." }, "banner": { "connected": "Skrypty zainstalowane", "incomplete": "Skrypty częściowo zainstalowane", "disconnected": "Skrypty niezainstalowane" }, "button": { "configure": "Zainstaluj skrypty" }, "success": "Pomyślnie zainstalowano.", "errors": { "requestScriptError": "Błąd podczas pobierania skryptu", "createGeneralDomainError": "Błąd tworzenia głównej domeny", "createWebPushDomainError": "Błąd tworzenia domeny WebPush", "domainAlreadyRegisteredError": "Domena już zarejestrowana.", "domainCantBeReachedError": "Domena jest nieosiągalna.", "support": "Skontaktuj się z pomocą techniczną Yespo." } };
+const UsefulLinksSection$2 = { "title": "Przydatne linki", "helpText": "Oto kilka linków, które pomogą Ci szybko zapoznać się z naszym oprogramowaniem:", "links": [{ "description": "Poznaj wszystkie funkcje Yespo CDP, w tym zaawansowane funkcje AI i 9 kanałów marketingowych.", "label": "https://yespo.io", "url": "https://yespo.io" }, { "description": "Przewodnik Szybkiego Startu", "label": "https://docs.yespo.io/docs/support", "url": "https://docs.yespo.io/docs/support" }, { "description": "Ustawienia Web Push", "label": "https://docs.yespo.io/docs/web-push", "url": "https://docs.yespo.io/docs/web-push" }, { "description": "Ustawienia widgetów", "label": "https://docs.yespo.io/docs/widgets", "url": "https://docs.yespo.io/docs/widgets" }, { "description": "Dane zgodności z RODO", "label": "https://docs.yespo.io/docs/gdpr-compliance", "url": "https://docs.yespo.io/docs/gdpr-compliance" }, { "description": "Śledzenie zdarzeń i zachowań", "label": "https://docs.yespo.io/docs/gdpr-compliance", "url": "https://docs.yespo.io/docs/gdpr-compliance" }, { "description": "Przewodnik dla deweloperów", "label": "https://docs.yespo.io/reference/getting-started-with-your-api", "url": "https://docs.yespo.io/reference/getting-started-with-your-api" }, { "description": "Kontakt e-mail", "label": "support@yespo.io", "url": "mailto:support@yespo.io" }] };
+const pl = {
+  WelcomeSection: WelcomeSection$1,
+  UnsupportedMarketsSection: UnsupportedMarketsSection$2,
+  AccountConnectionSection: AccountConnectionSection$2,
+  ConnectionStatusSection: ConnectionStatusSection$2,
+  UsefulLinksSection: UsefulLinksSection$2
+};
+const WelcomeSection = { "title": "Bem-vindo ao Yespo App", "description": "Estamos felizes em ter você aqui! O Yespo foi criado para fornecer às lojas de comércio eletrônico um conjunto completo de ferramentas para automação de marketing. Se tiver alguma dúvida sobre o uso do nosso aplicativo, nosso &lt;supportLink>artigo&lt;/supportLink> cobre tudo o que você precisa. Se ainda precisar de ajuda, não hesite em nos enviar um e-mail. Bem-vindo a bordo!" };
+const UnsupportedMarketsSection$1 = { "title": "Atenção!", "description": "O app suporta apenas um mercado ativo.", "button": "Ir para configurações" };
+const AccountConnectionSection$1 = { "title": "Conexão de conta", "helpText": "Se precisar de ajuda", "status": { "active": "Ativo", "inactive": "Inativo" }, "account": "Conta", "button": { "connect": "Conectar", "disconnect": "Desconectar" }, "link": "https://docs.yespo.io/reference/api-keys", "success": "API Key atualizada", "errors": { "invalidApiKey": "API Key inválida", "emptyApiKey": "API Key obrigatória", "unknownError": "Erro desconhecido" } };
+const ConnectionStatusSection$1 = { "title": "Integração de scripts", "refresh": "Atualizar", "list": { "first": "Conecte sua conta Yespo usando a chave API de Acesso Total. Você pode encontrar a chave na sua conta Yespo: &lt;apiKeysLink>Yespo API Keys&lt;/apiKeysLink>.", "second": "Depois de conectar a conta, você precisa instalar os scripts. Para isso, clique no botão correspondente e ative a extensão para o tema.", "third": "Após a instalação dos scripts, você pode acessar o Yespo para mais configurações.", "more": "Para mais informações detalhadas, siga este &lt;detailedLink>link&lt;/detailedLink> ou entre em contato com o suporte Yespo: &lt;supportLink>Documentação Yespo&lt;/supportLink>." }, "banner": { "connected": "Scripts instalados", "incomplete": "Scripts parcialmente instalados", "disconnected": "Scripts não instalados" }, "button": { "configure": "Instalar scripts" }, "success": "Instalado com sucesso.", "errors": { "requestScriptError": "Erro ao solicitar script", "createGeneralDomainError": "Erro ao criar domínio geral", "createWebPushDomainError": "Erro ao criar domínio WebPush", "domainAlreadyRegisteredError": "Domínio já registrado.", "domainCantBeReachedError": "O domínio não pode ser acessado.", "support": "Entre em contato com o suporte da Yespo." } };
+const UsefulLinksSection$1 = { "title": "Links úteis", "helpText": "Aqui estão alguns links para ajudá-lo a se familiarizar rapidamente com nosso software:", "links": [{ "description": "Explore todos os recursos do Yespo CDP, incluindo IA avançada e 9 canais de marketing.", "label": "https://yespo.io", "url": "https://yespo.io" }, { "description": "Guia de Início Rápido", "label": "https://docs.yespo.io/docs/support", "url": "https://docs.yespo.io/docs/support" }, { "description": "Configurações do Web Push", "label": "https://docs.yespo.io/docs/web-push", "url": "https://docs.yespo.io/docs/web-push" }, { "description": "Configurações de widgets", "label": "https://docs.yespo.io/docs/widgets", "url": "https://docs.yespo.io/docs/widgets" }, { "description": "Dados de conformidade com a GDPR", "label": "https://docs.yespo.io/docs/gdpr-compliance", "url": "https://docs.yespo.io/docs/gdpr-compliance" }, { "description": "Rastreamento de eventos e comportamento", "label": "https://docs.yespo.io/docs/gdpr-compliance", "url": "https://docs.yespo.io/docs/gdpr-compliance" }, { "description": "Guia do Desenvolvedor", "label": "https://docs.yespo.io/reference/getting-started-with-your-api", "url": "https://docs.yespo.io/reference/getting-started-with-your-api" }, { "description": "Contato por e-mail", "label": "support@yespo.io", "url": "mailto:support@yespo.io" }] };
+const pt = {
+  WelcomeSection,
+  UnsupportedMarketsSection: UnsupportedMarketsSection$1,
+  AccountConnectionSection: AccountConnectionSection$1,
+  ConnectionStatusSection: ConnectionStatusSection$1,
+  UsefulLinksSection: UsefulLinksSection$1
+};
+const supportedLngsOptions = [
+  { label: "English", value: "en" },
+  { label: "Polish", value: "pl" },
+  { label: "Portuguese", value: "pt" }
+];
+const supportedLngs = supportedLngsOptions.map(({ value }) => value);
+const fallbackLng = "en";
+const defaultNS = "translation";
+const resources = {
+  en: { translation: en },
+  pl: { translation: pl },
+  pt: { translation: pt }
+};
+const i18n$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  defaultNS,
+  fallbackLng,
+  resources,
+  supportedLngs,
+  supportedLngsOptions
+}, Symbol.toStringTag, { value: "Module" }));
+const localeCookie = createCookie("lng", {
+  path: "/",
+  sameSite: "lax",
+  secure: process.env.NODE_ENV === "production",
+  httpOnly: true
+});
+const i18n = new RemixI18Next({
+  detection: {
+    supportedLanguages: supportedLngs,
+    fallbackLanguage: fallbackLng,
+    cookie: localeCookie
+  },
+  // This is the configuration for i18next used
+  // when translating messages server-side only
+  i18next: {
+    ...i18n$1
+  }
+});
+const streamTimeout = 5e3;
+async function handleRequest(request, responseStatusCode, responseHeaders, remixContext) {
+  return isbot(request.headers.get("user-agent") || "") ? handleBotRequest(
+    request,
+    responseStatusCode,
+    responseHeaders,
+    remixContext
+  ) : handleBrowserRequest(
+    request,
+    responseStatusCode,
+    responseHeaders,
+    remixContext
+  );
+}
+async function handleBrowserRequest(request, responseStatusCode, responseHeaders, remixContext) {
+  const instance = createInstance();
+  const lng = await i18n.getLocale(request);
+  const ns = i18n.getRouteNamespaces(remixContext);
+  await instance.use(initReactI18next).init({
+    ...i18n$1,
+    lng,
+    ns
+  });
+  addDocumentResponseHeaders(request, responseHeaders);
+  const userAgent = request.headers.get("user-agent");
+  const callbackName = isbot(userAgent ?? "") ? "onAllReady" : "onShellReady";
+  return new Promise((resolve, reject) => {
+    const { pipe, abort } = renderToPipeableStream(
+      /* @__PURE__ */ jsx(I18nextProvider, { i18n: instance, children: /* @__PURE__ */ jsx(
+        RemixServer,
+        {
+          context: remixContext,
+          url: request.url,
+          abortDelay: streamTimeout
+        }
+      ) }),
+      {
+        [callbackName]: () => {
+          const body = new PassThrough();
+          const stream = createReadableStreamFromReadable(body);
+          responseHeaders.set("Content-Type", "text/html");
+          resolve(
+            new Response(stream, {
+              headers: responseHeaders,
+              status: responseStatusCode
+            })
+          );
+          pipe(body);
+        },
+        onShellError(error) {
+          reject(error);
+        },
+        onError(error) {
+          responseStatusCode = 500;
+          console.error(error);
+        }
+      }
+    );
+    setTimeout(abort, streamTimeout + 1e3);
+  });
+}
+async function handleBotRequest(request, responseStatusCode, responseHeaders, remixContext) {
+  const instance = createInstance();
+  const lng = await i18n.getLocale(request);
+  const ns = i18n.getRouteNamespaces(remixContext);
+  await instance.use(initReactI18next).init({
+    ...i18n$1,
+    lng,
+    ns
+  });
+  return new Promise((resolve, reject) => {
+    let shellRendered = false;
+    const { pipe, abort } = renderToPipeableStream(
+      /* @__PURE__ */ jsx(I18nextProvider, { i18n: instance, children: /* @__PURE__ */ jsx(
+        RemixServer,
+        {
+          context: remixContext,
+          url: request.url,
+          abortDelay: streamTimeout
+        }
+      ) }),
+      {
+        onAllReady() {
+          shellRendered = true;
+          const body = new PassThrough();
+          const stream = createReadableStreamFromReadable(body);
+          responseHeaders.set("Content-Type", "text/html");
+          resolve(
+            new Response(stream, {
+              headers: responseHeaders,
+              status: responseStatusCode
+            })
+          );
+          pipe(body);
+        },
+        onShellError(error) {
+          reject(error);
+        },
+        onError(error) {
+          responseStatusCode = 500;
+          if (shellRendered) {
+            console.error(error);
+          }
+        }
+      }
+    );
+    setTimeout(abort, streamTimeout + 1e3);
+  });
+}
+const entryServer = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: handleRequest,
+  streamTimeout
+}, Symbol.toStringTag, { value: "Module" }));
+function App$2() {
+  return /* @__PURE__ */ jsxs("html", { children: [
+    /* @__PURE__ */ jsxs("head", { children: [
+      /* @__PURE__ */ jsx("meta", { charSet: "utf-8" }),
+      /* @__PURE__ */ jsx("meta", { name: "viewport", content: "width=device-width,initial-scale=1" }),
+      /* @__PURE__ */ jsx("link", { rel: "preconnect", href: "https://cdn.shopify.com/" }),
+      /* @__PURE__ */ jsx(
+        "link",
+        {
+          rel: "stylesheet",
+          href: "https://cdn.shopify.com/static/fonts/inter/v4/styles.css"
+        }
+      ),
+      /* @__PURE__ */ jsx(Meta, {}),
+      /* @__PURE__ */ jsx(Links, {})
+    ] }),
+    /* @__PURE__ */ jsxs("body", { children: [
+      /* @__PURE__ */ jsx(Outlet, {}),
+      /* @__PURE__ */ jsx(ScrollRestoration, {}),
+      /* @__PURE__ */ jsx(Scripts, {})
+    ] })
+  ] });
+}
+const route0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: App$2
+}, Symbol.toStringTag, { value: "Module" }));
+const action$5 = async ({ request }) => {
+  const { payload, session, topic, shop } = await authenticate.webhook(request);
+  console.log(`Received ${topic} webhook for ${shop}`);
+  const current = payload.current;
+  if (session) {
+    await prisma.session.update({
+      where: {
+        id: session.id
+      },
+      data: {
+        scope: current.toString()
+      }
+    });
+  }
+  return new Response();
+};
+const route1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$5
+}, Symbol.toStringTag, { value: "Module" }));
+const action$4 = async ({ request }) => {
+  const { shop, session, topic } = await authenticate.webhook(request);
+  console.log(`Received ${topic} webhook for ${shop}`);
+  if (session) {
+    await shopRepository.updateShop(shop, { apiKey: null, active: false });
+    await prisma.session.deleteMany({ where: { shop } });
+  }
+  return new Response();
+};
+const route2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$4
+}, Symbol.toStringTag, { value: "Module" }));
+function getAuthHeader(apiKey) {
+  const username = "user";
+  const encoded = Buffer.from(`${username}:${apiKey}`).toString("base64");
+  return `Basic ${encoded}`;
+}
+class FetchError extends Error {
+  /**
+   * Creates a new FetchError instance.
+   *
+   * @param {string} message - The error message.
+   * @param {number} status - The HTTP status code associated with the error.
+   */
+  constructor(message, status) {
+    super(message);
+    __publicField(this, "status");
+    this.status = status;
+  }
+}
+async function fetchWithErrorHandling(url, options) {
+  try {
+    const response = await fetch(url, options);
+    const rawResponse = await response.text();
+    let responseData = rawResponse;
+    try {
+      responseData = JSON.parse(rawResponse);
+    } catch (e) {
+    }
+    if (!response.ok) {
+      const message = typeof responseData === "string" ? responseData : (responseData == null ? void 0 : responseData.message) || "Unknown error";
+      throw new FetchError(message, response.status);
+    }
+    return responseData;
+  } catch (error) {
+    if (error instanceof FetchError) {
+      throw error;
+    }
+    throw new FetchError(error.message || "Unexpected error", 500);
+  }
+}
+const createContact = async ({
+  apiKey,
+  contactData
+}) => {
+  var _a2;
+  const url = `${process.env.API_URL}/contact`;
+  const authHeader = getAuthHeader(apiKey);
+  const options = {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      Authorization: authHeader
+    },
+    body: JSON.stringify(contactData)
+  };
+  try {
+    const response = await fetchWithErrorHandling(url, options);
+    return response;
+  } catch (error) {
+    console.error("Error creating contact:", error == null ? void 0 : error.message);
+    if (!((_a2 = error == null ? void 0 : error.message) == null ? void 0 : _a2.includes("Duplicated request"))) {
+      throw new Error(error.message);
+    }
+  }
+};
+const createContactService = async (payload, apiKey) => {
+  try {
+    const channels = [];
+    if (payload.email) {
+      channels.push({
+        type: "email",
+        value: payload.email
+      });
+    }
+    if (payload.phone) {
+      channels.push({
+        type: "sms",
+        value: payload.phone
+      });
+    }
+    const contactData = {
+      firstName: payload.first_name || "",
+      lastName: payload.last_name || "",
+      channels,
+      externalCustomerId: payload.id.toString()
+    };
+    await createContact({
+      apiKey,
+      contactData
+    });
+  } catch (error) {
+    console.error(error);
+  }
+};
+const updateContact = async ({
+  apiKey,
+  contactData
+}) => {
+  var _a2;
+  const url = `${process.env.API_URL}/contact`;
+  const authHeader = getAuthHeader(apiKey);
+  const options = {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      Authorization: authHeader
+    },
+    body: JSON.stringify(contactData)
+  };
+  try {
+    const response = await fetchWithErrorHandling(url, options);
+    return response;
+  } catch (error) {
+    console.error("Error updating contact:", error == null ? void 0 : error.message);
+    if (!((_a2 = error == null ? void 0 : error.message) == null ? void 0 : _a2.includes("Duplicated request"))) {
+      throw new Error(error.message);
+    }
+  }
+};
+const updateContactService = async (payload, apiKey) => {
+  const channels = [];
+  let address = void 0;
+  if (payload.email) {
+    channels.push({
+      type: "email",
+      value: payload.email
+    });
+  }
+  if (payload.phone) {
+    channels.push({
+      type: "sms",
+      value: payload.phone
+    });
+  } else if (payload.default_address.phone) {
+    channels.push({
+      type: "sms",
+      value: payload.default_address.phone
+    });
+  }
+  if (payload.default_address) {
+    address = {
+      town: payload.default_address.city || "",
+      address: payload.default_address.address1 || "",
+      postcode: payload.default_address.zip || ""
+    };
+  }
+  const contactData = {
+    firstName: payload.first_name || "",
+    lastName: payload.last_name || "",
+    channels,
+    externalCustomerId: payload.id.toString(),
+    address
+  };
+  await updateContact({
+    apiKey,
+    contactData
+  });
+};
+const action$3 = async ({ request }) => {
+  const { topic, session, payload, webhookId } = await authenticate.webhook(request);
+  if (!session) {
+    return new Response("Success", { status: 200 });
+  }
+  console.log(`Received ${topic} webhook for ${session.shop} webhookId ${webhookId}`);
+  const shop = await shopRepository.getShop(session.shop);
+  if (!shop || !(shop == null ? void 0 : shop.apiKey)) {
+    return new Response("Success", { status: 200 });
+  }
+  switch (topic) {
+    case "CUSTOMERS_CREATE":
+      await createContactService(payload, shop.apiKey);
+      break;
+    case "CUSTOMERS_UPDATE":
+      await updateContactService(payload, shop.apiKey);
+      break;
+    default:
+      console.warn(`❌ Unhandled webhook topic: ${topic}`);
+      return new Response(`Unhandled webhook topic: ${topic}`, { status: 400 });
+  }
+  return new Response("Success", { status: 200 });
+};
+const route3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$3
+}, Symbol.toStringTag, { value: "Module" }));
+const deleteContact = async ({
+  apiKey,
+  externalCustomerId,
+  erase = false
+}) => {
+  const url = `${process.env.API_URL}/contact?externalCustomerId=${externalCustomerId}&amp;erase=${erase}`;
+  const authHeader = getAuthHeader(apiKey);
+  const options = {
+    method: "DELETE",
+    headers: {
+      "content-type": "application/json",
+      Authorization: authHeader
+    }
+  };
+  try {
+    const response = await fetchWithErrorHandling(url, options);
+    return response;
+  } catch (error) {
+    console.error("Error deleting contact:", error == null ? void 0 : error.message);
+    if (!(error == null ? void 0 : error.message.includes("not found"))) {
+      throw new Error(error.message);
+    }
+  }
+};
+const deleteContactService = async (externalCustomerId, apiKey, erase) => {
+  await deleteContact({
+    apiKey,
+    externalCustomerId,
+    erase
+  });
+};
+const action$2 = async ({ request }) => {
+  const requestClone = request.clone();
+  const rawPayload = await request.text();
+  const signature = request.headers.get("x-shopify-hmac-sha256");
+  const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
+  const { shop, topic, payload, webhookId } = await authenticate.webhook(requestClone);
+  console.log(`Received ${topic} webhook for ${shop}`);
+  if (!SHOPIFY_API_SECRET) {
+    console.error(
+      "Webhook HMAC validation failed: SHOPIFY_API_SECRET is missing."
+    );
+    return new Response("Webhook HMAC validation failed", { status: 401 });
+  }
+  const generatedSignature = crypto.createHmac("sha256", SHOPIFY_API_SECRET).update(rawPayload).digest("base64");
+  if (signature !== generatedSignature) {
+    console.error("Webhook HMAC validation failed: signature does not match.");
+    return new Response("Webhook HMAC validation failed", { status: 401 });
+  }
+  const store = await shopRepository.getShop(shop);
+  if (!store || !(store == null ? void 0 : store.apiKey)) {
+    return new Response("Success", { status: 200 });
+  }
+  switch (topic) {
+    case "CUSTOMERS_DATA_REQUEST":
+      const customerDataRequest = {
+        webhookId,
+        topic,
+        payload: JSON.stringify(payload),
+        shop: {
+          connect: {
+            id: store.id
+          }
+        }
+      };
+      await customerDataRepository.createCustomerDataRequest(customerDataRequest);
+      break;
+    case "CUSTOMERS_REDACT":
+      await deleteContactService(payload.customer.id.toString(), store.apiKey, true);
+      break;
+    case "SHOP_REDACT":
+      const shopData = await shopRepository.getShop(shop);
+      if (shopData) {
+        await shopRepository.deleteShop(shop);
+      } else {
+        console.log(
+          `📌 No shop data stored. Acknowledging shop deletion request for shop: ${shop}`
+        );
+      }
+      break;
+    default:
+      console.warn(`❌ Unhandled webhook topic: ${topic}`);
+      return new Response(`Unhandled webhook topic: ${topic}`, { status: 400 });
+  }
+  return new Response("Success", { status: 200 });
+};
+const route4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$2
+}, Symbol.toStringTag, { value: "Module" }));
+const Polaris = /* @__PURE__ */ JSON.parse('{"ActionMenu":{"Actions":{"moreActions":"More actions"},"RollupActions":{"rollupButton":"View actions"}},"ActionList":{"SearchField":{"clearButtonLabel":"Clear","search":"Search","placeholder":"Search actions"}},"Avatar":{"label":"Avatar","labelWithInitials":"Avatar with initials {initials}"},"Autocomplete":{"spinnerAccessibilityLabel":"Loading","ellipsis":"{content}…"},"Badge":{"PROGRESS_LABELS":{"incomplete":"Incomplete","partiallyComplete":"Partially complete","complete":"Complete"},"TONE_LABELS":{"info":"Info","success":"Success","warning":"Warning","critical":"Critical","attention":"Attention","new":"New","readOnly":"Read-only","enabled":"Enabled"},"progressAndTone":"{toneLabel} {progressLabel}"},"Banner":{"dismissButton":"Dismiss notification"},"Button":{"spinnerAccessibilityLabel":"Loading"},"Common":{"checkbox":"checkbox","undo":"Undo","cancel":"Cancel","clear":"Clear","close":"Close","submit":"Submit","more":"More"},"ContextualSaveBar":{"save":"Save","discard":"Discard"},"DataTable":{"sortAccessibilityLabel":"sort {direction} by","navAccessibilityLabel":"Scroll table {direction} one column","totalsRowHeading":"Totals","totalRowHeading":"Total"},"DatePicker":{"previousMonth":"Show previous month, {previousMonthName} {showPreviousYear}","nextMonth":"Show next month, {nextMonth} {nextYear}","today":"Today ","start":"Start of range","end":"End of range","months":{"january":"January","february":"February","march":"March","april":"April","may":"May","june":"June","july":"July","august":"August","september":"September","october":"October","november":"November","december":"December"},"days":{"monday":"Monday","tuesday":"Tuesday","wednesday":"Wednesday","thursday":"Thursday","friday":"Friday","saturday":"Saturday","sunday":"Sunday"},"daysAbbreviated":{"monday":"Mo","tuesday":"Tu","wednesday":"We","thursday":"Th","friday":"Fr","saturday":"Sa","sunday":"Su"}},"DiscardConfirmationModal":{"title":"Discard all unsaved changes","message":"If you discard changes, you’ll delete any edits you made since you last saved.","primaryAction":"Discard changes","secondaryAction":"Continue editing"},"DropZone":{"single":{"overlayTextFile":"Drop file to upload","overlayTextImage":"Drop image to upload","overlayTextVideo":"Drop video to upload","actionTitleFile":"Add file","actionTitleImage":"Add image","actionTitleVideo":"Add video","actionHintFile":"or drop file to upload","actionHintImage":"or drop image to upload","actionHintVideo":"or drop video to upload","labelFile":"Upload file","labelImage":"Upload image","labelVideo":"Upload video"},"allowMultiple":{"overlayTextFile":"Drop files to upload","overlayTextImage":"Drop images to upload","overlayTextVideo":"Drop videos to upload","actionTitleFile":"Add files","actionTitleImage":"Add images","actionTitleVideo":"Add videos","actionHintFile":"or drop files to upload","actionHintImage":"or drop images to upload","actionHintVideo":"or drop videos to upload","labelFile":"Upload files","labelImage":"Upload images","labelVideo":"Upload videos"},"errorOverlayTextFile":"File type is not valid","errorOverlayTextImage":"Image type is not valid","errorOverlayTextVideo":"Video type is not valid"},"EmptySearchResult":{"altText":"Empty search results"},"Frame":{"skipToContent":"Skip to content","navigationLabel":"Navigation","Navigation":{"closeMobileNavigationLabel":"Close navigation"}},"FullscreenBar":{"back":"Back","accessibilityLabel":"Exit fullscreen mode"},"Filters":{"moreFilters":"More filters","moreFiltersWithCount":"More filters ({count})","filter":"Filter {resourceName}","noFiltersApplied":"No filters applied","cancel":"Cancel","done":"Done","clearAllFilters":"Clear all filters","clear":"Clear","clearLabel":"Clear {filterName}","addFilter":"Add filter","clearFilters":"Clear all","searchInView":"in:{viewName}"},"FilterPill":{"clear":"Clear","unsavedChanges":"Unsaved changes - {label}"},"IndexFilters":{"searchFilterTooltip":"Search and filter","searchFilterTooltipWithShortcut":"Search and filter (F)","searchFilterAccessibilityLabel":"Search and filter results","sort":"Sort your results","addView":"Add a new view","newView":"Custom search","SortButton":{"ariaLabel":"Sort the results","tooltip":"Sort","title":"Sort by","sorting":{"asc":"Ascending","desc":"Descending","az":"A-Z","za":"Z-A"}},"EditColumnsButton":{"tooltip":"Edit columns","accessibilityLabel":"Customize table column order and visibility"},"UpdateButtons":{"cancel":"Cancel","update":"Update","save":"Save","saveAs":"Save as","modal":{"title":"Save view as","label":"Name","sameName":"A view with this name already exists. Please choose a different name.","save":"Save","cancel":"Cancel"}}},"IndexProvider":{"defaultItemSingular":"Item","defaultItemPlural":"Items","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} are selected","selected":"{selectedItemsCount} selected","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}"},"IndexTable":{"emptySearchTitle":"No {resourceNamePlural} found","emptySearchDescription":"Try changing the filters or search term","onboardingBadgeText":"New","resourceLoadingAccessibilityLabel":"Loading {resourceNamePlural}…","selectAllLabel":"Select all {resourceNamePlural}","selected":"{selectedItemsCount} selected","undo":"Undo","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural}","selectItem":"Select {resourceName}","selectButtonText":"Select","sortAccessibilityLabel":"sort {direction} by"},"Loading":{"label":"Page loading bar"},"Modal":{"iFrameTitle":"body markup","modalWarning":"These required properties are missing from Modal: {missingProps}"},"Page":{"Header":{"rollupActionsLabel":"View actions for {title}","pageReadyAccessibilityLabel":"{title}. This page is ready"}},"Pagination":{"previous":"Previous","next":"Next","pagination":"Pagination"},"ProgressBar":{"negativeWarningMessage":"Values passed to the progress prop shouldn’t be negative. Resetting {progress} to 0.","exceedWarningMessage":"Values passed to the progress prop shouldn’t exceed 100. Setting {progress} to 100."},"ResourceList":{"sortingLabel":"Sort by","defaultItemSingular":"item","defaultItemPlural":"items","showing":"Showing {itemsCount} {resource}","showingTotalCount":"Showing {itemsCount} of {totalItemsCount} {resource}","loading":"Loading {resource}","selected":"{selectedItemsCount} selected","allItemsSelected":"All {itemsLength}+ {resourceNamePlural} in your store are selected","allFilteredItemsSelected":"All {itemsLength}+ {resourceNamePlural} in this filter are selected","selectAllItems":"Select all {itemsLength}+ {resourceNamePlural} in your store","selectAllFilteredItems":"Select all {itemsLength}+ {resourceNamePlural} in this filter","emptySearchResultTitle":"No {resourceNamePlural} found","emptySearchResultDescription":"Try changing the filters or search term","selectButtonText":"Select","a11yCheckboxDeselectAllSingle":"Deselect {resourceNameSingular}","a11yCheckboxSelectAllSingle":"Select {resourceNameSingular}","a11yCheckboxDeselectAllMultiple":"Deselect all {itemsLength} {resourceNamePlural}","a11yCheckboxSelectAllMultiple":"Select all {itemsLength} {resourceNamePlural}","Item":{"actionsDropdownLabel":"Actions for {accessibilityLabel}","actionsDropdown":"Actions dropdown","viewItem":"View details for {itemName}"},"BulkActions":{"actionsActivatorLabel":"Actions","moreActionsActivatorLabel":"More actions"}},"SkeletonPage":{"loadingLabel":"Page loading"},"Tabs":{"newViewAccessibilityLabel":"Create new view","newViewTooltip":"Create view","toggleTabsLabel":"More views","Tab":{"rename":"Rename view","duplicate":"Duplicate view","edit":"Edit view","editColumns":"Edit columns","delete":"Delete view","copy":"Copy of {name}","deleteModal":{"title":"Delete view?","description":"This can’t be undone. {viewName} view will no longer be available in your admin.","cancel":"Cancel","delete":"Delete view"}},"RenameModal":{"title":"Rename view","label":"Name","cancel":"Cancel","create":"Save","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"DuplicateModal":{"title":"Duplicate view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}},"CreateViewModal":{"title":"Create new view","label":"Name","cancel":"Cancel","create":"Create view","errors":{"sameName":"A view with this name already exists. Please choose a different name."}}},"Tag":{"ariaLabel":"Remove {children}"},"TextField":{"characterCount":"{count} characters","characterCountWithMaxLength":"{count} of {limit} characters used"},"TooltipOverlay":{"accessibilityLabel":"Tooltip: {label}"},"TopBar":{"toggleMenuLabel":"Toggle menu","SearchField":{"clearButtonLabel":"Clear","search":"Search"}},"MediaCard":{"dismissButton":"Dismiss","popoverButton":"Actions"},"VideoThumbnail":{"playButtonA11yLabel":{"default":"Play video","defaultWithDuration":"Play video of length {duration}","duration":{"hours":{"other":{"only":"{hourCount} hours","andMinutes":"{hourCount} hours and {minuteCount} minutes","andMinute":"{hourCount} hours and {minuteCount} minute","minutesAndSeconds":"{hourCount} hours, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hours, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hours, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hours, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hours and {secondCount} seconds","andSecond":"{hourCount} hours and {secondCount} second"},"one":{"only":"{hourCount} hour","andMinutes":"{hourCount} hour and {minuteCount} minutes","andMinute":"{hourCount} hour and {minuteCount} minute","minutesAndSeconds":"{hourCount} hour, {minuteCount} minutes, and {secondCount} seconds","minutesAndSecond":"{hourCount} hour, {minuteCount} minutes, and {secondCount} second","minuteAndSeconds":"{hourCount} hour, {minuteCount} minute, and {secondCount} seconds","minuteAndSecond":"{hourCount} hour, {minuteCount} minute, and {secondCount} second","andSeconds":"{hourCount} hour and {secondCount} seconds","andSecond":"{hourCount} hour and {secondCount} second"}},"minutes":{"other":{"only":"{minuteCount} minutes","andSeconds":"{minuteCount} minutes and {secondCount} seconds","andSecond":"{minuteCount} minutes and {secondCount} second"},"one":{"only":"{minuteCount} minute","andSeconds":"{minuteCount} minute and {secondCount} seconds","andSecond":"{minuteCount} minute and {secondCount} second"}},"seconds":{"other":"{secondCount} seconds","one":"{secondCount} second"}}}}}');
+const polarisTranslations = {
+  Polaris
+};
+const polarisStyles = "/assets/styles-BeiPL2RV.css";
+function loginErrorMessage(loginErrors) {
+  if ((loginErrors == null ? void 0 : loginErrors.shop) === LoginErrorType.MissingShop) {
+    return { shop: "Please enter your shop domain to log in" };
+  } else if ((loginErrors == null ? void 0 : loginErrors.shop) === LoginErrorType.InvalidShop) {
+    return { shop: "Please enter a valid shop domain to log in" };
+  }
+  return {};
+}
+const links$1 = () => [{ rel: "stylesheet", href: polarisStyles }];
+const loader$4 = async ({ request }) => {
+  const errors = loginErrorMessage(await login(request));
+  return { errors, polarisTranslations };
+};
+const action$1 = async ({ request }) => {
+  const errors = loginErrorMessage(await login(request));
+  return {
+    errors
+  };
+};
+function Auth() {
+  const loaderData = useLoaderData();
+  const actionData = useActionData();
+  const [shop, setShop] = useState("");
+  const { errors } = actionData || loaderData;
+  return /* @__PURE__ */ jsx(AppProvider, { i18n: loaderData.polarisTranslations, children: /* @__PURE__ */ jsx(Page, { children: /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsx(Form, { method: "post", children: /* @__PURE__ */ jsxs(FormLayout, { children: [
+    /* @__PURE__ */ jsx(Text, { variant: "headingMd", as: "h2", children: "Log in" }),
+    /* @__PURE__ */ jsx(
+      TextField,
+      {
+        type: "text",
+        name: "shop",
+        label: "Shop domain",
+        helpText: "example.myshopify.com",
+        value: shop,
+        onChange: setShop,
+        autoComplete: "on",
+        error: errors.shop
+      }
+    ),
+    /* @__PURE__ */ jsx(Button, { submit: true, children: "Log in" })
+  ] }) }) }) }) });
+}
+const route5 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action: action$1,
+  default: Auth,
+  links: links$1,
+  loader: loader$4
+}, Symbol.toStringTag, { value: "Module" }));
+const index = "_index_12o3y_1";
+const heading = "_heading_12o3y_11";
+const text = "_text_12o3y_12";
+const content = "_content_12o3y_22";
+const form = "_form_12o3y_27";
+const label = "_label_12o3y_35";
+const input = "_input_12o3y_43";
+const button = "_button_12o3y_47";
+const list = "_list_12o3y_51";
+const styles = {
+  index,
+  heading,
+  text,
+  content,
+  form,
+  label,
+  input,
+  button,
+  list
+};
+const loader$3 = async ({ request }) => {
+  const url = new URL(request.url);
+  if (url.searchParams.get("shop")) {
+    throw redirect(`/app?${url.searchParams.toString()}`);
+  }
+  return { showForm: Boolean(login) };
+};
+function App$1() {
+  const { showForm } = useLoaderData();
+  return /* @__PURE__ */ jsx("div", { className: styles.index, children: /* @__PURE__ */ jsxs("div", { className: styles.content, children: [
+    /* @__PURE__ */ jsx("h1", { className: styles.heading, children: "A short heading about [your app]" }),
+    /* @__PURE__ */ jsx("p", { className: styles.text, children: "A tagline about [your app] that describes your value proposition." }),
+    showForm &amp;&amp; /* @__PURE__ */ jsxs(Form, { className: styles.form, method: "post", action: "/auth/login", children: [
+      /* @__PURE__ */ jsxs("label", { className: styles.label, children: [
+        /* @__PURE__ */ jsx("span", { children: "Shop domain" }),
+        /* @__PURE__ */ jsx("input", { className: styles.input, type: "text", name: "shop" }),
+        /* @__PURE__ */ jsx("span", { children: "e.g: my-shop-domain.myshopify.com" })
+      ] }),
+      /* @__PURE__ */ jsx("button", { className: styles.button, type: "submit", children: "Log in" })
+    ] }),
+    /* @__PURE__ */ jsxs("ul", { className: styles.list, children: [
+      /* @__PURE__ */ jsxs("li", { children: [
+        /* @__PURE__ */ jsx("strong", { children: "Product feature" }),
+        ". Some detail about your feature and its benefit to your customer."
+      ] }),
+      /* @__PURE__ */ jsxs("li", { children: [
+        /* @__PURE__ */ jsx("strong", { children: "Product feature" }),
+        ". Some detail about your feature and its benefit to your customer."
+      ] }),
+      /* @__PURE__ */ jsxs("li", { children: [
+        /* @__PURE__ */ jsx("strong", { children: "Product feature" }),
+        ". Some detail about your feature and its benefit to your customer."
+      ] })
+    ] })
+  ] }) });
+}
+const route6 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  default: App$1,
+  loader: loader$3
+}, Symbol.toStringTag, { value: "Module" }));
+const loader$2 = async ({ request }) => {
+  await authenticate.admin(request);
+  return null;
+};
+const route7 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  loader: loader$2
+}, Symbol.toStringTag, { value: "Module" }));
+const links = () => [{ rel: "stylesheet", href: polarisStyles }];
+const loader$1 = async ({ request }) => {
+  await authenticate.admin(request);
+  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+};
+function App() {
+  const { apiKey } = useLoaderData();
+  const { i18n: i18n2 } = useTranslation();
+  const appBridge = useAppBridge();
+  useEffect(() => {
+    var _a2;
+    if ((_a2 = appBridge == null ? void 0 : appBridge.config) == null ? void 0 : _a2.locale) {
+      i18n2.changeLanguage(appBridge.config.locale);
+    }
+  }, [i18n2, appBridge]);
+  return /* @__PURE__ */ jsxs(AppProvider$1, { isEmbeddedApp: true, apiKey, children: [
+    /* @__PURE__ */ jsx(NavMenu, { children: /* @__PURE__ */ jsx(Link, { to: "/app", rel: "home", children: "Home" }) }),
+    /* @__PURE__ */ jsx(Outlet, {})
+  ] });
+}
+function ErrorBoundary() {
+  return boundary.error(useRouteError());
+}
+const headers = (headersArgs) => {
+  return boundary.headers(headersArgs);
+};
+const route8 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  ErrorBoundary,
+  default: App,
+  headers,
+  links,
+  loader: loader$1
+}, Symbol.toStringTag, { value: "Module" }));
+const UnsupportedMarketsSection = () => {
+  const { t } = useTranslation();
+  return /* @__PURE__ */ jsx(Banner, { title: t("UnsupportedMarketsSection.title"), tone: "warning", children: /* @__PURE__ */ jsxs(BlockStack, { inlineAlign: "start", gap: "200", children: [
+    t("UnsupportedMarketsSection.description"),
+    /* @__PURE__ */ jsx(Button, { variant: "primary", url: "shopify://admin/settings/markets", children: t("UnsupportedMarketsSection.button") })
+  ] }) });
+};
+const AccountConnectionSection = ({
+  apiKey,
+  account,
+  errors,
+  disabled
+}) => {
+  const { t } = useTranslation();
+  const fetcher = useFetcher();
+  const [value, setValue] = useState(apiKey || "");
+  const [show, setShow] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const handleValueChange = useCallback((value2) => setValue(value2), []);
+  const handleShowChange = useCallback(() => setShow(!show), [show]);
+  const handleModalOpen = useCallback(() => setModalOpen(true), []);
+  const handleModalClose = useCallback(() => setModalOpen(false), []);
+  const handleDisconnect = useCallback(() => {
+    try {
+      fetcher.submit({ intent: "account-disconnection" }, { method: "post" });
+      setModalOpen(false);
+    } catch (error) {
+      console.error("Error during account disconnection:", error);
+    }
+  }, [fetcher]);
+  useEffect(() => {
+    setValue(apiKey || "");
+  }, [apiKey]);
+  return /* @__PURE__ */ jsxs(Card, { children: [
+    /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
+      /* @__PURE__ */ jsxs(InlineStack, { gap: "200", children: [
+        /* @__PURE__ */ jsx(Text, { as: "h2", variant: "headingMd", children: t("AccountConnectionSection.title") }),
+        account ? /* @__PURE__ */ jsx(Badge, { tone: "success", progress: "complete", children: t("AccountConnectionSection.status.active") }) : /* @__PURE__ */ jsx(Badge, { tone: "critical", progress: "incomplete", children: t("AccountConnectionSection.status.inactive") })
+      ] }),
+      (account == null ? void 0 : account.organisationName) &amp;&amp; /* @__PURE__ */ jsxs(InlineStack, { gap: "100", children: [
+        /* @__PURE__ */ jsxs(Text, { as: "span", variant: "bodyMd", children: [
+          t("AccountConnectionSection.account"),
+          ":"
+        ] }),
+        /* @__PURE__ */ jsx(Text, { as: "h2", variant: "headingMd", children: account == null ? void 0 : account.organisationName })
+      ] }),
+      /* @__PURE__ */ jsxs(Form, { method: "post", name: "account-connection", children: [
+        /* @__PURE__ */ jsx("input", { type: "hidden", name: "intent", value: "account-connection" }),
+        /* @__PURE__ */ jsx(
+          TextField,
+          {
+            value,
+            name: "apiKey",
+            label: "Api Key",
+            type: show ? "text" : "password",
+            autoComplete: "off",
+            onChange: handleValueChange,
+            helpText: /* @__PURE__ */ jsxs("p", { children: [
+              t("AccountConnectionSection.helpText"),
+              " ",
+              /* @__PURE__ */ jsx(Link$1, { url: t("AccountConnectionSection.link"), target: "_blank", children: "docs.yespo.io" })
+            ] }),
+            error: errors == null ? void 0 : errors.apiKey,
+            disabled: disabled || !!apiKey,
+            suffix: /* @__PURE__ */ jsx(InlineStack, { blockAlign: "center", children: /* @__PURE__ */ jsx(
+              Button,
+              {
+                variant: "plain",
+                disabled,
+                icon: show ? HideIcon : ViewIcon,
+                onClick: handleShowChange
+              }
+            ) }),
+            connectedRight: account ? /* @__PURE__ */ jsx(
+              Button,
+              {
+                size: "large",
+                variant: "primary",
+                tone: "critical",
+                onClick: handleModalOpen,
+                loading: fetcher.state === "submitting",
+                disabled: disabled || fetcher.state === "submitting",
+                children: t("AccountConnectionSection.button.disconnect")
+              }
+            ) : /* @__PURE__ */ jsx(
+              Button,
+              {
+                size: "large",
+                variant: "primary",
+                loading: fetcher.state === "submitting",
+                disabled: disabled || !!apiKey,
+                submit: true,
+                children: t("AccountConnectionSection.button.connect")
+              }
+            )
+          }
+        )
+      ] })
+    ] }),
+    /* @__PURE__ */ jsxs(Modal, { open: modalOpen, onHide: () => setModalOpen(false), children: [
+      /* @__PURE__ */ jsx(Box, { paddingBlock: "400", paddingInline: "200", children: /* @__PURE__ */ jsx(Text, { as: "p", children: "Are you sure you want to disable your account?" }) }),
+      /* @__PURE__ */ jsxs(TitleBar, { title: "Disconnect account", children: [
+        /* @__PURE__ */ jsx(
+          "button",
+          {
+            variant: "primary",
+            tone: "critical",
+            disabled: disabled &amp;&amp; fetcher.state === "submitting",
+            onClick: handleDisconnect,
+            children: "Confirm"
+          }
+        ),
+        /* @__PURE__ */ jsx("button", { disabled, onClick: handleModalClose, children: "Cancel" })
+      ] })
+    ] })
+  ] });
+};
+const ConnectionStatusList = ({
+  isApiKeyActive,
+  isGeneralScriptExist,
+  isWebPushScriptExist,
+  isAppExtensionActive,
+  dockUrl,
+  platformUrl
+}) => {
+  const { t } = useTranslation();
+  const isScriptsActive = isApiKeyActive &amp;&amp; isGeneralScriptExist &amp;&amp; isWebPushScriptExist &amp;&amp; isAppExtensionActive &amp;&amp; isAppExtensionActive;
+  return /* @__PURE__ */ jsxs(BlockStack, { gap: "150", children: [
+    /* @__PURE__ */ jsxs(InlineStack, { align: "start", blockAlign: "center", gap: "100", wrap: false, children: [
+      /* @__PURE__ */ jsx(Box, { children: /* @__PURE__ */ jsx(
+        Icon,
+        {
+          source: isApiKeyActive ? CheckCircleIcon : XCircleIcon,
+          tone: isApiKeyActive ? "textSuccess" : "textCritical"
+        }
+      ) }),
+      /* @__PURE__ */ jsx(Text, { as: "p", children: /* @__PURE__ */ jsx(
+        Trans,
+        {
+          i18nKey: "ConnectionStatusSection.list.first",
+          t,
+          components: {
+            apiKeysLink: /* @__PURE__ */ jsx(
+              Link$1,
+              {
+                url: `${platformUrl}/settings-ui/#/api-keys-list`,
+                target: "_blank"
+              }
+            )
+          }
+        }
+      ) })
+    ] }),
+    /* @__PURE__ */ jsxs(InlineStack, { align: "start", blockAlign: "center", gap: "100", wrap: false, children: [
+      /* @__PURE__ */ jsx(Box, { children: /* @__PURE__ */ jsx(
+        Icon,
+        {
+          source: isScriptsActive ? CheckCircleIcon : XCircleIcon,
+          tone: isScriptsActive ? "textSuccess" : "textCritical"
+        }
+      ) }),
+      /* @__PURE__ */ jsx(Text, { as: "p", children: t("ConnectionStatusSection.list.second") })
+    ] }),
+    /* @__PURE__ */ jsxs(InlineStack, { align: "start", blockAlign: "center", gap: "100", wrap: false, children: [
+      /* @__PURE__ */ jsx(Box, { children: /* @__PURE__ */ jsx(
+        Icon,
+        {
+          source: isScriptsActive ? CheckCircleIcon : XCircleIcon,
+          tone: isScriptsActive ? "textSuccess" : "textCritical"
+        }
+      ) }),
+      /* @__PURE__ */ jsx(Text, { as: "p", children: t("ConnectionStatusSection.list.third") })
+    ] }),
+    /* @__PURE__ */ jsx(InlineStack, { align: "start", blockAlign: "center", gap: "100", wrap: false, children: /* @__PURE__ */ jsx(Text, { as: "p", children: /* @__PURE__ */ jsx(
+      Trans,
+      {
+        i18nKey: "ConnectionStatusSection.list.more",
+        t,
+        components: {
+          supportLink: /* @__PURE__ */ jsx(Link$1, { url: `${dockUrl}/docs/what-is-yespo`, target: "_blank" }),
+          detailedLink: /* @__PURE__ */ jsx(
+            Link$1,
+            {
+              url: `${dockUrl}/docs/integrating-with-shopify`,
+              target: "_blank"
+            }
+          )
+        }
+      }
+    ) }) })
+  ] });
+};
+const ConnectionStatusSection = ({
+  isApiKeyActive,
+  isGeneralScriptExist,
+  isWebPushScriptExist,
+  isAppExtensionActive,
+  dockUrl,
+  platformUrl,
+  errors,
+  disabled
+}) => {
+  const revalidator = useRevalidator();
+  const { t } = useTranslation();
+  const intent = "connection-status";
+  return /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
+    /* @__PURE__ */ jsxs(InlineStack, { gap: "200", children: [
+      /* @__PURE__ */ jsx(Text, { as: "h2", variant: "headingMd", children: t("ConnectionStatusSection.title") }),
+      /* @__PURE__ */ jsx(
+        Button,
+        {
+          icon: RefreshIcon,
+          size: "micro",
+          variant: "plain",
+          onClick: () => revalidator.revalidate(),
+          disabled,
+          children: t("ConnectionStatusSection.refresh")
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsx(
+      ConnectionStatusList,
+      {
+        isApiKeyActive,
+        isGeneralScriptExist,
+        isWebPushScriptExist,
+        isAppExtensionActive,
+        dockUrl,
+        platformUrl
+      }
+    ),
+    /* @__PURE__ */ jsxs("div", { style: { display: "flex", alignItems: "center", gap: 5 }, children: [
+      /* @__PURE__ */ jsx("div", { style: { flex: 1 }, children: isApiKeyActive &amp;&amp; isGeneralScriptExist &amp;&amp; isWebPushScriptExist &amp;&amp; isAppExtensionActive ? /* @__PURE__ */ jsx(Banner, { tone: "success", children: t("ConnectionStatusSection.banner.connected") }) : isApiKeyActive &amp;&amp; isAppExtensionActive &amp;&amp; (isGeneralScriptExist || isWebPushScriptExist) ? /* @__PURE__ */ jsx(Banner, { tone: "warning", children: t("ConnectionStatusSection.banner.incomplete") }) : /* @__PURE__ */ jsx(Banner, { tone: "critical", children: t("ConnectionStatusSection.banner.disconnected") }) }),
+      /* @__PURE__ */ jsxs(Form, { method: "post", name: intent, children: [
+        /* @__PURE__ */ jsx("input", { type: "hidden", name: "intent", value: intent }),
+        (!isApiKeyActive || !isGeneralScriptExist || !isWebPushScriptExist || !isAppExtensionActive) &amp;&amp; /* @__PURE__ */ jsx(
+          Button,
+          {
+            size: "large",
+            variant: "primary",
+            disabled,
+            submit: true,
+            children: t("ConnectionStatusSection.button.configure")
+          }
+        )
+      ] })
+    ] }),
+    (errors == null ? void 0 : errors.script) &amp;&amp; /* @__PURE__ */ jsx(
+      InlineError,
+      {
+        message: /* @__PURE__ */ jsxs(BlockStack, { children: [
+          /* @__PURE__ */ jsx(Text, { as: "p", children: errors.script }),
+          /* @__PURE__ */ jsxs(InlineStack, { gap: "100", children: [
+            /* @__PURE__ */ jsx(Text, { as: "p", children: t("ConnectionStatusSection.errors.support") }),
+            /* @__PURE__ */ jsx(Link$1, { url: `${dockUrl}/docs/what-is-yespo`, target: "_blank", children: `${dockUrl}/docs/what-is-yespo` })
+          ] })
+        ] }),
+        fieldID: "fieldID"
+      }
+    )
+  ] }) });
+};
+const UsefulLinksSection = () => {
+  const { t } = useTranslation();
+  const links2 = t("UsefulLinksSection.links", { returnObjects: true });
+  return /* @__PURE__ */ jsx(Card, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "200", children: [
+    /* @__PURE__ */ jsx(Text, { as: "h2", variant: "headingMd", children: t("UsefulLinksSection.title") }),
+    /* @__PURE__ */ jsx(Text, { as: "p", variant: "bodyMd", children: t("UsefulLinksSection.helpText") }),
+    /* @__PURE__ */ jsx(List, { type: "bullet", gap: "extraTight", children: links2.map((link, index2) => /* @__PURE__ */ jsx(List.Item, { children: /* @__PURE__ */ jsx(Box, { paddingBlockEnd: "200", children: /* @__PURE__ */ jsxs(InlineStack, { gap: "100", wrap: false, children: [
+      /* @__PURE__ */ jsx("div", { style: { textWrap: "nowrap" }, children: /* @__PURE__ */ jsx(Link$1, { url: link.url, target: "_blank", children: link.label }) }),
+      "—",
+      /* @__PURE__ */ jsx(Text, { as: "p", children: link.description })
+    ] }) }) }, `${link.url}-${index2}`)) })
+  ] }) });
+};
+const getAccountInfo = async ({
+  apiKey
+}) => {
+  const url = `${process.env.API_URL}/account/info`;
+  const authHeader = getAuthHeader(apiKey);
+  const options = {
+    method: "GET",
+    headers: {
+      accept: "application/json; charset=UTF-8",
+      Authorization: authHeader
+    }
+  };
+  try {
+    const response = await fetch(url, options);
+    const responseParse = await response.json();
+    if (response.status === 401) {
+      throw new Error("invalidApiKey");
+    }
+    if (!response.ok) {
+      throw new Error("unknownError");
+    }
+    return responseParse;
+  } catch (error) {
+    const message = (error == null ? void 0 : error.message) ?? "unknownError";
+    throw new Error(message);
+  }
+};
+const GENERAL_SCRIPT_HANDLE$4 = process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
+const WEB_PUSH_SCRIPT_HANDLE$3 = process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
+const connectAccountService = async ({
+  session,
+  apiKey,
+  admin
+}) => {
+  await getAccountInfo({ apiKey });
+  await shopRepository.updateShop(session.shop, { apiKey });
+  const shop = await shopRepository.getShop(session.shop);
+  if (shop == null ? void 0 : shop.shopId) {
+    await deleteMetafields({
+      admin,
+      ownerId: shop == null ? void 0 : shop.shopId,
+      keys: [GENERAL_SCRIPT_HANDLE$4, WEB_PUSH_SCRIPT_HANDLE$3]
+    });
+  }
+};
+const GENERAL_SCRIPT_HANDLE$3 = process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
+const WEB_PUSH_SCRIPT_HANDLE$2 = process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
+const disconnectAccountService = async ({
+  session,
+  admin
+}) => {
+  await shopRepository.updateShop(session.shop, { apiKey: "" });
+  const shop = await shopRepository.getShop(session.shop);
+  if (shop == null ? void 0 : shop.shopId) {
+    await deleteMetafields({
+      admin,
+      ownerId: shop == null ? void 0 : shop.shopId,
+      keys: [GENERAL_SCRIPT_HANDLE$3, WEB_PUSH_SCRIPT_HANDLE$2]
+    });
+  }
+};
+const getGeneralScript = async ({ apiKey }) => {
+  const url = `${process.env.API_URL}/site/script`;
+  const authHeader = getAuthHeader(apiKey);
+  const options = {
+    method: "GET",
+    headers: {
+      accept: "text/plain",
+      Authorization: authHeader
+    }
+  };
+  try {
+    const response = await fetchWithErrorHandling(url, options);
+    return response;
+  } catch (error) {
+    console.error("Error fetching general script:", error);
+    throw new Error("requestScriptError");
+  }
+};
+const createGeneralDomain = async ({
+  apiKey,
+  domain
+}) => {
+  var _a2, _b;
+  const url = `${process.env.API_URL}/site/domains`;
+  const authHeader = getAuthHeader(apiKey);
+  const options = {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      Authorization: authHeader
+    },
+    body: JSON.stringify({ domain })
+  };
+  try {
+    const response = await fetchWithErrorHandling(url, options);
+    return response;
+  } catch (error) {
+    console.error("Error creating general domain:", error == null ? void 0 : error.message);
+    if ((_a2 = error == null ? void 0 : error.message) == null ? void 0 : _a2.includes("Domain is already registered")) {
+      throw new Error("domainAlreadyRegisteredError");
+    } else if ((_b = error == null ? void 0 : error.message) == null ? void 0 : _b.includes("Domain can't be reached")) {
+      throw new Error("domainCantBeReachedError");
+    } else {
+      throw new Error("createGeneralDomainError");
+    }
+  }
+};
+async function createMetafield({
+  admin,
+  shopId,
+  key,
+  value
+}) {
+  var _a2;
+  try {
+    const response = await admin.graphql(
+      `
+      #graphql
+      mutation metafieldsSet($metafields: [MetafieldsSetInput!]!) {
+        metafieldsSet(metafields: $metafields) {
+          metafields {
+            id
+            key
+            value
+            ownerType
+            namespace
+            type
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `,
+      {
+        variables: {
+          metafields: [
+            {
+              key,
+              namespace: "$app",
+              type: "single_line_text_field",
+              value: value.replace(/\n/g, "").replace(/\s+/g, " ").trim(),
+              ownerId: shopId
+            }
+          ]
+        }
+      }
+    );
+    const responseParse = await response.json();
+    const metafieldData = responseParse == null ? void 0 : responseParse.data;
+    const metafield = (_a2 = metafieldData == null ? void 0 : metafieldData.metafieldsSet) == null ? void 0 : _a2.metafields[0];
+    return metafield ?? null;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+const GENERAL_SCRIPT_HANDLE$2 = process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
+const connectGeneralScriptService = async ({
+  shopId,
+  apiKey,
+  domain,
+  admin
+}) => {
+  try {
+    await createGeneralDomain({ apiKey, domain });
+    const script = await getGeneralScript({ apiKey });
+    const metafield = await createMetafield({
+      shopId,
+      admin,
+      value: script,
+      key: GENERAL_SCRIPT_HANDLE$2
+    });
+    if (!metafield) {
+      throw new Error("requestScriptError");
+    }
+    return true;
+  } catch (error) {
+    console.error(`Error connecting general script: ${error.message}`);
+    if (error == null ? void 0 : error.message) {
+      throw new Error(error.message);
+    } else {
+      throw new Error("requestScriptError");
+    }
+  }
+};
+const getWebpushScript = async ({
+  apiKey,
+  domain
+}) => {
+  const url = `${process.env.API_URL}/site/webpush/script?domain=https://${domain}`;
+  const authHeader = getAuthHeader(apiKey);
+  const options = {
+    method: "GET",
+    headers: {
+      accept: "application/json",
+      Authorization: authHeader
+    }
+  };
+  try {
+    const response = await fetchWithErrorHandling(url, options);
+    const { script } = response;
+    if (!script) {
+      throw new Error("requestScriptError");
+    }
+    return script;
+  } catch (error) {
+    console.error("Error fetching webpush script:", error);
+    throw new Error("requestScriptError");
+  }
+};
+const SERVICE_WORKER_NAME = process.env.SERVICE_WORKER_NAME ?? "service-worker.js";
+const SERVICE_WORKER_PATH = process.env.SERVICE_WORKER_PATH ?? "/apps/yespo-proxy/";
+const createWebPushDomain = async ({
+  apiKey,
+  domain
+}) => {
+  var _a2, _b, _c, _d, _e;
+  const url = `${process.env.API_URL}/site/webpush/domains`;
+  const authHeader = getAuthHeader(apiKey);
+  const options = {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      Authorization: authHeader
+    },
+    body: JSON.stringify({
+      domains: [
+        {
+          domain: `https://${domain}`,
+          serviceWorkerName: SERVICE_WORKER_NAME,
+          serviceWorkerPath: SERVICE_WORKER_PATH,
+          serviceWorkerScope: SERVICE_WORKER_PATH
+        }
+      ]
+    })
+  };
+  try {
+    const response = await fetchWithErrorHandling(
+      url,
+      options
+    );
+    if ((_b = (_a2 = response == null ? void 0 : response.errors) == null ? void 0 : _a2.message) == null ? void 0 : _b.includes("Domain can't be reached")) {
+      throw new Error("Domain can't be reached");
+    }
+    return { result: ((_c = response == null ? void 0 : response.success) == null ? void 0 : _c.status) ?? "ok" };
+  } catch (error) {
+    console.error("Error creating webpush domain:", error == null ? void 0 : error.message);
+    if ((_d = error == null ? void 0 : error.message) == null ? void 0 : _d.includes("Domain is already registered")) {
+      throw new Error("domainAlreadyRegisteredError");
+    } else if ((_e = error == null ? void 0 : error.message) == null ? void 0 : _e.includes("Domain can't be reached")) {
+      throw new Error("domainCantBeReachedError");
+    } else {
+      throw new Error("createWebPushDomainError");
+    }
+  }
+};
+const WEB_PUSH_SCRIPT_HANDLE$1 = process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
+const connectWebPushScriptService = async ({
+  shopId,
+  apiKey,
+  domain,
+  admin
+}) => {
+  try {
+    await createWebPushDomain({ apiKey, domain });
+    const script = await getWebpushScript({ apiKey, domain });
+    const metafield = await createMetafield({
+      shopId,
+      admin,
+      value: script,
+      key: WEB_PUSH_SCRIPT_HANDLE$1
+    });
+    if (!metafield) {
+      throw new Error("requestScriptError");
+    }
+    return true;
+  } catch (error) {
+    console.error(`Error connecting webpush script: ${error.message}`);
+    if (error == null ? void 0 : error.message) {
+      throw new Error(error.message);
+    } else {
+      throw new Error("requestScriptError");
+    }
+  }
+};
+const getMarkets = async ({
+  admin,
+  count = 5
+}) => {
+  var _a2;
+  try {
+    const response = await admin.graphql(
+      `
+      #graphql
+      query getMarkets($count: Int) {
+        markets(first: $count) {
+          nodes {
+            id
+            name
+            handle
+            enabled
+          }
+        }
+      }
+    `,
+      {
+        variables: {
+          count
+        }
+      }
+    );
+    const responseParse = await response.json();
+    const marketsData = responseParse == null ? void 0 : responseParse.data;
+    const markets = (_a2 = marketsData == null ? void 0 : marketsData.markets) == null ? void 0 : _a2.nodes;
+    return markets ?? [];
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+};
+const checkMarketsService = async ({
+  admin
+}) => {
+  const markets = await getMarkets({ admin, count: 200 });
+  const activeMarkets = markets.filter((market) => market.enabled);
+  return activeMarkets.length > 1;
+};
+async function getThemes({ admin }) {
+  var _a2;
+  try {
+    const response = await admin.graphql(`
+      #graphql
+      query {
+        themes(first: 1, roles: [MAIN]) {
+          nodes {
+            id
+            name
+            role
+            files(first: 1, filenames: "config/settings_data.json") {
+              nodes {
+                filename
+                body {
+                  ... on OnlineStoreThemeFileBodyText {
+                    content
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    `);
+    const responseParse = await response.json();
+    const themesData = responseParse == null ? void 0 : responseParse.data;
+    const themes = (_a2 = themesData.themes) == null ? void 0 : _a2.nodes;
+    return themes ?? [];
+  } catch (error) {
+    console.error(error);
+    return [];
+  }
+}
+const GENERAL_SCRIPT_HANDLE$1 = process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
+async function checkThemeExtensionService({
+  admin
+}) {
+  var _a2;
+  try {
+    const themes = await getThemes({ admin });
+    const publishedTheme = themes == null ? void 0 : themes.find((theme) => theme.role === "MAIN");
+    if (!publishedTheme) {
+      return false;
+    }
+    const config = publishedTheme.files.nodes.find(
+      (file) => file.filename === "config/settings_data.json"
+    );
+    if (!config) {
+      return false;
+    }
+    const configParse = commentJSON.parse(config.body.content);
+    const appBlocks = ((_a2 = configParse == null ? void 0 : configParse.current) == null ? void 0 : _a2.blocks) ? Object.values(configParse == null ? void 0 : configParse.current.blocks) : [];
+    const antlaBlock = appBlocks.find(
+      ({ type }) => type.includes(GENERAL_SCRIPT_HANDLE$1)
+    );
+    return antlaBlock ? !(antlaBlock == null ? void 0 : antlaBlock.disabled) : false;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}
+const getMetafield = async ({
+  admin,
+  key
+}) => {
+  var _a2;
+  try {
+    const response = await admin.graphql(
+      `
+      #graphql
+      query ShopMetafield($namespace: String!, $key: String!) {
+        shop {
+          metafield(namespace: $namespace, key: $key) {
+            id
+            type
+            value
+            ownerType
+            namespace
+            key
+          }
+        }
+      }`,
+      {
+        variables: {
+          namespace: "$app",
+          key
+        }
+      }
+    );
+    if (!response) {
+      console.error("Response is null or undefined");
+      return null;
+    }
+    const responseParse = await response.json();
+    const metafieldData = responseParse == null ? void 0 : responseParse.data;
+    const metafield = (_a2 = metafieldData == null ? void 0 : metafieldData.shop) == null ? void 0 : _a2.metafield;
+    return metafield ?? null;
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+};
+const GENERAL_SCRIPT_HANDLE = process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
+const WEB_PUSH_SCRIPT_HANDLE = process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
+const checkScriptConnectionService = async ({
+  admin
+}) => {
+  const isThemeExtensionActive = await checkThemeExtensionService({ admin });
+  const metafield = await getMetafield({
+    admin,
+    key: GENERAL_SCRIPT_HANDLE
+  });
+  const webPushMetafield = await getMetafield({
+    admin,
+    key: WEB_PUSH_SCRIPT_HANDLE
+  });
+  const isGeneralScriptExist = !!(metafield == null ? void 0 : metafield.value);
+  const isWebPushScriptExist = !!(webPushMetafield == null ? void 0 : webPushMetafield.value);
+  return {
+    isThemeExtensionActive,
+    isGeneralScriptExist,
+    isWebPushScriptExist
+  };
+};
+const loaderHandler = async ({ request }) => {
+  const { admin, session } = await authenticate.admin(request);
+  const shop = await shopRepository.getShop(session.shop);
+  const isMarketsOverflowing = await checkMarketsService({ admin });
+  const scriptConnectionStatus = await checkScriptConnectionService({ admin });
+  let account = null;
+  if (shop == null ? void 0 : shop.apiKey) {
+    try {
+      account = await getAccountInfo({ apiKey: shop.apiKey });
+    } catch (error) {
+      console.error(error);
+      account = null;
+    }
+  }
+  return {
+    shop,
+    account,
+    scriptConnectionStatus,
+    isMarketsOverflowing,
+    ENV: {
+      DOCK_URL: process.env.DOCK_URL ?? "https://docs.yespo.io",
+      PLATFORM_URL: process.env.PLATFORM_URL ?? "https://my.yespo.io"
+    }
+  };
+};
+const actionHandler = async ({ request }) => {
+  var _a2;
+  const { session, admin } = await authenticate.admin(request);
+  const t = await i18n.getFixedT(request);
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+  const errors = {};
+  const success = {};
+  if (intent === "account-disconnection") {
+    try {
+      await disconnectAccountService({ session, admin });
+    } catch (error) {
+      errors.apiKey = t(`AccountConnectionSection.errors.${error.message}`);
+      return { success, errors };
+    }
+  }
+  if (intent === "account-connection") {
+    const apiKey = (_a2 = formData.get("apiKey")) == null ? void 0 : _a2.toString();
+    if (!apiKey) {
+      errors.apiKey = t("AccountConnectionSection.errors.emptyApiKey");
+      return { success, errors };
+    }
+    try {
+      await connectAccountService({ session, apiKey, admin });
+      success.apiKey = true;
+    } catch (error) {
+      errors.apiKey = t(`AccountConnectionSection.errors.${error.message}`);
+      return { success, errors };
+    }
+  }
+  if (intent === "connection-status") {
+    try {
+      const shop = await shopRepository.getShop(session.shop);
+      if (!shop || !(shop == null ? void 0 : shop.apiKey)) {
+        errors.script = t("AccountConnectionSection.errors.emptyApiKey");
+        return { success, errors };
+      }
+      await connectGeneralScriptService({
+        apiKey: shop.apiKey,
+        shopId: shop.shopId,
+        domain: shop.domain,
+        admin
+      });
+      success.connection = {
+        isGeneralScriptExist: true
+      };
+      await connectWebPushScriptService({
+        apiKey: shop.apiKey,
+        shopId: shop.shopId,
+        domain: shop.domain,
+        admin
+      });
+      success.connection = {
+        isWebPushScriptExist: true
+      };
+      const isThemeExtensionActive = await checkThemeExtensionService({
+        admin
+      });
+      success.connection = {
+        ...success.connection,
+        isThemeExtensionActive,
+        ok: true
+      };
+    } catch (error) {
+      errors.script = t(`ConnectionStatusSection.errors.${error.message}`);
+      return { success, errors };
+    }
+  }
+  return { success, errors };
+};
+const loader = loaderHandler;
+const action = actionHandler;
+function Index() {
+  const { t } = useTranslation();
+  const shopify2 = useAppBridge();
+  const loaderData = useLoaderData();
+  const actionData = useActionData();
+  const { shop, account, isMarketsOverflowing, scriptConnectionStatus, ENV } = loaderData;
+  const navigation = useNavigation();
+  const revalidator = useRevalidator();
+  const isLoading = revalidator.state === "loading";
+  const isSubmitting = navigation.state === "submitting";
+  useEffect(() => {
+    var _a2, _b, _c, _d, _e;
+    if ((_a2 = actionData == null ? void 0 : actionData.success) == null ? void 0 : _a2.apiKey) {
+      shopify2.toast.show(t("AccountConnectionSection.success"), {
+        duration: 2e3
+      });
+    } else if ((_c = (_b = actionData == null ? void 0 : actionData.success) == null ? void 0 : _b.connection) == null ? void 0 : _c.ok) {
+      if (!((_e = (_d = actionData == null ? void 0 : actionData.success) == null ? void 0 : _d.connection) == null ? void 0 : _e.isThemeExtensionActive)) {
+        open("shopify://admin/themes/current/editor?context=apps", "_top");
+      }
+      shopify2.toast.show(t("ConnectionStatusSection.success"), {
+        duration: 2e3
+      });
+    } else if (Object.values((actionData == null ? void 0 : actionData.errors) ?? {}).length > 0) {
+      const error = Object.values((actionData == null ? void 0 : actionData.errors) ?? {})[0];
+      shopify2.toast.show(error, {
+        duration: 2e3,
+        isError: true
+      });
+    }
+  }, [actionData, shopify2, t]);
+  return /* @__PURE__ */ jsx(Page, { children: /* @__PURE__ */ jsx(Box, { paddingBlockEnd: "500", children: /* @__PURE__ */ jsx(BlockStack, { gap: "500", children: /* @__PURE__ */ jsxs(Layout, { children: [
+    isMarketsOverflowing &amp;&amp; /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(UnsupportedMarketsSection, {}) }),
+    /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsxs(BlockStack, { gap: "300", children: [
+      /* @__PURE__ */ jsxs(InlineStack, { gap: "300", blockAlign: "center", children: [
+        /* @__PURE__ */ jsx(Image, { source: "./logo.png", alt: "logo", height: 48 }),
+        /* @__PURE__ */ jsx(Text, { as: "h1", variant: "heading3xl", fontWeight: "medium", children: t("WelcomeSection.title") })
+      ] }),
+      /* @__PURE__ */ jsx(Text, { as: "p", children: /* @__PURE__ */ jsx(
+        Trans,
+        {
+          i18nKey: "WelcomeSection.description",
+          t,
+          components: {
+            supportLink: /* @__PURE__ */ jsx(
+              Link$1,
+              {
+                url: `${ENV.DOCK_URL}/docs/integrating-with-shopify`,
+                target: "_blank"
+              }
+            )
+          }
+        }
+      ) })
+    ] }) }),
+    /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(
+      AccountConnectionSection,
+      {
+        apiKey: (shop == null ? void 0 : shop.apiKey) ?? "",
+        account,
+        errors: actionData == null ? void 0 : actionData.errors,
+        disabled: isMarketsOverflowing || isSubmitting || isLoading
+      }
+    ) }),
+    /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(
+      ConnectionStatusSection,
+      {
+        isApiKeyActive: !!account,
+        isGeneralScriptExist: scriptConnectionStatus == null ? void 0 : scriptConnectionStatus.isGeneralScriptExist,
+        isWebPushScriptExist: scriptConnectionStatus == null ? void 0 : scriptConnectionStatus.isWebPushScriptExist,
+        isAppExtensionActive: scriptConnectionStatus.isThemeExtensionActive,
+        errors: actionData == null ? void 0 : actionData.errors,
+        dockUrl: ENV.DOCK_URL,
+        platformUrl: ENV.PLATFORM_URL,
+        disabled: isMarketsOverflowing || isSubmitting || isLoading || !(shop == null ? void 0 : shop.apiKey)
+      }
+    ) }),
+    /* @__PURE__ */ jsx(Layout.Section, { children: /* @__PURE__ */ jsx(UsefulLinksSection, {}) })
+  ] }) }) }) });
+}
+const route9 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  action,
+  default: Index,
+  loader
+}, Symbol.toStringTag, { value: "Module" }));
+const serverManifest = { "entry": { "module": "/assets/entry.client-CB-wGTPx.js", "imports": ["/assets/components-Cz6YvsjK.js", "/assets/context-DjV2Sext.js"], "css": [] }, "routes": { "root": { "id": "root", "parentId": void 0, "path": "", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/root-DwKdryPu.js", "imports": ["/assets/components-Cz6YvsjK.js", "/assets/context-DjV2Sext.js"], "css": [] }, "routes/webhooks.app.scopes_update": { "id": "routes/webhooks.app.scopes_update", "parentId": "root", "path": "webhooks/app/scopes_update", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.scopes_update-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.uninstalled": { "id": "routes/webhooks.app.uninstalled", "parentId": "root", "path": "webhooks/app/uninstalled", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.uninstalled-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.customers": { "id": "routes/webhooks.app.customers", "parentId": "root", "path": "webhooks/app/customers", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.customers-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/webhooks.app.gdpr": { "id": "routes/webhooks.app.gdpr", "parentId": "root", "path": "webhooks/app/gdpr", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": false, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/webhooks.app.gdpr-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/auth.login": { "id": "routes/auth.login", "parentId": "root", "path": "auth/login", "index": void 0, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-C2r7iUa3.js", "imports": ["/assets/components-Cz6YvsjK.js", "/assets/styles-DuWmPSpn.js", "/assets/Page-R5H6qKw2.js", "/assets/context-BzRg64X4.js"], "css": [] }, "routes/_index": { "id": "routes/_index", "parentId": "root", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/route-BAoAV6jV.js", "imports": ["/assets/components-Cz6YvsjK.js"], "css": ["/assets/route-TqOIn4DE.css"] }, "routes/auth.$": { "id": "routes/auth.$", "parentId": "root", "path": "auth/*", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/auth._-l0sNRNKZ.js", "imports": [], "css": [] }, "routes/app": { "id": "routes/app", "parentId": "root", "path": "app", "index": void 0, "caseSensitive": void 0, "hasAction": false, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": true, "module": "/assets/app-C3cRZI9d.js", "imports": ["/assets/components-Cz6YvsjK.js", "/assets/styles-DuWmPSpn.js", "/assets/index-DeiVsHJI.js", "/assets/context-BzRg64X4.js", "/assets/context-DjV2Sext.js"], "css": [] }, "routes/app._index": { "id": "routes/app._index", "parentId": "routes/app", "path": void 0, "index": true, "caseSensitive": void 0, "hasAction": true, "hasLoader": true, "hasClientAction": false, "hasClientLoader": false, "hasErrorBoundary": false, "module": "/assets/app._index-DfrlwJWq.js", "imports": ["/assets/components-Cz6YvsjK.js", "/assets/index-DeiVsHJI.js", "/assets/Page-R5H6qKw2.js", "/assets/context-BzRg64X4.js", "/assets/context-DjV2Sext.js"], "css": [] } }, "url": "/assets/manifest-8457c2de.js", "version": "8457c2de" };
+const mode = "production";
+const assetsBuildDirectory = "build/client";
+const basename = "/";
+const future = { "v3_fetcherPersist": true, "v3_relativeSplatPath": true, "v3_throwAbortReason": true, "v3_routeConfig": true, "v3_singleFetch": false, "v3_lazyRouteDiscovery": true, "unstable_optimizeDeps": false };
+const isSpaMode = false;
+const publicPath = "/";
+const entry = { module: entryServer };
+const routes = {
+  "root": {
+    id: "root",
+    parentId: void 0,
+    path: "",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route0
+  },
+  "routes/webhooks.app.scopes_update": {
+    id: "routes/webhooks.app.scopes_update",
+    parentId: "root",
+    path: "webhooks/app/scopes_update",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route1
+  },
+  "routes/webhooks.app.uninstalled": {
+    id: "routes/webhooks.app.uninstalled",
+    parentId: "root",
+    path: "webhooks/app/uninstalled",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route2
+  },
+  "routes/webhooks.app.customers": {
+    id: "routes/webhooks.app.customers",
+    parentId: "root",
+    path: "webhooks/app/customers",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route3
+  },
+  "routes/webhooks.app.gdpr": {
+    id: "routes/webhooks.app.gdpr",
+    parentId: "root",
+    path: "webhooks/app/gdpr",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route4
+  },
+  "routes/auth.login": {
+    id: "routes/auth.login",
+    parentId: "root",
+    path: "auth/login",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route5
+  },
+  "routes/_index": {
+    id: "routes/_index",
+    parentId: "root",
+    path: void 0,
+    index: true,
+    caseSensitive: void 0,
+    module: route6
+  },
+  "routes/auth.$": {
+    id: "routes/auth.$",
+    parentId: "root",
+    path: "auth/*",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route7
+  },
+  "routes/app": {
+    id: "routes/app",
+    parentId: "root",
+    path: "app",
+    index: void 0,
+    caseSensitive: void 0,
+    module: route8
+  },
+  "routes/app._index": {
+    id: "routes/app._index",
+    parentId: "routes/app",
+    path: void 0,
+    index: true,
+    caseSensitive: void 0,
+    module: route9
+  }
+};
+export {
+  serverManifest as assets,
+  assetsBuildDirectory,
+  basename,
+  entry,
+  future,
+  isSpaMode,
+  mode,
+  publicPath,
+  routes
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.4</a> on Thu Jul 03 2025 11:10:06 GMT+0300 (Eastern European Summer Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+<script src="scripts/search.js" defer></script>
+
+
+<script src="scripts/collapse.js" defer></script>
+
+
+</body>
+</html>

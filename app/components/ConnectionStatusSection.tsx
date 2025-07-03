@@ -14,6 +14,18 @@ import { RefreshIcon } from "@shopify/polaris-icons";
 import { useTranslation } from "react-i18next";
 import ConnectionStatusList from "./ConnectionStatusList";
 
+/**
+ * Props for the ConnectionStatusSection component.
+ *
+ * @property {boolean} [isApiKeyActive] - Indicates if the Yespo API key is active.
+ * @property {boolean} [isGeneralScriptExist] - Indicates if the general script is installed.
+ * @property {boolean} [isWebPushScriptExist] - Indicates if the web push script is installed.
+ * @property {boolean} [isAppExtensionActive] - Indicates if the app extension is active.
+ * @property {string} dockUrl - Base URL for Dock documentation links.
+ * @property {string} platformUrl - Base URL for the platform (used for links).
+ * @property {{ [key: string]: string }} [errors] - Optional error messages keyed by error type.
+ * @property {boolean} [disabled] - Whether the UI controls (buttons) are disabled.
+ */
 export interface ConnectionStatusSectionProps {
   isApiKeyActive?: boolean;
   isGeneralScriptExist?: boolean;
@@ -25,6 +37,32 @@ export interface ConnectionStatusSectionProps {
   disabled?: boolean;
 }
 
+/**
+ * Displays the connection status section showing the overall integration state,
+ * including API key, scripts, and app extension status. Provides controls to refresh
+ * the status and configure the integration if needed.
+ *
+ * Shows different banners based on the connection completeness:
+ * - Success if all required parts are active.
+ * - Warning if partially configured.
+ * - Critical if disconnected.
+ *
+ * @param {ConnectionStatusSectionProps} props - Component properties.
+ *
+ * @returns {JSX.Element} The rendered connection status UI section.
+ *
+ * @example
+ * <ConnectionStatusSection
+ *   isApiKeyActive={true}
+ *   isGeneralScriptExist={true}
+ *   isWebPushScriptExist={false}
+ *   isAppExtensionActive={true}
+ *   dockUrl="https://docs.example.com"
+ *   platformUrl="https://platform.example.com"
+ *   errors={{ script: "Script loading failed." }}
+ *   disabled={false}
+ * />
+ */
 const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
   isApiKeyActive,
   isGeneralScriptExist,

@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    
+    <meta charset="utf-8">
+    <title>Home - Documentation</title>
+    
+    
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+    <script src="scripts/nav.js" defer></script>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav >
+    
+    <input type="text" id="nav-search" placeholder="Search" />
+    
+    
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="CustomerDataRepositoryImpl.html">CustomerDataRepositoryImpl</a><ul class='methods'><li data-type='method' style='display: none;'><a href="CustomerDataRepositoryImpl.html#createCustomerDataRequest">createCustomerDataRequest</a></li></ul></li><li><a href="FetchError.html">FetchError</a></li><li><a href="ShopRepositoryImpl.html">ShopRepositoryImpl</a><ul class='methods'><li data-type='method' style='display: none;'><a href="ShopRepositoryImpl.html#createShop">createShop</a></li><li data-type='method' style='display: none;'><a href="ShopRepositoryImpl.html#deleteShop">deleteShop</a></li><li data-type='method' style='display: none;'><a href="ShopRepositoryImpl.html#getShop">getShop</a></li><li data-type='method' style='display: none;'><a href="ShopRepositoryImpl.html#updateShop">updateShop</a></li></ul></li></ul>
+    
+</nav>
+
+<div id="main">
+    
+
+    
+
+
+
+    
+
+
+    <section class="package">
+        <h3> </h3>		
+    </section>
+
+
+
+
+
+
+
+
+
+    
+
+
+
+    <section class="readme usertext">
+        <article><h1>Yespo Shopify App</h1>
+<p>Shopify app for integration Yespo with Shopify</p>
+<h2>Purpose</h2>
+<p>The app allows merchants to:</p>
+<ul>
+<li>Sync customer data (create, update, delete) from Shopify to Yespo</li>
+<li>Automatically register their store domain in Yespo (to get site and web push scripts)</li>
+<li>Inject site and push scripts into the storefront via Theme App Extensions</li>
+<li>Install the service worker file for web push notifications using a Shopify App Proxy</li>
+</ul>
+<h2>Features and Implementation Details</h2>
+<h3>Widgets</h3>
+<p>Purpose: Register the store domain and inject the Yespo site script into the storefront automatically.</p>
+<p>Implementation:</p>
+<ul>
+<li><a href="https://docs.esputnik.com/reference/createdomain">Registers</a> the current store domain in Yespo</li>
+<li><a href="https://docs.esputnik.com/reference/getscript">Retrieves</a> the Yespo site script</li>
+<li>Stores the script content in a Shopify metafield: yespo-script</li>
+<li>Injects the script into the storefront using a Theme App Extension (./extensions/yespo-extension)</li>
+</ul>
+<h3>Web Push Subscription</h3>
+<p>Purpose: Enable customer subscriptions to web push notifications by registering the domain and injecting required scripts.</p>
+<p>Implementation:</p>
+<ul>
+<li><a href="https://docs.esputnik.com/reference/addwebpushdomain">Registers</a> the current store domain in Yespo</li>
+<li><a href="https://docs.esputnik.com/reference/getscript">Retrieves</a> the push script and service worker content</li>
+<li>Stores the push script in the yespo-web-push-script metafield</li>
+<li>Injects the push script into the storefront using the same Theme App Extension</li>
+</ul>
+<p>Service Worker Installation:</p>
+<ul>
+<li>A Shopify App Proxy is used to serve the service worker content dynamically from Yespo</li>
+<li>The worker file is exposed at a predefined path (/apps/yespo/sw.js) to comply with browser requirements</li>
+</ul>
+<h3>Contact Sync (Shopify → Yespo)</h3>
+<p>Purpose: Automatically sync new, updated, and deleted customers from Shopify to Yespo as contacts.</p>
+<p>Implementation:</p>
+<ul>
+<li>App requests access to the following scopes:
+<ul>
+<li>read_customers</li>
+<li>write_customers</li>
+</ul>
+</li>
+<li>Shopify webhooks used:
+<ul>
+<li>customers/create → creates a new contact in Yespo</li>
+<li>customers/update → updates existing contact data</li>
+<li>customers/redact → removes contact in Yespo</li>
+</ul>
+</li>
+</ul>
+<p>Deduplication in Yespo: Contacts are matched using externalCustomerId, email, and phone. If a contact exists, it is updated instead of duplicated.</p>
+<p>Yespo API methods:</p>
+<ul>
+<li><a href="https://docs.esputnik.com/reference/addcontact-1">POST /contact</a> – create or update contact</li>
+<li><a href="https://docs.esputnik.com/reference/deletecontact-1">DELETE /contact</a> (erase=true) – remove contact</li>
+</ul>
+<h2>Technologies and Shopify Tools Used</h2>
+<ul>
+<li><a href="https://shopify.dev/docs/api/shopify-app-remix">Shopify App Remix</a> provides authentication and methods for interacting with Shopify APIs.</li>
+<li><a href="https://shopify.dev/docs/apps/tools/app-bridge">Shopify App Bridge</a> allows your app to seamlessly integrate your app within Shopify's Admin.</li>
+<li><a href="https://shopify.dev/docs/apps/build/app-extensions">App extensions</a> - Theme app extensions allow the Yespo app to
+seamlessly inject scripts into a merchant’s theme without manual code edits.
+You can find the extension code in the <code>./extensions/yespo-extension</code> directory.
+This extension includes:
+<ul>
+<li><code>blocks/</code> – Contains Liquid files that act as entry points for injecting Yespo scripts into the theme. These blocks can be enabled via the Shopify theme editor.</li>
+</ul>
+</li>
+<li><a href="https://polaris.shopify.com/">Polaris</a>: Design system that enables apps to create Shopify-like experiences</li>
+<li><a href="https://shopify.dev/docs/api/webhooks?reference=toml">Webhooks</a> - to receive notifications about particular events in a shop such as customer-related changes.</li>
+<li><a href="https://shopify.dev/docs/apps/build/online-store/theme-app-extensions/configuration#metafield-namespaces">Metafields</a> -
+used for storing tracking and scripts configurations (custom namespace: $app)</li>
+</ul>
+<h2>Yespo API Authentication</h2>
+<p>The app uses a Yespo API key, provided by the merchant during onboarding, to authorize all API requests. The key is stored securely and used for:</p>
+<ul>
+<li>Contact sync</li>
+<li>Domain registration</li>
+<li>Script retrieval</li>
+</ul>
+<p>Full API documentation: https://docs.yespo.io/docs/integration-with-api</p>
+<h2>Quick start</h2>
+<h3>Prerequisites</h3>
+<p>Before you begin, you'll need the following:</p>
+<ol>
+<li><strong>Node.js</strong>: version 20 <a href="https://nodejs.org/en/download/">Download and install</a> it if you haven't already.</li>
+<li><strong>Shopify Partner Account</strong>: <a href="https://partners.shopify.com/signup">Create an account</a> if you don't have one.</li>
+<li><strong>Test Store</strong>: Set up either a <a href="https://help.shopify.com/en/partners/dashboard/development-stores#create-a-development-store">development store</a> or a <a href="https://help.shopify.com/en/partners/dashboard/managing-stores/plus-sandbox-store">Shopify Plus sandbox store</a> for testing your app.</li>
+</ol>
+<h3>Setup</h3>
+<h4>Environment variables</h4>
+<p>Create a <code>.env</code> file with the following:</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>SHOPIFY_API_KEY</strong></td>
+<td><strong>Required.</strong> Your shopify app Client ID</td>
+<td><code>12e4a9a4*****************eb80fba</code></td>
+</tr>
+<tr>
+<td><strong>SHOPIFY_API_SECRET</strong></td>
+<td><strong>Required.</strong> Your shopify app Client secret</td>
+<td><code>f7725*********************420ad06</code></td>
+</tr>
+<tr>
+<td><strong>SHOPIFY_APP_URL</strong></td>
+<td><strong>Required.</strong> Your shopify app url</td>
+<td><code>https://your-domain.com</code></td>
+</tr>
+<tr>
+<td><strong>SHOPIFY_YESPO_EXTENSION_ID</strong></td>
+<td><strong>Required.</strong> Extension ID (Auto generated after run <code>deploy</code> command)</td>
+<td><code>c10***ff-****-48cc-****-f882b***fa8e</code></td>
+</tr>
+<tr>
+<td><strong>DATABASE_URL</strong></td>
+<td><strong>Required.</strong> Database connect url</td>
+<td><code>postgresql://admin:admin@localhost:5432/database</code></td>
+</tr>
+<tr>
+<td><strong>SCOPES</strong></td>
+<td><strong>Required.</strong> Required access scopes</td>
+<td><strong>Must be</strong> <code>read_markets,read_themes</code></td>
+</tr>
+<tr>
+<td><strong>API_URL</strong></td>
+<td><strong>Required.</strong> Yespo api url</td>
+<td><strong>Must be</strong> <code>https://yespo.io/api/v1</code></td>
+</tr>
+<tr>
+<td><strong>GENERAL_SCRIPT_HANDLE</strong></td>
+<td><strong>Required.</strong> Handle for general metafield and extension name</td>
+<td><strong>Must be</strong> <code>yespo-script</code></td>
+</tr>
+<tr>
+<td><strong>WEB_PUSH_SCRIPT_HANDLE</strong></td>
+<td><strong>Required.</strong> Handle for webpush metafield and extension name</td>
+<td><strong>Must be</strong> <code>yespo-web-push-script</code></td>
+</tr>
+<tr>
+<td><strong>DOCK_URL</strong></td>
+<td>Yespo dock link</td>
+<td><code>https://docs.yespo.io</code></td>
+</tr>
+<tr>
+<td><strong>PLATFORM_URL</strong></td>
+<td>Yespo platform link</td>
+<td><code>https://my.yespo.io</code></td>
+</tr>
+<tr>
+<td><strong>SERVICE_WORKER_NAME</strong></td>
+<td><strong>Required.</strong> Web push service worker file name, in *.js format</td>
+<td><strong>Must be</strong> <code>service-worker.js</code></td>
+</tr>
+<tr>
+<td><strong>SERVICE_WORKER_PATH</strong></td>
+<td><strong>Required.</strong> Relative path on site, where service worker will be stored. Must start and end with slash</td>
+<td><code>/apps/yespo-proxy/</code></td>
+</tr>
+</tbody>
+</table>
+<h4>Required Shopify Scopes</h4>
+<p>You can <a href="https://shopify.dev/docs/apps/build/cli-for-apps/app-configuration">configure app</a> locally with TOML files.
+In root directory you need have <code>shopify.app.toml</code>  or <code>shopify.app.{your-config-name}.toml</code>.
+Use shopify app config link to generate additional configuration files for development or staging apps. You can also
+re-link upstream Shopify apps if your configuration file gets deleted, corrupted, or out-of-sync. If you already
+have a shopify.app.toml in your root directory, then you’ll be prompted to give your configuration file a name, and a
+file shopify.app.{your-config-name}.toml is generated in your root directory.</p>
+<p>The app requires the following access scopes:</p>
+<ul>
+<li><code>read_customers</code></li>
+<li><code>read_markets</code></li>
+<li><code>read_orders</code></li>
+<li><code>read_themes</code></li>
+<li><code>write_app_proxy</code></li>
+</ul>
+<h4>Webhooks</h4>
+<p>Shopify webhooks (API version: 2025-01) used by the app:</p>
+<table>
+<thead>
+<tr>
+<th>Event Topic</th>
+<th>Description</th>
+<th>Endpoint</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>customers/data_request</strong></td>
+<td>Triggered when a customer requests their personal data under GDPR compliance.</td>
+<td><code>/webhooks/app/gdpr</code></td>
+</tr>
+<tr>
+<td><strong>customers/redact</strong></td>
+<td>Triggered when a customer requests deletion of their personal data (GDPR).</td>
+<td><code>/webhooks/app/gdpr</code></td>
+</tr>
+<tr>
+<td><strong>shop/redact</strong></td>
+<td>Triggered when a store uninstalls the app and requests data erasure.</td>
+<td><code>/webhooks/app/gdpr</code></td>
+</tr>
+<tr>
+<td><strong>carts/update</strong></td>
+<td>Triggered whenever a customer updates a cart (e.g. adding/removing items).</td>
+<td><code>/webhooks/app/carts</code></td>
+</tr>
+<tr>
+<td><strong>customers/create</strong></td>
+<td>Triggered when a new customer account is created in the store.</td>
+<td><code>/webhooks/app/customers</code></td>
+</tr>
+<tr>
+<td><strong>customers/update</strong></td>
+<td>Triggered when an existing customer’s data is updated.</td>
+<td><code>/webhooks/app/customers</code></td>
+</tr>
+<tr>
+<td><strong>app/scopes_update</strong></td>
+<td>Triggered when the app's permission scopes are updated by the merchant.</td>
+<td><code>/webhooks/app/scopes_update</code></td>
+</tr>
+<tr>
+<td><strong>app/uninstalled</strong></td>
+<td>Triggered when a merchant uninstalls the app.</td>
+<td><code>/webhooks/app/uninstalled</code></td>
+</tr>
+</tbody>
+</table>
+<h4>Setup App Proxy</h4>
+<p>App proxy is used for web push notifications.</p>
+<ul>
+<li>Select yespo app in shopify partner</li>
+<li>Go to <code>Configuration</code></li>
+<li>Find <code>App proxy</code> section</li>
+<li>Subpath prefix: <code>apps</code></li>
+<li>Subpath: <code>yespo-proxy</code></li>
+<li>Proxy URL: <code>https://push.yespo.tech/</code></li>
+</ul>
+<h3>Development</h3>
+<h5>Install dependencies</h5>
+<pre class="prettyprint source lang-shell"><code>npm install
+</code></pre>
+<h5>Database development &amp; migration</h5>
+<pre class="prettyprint source lang-shell"><code>npx prisma generate
+npx prisma migrate dev
+</code></pre>
+<h4>Run</h4>
+<pre class="prettyprint source lang-shell"><code>npm run dev
+</code></pre>
+<h3>Production</h3>
+<h4>Install dependencies</h4>
+<pre class="prettyprint source lang-shell"><code>npm install
+</code></pre>
+<h4>Database development &amp; migration</h4>
+<pre class="prettyprint source lang-shell"><code>npm run setup
+</code></pre>
+<h4>Build</h4>
+<pre class="prettyprint source lang-shell"><code>npm run build
+</code></pre>
+<h4>Run</h4>
+<pre class="prettyprint source lang-shell"><code>npm run start
+</code></pre>
+<h3>App Deployment</h3>
+<h4>Hosting &amp; Source Code Deployment</h4>
+<p>You’ll first need to deploy the app’s source code to your hosting provider. This example uses Heroku, and the
+repository includes a <a href="https://devcenter.heroku.com/articles/procfile">Procfile</a> for Heroku compatibility.
+Steps to deploy to Heroku:</p>
+<ol>
+<li>Login and create a new Heroku app:</li>
+</ol>
+<pre class="prettyprint source lang-shell"><code>heroku login
+heroku create your-app-name
+</code></pre>
+<ol start="2">
+<li><a href="https://devcenter.heroku.com/articles/config-vars">Set Environment Variables</a> in the Heroku dashboard or via CLI.</li>
+<li>Add <a href="https://devcenter.heroku.com/articles/heroku-postgresql">PostgreSQL</a>:</li>
+</ol>
+<ul>
+<li>Use the Heroku Postgres add-on</li>
+<li>Recommended: A plan with at least 10 GB storage</li>
+</ul>
+<ol start="4">
+<li>Ensure the Procfile is present. The repository already includes one, so no action should be needed here.</li>
+<li>Commit your changes and push to Heroku:</li>
+</ol>
+<pre class="prettyprint source lang-shell"><code>git add .
+git commit -m &quot;Prepare for Heroku deployment&quot;
+git push heroku main
+</code></pre>
+<h4>Deployment of Theme Extension &amp; .toml Configuration</h4>
+<p>After deploying your app backend, you need to deploy the Shopify theme extension and app configuration (shopify.app.toml).
+Use the Shopify CLI to deploy both:</p>
+<pre class="prettyprint source lang-shell"><code>npm run deploy
+</code></pre>
+<p>This command will:</p>
+<ul>
+<li>Deploy the Theme App Extension</li>
+<li>Sync the .toml configuration file to Shopify</li>
+<li>Link and register app blocks automatically</li>
+</ul>
+<p>Make sure you're authenticated via Shopify CLI and connected to the correct Partner organization and store.</p>
+<h3>Using the App</h3>
+<ul>
+<li>Install the app in your Shopify store</li>
+<li><a href="https://docs.yespo.io/reference/api-keys">Generate an API key</a> and add it to the <code>Account connection</code> section</li>
+<li>Connect general script</li>
+<li>Connect webpush script</li>
+</ul></article>
+    </section>
+
+
+
+
+
+
+    
+    
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 4.0.4</a> on Thu Jul 03 2025 11:10:06 GMT+0300 (Eastern European Summer Time) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/polyfill.js"></script>
+<script src="scripts/linenumber.js"></script>
+
+<script src="scripts/search.js" defer></script>
+
+
+<script src="scripts/collapse.js" defer></script>
+
+
+</body>
+</html>
