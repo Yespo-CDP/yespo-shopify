@@ -26,7 +26,18 @@ export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
   try {
     const eventData = await eventDataRepository.getEventData(payload.cart_token)
 
-    if (!eventData || !shop.apiKey || !shop.siteId) {
+    if (!eventData) {
+      console.error('Event data not exist')
+      return null
+    }
+
+    if (!shop.apiKey) {
+      console.error('Api key does not provided')
+      return null
+    }
+
+    if (!shop.siteId) {
+      console.error('Site id does not provided')
       return null
     }
 
@@ -60,6 +71,6 @@ export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
       purchasedItemsData
     })
   } catch (error) {
-    console.error(error);
+    console.error("Error occurred in Send Purchased Items Service", error);
   }
 }
