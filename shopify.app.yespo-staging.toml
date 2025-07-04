@@ -24,28 +24,28 @@ redirect_urls = [
 api_version = "2025-01"
 
   [[webhooks.subscriptions]]
-  uri = "https://yespo-app.dev-test.pro/webhooks/app/gdpr"
+  uri = "/webhooks/app/gdpr"
   compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
 
   [[webhooks.subscriptions]]
   topics = [ "orders/create" ]
-  uri = "https://yespo-app.dev-test.pro/webhook/app/orders"
+  uri = "/webhook/app/orders"
 
   [[webhooks.subscriptions]]
   topics = [ "carts/update" ]
-  uri = "https://yespo-app.dev-test.pro/webhooks/app/carts"
+  uri = "/webhooks/app/carts"
 
   [[webhooks.subscriptions]]
   topics = [ "customers/create", "customers/update" ]
-  uri = "https://yespo-app.dev-test.pro/webhooks/app/customers"
+  uri = "/webhooks/app/customers"
 
   [[webhooks.subscriptions]]
   topics = [ "app/scopes_update" ]
-  uri = "https://yespo-app.dev-test.pro/webhooks/app/scopes_update"
+  uri = "/webhooks/app/scopes_update"
 
   [[webhooks.subscriptions]]
   topics = [ "app/uninstalled" ]
-  uri = "https://yespo-app.dev-test.pro/webhooks/app/uninstalled"
+  uri = "/webhooks/app/uninstalled"
 
 [app_proxy]
 url = "https://push.yespo.tech/"
