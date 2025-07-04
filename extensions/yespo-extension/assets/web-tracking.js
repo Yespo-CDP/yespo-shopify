@@ -123,6 +123,10 @@ class EventTracker {
     const token = cartTokenRaw ? cartTokenRaw.split('?')[0] : null;
     const customer = this.data.customer;
 
+    if (!this.data.host) {
+      return
+    }
+
     try {
       const res = await fetch(`${this.data.host}/public/event-data`, {
         method: 'POST',
