@@ -4,7 +4,7 @@ import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
 /**
  * Disconnects a Yespo account by clearing the stored API key and deleting associated metafields.
  *
- * This function updates the shop's record to remove the Yespo API key, effectively disabling the connection,
+ * This function updates the shop's record to remove the Yespo API key, effectively disabling the connection, remove siteId
  * and then deletes the general and web push script metafields from the Shopify store.
  *
  * @param {Object} params - The parameters object.

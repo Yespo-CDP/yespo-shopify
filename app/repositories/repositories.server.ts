@@ -15,14 +15,30 @@ import CustomerRepositoryImpl from "~/repositories/customer/customerRepositoryIm
 const shopRepository = new ShopRepositoryImpl(database);
 
 /**
- * An instance of the CustomerDataRepository implementation, initialized with the Prisma database client.
+ * An instance of the GdprCustomerDataRepository implementation, initialized with the Prisma database client.
  *
  * Provides methods to manage GDPR-related customer data requests.
  *
- * @type {CustomerDataRepositoryImpl}
+ * @type {GdprCustomerDataRepositoryImpl}
  */
 const gdprCustomerDataRepository = new GdprCustomerDataRepositoryImpl(database)
+
+/**
+ * An instance of the EventDataRepository implementation, initialized with the Prisma database client.
+ *
+ * Provides methods to retrieve, create, and bulk delete event-related data.
+ *
+ * @type {EventDataRepositoryImpl}
+ */
 const eventDataRepository = new EventDataRepositoryImpl(database)
+
+/**
+ * An instance of the CustomerRepository implementation, initialized with the Prisma database client.
+ *
+ * Provides methods to upsert customer records in the data store.
+ *
+ * @type {CustomerRepositoryImpl}
+ */
 const customerRepository = new CustomerRepositoryImpl(database)
 
 

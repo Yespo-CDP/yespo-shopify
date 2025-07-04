@@ -47,6 +47,7 @@ export const action = actionHandler;
  * - A welcome section with logo and description.
  * - Account connection section (with API key and account info).
  * - Connection status section (showing connection status script and app extension status).
+ * - Enable/disable web tracking section.
  * - Unsupported markets warning if applicable.
  * - Useful links section.
  *

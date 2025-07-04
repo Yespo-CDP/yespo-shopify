@@ -22,7 +22,6 @@ export const createContact = async ({
   apiKey: string;
   contactData: Contact
 }): Promise<void> => {
-  console.log('CREATE CONTACT REQUEST DATA', JSON.stringify(contactData, null, 2));
   const url = `${process.env.API_URL}/contact`;
   const authHeader = getAuthHeader(apiKey);
   const options = {
@@ -36,7 +35,6 @@ export const createContact = async ({
 
   try {
     const response = await fetchWithErrorHandling(url, options);
-    console.log('CREATE CONTACT RESPONSE', JSON.stringify(response, null, 2));
     return response;
   } catch (error: any) {
     console.error("Error creating contact:", error?.message);
