@@ -8,6 +8,7 @@ The app allows merchants to:
 - Automatically register their store domain in Yespo (to get site and web push scripts)
 - Inject site and push scripts into the storefront via Theme App Extensions
 - Install the service worker file for web push notifications using a Shopify App Proxy
+- Send tracking events like MainPage, 404 Page, ProductPage, CustomerData, StatusCart and PurchasedItems from your store to Yespo
 
 
 ## Features and Implementation Details
@@ -54,6 +55,32 @@ Yespo API methods:
 - [POST /contact](https://docs.esputnik.com/reference/addcontact-1) – create or update contact
 - [DELETE /contact](https://docs.esputnik.com/reference/deletecontact-1) (erase=true) – remove contact
 
+### Web Tracker
+Purpose: Allow you to track events within your site.
+
+Implementation:
+- Stores the enable flag in the web-tracking-enabled metafield
+- Send tracking events from the site to Yespo through Theme extension.
+
+#### Frontend Events
+- **MainPage** - [MainPage event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#main-page) occurs when user visited Home page of the site
+- **404 Page** - [404 Page event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#404-page) occurs when user visited 404 page of the site
+- **ProductPage** - [ProductPage event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#product-card) occurs when user visited product page of the site and send payload with product data:
+  - productKey - product id
+  - price - product price
+  - isInStock - indicates if product is in stock
+- **CustomerData** - [CustomerData event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#customer) occurs when there is a logged in user on the site and send payload with customer data:
+  - externalCustomerId - customer id
+  - user_email - customer email
+  - user_name - customer name
+  - phone - customer phone
+
+#### Backend Events
+- **StatusCart** - [StatusCart event](https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#statuscart) 
+occurs when CARTS_UPDATE webhook happened and send payload with cart data.
+- **PurchasedItems** - [PurchasedItems](https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#purchaseditems)
+occurs when ORDERS_CREATE webhook happened and send payload with purchased products data.
+
 
 ## Technologies and Shopify Tools Used
 
@@ -95,21 +122,25 @@ Before you begin, you'll need the following:
 
 Create a `.env` file with the following:
 
-| Name                      | Description                                                                                             | Example                                          |
-| ------------------------- |---------------------------------------------------------------------------------------------------------| ------------------------------------------------ |
-| **SHOPIFY_API_KEY**       | **Required.** Your shopify app Client ID                                                                | `12e4a9a4*****************eb80fba`               |
-| **SHOPIFY_API_SECRET**    | **Required.** Your shopify app Client secret                                                            | `f7725*********************420ad06`              |
-| **SHOPIFY_APP_URL**       | **Required.** Your shopify app url                                                                      | `https://your-domain.com`                        |
-| **SHOPIFY_YESPO_EXTENSION_ID** | **Required.** Extension ID (Auto generated after run `deploy` command)                                  | `c10***ff-****-48cc-****-f882b***fa8e` |
-| **DATABASE_URL**          | **Required.** Database connect url                                                                      | `postgresql://admin:admin@localhost:5432/database`|
-| **SCOPES**                | **Required.** Required access scopes                                                                    | **Must be** `read_markets,read_themes`           |
-| **API_URL**               | **Required.** Yespo api url                                                                             | **Must be** `https://yespo.io/api/v1`            |
-| **GENERAL_SCRIPT_HANDLE** | **Required.** Handle for general metafield and extension name                                           | **Must be** `yespo-script`               |
-| **WEB_PUSH_SCRIPT_HANDLE**| **Required.** Handle for webpush metafield and extension name                                           | **Must be** `yespo-web-push-script`      |
-| **DOCK_URL**              | Yespo dock link                                                                                         |`https://docs.yespo.io`                          |
-| **PLATFORM_URL**          | Yespo platform link                                                                                     |`https://my.yespo.io`                            |
-| **SERVICE_WORKER_NAME**   | **Required.** Web push service worker file name, in *.js format                                         | **Must be** `service-worker.js`                  |
-| **SERVICE_WORKER_PATH**   | **Required.** Relative path on site, where service worker will be stored. Must start and end with slash | `/apps/yespo-proxy/`|
+| Name                           | Description                                                                                             | Example                                            |
+|--------------------------------|---------------------------------------------------------------------------------------------------------|----------------------------------------------------|
+| **SHOPIFY_API_KEY**            | **Required.** Your shopify app Client ID                                                                | `12e4a9a4*****************eb80fba`                 |
+| **SHOPIFY_API_SECRET**         | **Required.** Your shopify app Client secret                                                            | `f7725*********************420ad06`                |
+| **SHOPIFY_APP_URL**            | **Required.** Your shopify app url                                                                      | `https://your-domain.com`                          |
+| **SHOPIFY_YESPO_EXTENSION_ID** | **Required.** Extension ID (Auto generated after run `deploy` command)                                  | `c10***ff-****-48cc-****-f882b***fa8e`             |
+| **DATABASE_URL**               | **Required.** Database connect url                                                                      | `postgresql://admin:admin@localhost:5432/database` |
+| **SCOPES**                     | **Required.** Required access scopes                                                                    | **Must be** `read_markets,read_themes`             |
+| **API_URL**                    | **Required.** Yespo api url                                                                             | **Must be** `https://yespo.io/api/v1`              |
+| **GENERAL_SCRIPT_HANDLE**      | **Required.** Handle for general metafield and extension name                                           | **Must be** `yespo-script`                         |
+| **WEB_PUSH_SCRIPT_HANDLE**     | **Required.** Handle for webpush metafield and extension name                                           | **Must be** `yespo-web-push-script`                |
+| **DOCK_URL**                   | Yespo dock link                                                                                         | `https://docs.yespo.io`                            |
+| **PLATFORM_URL**               | Yespo platform link                                                                                     | `https://my.yespo.io`                              |
+| **SERVICE_WORKER_NAME**        | **Required.** Web push service worker file name, in *.js format                                         | **Must be** `service-worker.js`                    |
+| **SERVICE_WORKER_PATH**        | **Required.** Relative path on site, where service worker will be stored. Must start and end with slash | `/apps/yespo-proxy/`                               |
+| **WEB_TRACKING_ENABLED**       | **Required.** Handle for enabled metafield and extension name                                           | **Must be** `web-tracking-enabled`                 |
+| **WEB_TRACKER_URL**            | **Required.** Yespo tracker api url                                                                     | **Must be** `https://tracker.yespo.io/api/v2`      |
+| **QSTASH_CURRENT_SIGNING_KEY** | **Required.** QSTASH current signing key                                                                | `sig_5**********************S9aU`                  |
+| **QSTASH_NEXT_SIGNING_KEY**    | **Required.** QSTASH next signing key                                                                   | `sig_81*********************WZSrj`                 |
 
 
 #### Required Shopify Scopes
@@ -130,16 +161,18 @@ The app requires the following access scopes:
 #### Webhooks
 Shopify webhooks (API version: 2025-01) used by the app:
 
-| Event Topic                | Description                                                                   | Endpoint                              |
-|----------------------------|-------------------------------------------------------------------------------|---------------------------------------|
-| **customers/data_request** | Triggered when a customer requests their personal data under GDPR compliance. | `/webhooks/app/gdpr`                  |
-| **customers/redact**       | Triggered when a customer requests deletion of their personal data (GDPR).    | `/webhooks/app/gdpr`                  |
-| **shop/redact**            | Triggered when a store uninstalls the app and requests data erasure.          | `/webhooks/app/gdpr`                  |
-| **carts/update**           | Triggered whenever a customer updates a cart (e.g. adding/removing items).    | `/webhooks/app/carts`                 |
-| **customers/create**       | Triggered when a new customer account is created in the store.                | `/webhooks/app/customers`             |
-| **customers/update**       | Triggered when an existing customer’s data is updated.                        | `/webhooks/app/customers`             |
-| **app/scopes_update**      | Triggered when the app's permission scopes are updated by the merchant.       | `/webhooks/app/scopes_update`         |
-| **app/uninstalled**        | Triggered when a merchant uninstalls the app.                                 | `/webhooks/app/uninstalled`           |
+| Event Topic                | Description                                                                   | Endpoint                      |
+|----------------------------|-------------------------------------------------------------------------------|-------------------------------|
+| **customers/data_request** | Triggered when a customer requests their personal data under GDPR compliance. | `/webhooks/app/gdpr`          |
+| **customers/redact**       | Triggered when a customer requests deletion of their personal data (GDPR).    | `/webhooks/app/gdpr`          |
+| **shop/redact**            | Triggered when a store uninstalls the app and requests data erasure.          | `/webhooks/app/gdpr`          |
+| **carts/update**           | Triggered whenever a customer updates a cart (e.g. adding/removing items).    | `/webhooks/app/carts`         |
+| **customers/create**       | Triggered when a new customer account is created in the store.                | `/webhooks/app/customers`     |
+| **customers/update**       | Triggered when an existing customer’s data is updated.                        | `/webhooks/app/customers`     |
+| **app/scopes_update**      | Triggered when the app's permission scopes are updated by the merchant.       | `/webhooks/app/scopes_update` |
+| **app/uninstalled**        | Triggered when a merchant uninstalls the app.                                 | `/webhooks/app/uninstalled`   |
+| **orders/create**          | Triggered when an order is created.                                           | `/webhook/app/orders`         |
+| **carts/update**           | Triggered when a cart is updated in the online store.                         | `/webhooks/app/carts`         |
 
 
 #### Setup App Proxy
