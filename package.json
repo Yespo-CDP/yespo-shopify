@@ -16,7 +16,10 @@
     "shopify": "shopify",
     "prisma": "prisma",
     "graphql-codegen": "graphql-codegen",
-    "vite": "vite"
+    "vite": "vite",
+    "docs:html": "typedoc --options typedoc.html.json",
+    "docs:md": "typedoc --options typedoc.md.json",
+    "docs": "npm run docs:html && npm run docs:md"
   },
   "type": "module",
   "engines": {
@@ -51,12 +54,17 @@
     "@remix-run/route-config": "^2.16.2",
     "@shopify/api-codegen-preset": "^1.1.1",
     "@types/eslint": "^9.6.1",
-    "@types/node": "^22.2.0",
+    "@types/node": "^22.16.0",
     "@types/react": "^18.2.31",
     "@types/react-dom": "^18.2.14",
+    "docdash": "^2.0.2",
     "eslint": "^8.42.0",
     "eslint-config-prettier": "^10.0.1",
+    "jsdoc": "^4.0.4",
+    "jsdoc-to-markdown": "^9.1.1",
     "prettier": "^3.2.4",
+    "typedoc": "^0.28.7",
+    "typedoc-plugin-markdown": "^4.7.0",
     "typescript": "^5.2.2",
     "vite": "^6.2.2"
   },
@@ -72,5 +80,5 @@
   "overrides": {
     "@graphql-tools/url-loader": "8.0.16"
   },
-  "author": "developer@devit.group"
+  "author": "yespoplugin@yespo.io"
 }

@@ -13,10 +13,28 @@ const WEB_PUSH_SCRIPT_HANDLE =
   process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
 const WEB_TRACKING_ENABLED =
   process.env.WEB_TRACKING_ENABLED ?? "web-tracking-enabled";
+const HOST_URL =
+  process.env.HOST_URL ?? "yespo-app-host";
 
+/**
+ * Handles post-authentication logic for a Shopify session.
+ *
+ * - Updates or creates the shop in your database
+ * - Registers metafield definitions for Yespo scripts if they do not exist
+ * - Deletes Yespo-related metafields if the shop has no API key
+ * - Registers webhooks
+ *
+ * @function afterAuth
+ * @param {Object} params - Parameters object
+ * @param {Session} params.session - Shopify session object
+ * @param {any} params.admin - Shopify admin API client
+ * @returns {Promise<void>} Resolves when setup is complete
+ *
+ * @throws {Error} If the shop could not be retrieved
+ */
 const afterAuth = async ({
-  session,
-  admin,
+session,
+admin,
 }: {
   session: Session;
   admin: any;
@@ -61,6 +79,11 @@ const afterAuth = async ({
     key: WEB_TRACKING_ENABLED,
   });
 
+  const hostDefinition = await getMetafieldDefinition({
+    admin,
+    key: HOST_URL,
+  });
+
   /* Create definition for general yespo script */
   if (!generalDefinition) {
     await createMetafieldDefinition({
@@ -93,11 +116,21 @@ const afterAuth = async ({
     });
   }
 
+  if (!hostDefinition) {
+    await createMetafieldDefinition({
+      admin,
+      key: HOST_URL,
+      name: "Yespo app host",
+      description:
+        "This is a app metafield definition for Yespo app host",
+    });
+  }
+
   if (!shopObject?.apiKey && shop?.id) {
     await deleteMetafields({
       admin,
       ownerId: shop?.id,
-      keys: [GENERAL_SCRIPT_HANDLE, WEB_PUSH_SCRIPT_HANDLE, WEB_TRACKING_ENABLED],
+      keys: [GENERAL_SCRIPT_HANDLE, WEB_PUSH_SCRIPT_HANDLE, WEB_TRACKING_ENABLED, HOST_URL],
     });
   }
 

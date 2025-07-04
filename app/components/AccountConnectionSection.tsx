@@ -17,12 +17,39 @@ import { useTranslation } from "react-i18next";
 
 import type { Account } from "~/@types/account";
 
+/**
+ * Props for the AccountConnectionSection component.
+ *
+ * @property {string} [apiKey] - The current Yespo API key for the connected account.
+ * @property {Account | null} [account] - The account information object, or null if not connected.
+ * @property {{ [key: string]: string }} [errors] - Validation or server errors keyed by field name.
+ * @property {boolean} [disabled] - Whether the form inputs and buttons are disabled.
+ */
 export interface AccountConnectionSectionProps {
   apiKey?: string;
   account?: Account | null;
   errors?: { [key: string]: string };
   disabled?: boolean;
 }
+
+/**
+ * AccountConnectionSection component allows users to connect or disconnect their account via Yespo API key.
+ *
+ * Displays the connection status, account details (if connected), an API key input with show/hide toggle,
+ * and buttons to connect or disconnect the account. Includes a confirmation modal before disconnecting.
+ *
+ * @param {AccountConnectionSectionProps} props - Component props.
+ *
+ * @returns {JSX.Element} The rendered component.
+ *
+ * @example
+ * <AccountConnectionSection
+ *   apiKey="abcdef123456"
+ *   account={accountData}
+ *   errors={{ apiKey: "Invalid API key" }}
+ *   disabled={false}
+ * />
+ */
 
 const AccountConnectionSection: FC<AccountConnectionSectionProps> = ({
   apiKey,

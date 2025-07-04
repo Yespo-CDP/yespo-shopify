@@ -10,6 +10,20 @@ import {
 } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
 
+/**
+ * UsefulLinksSection component renders a card containing a list of helpful links.
+ *
+ * It fetches localized link data using the `useTranslation` hook and displays
+ * each link with a label, URL, and description.
+ *
+ * The links are displayed as a bulleted list with each item containing a clickable
+ * link and accompanying description.
+ *
+ * @returns {JSX.Element} The rendered Useful Links section UI.
+ *
+ * @example
+ * <UsefulLinksSection />
+ */
 const UsefulLinksSection: FC = () => {
   const { t } = useTranslation();
   const links = t("UsefulLinksSection.links", { returnObjects: true }) as {

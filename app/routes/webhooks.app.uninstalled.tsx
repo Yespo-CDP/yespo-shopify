@@ -4,6 +4,19 @@ import { shopRepository } from "~/repositories/repositories.server";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
 
+/**
+ * Action handler for Shopify webhook events related to app uninstallation or deactivation.
+ *
+ * Authenticates the webhook request and logs the received topic and shop.
+ * If a valid session exists, updates the shop record to mark it inactive and
+ * removes all related sessions from the database.
+ *
+ * Note: Webhook events can be triggered multiple times or after the app
+ * has been uninstalled, so the session may not exist.
+ *
+ * @param {ActionFunctionArgs} args - The arguments containing the request.
+ * @returns {Promise<Response>} An empty HTTP response indicating success.
+ */
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { shop, session, topic } = await authenticate.webhook(request);
 

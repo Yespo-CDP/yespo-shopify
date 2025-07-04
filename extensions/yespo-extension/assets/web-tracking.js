@@ -2,7 +2,6 @@ class EventTracker {
   constructor(document, scriptTagName = 'script') {
     this.document = document;
     this.scriptTagName = scriptTagName;
-    this.HOST = 'https://bobcat-noted-moose.ngrok-free.app';
     this.cookie = document.cookie;
 
     window.eS = window.eS || function () {
@@ -56,49 +55,65 @@ class EventTracker {
   }
 
   sendPage404Event() {
-    if (this.data.pageTemplate === '404') {
-      window.eS('sendEvent', 'NotFound');
+    try {
+      if (this.data.pageTemplate === '404') {
+        window.eS('sendEvent', 'NotFound');
+      }
+    } catch (e) {
+      console.error('Failed send 404 page event')
     }
   }
 
   sendMainPageEvent() {
-    if (this.data.pageTemplate === 'index') {
-      window.eS('sendEvent', 'MainPage');
-    }
+   try {
+     if (this.data.pageTemplate === 'index') {
+       window.eS('sendEvent', 'MainPage');
+     }
+   } catch (e) {
+     console.error('Failed send main page event')
+   }
   }
 
   sendProductPageEvent() {
-    const product = this.data.product;
-    if (this.data.pageTemplate === 'product' && product) {
-      window.eS('sendEvent', 'ProductPage', {
-        ProductPage: {
-          productKey: product.id.toString(),
-          price: product.price.toString(),
-          isInStock: product.available ? 1 : 0
-        }
-      });
+    try {
+      const product = this.data.product;
+      if (this.data.pageTemplate === 'product' && product) {
+        window.eS('sendEvent', 'ProductPage', {
+          ProductPage: {
+            productKey: product.id.toString(),
+            price: product.price.toString(),
+            isInStock: product.available ? 1 : 0
+          }
+        });
+      }
+    } catch (e) {
+      console.error('Failed send product page event')
     }
   }
 
   sendCustomerEvent() {
-    const customer = this.data.customer;
-    if (customer) {
-      let customerData = {
-        externalCustomerId: customer.id.toString(),
-        user_email: customer.email,
-      };
+    try {
+      const customer = this.data.customer;
+      if (customer) {
+        let customerData = {
+          externalCustomerId: customer.id.toString(),
+          user_email: customer.email,
+        };
 
-      if (customer.firstName || customer.lastName) {
-        customerData.user_name = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+        if (customer.firstName || customer.lastName) {
+          customerData.user_name = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
+        }
+
+        if (customer.phone) {
+          customerData.user_phone = customer.phone;
+        }
+
+        window.eS('sendEvent', 'CustomerData', {
+          CustomerData: customerData
+        });
       }
-
-      if (customer.phone) {
-        customerData.user_phone = customer.phone;
-      }
-
-      window.eS('sendEvent', 'CustomerData', {
-        CustomerData: customerData
-      });
+    } catch (e) {
+      console.error("Failed send customer data event")
     }
   }
 
@@ -108,8 +123,12 @@ class EventTracker {
     const token = cartTokenRaw ? cartTokenRaw.split('?')[0] : null;
     const customer = this.data.customer;
 
+    if (!this.data.host) {
+      return
+    }
+
     try {
-      const res = await fetch(`${this.HOST}/public/event-data`, {
+      const res = await fetch(`${this.data.host}/public/event-data`, {
         method: 'POST',
         body: JSON.stringify({
           shop: this.data.domain,
@@ -127,6 +146,8 @@ class EventTracker {
 
   async run() {
     if (!this.data) return;
+
+    console.log('>>>>>>', this.data)
 
     this.sendPage404Event();
     this.sendMainPageEvent();

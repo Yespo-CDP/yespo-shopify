@@ -10,13 +10,48 @@ const CORS_HEADERS = {
   "Content-Type": "application/json",
 };
 
+/**
+ * Creates a JSON HTTP response with appropriate CORS headers.
+ *
+ * @param {object} data - The data object to serialize as JSON in the response body.
+ * @param {number} [status=200] - The HTTP status code of the response.
+ * @returns {Response} A Response object with JSON body and CORS headers.
+ */
 // Helper to create a response
-const jsonResponse = (data: object, status = 200) =>
+const jsonResponse = (data: object, status: number = 200): Response =>
   new Response(JSON.stringify(data), {
     status,
     headers: CORS_HEADERS,
   });
 
+/**
+ * Handles incoming HTTP requests to create or update event data.
+ *
+ * Supports CORS preflight with OPTIONS method.
+ * Expects a POST request with JSON body containing at least `shop`, `sc`, and `cartToken`.
+ * Silently accepts incomplete data or unknown shops without error.
+ * If customer data is present, upserts the customer record.
+ * Creates or updates event data with a TTL of 14 days.
+ *
+ * @async
+ * @function action
+ * @param {ActionFunctionArgs} args - Remix action function arguments including the HTTP request.
+ * @param {Request} args.request - The incoming HTTP request.
+ * @returns {Promise<Response>} JSON response indicating success or failure.
+ *
+ * @example
+ * // Example request body:
+ * {
+ *   "shop": "example-shop.myshopify.com",
+ *   "sc": "...",
+ *   "cartToken": "token123",
+ *   "customer": {
+ *     "id": "cust123",
+ *     "email": "customer@example.com",
+ *     ...,
+ *   }
+ * }
+ */
 export const action = async ({request}: ActionFunctionArgs) => {
   // Handle CORS preflight request
   if (request.method === "OPTIONS") {
