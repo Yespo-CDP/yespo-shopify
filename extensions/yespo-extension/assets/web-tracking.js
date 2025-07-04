@@ -49,24 +49,20 @@ class EventTracker {
     const decoded = decodeURIComponent(raw);
     if (!decoded.includes('?key')) {
       const updatedCart = await this.updateCart();
-      console.log('UPDATE CART', updatedCart);
       return updatedCart?.token || null;
     }
 
-    console.log('CART', decoded);
     return decoded;
   }
 
   sendPage404Event() {
     if (this.data.pageTemplate === '404') {
-      console.log('404 PAGE');
       window.eS('sendEvent', 'NotFound');
     }
   }
 
   sendMainPageEvent() {
     if (this.data.pageTemplate === 'index') {
-      console.log('MAIN PAGE');
       window.eS('sendEvent', 'MainPage');
     }
   }
@@ -74,7 +70,6 @@ class EventTracker {
   sendProductPageEvent() {
     const product = this.data.product;
     if (this.data.pageTemplate === 'product' && product) {
-      console.log('PRODUCT PAGE');
       window.eS('sendEvent', 'ProductPage', {
         ProductPage: {
           productKey: product.id.toString(),
@@ -88,7 +83,6 @@ class EventTracker {
   sendCustomerEvent() {
     const customer = this.data.customer;
     if (customer) {
-      console.log('CUSTOMER DATA');
       let customerData = {
         externalCustomerId: customer.id.toString(),
         user_email: customer.email,

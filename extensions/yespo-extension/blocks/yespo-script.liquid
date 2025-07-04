@@ -30,23 +30,6 @@
   }
 </script>
 
-
-<script>
-  const pageTemplate =  "{{ template.name }}";
-  const trackingEnabled = "{{ yespo_web_tracking_enabled }}";
-  console.log("pageTemplate", pageTemplate)
-  console.log("Web tracking enabled:", trackingEnabled);
-   const customerData = {
-      id: {{ customer.id | json }},
-      email: "{{ customer.email }}",
-      firstName: "{{ customer.first_name }}",
-      lastName: "{{ customer.last_name }}",
-      phone: {{ customer.phone | json }},
-      city: "{{ customer.default_address.city }}"
-    };
-  console.log('CUSTOMER',customerData )
-</script>
-
 {% if yespo_web_tracking_enabled %}
   <script>
     console.log('ENABLED')
