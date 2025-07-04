@@ -1,6 +1,7 @@
 import { getGeneralScript } from "~/api/get-general-script.server";
 import { createGeneralDomain } from "~/api/create-general-domain.server";
 import createMetafield from "~/shopify/mutations/create-metafield.server";
+import {shopRepository} from "~/repositories/repositories.server";
 
 const GENERAL_SCRIPT_HANDLE =
   process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
@@ -17,7 +18,11 @@ export const connectGeneralScriptService = async ({
   admin: any;
 }) => {
   try {
-    await createGeneralDomain({ apiKey, domain });
+    const connectedData = await createGeneralDomain({ apiKey, domain });
+
+    await shopRepository.updateShop(domain, {
+      siteId: connectedData.siteId
+    });
 
     const script = await getGeneralScript({ apiKey });
 

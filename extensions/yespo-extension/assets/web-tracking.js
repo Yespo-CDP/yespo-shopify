@@ -1,60 +1,144 @@
-function sendPage404Event(eS, pageTemplate) {
-  if (pageTemplate === '404') {
-    console.log('404 PAGE')
-    eS('sendEvent', 'NotFound');
-  }
-}
+class EventTracker {
+  constructor(document, scriptTagName = 'script') {
+    this.document = document;
+    this.scriptTagName = scriptTagName;
+    this.HOST = 'https://bobcat-noted-moose.ngrok-free.app';
+    this.cookie = document.cookie;
 
-function sendMainPageEvent(eS, pageTemplate) {
-  if (pageTemplate === 'index') {
-    console.log('MAIN PAGE')
-    eS('sendEvent', 'MainPage');
-  }
-}
+    window.eS = window.eS || function () {
+      (window.eS.q = window.eS.q || []).push(arguments);
+    };
 
-function sendProductPageEvent(eS, pageTemplate, product) {
-  if (pageTemplate === 'product' && !!product) {
-    console.log('PRODUCT PAGE')
-    eS('sendEvent', 'ProductPage', {
-      'ProductPage': {
-        'productKey': product.id.toString(),
-        'price': product.price.toString(),
-        'isInStock': product.available ? 1 : 0
-      }});
+    this.data = this.getPageData();
   }
-}
 
-function sendCustomerEvent(eS, customer) {
-  if (customer) {
-    console.log('CUSTOMER DATA')
-    eS('sendEvent', 'CustomerData', {
-      'CustomerData': {
-        'externalCustomerId': customer.id.toString(),
-        'user_email': customer.email,
-        'user_name': `${customer.firstName} ${customer.lastName}`,
-        'user_phone': customer.phone,
-        'user_city': customer.city,
+  getPageData() {
+    try {
+      const scriptTag = this.document.getElementById('data');
+      return scriptTag ? JSON.parse(scriptTag.textContent) : null;
+    } catch (error) {
+      console.error('Error parsing JSON from #data script tag:', error);
+      return null;
+    }
+  }
+
+  getCookieValue(name) {
+    const match = this.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
+    return match ? match[2] : "";
+  }
+
+  //Create empty cart
+  async updateCart() {
+    try {
+      const res = await fetch('/cart/update.js', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+        keepalive: true
+      });
+      return await res.json();
+    } catch (error) {
+      console.error('Error updating cart:', error);
+      return null;
+    }
+  }
+
+  async getCartToken() {
+    const raw = this.getCookieValue('cart');
+
+    const decoded = decodeURIComponent(raw);
+    if (!decoded.includes('?key')) {
+      const updatedCart = await this.updateCart();
+      return updatedCart?.token || null;
+    }
+
+    return decoded;
+  }
+
+  sendPage404Event() {
+    if (this.data.pageTemplate === '404') {
+      window.eS('sendEvent', 'NotFound');
+    }
+  }
+
+  sendMainPageEvent() {
+    if (this.data.pageTemplate === 'index') {
+      window.eS('sendEvent', 'MainPage');
+    }
+  }
+
+  sendProductPageEvent() {
+    const product = this.data.product;
+    if (this.data.pageTemplate === 'product' && product) {
+      window.eS('sendEvent', 'ProductPage', {
+        ProductPage: {
+          productKey: product.id.toString(),
+          price: product.price.toString(),
+          isInStock: product.available ? 1 : 0
+        }
+      });
+    }
+  }
+
+  sendCustomerEvent() {
+    const customer = this.data.customer;
+    if (customer) {
+      let customerData = {
+        externalCustomerId: customer.id.toString(),
+        user_email: customer.email,
+      };
+
+      if (customer.firstName || customer.lastName) {
+        customerData.user_name = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
       }
-    })
+
+      if (customer.phone) {
+        customerData.user_phone = customer.phone;
+      }
+
+      window.eS('sendEvent', 'CustomerData', {
+        CustomerData: customerData
+      });
+    }
+  }
+
+  async sendTrackingData() {
+    const sc = this.getCookieValue('sc');
+    const cartTokenRaw = await this.getCartToken();
+    const token = cartTokenRaw ? cartTokenRaw.split('?')[0] : null;
+    const customer = this.data.customer;
+
+    try {
+      const res = await fetch(`${this.HOST}/public/event-data`, {
+        method: 'POST',
+        body: JSON.stringify({
+          shop: this.data.domain,
+          sc,
+          cartToken: token,
+          customer
+        }),
+        keepalive: true
+      });
+      console.log('✅ Tracking sent:', res);
+    } catch (error) {
+      console.error('❌ Tracking failed:', error);
+    }
+  }
+
+  async run() {
+    if (!this.data) return;
+
+    this.sendPage404Event();
+    this.sendMainPageEvent();
+    this.sendProductPageEvent();
+    this.sendCustomerEvent();
+    await this.sendTrackingData();
   }
 }
 
-function processEvents (d,s) {
-  window.eS = window.eS || function () {
-    (window.eS.q = window.eS.q || []).push(arguments);
-  };
-
-  var data = JSON.parse(d.getElementById('data').textContent);
-  if (!data) return
-
-  console.log('data', data)
-
-  sendPage404Event(window.eS, data.pageTemplate);
-  sendMainPageEvent(window.eS, data.pageTemplate)
-  sendProductPageEvent(window.eS, data.pageTemplate, data.product)
-  sendCustomerEvent(window.eS, data.customer)
-}
-(function(d,s){
-  console.log("EVENT SCRIPT STARTED")
-  processEvents(d, s)
-})(document, 'script');
+// 👇 Execute the tracker
+(async () => {
+  console.log("EVENT SCRIPT STARTED");
+  const tracker = new EventTracker(document);
+  await tracker.run();
+})();

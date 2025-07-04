@@ -53,7 +53,6 @@ async function createMetafield({
     const metafieldData = responseParse?.data as {
       metafieldsSet: { metafields: Metafield[] };
     };
-    console.log('metafieldData', JSON.stringify(metafieldData, null, 2))
     const metafield = metafieldData?.metafieldsSet?.metafields[0];
 
     return metafield ?? null;

@@ -13,6 +13,7 @@ import checkThemeExtensionService from "~/services/check-theme-extension.server"
 import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
 import {toggleWebTrackingServer} from "~/services/toggleWebTracking.server";
+import {createGeneralDomain} from "~/api/create-general-domain.server";
 
 export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
@@ -138,6 +139,14 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       if (!shop) {
         errors.webTracking = t("General.errors.shopNotFound");
         return { success, errors };
+      }
+
+      if (!shop.siteId && shop.apiKey) {
+        const connectedData = await createGeneralDomain({ apiKey: shop.apiKey, domain: shop.domain });
+
+        await shopRepository.updateShop(shop.domain, {
+          siteId: connectedData.siteId
+        });
       }
 
       await toggleWebTrackingServer({
