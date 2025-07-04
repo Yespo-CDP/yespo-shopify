@@ -17,12 +17,10 @@ export const action = async ({request}: ActionFunctionArgs) => {
 
   switch (topic) {
     case "CUSTOMERS_CREATE":
-      console.log('CUSTOMERS_CREATE', JSON.stringify(payload, null, 2));
       await createContactService(payload, shop.apiKey)
       break;
 
     case "CUSTOMERS_UPDATE":
-      console.log('CUSTOMERS_UPDATE', JSON.stringify(payload, null, 2))
       await updateContactService(payload, shop.apiKey)
       break;
 

@@ -14,7 +14,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   const { shop, topic, payload, webhookId } = await authenticate.webhook(requestClone);
   console.log(`Received ${topic} webhook for ${shop}`);
-  console.log('payload', JSON.stringify(payload, null, 2))
 
   if (!SHOPIFY_API_SECRET) {
     console.error(
@@ -52,7 +51,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       await gdprCustomerDataRepository.createGdprCustomerDataRequest(customerDataRequest)
       break;
     case "CUSTOMERS_REDACT":
-      console.log('CUSTOMERS_REDACT')
       await deleteContactService(payload.customer.id.toString(), store.apiKey, true)
       break;
     case "SHOP_REDACT":
