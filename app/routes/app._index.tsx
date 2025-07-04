@@ -25,9 +25,35 @@ import UsefulLinksSection from "~/components/UsefulLinksSection";
 import { loaderHandler, actionHandler } from "~/lib/app.server";
 import WebTrackingSection from "~/components/WebTrackingSection";
 
+/**
+ * The loader function to fetch initial data for the page.
+ * Delegates to `loaderHandler`.
+ */
 export const loader = loaderHandler;
+
+/**
+ * The action function to handle form submissions or interactions on the page.
+ * Delegates to `actionHandler`.
+ */
 export const action = actionHandler;
 
+/**
+ * Main component for the index route.
+ *
+ * Fetches initial data and handles form submission results,
+ * displaying appropriate UI sections and toast notifications.
+ *
+ * It renders:
+ * - A welcome section with logo and description.
+ * - Account connection section (with API key and account info).
+ * - Connection status section (showing connection status script and app extension status).
+ * - Unsupported markets warning if applicable.
+ * - Useful links section.
+ *
+ * Uses Shopify App Bridge for toast notifications.
+ *
+ * @returns {JSX.Element} The rendered page component.
+ */
 export default function Index() {
   const { t } = useTranslation();
   const shopify = useAppBridge();

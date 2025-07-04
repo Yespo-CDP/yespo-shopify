@@ -5,6 +5,26 @@ import {gdprCustomerDataRepository, shopRepository} from "~/repositories/reposit
 import { authenticate } from "../shopify.server";
 import {deleteContactService} from "~/services/delete-contact.service";
 
+/**
+ * Action handler for processing Shopify webhooks with HMAC validation.
+ *
+ * Steps performed:
+ * 1. Clones the incoming request to read raw payload.
+ * 2. Extracts and validates the Shopify webhook HMAC signature against the raw payload.
+ * 3. Authenticates the webhook and retrieves shop info, topic, payload, and webhookId.
+ * 4. If the shop or its API key is missing, responds with HTTP 200 to acknowledge.
+ * 5. Handles specific webhook topics:
+ *    - "CUSTOMERS_DATA_REQUEST": Creates a customer data request record.
+ *    - "CUSTOMERS_REDACT": Deletes customer contact data securely.
+ *    - "SHOP_REDACT": Deletes the entire shop data from the repository.
+ * 6. Responds with HTTP 400 if the topic is unhandled.
+ *
+ * Returns HTTP 401 if HMAC validation fails or secret is missing.
+ *
+ * @param {ActionFunctionArgs} args - The arguments containing the request.
+ * @returns {Promise<Response>} The HTTP response indicating success, failure, or unhandled topic.
+ */
+
 export const action = async ({ request }: ActionFunctionArgs) => {
   const requestClone = request.clone();
   const rawPayload = await request.text();
@@ -50,9 +70,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }
       await gdprCustomerDataRepository.createGdprCustomerDataRequest(customerDataRequest)
       break;
+
     case "CUSTOMERS_REDACT":
       await deleteContactService(payload.customer.id.toString(), store.apiKey, true)
       break;
+
     case "SHOP_REDACT":
       const shopData = await shopRepository.getShop(shop);
       if (shopData) {

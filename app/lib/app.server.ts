@@ -15,6 +15,26 @@ import i18n from "~/i18n.server";
 import {toggleWebTrackingServer} from "~/services/toggleWebTracking.server";
 import {createGeneralDomain} from "~/api/create-general-domain.server";
 
+/**
+ * Loader function for initializing data needed on the page.
+ *
+ * This function authenticates the admin, retrieves shop information,
+ * checks whether there are too many markets, verifies script connection status,
+ * and fetches account info from an external API if an API key exists.
+ *
+ * @param {LoaderFunctionArgs} args - The arguments containing the request.
+ * @returns {Promise<{
+ *   shop: Shop | null,
+ *   account: Account | null,
+ *   scriptConnectionStatus: any,
+ *   isMarketsOverflowing: boolean,
+ *   ENV: {
+ *     DOCK_URL: string,
+ *     PLATFORM_URL: string
+ *   }
+ * }>} - The data needed by the page.
+ */
+
 export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
   const shop = await shopRepository.getShop(session.shop);
@@ -42,6 +62,32 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
     },
   };
 };
+
+/**
+ * Action handler for processing form submissions related to account and script connections.
+ *
+ * Handles different `intent` types:
+ * - "account-connection": Connects an account using the provided API key.
+ * - "account-disconnection": Disconnects the currently connected account.
+ * - "connection-status": Verifies the status of scripts and theme extension.
+ *
+ * @param {ActionFunctionArgs} args - The arguments containing the request.
+ * @returns {Promise<{
+ *   success: {
+ *     apiKey?: boolean;
+ *     connection?: {
+ *       ok?: boolean;
+ *       isGeneralScriptExist?: boolean;
+ *       isWebPushScriptExist?: boolean;
+ *       isThemeExtensionActive?: boolean;
+ *     };
+ *   };
+ *   errors: {
+ *     apiKey?: string;
+ *     script?: string;
+ *   };
+ * }>} - The result of the action including success flags and error messages.
+ */
 
 export const actionHandler = async ({ request }: ActionFunctionArgs) => {
   const { session, admin } = await authenticate.admin(request);

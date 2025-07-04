@@ -1,6 +1,9 @@
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 
+/**
+ * Response structure for the web push domain creation API.
+ */
 interface WebPushDomainResponse {
   errors?: {
     domain: string;
@@ -12,11 +15,37 @@ interface WebPushDomainResponse {
   };
 }
 
+/**
+ * The name of the service worker file used for web push notifications.
+ * Defaults to "service-worker.js" if not specified in environment variables.
+ */
 const SERVICE_WORKER_NAME =
   process.env.SERVICE_WORKER_NAME ?? "service-worker.js";
+
+/**
+ * The path where the service worker is hosted.
+ * Defaults to "/apps/yespo-proxy/" if not specified in environment variables.
+ */
 const SERVICE_WORKER_PATH =
   process.env.SERVICE_WORKER_PATH ?? "/apps/yespo-proxy/";
 
+/**
+ * Registers a domain for web push notifications with the external API.
+ *
+ * Sends a POST request with domain and service worker details.
+ * Handles specific errors related to domain registration and reachability,
+ * throwing descriptive error messages accordingly.
+ *
+ * @param {Object} params - The parameters object.
+ * @param {string} params.apiKey - The API key used for authentication.
+ * @param {string} params.domain - The domain to register for web push.
+ * @returns {Promise<{ result: string }>} A promise resolving with the registration status.
+ *
+ * @throws Will throw specific errors:
+ * - "domainAlreadyRegisteredError" if the domain is already registered.
+ * - "domainCantBeReachedError" if the domain cannot be reached.
+ * - "createWebPushDomainError" for other errors.
+ */
 export const createWebPushDomain = async ({
   apiKey,
   domain,
