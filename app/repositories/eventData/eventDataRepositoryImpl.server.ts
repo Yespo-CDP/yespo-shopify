@@ -30,4 +30,14 @@ export default class EventDataRepositoryImpl implements IEventDataRepository {
       }
     })
   }
+
+  async bulkDeleteEventsData() {
+    await this.database.eventData.deleteMany({
+      where: {
+        ttl: {
+          lt: new Date(),
+        },
+      },
+    });
+  }
 }
