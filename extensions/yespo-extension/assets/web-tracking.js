@@ -31,7 +31,7 @@ class EventTracker {
     try {
       const res = await fetch('/cart/update.js', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({}),
         keepalive: true
       });
@@ -65,13 +65,13 @@ class EventTracker {
   }
 
   sendMainPageEvent() {
-   try {
-     if (this.data.pageTemplate === 'index') {
-       window.eS('sendEvent', 'MainPage');
-     }
-   } catch (e) {
-     console.error('Failed send main page event')
-   }
+    try {
+      if (this.data.pageTemplate === 'index') {
+        window.eS('sendEvent', 'MainPage');
+      }
+    } catch (e) {
+      console.error('Failed send main page event')
+    }
   }
 
   sendProductPageEvent() {
@@ -117,24 +117,19 @@ class EventTracker {
     }
   }
 
-  async sendTrackingData() {
-    const sc = this.getCookieValue('sc');
-    const cartTokenRaw = await this.getCartToken();
-    const token = cartTokenRaw ? cartTokenRaw.split('?')[0] : null;
-    const customer = this.data.customer;
-
-    if (!this.data.host) {
+  async sendTrackingData(data) {
+    if (!data.host) {
       return
     }
 
     try {
-      const res = await fetch(`${this.data.host}/public/event-data`, {
+      const res = await fetch(`${data.host}/public/event-data`, {
         method: 'POST',
         body: JSON.stringify({
-          shop: this.data.domain,
-          sc,
-          cartToken: token,
-          customer
+          shop: data.domain,
+          sc: data.sc,
+          cartToken: data.token,
+          customer: data.customer
         }),
         keepalive: true
       });
@@ -144,16 +139,84 @@ class EventTracker {
     }
   }
 
+  async sendCartData() {
+    const sc = this.getCookieValue('sc');
+    const cartTokenRaw = await this.getCartToken();
+    const token = cartTokenRaw ? cartTokenRaw.split('?')[0] : null;
+    const customer = this.data.customer;
+
+   await this.sendTrackingData({
+     host: this.data.host,
+     domain: this.data.domain,
+     sc,
+     token,
+     customer,
+   })
+  }
+
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async interceptCartCreateFetch() {
+    const originalFetch = window.fetch;
+    const self = this;
+
+    const sc = this.getCookieValue('sc');
+    const customer = this.data.customer;
+    const host = this.data.host;
+    const domain = this.data.domain;
+
+    window.fetch = async function (...args) {
+      const [url, options] = args;
+
+      const isTargetRequest =
+        typeof url === 'string' &&
+        url.includes("api/unstable/graphql.json?operation_name=cartCreate") &&
+        options?.method === 'POST';
+
+      if (isTargetRequest) {
+
+        try {
+          const response = await originalFetch(...args);
+          const clonedResponse = response.clone();
+          const data = await clonedResponse.json();
+
+          const cartId = data.data?.result?.cart?.id || ''
+          const cartToken = cartId.split('/').pop().split('?')[0];
+
+          await self.sendTrackingData({
+            host,
+            domain,
+            sc,
+            token: cartToken,
+            customer
+          });
+
+          return response;
+        } catch (error) {
+          console.error('❌ Error handling intercepted fetch:', error);
+          throw error;
+        }
+      } else {
+        // Not the target request — forward it unchanged
+        return originalFetch(...args);
+      }
+    }
+  };
+
+
   async run() {
     if (!this.data) return;
 
-    console.log('>>>>>>', this.data)
+    await this.interceptCartCreateFetch()
 
     this.sendPage404Event();
     this.sendMainPageEvent();
     this.sendProductPageEvent();
     this.sendCustomerEvent();
-    await this.sendTrackingData();
+    await this.sendCartData();
+
   }
 }
 
