@@ -1,15 +1,15 @@
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
-import {Contact} from "~/@types/contact";
+import type {StatusCartEvent} from "~/@types/statusCart";
 
-export const updateContact = async ({
-                                      apiKey,
-                                      contactData
-                                    }: {
+export const sendStatusCartEvent = async ({
+ apiKey,
+ cartEventData
+}: {
   apiKey: string;
-  contactData: Contact
+  cartEventData: StatusCartEvent
 }): Promise<void> => {
-  const url = `${process.env.API_URL}/contact`;
+  const url = `${process.env.WEB_TRACKER_URL}`;
   const authHeader = getAuthHeader(apiKey);
   const options = {
     method: "POST",
@@ -17,14 +17,13 @@ export const updateContact = async ({
       "content-type": "application/json",
       Authorization: authHeader,
     },
-    body: JSON.stringify(contactData),
+    body: JSON.stringify(cartEventData),
   };
 
   try {
-    const response = await fetchWithErrorHandling(url, options);
-    return response;
+    await fetchWithErrorHandling(url, options);
   } catch (error: any) {
-    console.error("Error updating contact:", error?.message);
+    console.error("Error sending status cart:", error?.message);
     if (!error?.message?.includes('Duplicated request')) {
       throw new Error(error.message);
     }

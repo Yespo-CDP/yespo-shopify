@@ -39,12 +39,14 @@ model Shop {
   name                  String
   domain                String    @unique @default("")
   apiKey                String?
+  siteId                String?
   isWebTrackingEnabled  Boolean?  @default(false)
   active                Boolean?  @default(true)
   createdAt             DateTime  @default(now())
   updatedAt              DateTime? @updatedAt
 
   customerDataRequests GdprCustomerDataRequest[]
+  eventsData            EventData[]
 }
 
 model GdprCustomerDataRequest{
@@ -57,4 +59,31 @@ model GdprCustomerDataRequest{
 
   shop                  Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   shopId                Int
+}
+
+model EventData {
+   cartToken             String   @id
+   sc                    String
+   ttl                   DateTime
+   createdAt             DateTime  @default(now())
+   updatedAt             DateTime? @updatedAt
+
+   shop                  Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+   shopId                Int
+
+   customer              Customer? @relation(fields: [customerId], references: [customerId])
+   customerId            String?   // optional foreign key field
+}
+
+model Customer {
+  customerId             String   @id
+  phone                  String?
+  email                  String?
+  firstName               String?
+  lastName               String?
+
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime? @updatedAt
+
+  eventsData             EventData[]
 }
