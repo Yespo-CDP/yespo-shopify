@@ -1,23 +1,28 @@
 import type {ICartCustomer} from "~/@types/statusCart";
 import type {Customer} from "~/@types/customer";
 
-export const buildCustomerData = (customer?: Customer): ICartCustomer => {
+export const buildCustomerData = (customer?: Customer | any): ICartCustomer => {
   const customerData: ICartCustomer = {};
 
-  if (customer) {
-    customerData.externalCustomerId = customer.customerId;
+  if (!customer) return customerData;
 
-    if (customer.phone) {
-      customerData.user_phone = customer.phone;
-    }
+  // Prefer customerId over id if both exist
+  customerData.externalCustomerId =
+    customer.customerId ?? customer.id?.toString();
 
-    if (customer.email) {
-      customerData.user_email = customer.email;
-    }
+  const firstName = customer.firstName ?? customer.first_name ?? '';
+  const lastName = customer.lastName ?? customer.last_name ?? '';
 
-    if (customer.firstName || customer.lastName) {
-      customerData.user_name = `${customer.firstName || ''} ${customer.lastName || ''}`.trim();
-    }
+  if (firstName || lastName) {
+    customerData.user_name = `${firstName} ${lastName}`.trim();
+  }
+
+  if (customer.phone) {
+    customerData.user_phone = customer.phone;
+  }
+
+  if (customer.email) {
+    customerData.user_email = customer.email;
   }
 
   return customerData;

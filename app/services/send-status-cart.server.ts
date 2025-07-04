@@ -39,8 +39,6 @@ export const sendStatusCartService = async (payload: any, shop: Shop) => {
       }
     }
 
-    console.log('cartEventData', JSON.stringify(cartEventData, null, 2))
-
     await sendStatusCartEvent({
       apiKey: shop.apiKey,
       cartEventData

@@ -4,7 +4,7 @@ export interface ICartCustomer {
   user_email?: string;
   user_name?: string;
 }
-interface IGeneralInfo {
+export interface IGeneralInfo {
   eventName: string;
   siteId: string;
   datetime: number;
@@ -12,7 +12,7 @@ interface IGeneralInfo {
   user_phone?: string;
   user_email?: string;
   user_name?: string;
-  cookies?: {
+  cookies: {
     sc: string
   }
 }
