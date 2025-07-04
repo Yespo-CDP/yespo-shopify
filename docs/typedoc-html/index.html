@@ -1,0 +1,297 @@
+<!DOCTYPE html><html class="default" lang="en" data-base="./"><head><meta charset="utf-8"/><meta http-equiv="x-ua-compatible" content="IE=edge"/><title>yespo-app</title><meta name="description" content="Documentation for yespo-app"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="assets/style.css"/><link rel="stylesheet" href="assets/highlight.css"/><script defer src="assets/main.js"></script><script async src="assets/icons.js" id="tsd-icons-script"></script><script async src="assets/search.js" id="tsd-search-script"></script><script async src="assets/navigation.js" id="tsd-nav-script"></script><script async src="assets/hierarchy.js" id="tsd-hierarchy-script"></script></head><body><script>document.documentElement.dataset.theme = localStorage.getItem("tsd-theme") || "os";document.body.style.display="none";setTimeout(() => window.app?app.showPage():document.body.style.removeProperty("display"),500)</script><header class="tsd-page-toolbar"><div class="tsd-toolbar-contents container"><a href="index.html" class="title">yespo-app</a><div id="tsd-toolbar-links"></div><button id="tsd-search-trigger" class="tsd-widget" aria-label="Search"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-search"></use></svg></button><dialog id="tsd-search" aria-label="Search"><input role="combobox" id="tsd-search-input" aria-controls="tsd-search-results" aria-autocomplete="list" aria-expanded="true" autocapitalize="off" autocomplete="off" placeholder="Search the docs" maxLength="100"/><ul role="listbox" id="tsd-search-results"></ul><div id="tsd-search-status" aria-live="polite" aria-atomic="true"><div>Preparing search index...</div></div></dialog><a href="#" class="tsd-widget menu" id="tsd-toolbar-menu-trigger" data-toggle="menu" aria-label="Menu"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-menu"></use></svg></a></div></header><div class="container container-main"><div class="col-content"><div class="tsd-page-title"><h1>yespo-app</h1></div><div class="tsd-panel tsd-typography"><h1 id="yespo-shopify-app" class="tsd-anchor-link">Yespo Shopify App<a href="#yespo-shopify-app" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h1><p>Shopify app for integration Yespo with Shopify</p>
+<h2 id="purpose" class="tsd-anchor-link">Purpose<a href="#purpose" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2><p>The app allows merchants to:</p>
+<ul>
+<li>Sync customer data (create, update, delete) from Shopify to Yespo</li>
+<li>Automatically register their store domain in Yespo (to get site and web push scripts)</li>
+<li>Inject site and push scripts into the storefront via Theme App Extensions</li>
+<li>Install the service worker file for web push notifications using a Shopify App Proxy</li>
+</ul>
+<h2 id="features-and-implementation-details" class="tsd-anchor-link">Features and Implementation Details<a href="#features-and-implementation-details" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2><h3 id="widgets" class="tsd-anchor-link">Widgets<a href="#widgets" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><p>Purpose: Register the store domain and inject the Yespo site script into the storefront automatically.</p>
+<p>Implementation:</p>
+<ul>
+<li><a href="https://docs.esputnik.com/reference/createdomain">Registers</a> the current store domain in Yespo</li>
+<li><a href="https://docs.esputnik.com/reference/getscript">Retrieves</a> the Yespo site script</li>
+<li>Stores the script content in a Shopify metafield: yespo-script</li>
+<li>Injects the script into the storefront using a Theme App Extension (./extensions/yespo-extension)</li>
+</ul>
+<h3 id="web-push-subscription" class="tsd-anchor-link">Web Push Subscription<a href="#web-push-subscription" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><p>Purpose: Enable customer subscriptions to web push notifications by registering the domain and injecting required scripts.</p>
+<p>Implementation:</p>
+<ul>
+<li><a href="https://docs.esputnik.com/reference/addwebpushdomain">Registers</a> the current store domain in Yespo</li>
+<li><a href="https://docs.esputnik.com/reference/getscript">Retrieves</a> the push script and service worker content</li>
+<li>Stores the push script in the yespo-web-push-script metafield</li>
+<li>Injects the push script into the storefront using the same Theme App Extension</li>
+</ul>
+<p>Service Worker Installation:</p>
+<ul>
+<li>A Shopify App Proxy is used to serve the service worker content dynamically from Yespo</li>
+<li>The worker file is exposed at a predefined path (/apps/yespo/sw.js) to comply with browser requirements</li>
+</ul>
+<h3 id="contact-sync-shopify-→-yespo" class="tsd-anchor-link">Contact Sync (Shopify → Yespo)<a href="#contact-sync-shopify-→-yespo" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><p>Purpose: Automatically sync new, updated, and deleted customers from Shopify to Yespo as contacts.</p>
+<p>Implementation:</p>
+<ul>
+<li>App requests access to the following scopes:
+<ul>
+<li>read_customers</li>
+<li>write_customers</li>
+</ul>
+</li>
+<li>Shopify webhooks used:
+<ul>
+<li>customers/create → creates a new contact in Yespo</li>
+<li>customers/update → updates existing contact data</li>
+<li>customers/redact → removes contact in Yespo</li>
+</ul>
+</li>
+</ul>
+<p>Deduplication in Yespo: Contacts are matched using externalCustomerId, email, and phone. If a contact exists, it is updated instead of duplicated.</p>
+<p>Yespo API methods:</p>
+<ul>
+<li><a href="https://docs.esputnik.com/reference/addcontact-1">POST /contact</a> – create or update contact</li>
+<li><a href="https://docs.esputnik.com/reference/deletecontact-1">DELETE /contact</a> (erase=true) – remove contact</li>
+</ul>
+<h2 id="technologies-and-shopify-tools-used" class="tsd-anchor-link">Technologies and Shopify Tools Used<a href="#technologies-and-shopify-tools-used" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2><ul>
+<li><a href="https://shopify.dev/docs/api/shopify-app-remix">Shopify App Remix</a> provides authentication and methods for interacting with Shopify APIs.</li>
+<li><a href="https://shopify.dev/docs/apps/tools/app-bridge">Shopify App Bridge</a> allows your app to seamlessly integrate your app within Shopify's Admin.</li>
+<li><a href="https://shopify.dev/docs/apps/build/app-extensions">App extensions</a> - Theme app extensions allow the Yespo app to
+seamlessly inject scripts into a merchant’s theme without manual code edits.
+You can find the extension code in the <code>./extensions/yespo-extension</code> directory.
+This extension includes:
+<ul>
+<li><code>blocks/</code> – Contains Liquid files that act as entry points for injecting Yespo scripts into the theme. These blocks can be enabled via the Shopify theme editor.</li>
+</ul>
+</li>
+<li><a href="https://polaris.shopify.com/">Polaris</a>: Design system that enables apps to create Shopify-like experiences</li>
+<li><a href="https://shopify.dev/docs/api/webhooks?reference=toml">Webhooks</a> - to receive notifications about particular events in a shop such as customer-related changes.</li>
+<li><a href="https://shopify.dev/docs/apps/build/online-store/theme-app-extensions/configuration#metafield-namespaces">Metafields</a> -
+used for storing tracking and scripts configurations (custom namespace: $app)</li>
+</ul>
+<h2 id="yespo-api-authentication" class="tsd-anchor-link">Yespo API Authentication<a href="#yespo-api-authentication" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2><p>The app uses a Yespo API key, provided by the merchant during onboarding, to authorize all API requests. The key is stored securely and used for:</p>
+<ul>
+<li>Contact sync</li>
+<li>Domain registration</li>
+<li>Script retrieval</li>
+</ul>
+<p>Full API documentation: <a href="https://docs.yespo.io/docs/integration-with-api">https://docs.yespo.io/docs/integration-with-api</a></p>
+<h2 id="quick-start" class="tsd-anchor-link">Quick start<a href="#quick-start" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2><h3 id="prerequisites" class="tsd-anchor-link">Prerequisites<a href="#prerequisites" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><p>Before you begin, you'll need the following:</p>
+<ol>
+<li><strong>Node.js</strong>: version 20 <a href="https://nodejs.org/en/download/">Download and install</a> it if you haven't already.</li>
+<li><strong>Shopify Partner Account</strong>: <a href="https://partners.shopify.com/signup">Create an account</a> if you don't have one.</li>
+<li><strong>Test Store</strong>: Set up either a <a href="https://help.shopify.com/en/partners/dashboard/development-stores#create-a-development-store">development store</a> or a <a href="https://help.shopify.com/en/partners/dashboard/managing-stores/plus-sandbox-store">Shopify Plus sandbox store</a> for testing your app.</li>
+</ol>
+<h3 id="setup" class="tsd-anchor-link">Setup<a href="#setup" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><h4 id="environment-variables" class="tsd-anchor-link">Environment variables<a href="#environment-variables" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><p>Create a <code>.env</code> file with the following:</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>SHOPIFY_API_KEY</strong></td>
+<td><strong>Required.</strong> Your shopify app Client ID</td>
+<td><code>12e4a9a4*****************eb80fba</code></td>
+</tr>
+<tr>
+<td><strong>SHOPIFY_API_SECRET</strong></td>
+<td><strong>Required.</strong> Your shopify app Client secret</td>
+<td><code>f7725*********************420ad06</code></td>
+</tr>
+<tr>
+<td><strong>SHOPIFY_APP_URL</strong></td>
+<td><strong>Required.</strong> Your shopify app url</td>
+<td><code>https://your-domain.com</code></td>
+</tr>
+<tr>
+<td><strong>SHOPIFY_YESPO_EXTENSION_ID</strong></td>
+<td><strong>Required.</strong> Extension ID (Auto generated after run <code>deploy</code> command)</td>
+<td><code>c10***ff-****-48cc-****-f882b***fa8e</code></td>
+</tr>
+<tr>
+<td><strong>DATABASE_URL</strong></td>
+<td><strong>Required.</strong> Database connect url</td>
+<td><code>postgresql://admin:admin@localhost:5432/database</code></td>
+</tr>
+<tr>
+<td><strong>SCOPES</strong></td>
+<td><strong>Required.</strong> Required access scopes</td>
+<td><strong>Must be</strong> <code>read_markets,read_themes</code></td>
+</tr>
+<tr>
+<td><strong>API_URL</strong></td>
+<td><strong>Required.</strong> Yespo api url</td>
+<td><strong>Must be</strong> <code>https://yespo.io/api/v1</code></td>
+</tr>
+<tr>
+<td><strong>GENERAL_SCRIPT_HANDLE</strong></td>
+<td><strong>Required.</strong> Handle for general metafield and extension name</td>
+<td><strong>Must be</strong> <code>yespo-script</code></td>
+</tr>
+<tr>
+<td><strong>WEB_PUSH_SCRIPT_HANDLE</strong></td>
+<td><strong>Required.</strong> Handle for webpush metafield and extension name</td>
+<td><strong>Must be</strong> <code>yespo-web-push-script</code></td>
+</tr>
+<tr>
+<td><strong>DOCK_URL</strong></td>
+<td>Yespo dock link</td>
+<td><code>https://docs.yespo.io</code></td>
+</tr>
+<tr>
+<td><strong>PLATFORM_URL</strong></td>
+<td>Yespo platform link</td>
+<td><code>https://my.yespo.io</code></td>
+</tr>
+<tr>
+<td><strong>SERVICE_WORKER_NAME</strong></td>
+<td><strong>Required.</strong> Web push service worker file name, in *.js format</td>
+<td><strong>Must be</strong> <code>service-worker.js</code></td>
+</tr>
+<tr>
+<td><strong>SERVICE_WORKER_PATH</strong></td>
+<td><strong>Required.</strong> Relative path on site, where service worker will be stored. Must start and end with slash</td>
+<td><code>/apps/yespo-proxy/</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="required-shopify-scopes" class="tsd-anchor-link">Required Shopify Scopes<a href="#required-shopify-scopes" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><p>You can <a href="https://shopify.dev/docs/apps/build/cli-for-apps/app-configuration">configure app</a> locally with TOML files.
+In root directory you need have <code>shopify.app.toml</code>  or <code>shopify.app.{your-config-name}.toml</code>.
+Use shopify app config link to generate additional configuration files for development or staging apps. You can also
+re-link upstream Shopify apps if your configuration file gets deleted, corrupted, or out-of-sync. If you already
+have a shopify.app.toml in your root directory, then you’ll be prompted to give your configuration file a name, and a
+file shopify.app.{your-config-name}.toml is generated in your root directory.</p>
+<p>The app requires the following access scopes:</p>
+<ul>
+<li><code>read_customers</code></li>
+<li><code>read_markets</code></li>
+<li><code>read_orders</code></li>
+<li><code>read_themes</code></li>
+<li><code>write_app_proxy</code></li>
+</ul>
+<h4 id="webhooks" class="tsd-anchor-link">Webhooks<a href="#webhooks" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><p>Shopify webhooks (API version: 2025-01) used by the app:</p>
+<table>
+<thead>
+<tr>
+<th>Event Topic</th>
+<th>Description</th>
+<th>Endpoint</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>customers/data_request</strong></td>
+<td>Triggered when a customer requests their personal data under GDPR compliance.</td>
+<td><code>/webhooks/app/gdpr</code></td>
+</tr>
+<tr>
+<td><strong>customers/redact</strong></td>
+<td>Triggered when a customer requests deletion of their personal data (GDPR).</td>
+<td><code>/webhooks/app/gdpr</code></td>
+</tr>
+<tr>
+<td><strong>shop/redact</strong></td>
+<td>Triggered when a store uninstalls the app and requests data erasure.</td>
+<td><code>/webhooks/app/gdpr</code></td>
+</tr>
+<tr>
+<td><strong>carts/update</strong></td>
+<td>Triggered whenever a customer updates a cart (e.g. adding/removing items).</td>
+<td><code>/webhooks/app/carts</code></td>
+</tr>
+<tr>
+<td><strong>customers/create</strong></td>
+<td>Triggered when a new customer account is created in the store.</td>
+<td><code>/webhooks/app/customers</code></td>
+</tr>
+<tr>
+<td><strong>customers/update</strong></td>
+<td>Triggered when an existing customer’s data is updated.</td>
+<td><code>/webhooks/app/customers</code></td>
+</tr>
+<tr>
+<td><strong>app/scopes_update</strong></td>
+<td>Triggered when the app's permission scopes are updated by the merchant.</td>
+<td><code>/webhooks/app/scopes_update</code></td>
+</tr>
+<tr>
+<td><strong>app/uninstalled</strong></td>
+<td>Triggered when a merchant uninstalls the app.</td>
+<td><code>/webhooks/app/uninstalled</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="setup-app-proxy" class="tsd-anchor-link">Setup App Proxy<a href="#setup-app-proxy" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><p>App proxy is used for web push notifications.</p>
+<ul>
+<li>Select yespo app in shopify partner</li>
+<li>Go to <code>Configuration</code></li>
+<li>Find <code>App proxy</code> section</li>
+<li>Subpath prefix: <code>apps</code></li>
+<li>Subpath: <code>yespo-proxy</code></li>
+<li>Proxy URL: <code>https://push.yespo.tech/</code></li>
+</ul>
+<h3 id="development" class="tsd-anchor-link">Development<a href="#development" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><h5 id="install-dependencies" class="tsd-anchor-link">Install dependencies<a href="#install-dependencies" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h5><pre><code class="shell"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">install</span>
+</code><button type="button">Copy</button></pre>
+
+<h5 id="database-development--migration" class="tsd-anchor-link">Database development &amp; migration<a href="#database-development--migration" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h5><pre><code class="shell"><span class="hl-0">npx</span><span class="hl-1"> </span><span class="hl-2">prisma</span><span class="hl-1"> </span><span class="hl-2">generate</span><br/><span class="hl-0">npx</span><span class="hl-1"> </span><span class="hl-2">prisma</span><span class="hl-1"> </span><span class="hl-2">migrate</span><span class="hl-1"> </span><span class="hl-2">dev</span>
+</code><button type="button">Copy</button></pre>
+
+<h4 id="run" class="tsd-anchor-link">Run<a href="#run" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><pre><code class="shell"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">dev</span>
+</code><button type="button">Copy</button></pre>
+
+<h3 id="production" class="tsd-anchor-link">Production<a href="#production" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><h4 id="install-dependencies-1" class="tsd-anchor-link">Install dependencies<a href="#install-dependencies-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><pre><code class="shell"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">install</span>
+</code><button type="button">Copy</button></pre>
+
+<h4 id="database-development--migration-1" class="tsd-anchor-link">Database development &amp; migration<a href="#database-development--migration-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><pre><code class="shell"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">setup</span>
+</code><button type="button">Copy</button></pre>
+
+<h4 id="build" class="tsd-anchor-link">Build<a href="#build" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><pre><code class="shell"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">build</span>
+</code><button type="button">Copy</button></pre>
+
+<h4 id="run-1" class="tsd-anchor-link">Run<a href="#run-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><pre><code class="shell"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">start</span>
+</code><button type="button">Copy</button></pre>
+
+<h3 id="app-deployment" class="tsd-anchor-link">App Deployment<a href="#app-deployment" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><h4 id="hosting--source-code-deployment" class="tsd-anchor-link">Hosting &amp; Source Code Deployment<a href="#hosting--source-code-deployment" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><p>You’ll first need to deploy the app’s source code to your hosting provider. This example uses Heroku, and the
+repository includes a <a href="https://devcenter.heroku.com/articles/procfile">Procfile</a> for Heroku compatibility.
+Steps to deploy to Heroku:</p>
+<ol>
+<li>Login and create a new Heroku app:</li>
+</ol>
+<pre><code class="shell"><span class="hl-0">heroku</span><span class="hl-1"> </span><span class="hl-2">login</span><br/><span class="hl-0">heroku</span><span class="hl-1"> </span><span class="hl-2">create</span><span class="hl-1"> </span><span class="hl-2">your-app-name</span>
+</code><button type="button">Copy</button></pre>
+
+<ol start="2">
+<li><a href="https://devcenter.heroku.com/articles/config-vars">Set Environment Variables</a> in the Heroku dashboard or via CLI.</li>
+<li>Add <a href="https://devcenter.heroku.com/articles/heroku-postgresql">PostgreSQL</a>:</li>
+</ol>
+<ul>
+<li>Use the Heroku Postgres add-on</li>
+<li>Recommended: A plan with at least 10 GB storage</li>
+</ul>
+<ol start="4">
+<li>Ensure the Procfile is present. The repository already includes one, so no action should be needed here.</li>
+<li>Commit your changes and push to Heroku:</li>
+</ol>
+<pre><code class="shell"><span class="hl-0">git</span><span class="hl-1"> </span><span class="hl-2">add</span><span class="hl-1"> </span><span class="hl-2">.</span><br/><span class="hl-0">git</span><span class="hl-1"> </span><span class="hl-2">commit</span><span class="hl-1"> </span><span class="hl-3">-m</span><span class="hl-1"> </span><span class="hl-2">&quot;Prepare for Heroku deployment&quot;</span><br/><span class="hl-0">git</span><span class="hl-1"> </span><span class="hl-2">push</span><span class="hl-1"> </span><span class="hl-2">heroku</span><span class="hl-1"> </span><span class="hl-2">main</span>
+</code><button type="button">Copy</button></pre>
+
+<h4 id="deployment-of-theme-extension--toml-configuration" class="tsd-anchor-link">Deployment of Theme Extension &amp; .toml Configuration<a href="#deployment-of-theme-extension--toml-configuration" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><p>After deploying your app backend, you need to deploy the Shopify theme extension and app configuration (shopify.app.toml).
+Use the Shopify CLI to deploy both:</p>
+<pre><code class="shell"><span class="hl-0">npm</span><span class="hl-1"> </span><span class="hl-2">run</span><span class="hl-1"> </span><span class="hl-2">deploy</span>
+</code><button type="button">Copy</button></pre>
+
+<p>This command will:</p>
+<ul>
+<li>Deploy the Theme App Extension</li>
+<li>Sync the .toml configuration file to Shopify</li>
+<li>Link and register app blocks automatically</li>
+</ul>
+<p>Make sure you're authenticated via Shopify CLI and connected to the correct Partner organization and store.</p>
+<h3 id="using-the-app" class="tsd-anchor-link">Using the App<a href="#using-the-app" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><ul>
+<li>Install the app in your Shopify store</li>
+<li><a href="https://docs.yespo.io/reference/api-keys">Generate an API key</a> and add it to the <code>Account connection</code> section</li>
+<li>Connect general script</li>
+<li>Connect webpush script</li>
+</ul>
+</div></div><div class="col-sidebar"><div class="page-menu"><div class="tsd-navigation settings"><details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>Settings</h3></summary><div class="tsd-accordion-details"><div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span><ul id="tsd-filter-options"><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-external" name="external"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>External</span></label></li></ul></div><div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div><details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>On This Page</h3></summary><div class="tsd-accordion-details"><a href="#yespo-shopify-app"><span>Yespo <wbr/>Shopify <wbr/>App</span></a><ul><li><a href="#purpose"><span>Purpose</span></a></li><li><a href="#features-and-implementation-details"><span>Features and <wbr/>Implementation <wbr/>Details</span></a></li><li><ul><li><a href="#widgets"><span>Widgets</span></a></li><li><a href="#web-push-subscription"><span>Web <wbr/>Push <wbr/>Subscription</span></a></li><li><a href="#contact-sync-shopify-→-yespo"><span>Contact <wbr/>Sync (<wbr/>Shopify → <wbr/>Yespo)</span></a></li></ul></li><li><a href="#technologies-and-shopify-tools-used"><span>Technologies and <wbr/>Shopify <wbr/>Tools <wbr/>Used</span></a></li><li><a href="#yespo-api-authentication"><span>Yespo <wbr/>API <wbr/>Authentication</span></a></li><li><a href="#quick-start"><span>Quick start</span></a></li><li><ul><li><a href="#prerequisites"><span>Prerequisites</span></a></li><li><a href="#setup"><span>Setup</span></a></li><li><ul><li><a href="#environment-variables"><span>Environment variables</span></a></li><li><a href="#required-shopify-scopes"><span>Required <wbr/>Shopify <wbr/>Scopes</span></a></li><li><a href="#webhooks"><span>Webhooks</span></a></li><li><a href="#setup-app-proxy"><span>Setup <wbr/>App <wbr/>Proxy</span></a></li></ul></li><li><a href="#development"><span>Development</span></a></li><li><ul><li><ul><li><a href="#install-dependencies"><span>Install dependencies</span></a></li><li><a href="#database-development--migration"><span>Database development &amp; migration</span></a></li></ul></li><li><a href="#run"><span>Run</span></a></li></ul></li><li><a href="#production"><span>Production</span></a></li><li><ul><li><a href="#install-dependencies-1"><span>Install dependencies</span></a></li><li><a href="#database-development--migration-1"><span>Database development &amp; migration</span></a></li><li><a href="#build"><span>Build</span></a></li><li><a href="#run-1"><span>Run</span></a></li></ul></li><li><a href="#app-deployment"><span>App <wbr/>Deployment</span></a></li><li><ul><li><a href="#hosting--source-code-deployment"><span>Hosting &amp; <wbr/>Source <wbr/>Code <wbr/>Deployment</span></a></li><li><a href="#deployment-of-theme-extension--toml-configuration"><span>Deployment of <wbr/>Theme <wbr/>Extension &amp; .toml <wbr/>Configuration</span></a></li></ul></li><li><a href="#using-the-app"><span>Using the <wbr/>App</span></a></li></ul></li></ul></div></details></div><div class="site-menu"><nav class="tsd-navigation"><a href="modules.html">yespo-app</a><ul class="tsd-small-nested-navigation" id="tsd-nav-container"><li>Loading...</li></ul></nav></div></div></div><footer></footer><div class="overlay"></div></body></html>

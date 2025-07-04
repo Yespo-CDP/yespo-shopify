@@ -1,6 +1,19 @@
 import {updateContact} from "~/api/update-contact";
 import type {Contact} from "~/@types/contact";
 
+/**
+ * Updates a contact using the provided payload and API key.
+ *
+ * Extracts communication channels (email and phone) from the payload,
+ * including fallback to the default address phone if available.
+ * Also extracts address information from the payload's default address.
+ * Constructs a `Contact` object with personal and contact details,
+ * then calls `updateContact` service to perform the update.
+ *
+ * @param {any} payload - The customer data payload containing updated contact info.
+ * @param {string} apiKey - The API key used for authentication with the contact service.
+ * @returns {Promise<void>} A promise that resolves when the contact update completes.
+ */
 export const updateContactService = async (payload: any, apiKey: string) => {
   const channels = []
   let address = undefined

@@ -1,6 +1,22 @@
 import type { Account } from "~/@types/account";
 import { getAuthHeader } from "~/utils/auth";
 
+/**
+ * Fetches Yespo account information using the provided API key.
+ *
+ * Sends a GET request to the account info endpoint with the necessary authentication header.
+ *
+ * @param {Object} params - Parameters object.
+ * @param {string} params.apiKey - API key used for authentication.
+ *
+ * @returns {Promise<Account>} Resolves with the account information.
+ *
+ * @throws Will throw an error with message "invalidApiKey" if the API key is unauthorized (HTTP 401).
+ * @throws Will throw an error with message "unknownError" for other unsuccessful responses or network errors.
+ *
+ * @example
+ * const account = await getAccountInfoService({ apiKey: "your-api-key" });
+ */
 const getAccountInfoService = async ({
   apiKey,
 }: {

@@ -2,6 +2,17 @@ import type { FC } from "react";
 import { Banner, BlockStack, Button } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
 
+/**
+ * UnsupportedMarketsSection component displays a warning banner
+ * informing the user about unsupported markets in their Shopify store.
+ *
+ * It includes a description and a button linking to Shopify's markets settings page.
+ *
+ * @returns {JSX.Element} The warning banner UI element.
+ *
+ * @example
+ * <UnsupportedMarketsSection />
+ */
 const UnsupportedMarketsSection: FC = () => {
   const { t } = useTranslation();
   return (
