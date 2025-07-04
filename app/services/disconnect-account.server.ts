@@ -23,6 +23,8 @@ const GENERAL_SCRIPT_HANDLE =
   process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
 const WEB_PUSH_SCRIPT_HANDLE =
   process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
+const HOST_URL =
+  process.env.HOST_URL ?? "yespo-app-host";
 
 export const disconnectAccountService = async ({
   session,
@@ -41,7 +43,7 @@ export const disconnectAccountService = async ({
     await deleteMetafields({
       admin,
       ownerId: shop?.shopId,
-      keys: [GENERAL_SCRIPT_HANDLE, WEB_PUSH_SCRIPT_HANDLE],
+      keys: [GENERAL_SCRIPT_HANDLE, WEB_PUSH_SCRIPT_HANDLE, HOST_URL],
     });
   }
 };

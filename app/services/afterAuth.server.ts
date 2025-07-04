@@ -13,6 +13,8 @@ const WEB_PUSH_SCRIPT_HANDLE =
   process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
 const WEB_TRACKING_ENABLED =
   process.env.WEB_TRACKING_ENABLED ?? "web-tracking-enabled";
+const HOST_URL =
+  process.env.HOST_URL ?? "yespo-app-host";
 
 /**
  * Handles post-authentication logic for a Shopify session.
@@ -77,6 +79,11 @@ admin,
     key: WEB_TRACKING_ENABLED,
   });
 
+  const hostDefinition = await getMetafieldDefinition({
+    admin,
+    key: HOST_URL,
+  });
+
   /* Create definition for general yespo script */
   if (!generalDefinition) {
     await createMetafieldDefinition({
@@ -109,11 +116,21 @@ admin,
     });
   }
 
+  if (!hostDefinition) {
+    await createMetafieldDefinition({
+      admin,
+      key: HOST_URL,
+      name: "Yespo app host",
+      description:
+        "This is a app metafield definition for Yespo app host",
+    });
+  }
+
   if (!shopObject?.apiKey && shop?.id) {
     await deleteMetafields({
       admin,
       ownerId: shop?.id,
-      keys: [GENERAL_SCRIPT_HANDLE, WEB_PUSH_SCRIPT_HANDLE, WEB_TRACKING_ENABLED],
+      keys: [GENERAL_SCRIPT_HANDLE, WEB_PUSH_SCRIPT_HANDLE, WEB_TRACKING_ENABLED, HOST_URL],
     });
   }
 

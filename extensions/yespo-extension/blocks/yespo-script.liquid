@@ -1,6 +1,7 @@
 {%- assign yespo_script = shop.metafields['$app'].yespo-script -%}
 {%- assign yespo_web_push_script = shop.metafields['$app'].yespo-web-push-script -%}
 {%- assign yespo_web_tracking_enabled = shop.metafields['$app'].web-tracking-enabled -%}
+{%- assign yespo_app_host = shop.metafields['$app'].yespo-app-host -%}
 
 {% if yespo_script != blank %}
   {{ yespo_script }}
@@ -10,8 +11,13 @@
   {{ yespo_web_push_script }}
 {% endif %}
 
+<script>
+console.log({{ yespo_app_host }})
+</script>
+
 <script id="data" type="application/json">
   {
+    "host": {{ yespo_app_host | json }},
     "pageTemplate": {{ template.name | json }},
     "domain":  {{ shop.domain | json }},
     "product": {{ product | json }},

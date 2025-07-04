@@ -1,8 +1,12 @@
 import createMetafield from "~/shopify/mutations/create-metafield.server";
 import {shopRepository} from "~/repositories/repositories.server";
+import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
 
 const WEB_TRACKING_ENABLED =
   process.env.WEB_TRACKING_ENABLED ?? "web-tracking-enabled";
+const HOST_URL =
+  process.env.HOST_URL ?? "yespo-app-host";
+const SHOPIFY_APP_URL = process.env.SHOPIFY_APP_URL ?? ''
 
 /**
  * Enables or disables web tracking for a given shop by updating the shop record
@@ -49,9 +53,25 @@ export const toggleWebTrackingServer = async ({
       key: WEB_TRACKING_ENABLED,
     });
 
+    if (enabled) {
+      await createMetafield({
+        shopId,
+        admin,
+        value: SHOPIFY_APP_URL,
+        key: HOST_URL,
+      });
+    } else {
+      await deleteMetafields({
+        admin,
+        ownerId: shopId,
+        keys: [HOST_URL],
+      });
+    }
+
     if (!metafield) {
       throw new Error("requestScriptError");
     }
+
     return true;
   } catch (error: any) {
     console.error(`Error enabling web tracking: ${error.message}`)
