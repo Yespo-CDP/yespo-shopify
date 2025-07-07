@@ -48,7 +48,8 @@ export const sendPurchasedItemsEvent = async ({
   };
 
   try {
-    await fetchWithErrorHandling(url, options);
+   const response =  await fetchWithErrorHandling(url, options);
+   console.log('Purchased Items event successfully sent with response', JSON.stringify(response, null, 2))
   } catch (error: any) {
     console.error("Error sending purchased items:", error?.message);
   }
