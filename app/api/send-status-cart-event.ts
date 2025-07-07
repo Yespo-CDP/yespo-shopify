@@ -45,8 +45,10 @@ export const sendStatusCartEvent = async ({
     body: JSON.stringify(cartEventData),
   };
 
+
   try {
-    await fetchWithErrorHandling(url, options);
+   const response =  await fetchWithErrorHandling(url, options);
+    console.log('Status Cart event successfully sent with response', JSON.stringify(response, null, 2))
   } catch (error: any) {
     console.error("Error sending status cart:", error?.message);
   }
