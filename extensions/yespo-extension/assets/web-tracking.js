@@ -81,7 +81,7 @@ class EventTracker {
         window.eS('sendEvent', 'ProductPage', {
           ProductPage: {
             productKey: product.id.toString(),
-            price: product.price.toString(),
+            price: (product.price / 100).toFixed(2),
             isInStock: product.available ? 1 : 0
           }
         });
