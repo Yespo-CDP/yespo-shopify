@@ -18,6 +18,11 @@ export const updateContactService = async (payload: any, apiKey: string) => {
   const channels = []
   let address = undefined
 
+  if (!payload) {
+    console.error('Update customer payload is empty')
+    return null
+  }
+
   if (payload.email) {
     channels.push({
       type: 'email',
@@ -30,7 +35,7 @@ export const updateContactService = async (payload: any, apiKey: string) => {
       type: 'sms',
       value: payload.phone,
     })
-  } else if (payload.default_address.phone) {
+  } else if (payload.default_address?.phone) {
     channels.push({
       type: 'sms',
       value: payload.default_address.phone,
