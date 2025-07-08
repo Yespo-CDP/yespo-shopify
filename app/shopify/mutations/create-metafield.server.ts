@@ -1,5 +1,30 @@
 import type { Metafield } from "~/@types/metafield";
 
+/**
+ * Creates a metafield on the Shopify shop using the admin GraphQL API.
+ *
+ * This function sends a `metafieldsSet` GraphQL mutation to Shopify, creating a metafield
+ * in the `$app` namespace with a `single_line_text_field` type. It automatically strips
+ * newline characters and trims excess whitespace from the value.
+ *
+ * @param {Object} params - The input parameters.
+ * @param {any} params.admin - The authenticated Shopify Admin API client.
+ * @param {string} params.shopId - The Shopify shop's GID (global ID) used as the metafield's owner.
+ * @param {string} params.key - The metafield key.
+ * @param {string} params.value - The string value to store in the metafield.
+ *
+ * @returns {Promise<Metafield | null>} A promise that resolves to the created metafield,
+ * or `null` if the operation failed or no metafield was returned.
+ *
+ * @example
+ * const metafield = await createMetafield({
+ *   admin,
+ *   shopId: "gid://shopify/Shop/123456789",
+ *   key: "my_custom_key",
+ *   value: "My value",
+ * });
+ */
+
 async function createMetafield({
   admin,
   shopId,
