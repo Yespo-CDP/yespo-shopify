@@ -76,19 +76,54 @@ class EventTracker {
 
   sendProductPageEvent() {
     try {
-      const product = this.data.product;
-      if (this.data.pageTemplate === 'product' && product) {
+      const productVariant = this.data.currentVariant;
+      if (this.data.pageTemplate === 'product' && productVariant) {
         window.eS('sendEvent', 'ProductPage', {
           ProductPage: {
-            productKey: product.id.toString(),
-            price: (product.price / 100).toFixed(2),
-            isInStock: product.available ? 1 : 0
+            productKey: productVariant.id.toString(),
+            price: (productVariant.price / 100).toFixed(2),
+            isInStock: productVariant.available ? 1 : 0
           }
         });
       }
     } catch (e) {
       console.error('Failed send product page event')
     }
+  }
+
+  updateCurrentVariant(variantId) {
+    if (!this.data || !this.data.product?.variants) return;
+
+    const variant = this.data.product.variants.find(v => v.id == variantId);
+    if (variant) {
+      this.data.currentVariant = variant;
+      console.log('[EventTracker] currentVariant updated:', variant);
+    }
+  }
+
+  watchVariantChanges() {
+    const variantInput = this.document.querySelector('input[name="id"]');
+    if (!variantInput) return;
+
+    const onVariantChange = () => {
+      const variantId = variantInput.value;
+      this.updateCurrentVariant(variantId);
+
+      //re-send product page event or other relevant events
+      this.sendProductPageEvent();
+    };
+
+    // Observe changes to the 'value' attribute of the variant input
+    const observer = new MutationObserver(onVariantChange);
+    observer.observe(variantInput, { attributes: true, attributeFilter: ['value'] });
+
+    // Also listen for change events on selects as fallback
+    this.document.querySelectorAll('[data-product-option]').forEach(el => {
+      el.addEventListener('change', onVariantChange);
+    });
+
+    // Initial trigger to sync on page load
+    onVariantChange();
   }
 
   sendCustomerEvent() {
@@ -213,8 +248,9 @@ class EventTracker {
 
     this.sendPage404Event();
     this.sendMainPageEvent();
-    this.sendProductPageEvent();
+    // this.sendProductPageEvent();
     this.sendCustomerEvent();
+    this.watchVariantChanges();
     await this.sendCartData();
 
   }
