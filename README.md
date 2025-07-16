@@ -91,6 +91,7 @@ seamlessly inject scripts into a merchant’s theme without manual code edits.
   You can find the extension code in the `./extensions/yespo-extension` directory.
   This extension includes:
   - `blocks/` – Contains Liquid files that act as entry points for injecting Yespo scripts into the theme. These blocks can be enabled via the Shopify theme editor.
+  - `assests/` - Contains JavaScript script that send events using eS.JS.
 - [Polaris](https://polaris.shopify.com/): Design system that enables apps to create Shopify-like experiences
 - [Webhooks](https://shopify.dev/docs/api/webhooks?reference=toml) - to receive notifications about particular events in a shop such as customer-related changes.
 - [Metafields](https://shopify.dev/docs/apps/build/online-store/theme-app-extensions/configuration#metafield-namespaces) - 
@@ -141,6 +142,7 @@ Create a `.env` file with the following:
 | **WEB_TRACKER_URL**            | **Required.** Yespo tracker api url                                                                     | **Must be** `https://tracker.yespo.io/api/v2`      |
 | **QSTASH_CURRENT_SIGNING_KEY** | **Required.** QSTASH current signing key                                                                | `sig_5**********************S9aU`                  |
 | **QSTASH_NEXT_SIGNING_KEY**    | **Required.** QSTASH next signing key                                                                   | `sig_81*********************WZSrj`                 |
+| **HOST_URL**                   | **Required.** App host url metafiedld name for correct work of extension                                | **Must be** `yespo-app-host`                       |
 
 
 #### Required Shopify Scopes
@@ -267,3 +269,4 @@ Make sure you're authenticated via Shopify CLI and connected to the correct Part
 - [Generate an API key](https://docs.yespo.io/reference/api-keys) and add it to the `Account connection` section
 - Connect general script
 - Connect webpush script
+- Enable/disable web tracker on your site
