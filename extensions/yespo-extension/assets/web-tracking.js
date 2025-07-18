@@ -64,6 +64,16 @@ class EventTracker {
     }
   }
 
+  sendCartStatusPageEvent() {
+    try {
+      if (this.data.pageTemplate === 'cart') {
+        window.eS('sendEvent', 'StatusCartPage');
+      }
+    } catch (e) {
+      console.error('Failed send status cart page event')
+    }
+  }
+
   sendMainPageEvent() {
     try {
       if (this.data.pageTemplate === 'index') {
@@ -244,10 +254,13 @@ class EventTracker {
   async run() {
     if (!this.data) return;
 
+    console.log('>>>>>>>>', this.data)
+
     await this.interceptCartCreateFetch()
 
     this.sendPage404Event();
     this.sendMainPageEvent();
+    this.sendCartStatusPageEvent();
     // this.sendProductPageEvent();
     this.sendCustomerEvent();
     this.watchVariantChanges();
