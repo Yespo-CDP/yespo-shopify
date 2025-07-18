@@ -94,7 +94,7 @@ class EventTracker {
   updateCurrentVariant(variantId) {
     if (!this.data || !this.data.product?.variants) return;
 
-    const variant = this.data.product.variants.find(v => v.id == variantId);
+    const variant = this.data.product.variants.find(v => v.id === variantId);
     if (variant) {
       this.data.currentVariant = variant;
       console.log('[EventTracker] currentVariant updated:', variant);
