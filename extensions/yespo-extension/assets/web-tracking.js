@@ -64,6 +64,16 @@ class EventTracker {
     }
   }
 
+  sendCartStatusPageEvent() {
+    try {
+      if (this.data.pageTemplate === 'cart') {
+        window.eS('sendEvent', 'StatusCartPage');
+      }
+    } catch (e) {
+      console.error('Failed send status cart page event')
+    }
+  }
+
   sendMainPageEvent() {
     try {
       if (this.data.pageTemplate === 'index') {
@@ -91,10 +101,29 @@ class EventTracker {
     }
   }
 
+  sendCategoryPageEvent() {
+    try {
+      const pathName = window.location.pathname
+
+      if (this.data.pageTemplate === 'collection' && pathName.includes('types') ) {
+        const searchParams = new URLSearchParams(window.location.search);
+        const typeName = searchParams.get('q');
+
+        window.eS('sendEvent', 'CategoryPage', {
+          CategoryPage: {
+            categoryKey: typeName,
+          }
+        });
+      }
+    } catch (e) {
+      console.error('Failed send product page event')
+    }
+  }
+
   updateCurrentVariant(variantId) {
     if (!this.data || !this.data.product?.variants) return;
 
-    const variant = this.data.product.variants.find(v => v.id == variantId);
+    const variant = this.data.product.variants.find(v => v.id === variantId);
     if (variant) {
       this.data.currentVariant = variant;
       console.log('[EventTracker] currentVariant updated:', variant);
@@ -248,6 +277,8 @@ class EventTracker {
 
     this.sendPage404Event();
     this.sendMainPageEvent();
+    this.sendCartStatusPageEvent();
+    this.sendCategoryPageEvent();
     // this.sendProductPageEvent();
     this.sendCustomerEvent();
     this.watchVariantChanges();
