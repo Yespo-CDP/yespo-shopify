@@ -101,6 +101,25 @@ class EventTracker {
     }
   }
 
+  sendCategoryPageEvent() {
+    try {
+      const pathName = window.location.pathname
+
+      if (this.data.pageTemplate === 'collection' && pathName.includes('types') ) {
+        const searchParams = new URLSearchParams(window.location.search);
+        const typeName = searchParams.get('q');
+
+        window.eS('sendEvent', 'CategoryPage', {
+          CategoryPage: {
+            categoryKey: typeName,
+          }
+        });
+      }
+    } catch (e) {
+      console.error('Failed send product page event')
+    }
+  }
+
   updateCurrentVariant(variantId) {
     if (!this.data || !this.data.product?.variants) return;
 
@@ -254,13 +273,12 @@ class EventTracker {
   async run() {
     if (!this.data) return;
 
-    console.log('>>>>>>>>', this.data)
-
     await this.interceptCartCreateFetch()
 
     this.sendPage404Event();
     this.sendMainPageEvent();
     this.sendCartStatusPageEvent();
+    this.sendCategoryPageEvent();
     // this.sendProductPageEvent();
     this.sendCustomerEvent();
     this.watchVariantChanges();
