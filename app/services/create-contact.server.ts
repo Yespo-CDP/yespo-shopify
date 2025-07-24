@@ -43,6 +43,6 @@ export const createContactService = async (payload: any, apiKey: string) => {
       contactData
     })
   } catch (error: any) {
-    console.error(error);
+    console.error("Error occurred in Create Contact Service", error);
   }
 }

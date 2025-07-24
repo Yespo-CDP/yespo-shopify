@@ -1,6 +1,7 @@
 {%- assign yespo_script = shop.metafields['$app'].yespo-script -%}
 {%- assign yespo_web_push_script = shop.metafields['$app'].yespo-web-push-script -%}
 {%- assign yespo_web_tracking_enabled = shop.metafields['$app'].web-tracking-enabled -%}
+{%- assign yespo_app_host = shop.metafields['$app'].yespo-app-host -%}
 
 {% if yespo_script != blank %}
   {{ yespo_script }}
@@ -10,16 +11,29 @@
   {{ yespo_web_push_script }}
 {% endif %}
 
+{% assign current_variant = product.selected_or_first_available_variant %}
+
+
 <script id="data" type="application/json">
   {
-    "pageTemplate": "{{ template.name }}"
+    "host": {{ yespo_app_host | json }},
+    "pageTemplate": {{ template.name | json }},
+    "domain":  {{ shop.domain | json }},
+    "product": {{ product | json }},
+    "currentVariant": {{ current_variant | json }},
+    "customer":
+      {% if customer %}
+        {
+          "id": {{ customer.id | json }},
+          "email": {{ customer.email | json }},
+          "firstName": {{ customer.first_name | json }},
+          "lastName": {{ customer.last_name | json }},
+          "phone": {{ customer.phone | json }}
+        }
+      {% else %}
+        null
+      {% endif %}
   }
-</script>
-
-
-<script>
-  const trackingEnabled = "{{ yespo_web_tracking_enabled }}";
-  console.log("Web tracking enabled:", trackingEnabled);
 </script>
 
 {% if yespo_web_tracking_enabled %}

@@ -23,7 +23,7 @@ export const createGeneralDomain = async ({
 }: {
   apiKey: string;
   domain: string;
-}): Promise<{ result: string }> => {
+}): Promise<{ result: string, siteId: string }> => {
   const url = `${process.env.API_URL}/site/domains`;
   const authHeader = getAuthHeader(apiKey);
   const options = {

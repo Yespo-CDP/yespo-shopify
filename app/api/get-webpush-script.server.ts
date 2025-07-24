@@ -21,7 +21,7 @@ export const getWebpushScript = async ({
 }: {
   apiKey: string;
   domain: string;
-}) => {
+}): Promise<string> => {
   const url = `${process.env.API_URL}/site/webpush/script?domain=https://${domain}`;
   const authHeader = getAuthHeader(apiKey);
   const options = {

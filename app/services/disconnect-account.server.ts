@@ -4,7 +4,7 @@ import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
 /**
  * Disconnects a Yespo account by clearing the stored API key and deleting associated metafields.
  *
- * This function updates the shop's record to remove the Yespo API key, effectively disabling the connection,
+ * This function updates the shop's record to remove the Yespo API key, effectively disabling the connection, remove siteId
  * and then deletes the general and web push script metafields from the Shopify store.
  *
  * @param {Object} params - The parameters object.
@@ -23,6 +23,8 @@ const GENERAL_SCRIPT_HANDLE =
   process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
 const WEB_PUSH_SCRIPT_HANDLE =
   process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
+const HOST_URL =
+  process.env.HOST_URL ?? "yespo-app-host";
 
 export const disconnectAccountService = async ({
   session,
@@ -31,13 +33,17 @@ export const disconnectAccountService = async ({
   session: any;
   admin: any;
 }) => {
-  await shopRepository.updateShop(session.shop, { apiKey: "" });
+  await shopRepository.updateShop(session.shop, {
+    apiKey: "",
+    isWebTrackingEnabled: false,
+    siteId: ""
+  });
   const shop = await shopRepository.getShop(session.shop);
   if (shop?.shopId) {
     await deleteMetafields({
       admin,
       ownerId: shop?.shopId,
-      keys: [GENERAL_SCRIPT_HANDLE, WEB_PUSH_SCRIPT_HANDLE],
+      keys: [GENERAL_SCRIPT_HANDLE, WEB_PUSH_SCRIPT_HANDLE, HOST_URL],
     });
   }
 };
