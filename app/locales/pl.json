@@ -28,6 +28,20 @@
       "unknownError": "Nieznany błąd"
     }
   },
+  "WebTrackingSection": {
+    "title": "Śledzenie sieci",
+    "description": "Śledzenie sieci pozwala analizować zachowanie użytkowników na Twojej stronie internetowej",
+    "enable": "Włączać",
+    "disable": "Wyłączyć",
+    "status": {
+      "enabled": "Włączony",
+      "disabled": "Wyłączony"
+    },
+    "errors": {
+      "notEnabled": "Śledzenie sieci nie jest włączone",
+      "notDisabled": "Śledzenie sieci nie jest wyłączone"
+    }
+  },
   "ConnectionStatusSection": {
     "title": "Integracja skryptów",
     "refresh": "Odśwież",
@@ -100,5 +114,10 @@
         "url": "mailto:support@yespo.io"
       }
     ]
+  },
+  "General": {
+    "errors": {
+      "shopNotFound": "Nie znaleziono sklepu"
+    }
   }
 }

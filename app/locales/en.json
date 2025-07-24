@@ -28,6 +28,20 @@
       "unknownError": "Unknown error"
     }
   },
+  "WebTrackingSection": {
+    "title": "Web Tracking",
+    "description": "Web tracking enables to analyse user behavior on your website",
+    "enable": "Enable",
+    "disable": "Disable",
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "errors": {
+      "notEnabled": "Web tracking not enabled",
+      "notDisabled": "Web tracking not disabled"
+    }
+  },
   "ConnectionStatusSection": {
     "title": "Scripts integration",
     "refresh": "Refresh",
@@ -100,5 +114,10 @@
         "url": "mailto:support@yespo.io"
       }
     ]
+  },
+  "General": {
+    "errors": {
+      "shopNotFound": "The store not found"
+    }
   }
 }

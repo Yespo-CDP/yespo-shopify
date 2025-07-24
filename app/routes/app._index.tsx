@@ -23,6 +23,7 @@ import AccountConnectionSection from "~/components/AccountConnectionSection";
 import ConnectionStatusSection from "~/components/ConnectionStatusSection";
 import UsefulLinksSection from "~/components/UsefulLinksSection";
 import { loaderHandler, actionHandler } from "~/lib/app.server";
+import WebTrackingSection from "~/components/WebTrackingSection";
 
 /**
  * The loader function to fetch initial data for the page.
@@ -46,6 +47,7 @@ export const action = actionHandler;
  * - A welcome section with logo and description.
  * - Account connection section (with API key and account info).
  * - Connection status section (showing connection status script and app extension status).
+ * - Enable/disable web tracking section.
  * - Unsupported markets warning if applicable.
  * - Useful links section.
  *
@@ -150,6 +152,21 @@ export default function Index() {
                   !shop?.apiKey
                 }
               />
+            </Layout.Section>
+            <Layout.Section>
+              <WebTrackingSection
+                isGeneralScriptExist={
+                  scriptConnectionStatus?.isGeneralScriptExist
+                }
+                isWebPushScriptExist={
+                  scriptConnectionStatus?.isWebPushScriptExist
+                }
+                isAppExtensionActive={
+                  scriptConnectionStatus.isThemeExtensionActive
+                }
+                webTrackerEnabled={shop?.isWebTrackingEnabled ?? false}
+
+                disabled={isMarketsOverflowing || isSubmitting || isLoading || !account}/>
             </Layout.Section>
             <Layout.Section>
               <UsefulLinksSection />

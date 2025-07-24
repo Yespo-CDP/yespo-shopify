@@ -27,11 +27,13 @@ async function createMetafieldDefinition({
   key,
   name,
   description,
+  type = "single_line_text_field"
 }: {
   admin: any;
   key: string;
   name: string;
   description: string;
+  type?: string
 }) {
   try {
     await admin.graphql(
@@ -62,7 +64,7 @@ async function createMetafieldDefinition({
             name,
             description,
             namespace: "$app",
-            type: "single_line_text_field",
+            type,
             ownerType: "SHOP",
           },
         },
