@@ -15,6 +15,7 @@ import i18n from "~/i18n.server";
 import {toggleWebTrackingServer} from "~/services/toggleWebTracking.server";
 import {createGeneralDomain} from "~/api/create-general-domain.server";
 
+
 /**
  * Loader function for initializing data needed on the page.
  *
