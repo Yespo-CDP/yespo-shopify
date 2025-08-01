@@ -24,6 +24,7 @@ import ConnectionStatusSection from "~/components/ConnectionStatusSection";
 import UsefulLinksSection from "~/components/UsefulLinksSection";
 import { loaderHandler, actionHandler } from "~/lib/app.server";
 import WebTrackingSection from "~/components/WebTrackingSection";
+import ContactSyncSection from "~/components/ContactSyncSection";
 
 /**
  * The loader function to fetch initial data for the page.
@@ -48,6 +49,7 @@ export const action = actionHandler;
  * - Account connection section (with API key and account info).
  * - Connection status section (showing connection status script and app extension status).
  * - Enable/disable web tracking section.
+ * - Enable/disable sync contacts section.
  * - Unsupported markets warning if applicable.
  * - Useful links section.
  *
@@ -165,8 +167,18 @@ export default function Index() {
                   scriptConnectionStatus.isThemeExtensionActive
                 }
                 webTrackerEnabled={shop?.isWebTrackingEnabled ?? false}
-
-                disabled={isMarketsOverflowing || isSubmitting || isLoading || !account}/>
+                disabled={
+                  isMarketsOverflowing || isSubmitting || isLoading || !account
+                }
+              />
+            </Layout.Section>
+            <Layout.Section>
+              <ContactSyncSection
+                contactSyncEnabled={shop?.isContactSyncEnabled ?? false}
+                disabled={
+                  isMarketsOverflowing || isSubmitting || isLoading || !account
+                }
+              />
             </Layout.Section>
             <Layout.Section>
               <UsefulLinksSection />

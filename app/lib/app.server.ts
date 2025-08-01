@@ -12,9 +12,8 @@ import checkScriptConnectionService from "~/services/check-script-connection.ser
 import checkThemeExtensionService from "~/services/check-theme-extension.server";
 import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
-import {toggleWebTrackingServer} from "~/services/toggleWebTracking.server";
-import {createGeneralDomain} from "~/api/create-general-domain.server";
-
+import { toggleWebTrackingServer } from "~/services/toggleWebTracking.server";
+import { createGeneralDomain } from "~/api/create-general-domain.server";
 
 /**
  * Loader function for initializing data needed on the page.
@@ -98,7 +97,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
   const errors: {
     apiKey?: string;
     script?: string;
-    webTracking?: string
+    webTracking?: string;
   } = {};
   const success: {
     apiKey?: boolean;
@@ -180,7 +179,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
-  if (intent === 'tracking-enable') {
+  if (intent === "tracking-enable") {
     try {
       const shop = await shopRepository.getShop(session.shop);
       if (!shop) {
@@ -189,10 +188,13 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       }
 
       if (!shop.siteId && shop.apiKey) {
-        const connectedData = await createGeneralDomain({ apiKey: shop.apiKey, domain: shop.domain });
+        const connectedData = await createGeneralDomain({
+          apiKey: shop.apiKey,
+          domain: shop.domain,
+        });
 
         await shopRepository.updateShop(shop.domain, {
-          siteId: connectedData.siteId
+          siteId: connectedData.siteId,
         });
       }
 
@@ -200,15 +202,15 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         shopId: shop.shopId,
         domain: shop.domain,
         enabled: true,
-        admin
-      })
+        admin,
+      });
     } catch (error: any) {
       errors.webTracking = t("WebTrackingSection.errors.notEnabled");
       return { success, errors };
     }
   }
 
-  if (intent === 'tracking-disable') {
+  if (intent === "tracking-disable") {
     try {
       const shop = await shopRepository.getShop(session.shop);
       if (!shop) {
@@ -220,10 +222,44 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         shopId: shop.shopId,
         domain: shop.domain,
         enabled: false,
-        admin
-      })
+        admin,
+      });
     } catch (error: any) {
       errors.webTracking = t("WebTrackingSection.errors.notDisabled");
+      return { success, errors };
+    }
+  }
+
+  if (intent === "contact-sync-enable") {
+    try {
+      const shop = await shopRepository.getShop(session.shop);
+      if (!shop) {
+        errors.webTracking = t("General.errors.shopNotFound");
+        return { success, errors };
+      }
+
+      await shopRepository.updateShop(shop.domain, {
+        isContactSyncEnabled: true,
+      });
+    } catch (error: any) {
+      errors.webTracking = t("ContactSyncSection.errors.notEnabled");
+      return { success, errors };
+    }
+  }
+
+  if (intent === "contact-sync-disable") {
+    try {
+      const shop = await shopRepository.getShop(session.shop);
+      if (!shop) {
+        errors.webTracking = t("General.errors.shopNotFound");
+        return { success, errors };
+      }
+
+      await shopRepository.updateShop(shop.domain, {
+        isContactSyncEnabled: false,
+      });
+    } catch (error: any) {
+      errors.webTracking = t("ContactSyncSection.errors.notDisabled");
       return { success, errors };
     }
   }
