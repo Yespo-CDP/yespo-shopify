@@ -42,6 +42,20 @@
       "notDisabled": "Rastreamento da Web não desativado"
     }
   },
+  "ContactSyncSection": {
+    "title": "Sincronização de Contatos",
+    "description": "A sincronização de contatos permite sincronizar os clientes com os contatos do Yespo.",
+    "enable": "Habilitar",
+    "disable": "Desativar",
+    "status": {
+      "enabled": "Habilitado",
+      "disabled": "Desabilitado"
+    },
+    "errors": {
+      "notEnabled": "A sincronização de contatos não ativado",
+      "notDisabled": "A sincronização de contatos não desativado"
+    }
+  },
   "ConnectionStatusSection": {
     "title": "Integração de scripts",
     "refresh": "Atualizar",
