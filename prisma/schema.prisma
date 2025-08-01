@@ -41,9 +41,10 @@ model Shop {
   apiKey                String?
   siteId                String?
   isWebTrackingEnabled  Boolean?  @default(false)
+  isContactSyncEnabled  Boolean?  @default(false)
   active                Boolean?  @default(true)
   createdAt             DateTime  @default(now())
-  updatedAt              DateTime? @updatedAt
+  updatedAt             DateTime? @updatedAt
 
   customerDataRequests GdprCustomerDataRequest[]
   eventsData            EventData[]
