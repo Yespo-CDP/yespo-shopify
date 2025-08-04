@@ -22,6 +22,7 @@ import { updateContactService } from "~/services/update-contact.service";
  * @param {ActionFunctionArgs} args - The arguments containing the request.
  * @returns {Promise<Response>} An HTTP response indicating success or failure.
  */
+
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { topic, session, payload, webhookId } =
     await authenticate.webhook(request);
