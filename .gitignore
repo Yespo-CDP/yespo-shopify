@@ -26,4 +26,8 @@ database.sqlite
 .shopify/*
 .shopify.lock
 
+shopify.app.*
+shopify.app.yespo-staging.toml
+
 /docs/typedoc-md
+
