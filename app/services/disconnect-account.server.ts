@@ -23,8 +23,7 @@ const GENERAL_SCRIPT_HANDLE =
   process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
 const WEB_PUSH_SCRIPT_HANDLE =
   process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
-const HOST_URL =
-  process.env.HOST_URL ?? "yespo-app-host";
+const HOST_URL = process.env.HOST_URL ?? "yespo-app-host";
 
 export const disconnectAccountService = async ({
   session,
@@ -36,7 +35,8 @@ export const disconnectAccountService = async ({
   await shopRepository.updateShop(session.shop, {
     apiKey: "",
     isWebTrackingEnabled: false,
-    siteId: ""
+    isContactSyncEnabled: false,
+    siteId: "",
   });
   const shop = await shopRepository.getShop(session.shop);
   if (shop?.shopId) {
