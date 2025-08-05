@@ -1,9 +1,12 @@
 import type { ActionFunctionArgs } from "@remix-run/node";
 import crypto from "node:crypto";
 
-import {gdprCustomerDataRepository, shopRepository} from "~/repositories/repositories.server";
+import {
+  gdprCustomerDataRepository,
+  shopRepository,
+} from "~/repositories/repositories.server";
 import { authenticate } from "../shopify.server";
-import {deleteContactService} from "~/services/delete-contact.service";
+import { deleteContactService } from "~/services/delete-contact.service";
 
 /**
  * Action handler for processing Shopify webhooks with HMAC validation.
@@ -32,7 +35,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const signature = request.headers.get("x-shopify-hmac-sha256");
   const SHOPIFY_API_SECRET = process.env.SHOPIFY_API_SECRET;
 
-  const { shop, topic, payload, webhookId } = await authenticate.webhook(requestClone);
+  const { shop, topic, payload, webhookId } =
+    await authenticate.webhook(requestClone);
   console.log(`Received ${topic} webhook for ${shop}`);
 
   if (!SHOPIFY_API_SECRET) {
@@ -54,7 +58,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const store = await shopRepository.getShop(shop);
 
   if (!store || !store?.apiKey) {
-    return new Response("Success", {status: 200});
+    return new Response("Success", { status: 200 });
   }
   switch (topic) {
     case "CUSTOMERS_DATA_REQUEST":
@@ -64,15 +68,23 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         payload: JSON.stringify(payload),
         shop: {
           connect: {
-            id: store.id
-          }
-        }
-      }
-      await gdprCustomerDataRepository.createGdprCustomerDataRequest(customerDataRequest)
+            id: store.id,
+          },
+        },
+      };
+      await gdprCustomerDataRepository.createGdprCustomerDataRequest(
+        customerDataRequest,
+      );
       break;
 
     case "CUSTOMERS_REDACT":
-      await deleteContactService(payload.customer.id.toString(), store.apiKey, true)
+      if (store?.isContactSyncEnabled) {
+        await deleteContactService(
+          payload.customer.id.toString(),
+          store.apiKey,
+          true,
+        );
+      }
       break;
 
     case "SHOP_REDACT":
