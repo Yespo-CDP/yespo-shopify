@@ -49,6 +49,11 @@ Implementation:
   - customers/update → updates existing contact data
   - customers/redact → removes contact in Yespo
 
+Enable contacts sync (optional):
+- Open yespo app
+- Connect your yespo account
+- Enable sync in `Contact Sync` section
+
 Deduplication in Yespo: Contacts are matched using externalCustomerId, email, and phone. If a contact exists, it is updated instead of duplicated.
 
 Yespo API methods:
