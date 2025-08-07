@@ -42,6 +42,20 @@
       "notDisabled": "Web tracking not disabled"
     }
   },
+  "ContactSyncSection": {
+    "title": "Contact Sync",
+    "description": "Contact sync allows syncing customers with Yespo contacts.",
+    "enable": "Enable",
+    "disable": "Disable",
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "errors": {
+      "notEnabled": "Contact sync not enabled",
+      "notDisabled": "Contact sync not disabled"
+    }
+  },
   "ConnectionStatusSection": {
     "title": "Scripts integration",
     "refresh": "Refresh",

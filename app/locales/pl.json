@@ -42,6 +42,20 @@
       "notDisabled": "Śledzenie sieci nie jest wyłączone"
     }
   },
+  "ContactSyncSection": {
+    "title": "Synchronizacja kontaktów",
+    "description": "Synchronizacja kontaktów umożliwia synchronizację klientów z kontaktami Yespo.",
+    "enable": "Włączać",
+    "disable": "Wyłączyć",
+    "status": {
+      "enabled": "Włączony",
+      "disabled": "Wyłączony"
+    },
+    "errors": {
+      "notEnabled": "Synchronizacja kontaktów nie jest włączone",
+      "notDisabled": "Synchronizacja kontaktów nie jest wyłączone"
+    }
+  },
   "ConnectionStatusSection": {
     "title": "Integracja skryptów",
     "refresh": "Odśwież",
