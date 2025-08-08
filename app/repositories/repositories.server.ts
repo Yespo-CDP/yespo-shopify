@@ -3,6 +3,7 @@ import database from "~/db.server";
 import GdprCustomerDataRepositoryImpl from "~/repositories/gdprCustomerData/gdprCustomerDataRepositoryImpl.server";
 import EventDataRepositoryImpl from "~/repositories/eventData/eventDataRepositoryImpl.server";
 import CustomerRepositoryImpl from "~/repositories/customer/customerRepositoryImpl.server";
+import CustomerSyncRepositoryImpl from "~/repositories/customerSync/customerSyncRepositoryImpl.server";
 
 /**
  * An instance of the ShopRepository implementation, initialized with the Prisma database client.
@@ -21,7 +22,7 @@ const shopRepository = new ShopRepositoryImpl(database);
  *
  * @type {GdprCustomerDataRepositoryImpl}
  */
-const gdprCustomerDataRepository = new GdprCustomerDataRepositoryImpl(database)
+const gdprCustomerDataRepository = new GdprCustomerDataRepositoryImpl(database);
 
 /**
  * An instance of the EventDataRepository implementation, initialized with the Prisma database client.
@@ -30,7 +31,7 @@ const gdprCustomerDataRepository = new GdprCustomerDataRepositoryImpl(database)
  *
  * @type {EventDataRepositoryImpl}
  */
-const eventDataRepository = new EventDataRepositoryImpl(database)
+const eventDataRepository = new EventDataRepositoryImpl(database);
 
 /**
  * An instance of the CustomerRepository implementation, initialized with the Prisma database client.
@@ -39,12 +40,21 @@ const eventDataRepository = new EventDataRepositoryImpl(database)
  *
  * @type {CustomerRepositoryImpl}
  */
-const customerRepository = new CustomerRepositoryImpl(database)
+const customerRepository = new CustomerRepositoryImpl(database);
 
+/**
+ * An instance of the CustomerSyncRepository implementation, initialized with the Prisma database client.
+ *
+ * Provides methods to retrieve, create, update, and upsert customer sync records in the data store.
+ *
+ * @type {CustomerSyncRepositoryImpl}
+ */
+const customerSyncRepository = new CustomerSyncRepositoryImpl(database);
 
 export {
   shopRepository,
   gdprCustomerDataRepository,
   eventDataRepository,
-  customerRepository
+  customerRepository,
+  customerSyncRepository,
 };
