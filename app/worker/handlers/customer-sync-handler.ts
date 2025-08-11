@@ -27,6 +27,9 @@ export const customerSyncHandler = async (
 
   await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
     status: "IN_PROGRESS",
+    skippedCount: 0,
+    syncedCount: 0,
+    failedCount: 0,
     totalCount: customersCount,
     shop: {
       connect: {
@@ -38,7 +41,7 @@ export const customerSyncHandler = async (
   let cursor: string | null | undefined = null;
   let totalSkippedCount = 0;
   let totalFailedCount = 0;
-  let totalSyncedCount = customersCount;
+  let totalSyncedCount = 0;
 
   do {
     try {
@@ -105,6 +108,7 @@ export const customerSyncHandler = async (
 
       totalFailedCount += chunkFailedCount;
       totalSkippedCount += chunkSkippedCount;
+      totalSyncedCount += contactsData?.length - chunkFailedCount;
 
       console.log("Total customers in chunk:", customers?.length);
       console.log("Total skipped customers in chunk:", chunkSkippedCount);
@@ -114,7 +118,7 @@ export const customerSyncHandler = async (
       await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
         skippedCount: totalSkippedCount,
         failedCount: totalFailedCount,
-        syncedCount: totalSyncedCount - totalSkippedCount - totalFailedCount,
+        syncedCount: totalSyncedCount,
         totalCount: customersCount,
         shop: {
           connect: {
@@ -140,7 +144,7 @@ export const customerSyncHandler = async (
     status: "COMPLETE",
     skippedCount: totalSkippedCount,
     failedCount: totalFailedCount,
-    syncedCount: totalSyncedCount - totalSkippedCount - totalFailedCount,
+    syncedCount: totalSyncedCount,
     totalCount: customersCount,
     shop: {
       connect: {
