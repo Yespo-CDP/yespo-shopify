@@ -49,6 +49,7 @@ model Shop {
   customerDataRequests GdprCustomerDataRequest[]
   eventsData           EventData[]
   customerSyncs        CustomerSync[]
+  customerSyncLog      CustomerSyncLog?
 }
 
 model GdprCustomerDataRequest {
@@ -98,4 +99,25 @@ model CustomerSync {
 
   shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   shopId Int
+}
+
+enum SyncLogStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  ERROR
+  COMPLETE
+}
+
+model CustomerSyncLog {
+  id           Int           @id @default(autoincrement())
+  syncedCount  Int           @default(0)
+  skippedCount Int           @default(0)
+  failedCount  Int           @default(0)
+  totalCount   Int           @default(0)
+  status       SyncLogStatus @default(NOT_STARTED)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime?     @updatedAt
+
+  shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopId Int  @unique
 }

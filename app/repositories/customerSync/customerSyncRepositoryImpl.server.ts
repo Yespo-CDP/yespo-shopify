@@ -58,7 +58,6 @@ export default class CustomerSyncRepositoryImpl
    *
    * If a record with the given `customerId` exists, it is updated. Otherwise, a new record is created.
    *
-   * @param {number} shopId - Shop id in our database.
    * @param {CustomerSyncCreate} data - The data to be stored.
    * @returns {Promise<CustomerSync>} A promise that resolves to the created or updated customer sync record.
    */

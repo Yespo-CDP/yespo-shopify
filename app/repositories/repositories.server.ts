@@ -4,6 +4,7 @@ import GdprCustomerDataRepositoryImpl from "~/repositories/gdprCustomerData/gdpr
 import EventDataRepositoryImpl from "~/repositories/eventData/eventDataRepositoryImpl.server";
 import CustomerRepositoryImpl from "~/repositories/customer/customerRepositoryImpl.server";
 import CustomerSyncRepositoryImpl from "~/repositories/customerSync/customerSyncRepositoryImpl.server";
+import CustomerSyncLogRepositoryImpl from "~/repositories/customerSyncLog/customerSyncLogRepositoryImpl.server";
 
 /**
  * An instance of the ShopRepository implementation, initialized with the Prisma database client.
@@ -51,10 +52,20 @@ const customerRepository = new CustomerRepositoryImpl(database);
  */
 const customerSyncRepository = new CustomerSyncRepositoryImpl(database);
 
+/**
+ * An instance of the CustomerSyncLogRepository implementation, initialized with the Prisma database client.
+ *
+ * Provides methods to retrieve, create and update customer sync log record in the data store.
+ *
+ * @type {CustomerSyncLogRepositoryImpl}
+ */
+const customerSyncLogRepository = new CustomerSyncLogRepositoryImpl(database);
+
 export {
   shopRepository,
   gdprCustomerDataRepository,
   eventDataRepository,
   customerRepository,
   customerSyncRepository,
+  customerSyncLogRepository,
 };

@@ -68,7 +68,7 @@ export const updateContactService = async (
     apiKey,
     contactData,
   });
-  console.log(payload.created_at);
+
   await customerSyncRepository.createOrUpdateCustomerSync({
     customerId: payload.admin_graphql_api_id,
     createdAt: payload.created_at,

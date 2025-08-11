@@ -8,14 +8,14 @@ import type { CustomersResponse, CustomerData } from "~/@types/customer";
  * (default is 1). Each customer includes basic information such as ID, name, handle, and status.
  *
  * @param {Object} params - The input parameters.
- * @param {any} params.admin - The authenticated Shopify Admin API client.
+ * @param {GraphQLClient} params.client - The authenticated Shopify Admin API client.
  * @param {number} [params.count=1] - The number of customers to fetch.
  * @param {string} [params.cursor=null] - Cursor to request a specific page
  *
  * @returns {Promise<CustomerData[]>} A promise that resolves to an array of `CustomerData` objects, or an empty array if the query fails.
  *
  * @example
- * const customers = await getCustomers({ admin, count: 5 });
+ * const customers = await getCustomers({ client, count: 5 });
  * console.log(customers);
  */
 export const getCustomers = async ({
