@@ -62,8 +62,14 @@ export default function Index() {
   const shopify = useAppBridge();
   const loaderData = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
-  const { shop, account, isMarketsOverflowing, scriptConnectionStatus, ENV } =
-    loaderData;
+  const {
+    shop,
+    account,
+    isMarketsOverflowing,
+    scriptConnectionStatus,
+    customersSyncLog,
+    ENV,
+  } = loaderData;
   const navigation = useNavigation();
   const revalidator = useRevalidator();
   const isLoading = revalidator.state === "loading";
@@ -178,6 +184,7 @@ export default function Index() {
                 disabled={
                   isMarketsOverflowing || isSubmitting || isLoading || !account
                 }
+                customersSyncLog={customersSyncLog as any}
               />
             </Layout.Section>
             <Layout.Section>

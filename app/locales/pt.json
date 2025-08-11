@@ -51,6 +51,13 @@
       "enabled": "Habilitado",
       "disabled": "Desabilitado"
     },
+    "syncLog": {
+      "title": "Última sincronização",
+      "syncedCount": "Sincronizado",
+      "skippedCount": "Ignorado",
+      "failedCount": "Falhou",
+      "totalCount": "Total"
+    },
     "errors": {
       "notEnabled": "A sincronização de contatos não ativado",
       "notDisabled": "A sincronização de contatos não desativado"

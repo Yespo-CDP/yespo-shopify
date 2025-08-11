@@ -10,13 +10,18 @@ import {
 import { useTranslation } from "react-i18next";
 import { useFetcher } from "@remix-run/react";
 
+import type { CustomerSyncLog } from "~/@types/customerSyncLog";
+import ContactSyncStatusBadge from "./ui/ContactSyncStatusBadge";
+
 export interface ContactSyncSectionProps {
   disabled?: boolean;
   contactSyncEnabled?: boolean;
+  customersSyncLog?: CustomerSyncLog;
 }
 
 const ContactSyncSection: FC<ContactSyncSectionProps> = ({
   disabled,
+  customersSyncLog,
   contactSyncEnabled = false,
 }) => {
   const { t } = useTranslation();
@@ -38,49 +43,77 @@ const ContactSyncSection: FC<ContactSyncSectionProps> = ({
 
   return (
     <Card>
-      <InlineStack align={"space-between"} blockAlign={"baseline"}>
-        <BlockStack>
-          <InlineStack align={"start"} gap="200">
-            <Text as="h2" variant="headingMd">
-              {t("ContactSyncSection.title")}
-            </Text>
-            {contactSyncEnabled ? (
-              <Badge tone="success" progress="complete">
-                {t("ContactSyncSection.status.enabled")}
-              </Badge>
-            ) : (
-              <Badge tone="critical" progress="incomplete">
-                {t("ContactSyncSection.status.disabled")}
-              </Badge>
-            )}
-          </InlineStack>
-          <Text as={"span"}>{t("ContactSyncSection.description")}</Text>
-        </BlockStack>
+      <BlockStack gap="100">
+        <InlineStack align={"space-between"} blockAlign={"baseline"}>
+          <BlockStack>
+            <InlineStack align={"start"} gap="200">
+              <Text as="h2" variant="headingMd">
+                {t("ContactSyncSection.title")}
+              </Text>
+              {contactSyncEnabled ? (
+                <Badge tone="success" progress="complete">
+                  {t("ContactSyncSection.status.enabled")}
+                </Badge>
+              ) : (
+                <Badge tone="critical" progress="incomplete">
+                  {t("ContactSyncSection.status.disabled")}
+                </Badge>
+              )}
+            </InlineStack>
+            <Text as={"span"}>{t("ContactSyncSection.description")}</Text>
+          </BlockStack>
 
-        {contactSyncEnabled ? (
-          <Button
-            size="large"
-            variant="primary"
-            tone="critical"
-            onClick={() => handleTrackingToggle("contact-sync-disable")}
-            loading={fetcher.state === "submitting"}
-            disabled={disabled || fetcher.state === "submitting"}
-          >
-            {t("ContactSyncSection.disable")}
-          </Button>
-        ) : (
-          <Button
-            size="large"
-            variant="primary"
-            tone="success"
-            onClick={() => handleTrackingToggle("contact-sync-enable")}
-            loading={fetcher.state === "submitting"}
-            disabled={disabled || fetcher.state === "submitting"}
-          >
-            {t("ContactSyncSection.enable")}
-          </Button>
+          {contactSyncEnabled ? (
+            <Button
+              size="large"
+              variant="primary"
+              tone="critical"
+              onClick={() => handleTrackingToggle("contact-sync-disable")}
+              loading={fetcher.state === "submitting"}
+              disabled={disabled || fetcher.state === "submitting"}
+            >
+              {t("ContactSyncSection.disable")}
+            </Button>
+          ) : (
+            <Button
+              size="large"
+              variant="primary"
+              tone="success"
+              onClick={() => handleTrackingToggle("contact-sync-enable")}
+              loading={fetcher.state === "submitting"}
+              disabled={disabled || fetcher.state === "submitting"}
+            >
+              {t("ContactSyncSection.enable")}
+            </Button>
+          )}
+        </InlineStack>
+        {contactSyncEnabled && customersSyncLog && (
+          <BlockStack>
+            <Text as="h2" variant="headingMd">
+              {t("ContactSyncSection.syncLog.title")}
+            </Text>
+            <InlineStack align="space-between">
+              <Text as="span">
+                {t("ContactSyncSection.syncLog.syncedCount")}:{" "}
+                {customersSyncLog.syncedCount}
+              </Text>
+              <Text as="span">
+                {t("ContactSyncSection.syncLog.skippedCount")}:{" "}
+                {customersSyncLog.skippedCount}
+              </Text>
+              <Text as="span">
+                {t("ContactSyncSection.syncLog.failedCount")}:{" "}
+                {customersSyncLog.failedCount}
+              </Text>
+              <Text as="span">
+                {t("ContactSyncSection.syncLog.totalCount")}:{" "}
+                {customersSyncLog.totalCount}
+              </Text>
+              <ContactSyncStatusBadge status={customersSyncLog?.status} />
+            </InlineStack>
+          </BlockStack>
         )}
-      </InlineStack>
+      </BlockStack>
     </Card>
   );
 };

@@ -51,6 +51,13 @@
       "enabled": "Enabled",
       "disabled": "Disabled"
     },
+    "syncLog": {
+      "title": "Last synchronization",
+      "syncedCount": "Synchronized",
+      "skippedCount": "Skipped",
+      "failedCount": "Failed",
+      "totalCount": "Total"
+    },
     "errors": {
       "notEnabled": "Contact sync not enabled",
       "notDisabled": "Contact sync not disabled"
