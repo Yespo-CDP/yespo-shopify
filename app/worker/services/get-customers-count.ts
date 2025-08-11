@@ -5,8 +5,8 @@ import type { GraphQLClient } from "@shopify/graphql-client";
  *
  * This function queries the `customersCount` resource and returns count of customers.
  *
+ * @param {Object} params - The input parameters.
  * @param {GraphQLClient} params.client - The authenticated Shopify Admin API client.
- *
  * @returns {Promise<number>} A promise that resolves to number.
  *
  * @example
@@ -28,13 +28,13 @@ export const getCustomersCount = async ({
       `,
     );
 
-    const customersData = response?.data as {
+    const customersCountData = response?.data as {
       customersCount: {
         count: number;
       };
     };
 
-    const customersCount = customersData?.customersCount?.count ?? 0;
+    const customersCount = customersCountData?.customersCount?.count ?? 0;
 
     return customersCount;
   } catch (error) {

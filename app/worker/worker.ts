@@ -1,6 +1,7 @@
 import { Worker } from "bullmq";
 
 import { redisConfig } from "~/config/redis";
+import { shopRepository } from "~/repositories/repositories.server";
 import { customerSyncHandler } from "./handlers/customer-sync-handler";
 
 interface JobData {
@@ -13,11 +14,25 @@ console.log("===RUN WORKER===");
 new Worker<JobData>(
   "data-sync",
   async (job) => {
-    const { shop, accessToken } = job?.data;
+    try {
+      const { shop, accessToken } = job?.data;
 
-    if (!shop || !accessToken) return;
+      if (!shop || !accessToken) return;
 
-    await customerSyncHandler(shop, accessToken);
+      const shopData = await shopRepository.getShop(shop);
+      const apiKey = shopData?.apiKey;
+
+      if (!apiKey) {
+        console.error(
+          `Error data synchronization: Api key not found for ${shop}`,
+        );
+        return;
+      }
+
+      await customerSyncHandler(shop, accessToken, apiKey, shopData.id);
+    } catch (error: any) {
+      console.error(`Worker error:`, error);
+    }
   },
   {
     connection: redisConfig,

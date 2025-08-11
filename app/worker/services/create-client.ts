@@ -1,8 +1,33 @@
-import { createGraphQLClient } from "@shopify/graphql-client";
+import {
+  createGraphQLClient,
+  type GraphQLClient,
+} from "@shopify/graphql-client";
 
 import { ApiVersion } from "@shopify/shopify-app-remix/server";
 
-export const createClient = (shop: string, accessToken: string) => {
+/**
+ * Create Shopify GraphQL API.
+ *
+ * This function create new shopify client by `shop` and `accessToken`.
+ *
+ * @param {Object} params - The input parameters.
+ * @param {string} params.shop - The unique URL identifier of the shop.
+ * @param {string} params.accessToken - Access token from shopify session.
+ * @returns {GraphQLClient} New shopify graphql client GraphQLClient.
+ *
+ * @example
+  const client = createClient({ shop, accessToken });
+    const response = await client.request(
+      `...`,
+    );
+ */
+export const createClient = ({
+  shop,
+  accessToken,
+}: {
+  shop: string;
+  accessToken: string;
+}): GraphQLClient => {
   return createGraphQLClient({
     url: `https://${shop}/admin/api/${ApiVersion.April25}/graphql.json`,
     headers: {

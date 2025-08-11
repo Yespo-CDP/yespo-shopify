@@ -14,6 +14,7 @@ import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
 import { toggleWebTrackingServer } from "~/services/toggleWebTracking.server";
 import { createGeneralDomain } from "~/api/create-general-domain.server";
+import { enqueueDataSyncTasks } from "~/services/queue";
 
 /**
  * Loader function for initializing data needed on the page.
@@ -241,6 +242,8 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await shopRepository.updateShop(shop.domain, {
         isContactSyncEnabled: true,
       });
+
+      await enqueueDataSyncTasks({ session });
     } catch (error: any) {
       errors.webTracking = t("ContactSyncSection.errors.notEnabled");
       return { success, errors };
