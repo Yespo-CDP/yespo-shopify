@@ -22,7 +22,7 @@ export default interface CustomerSyncLogRepository {
   /**
    * Creates or update a new customer sync log record.
    *
-   * @param {CustomerSyncCreate} data - The data to be stored.
+   * @param {CustomerSyncLogCreate} data - The data to be stored.
    * @returns {Promise<CustomerSyncLog>} A promise that resolves to the created or updated customer sync log record.
    */
   createOrUpdateCustomerSyncLog(

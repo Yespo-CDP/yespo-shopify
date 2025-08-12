@@ -45,7 +45,7 @@ export default class CustomerSyncLogRepositoryImpl
    *
    * If a record with the given `data.shop.connect.id` exists, it is updated. Otherwise, a new record is created.
    *
-   * @param {CustomerSyncCreate} data - The data to be stored.
+   * @param {CustomerSyncLogCreate} data - The data to be stored.
    * @returns {Promise<CustomerSync>} A promise that resolves to the created or updated customer sync log record.
    */
   async createOrUpdateCustomerSyncLog(

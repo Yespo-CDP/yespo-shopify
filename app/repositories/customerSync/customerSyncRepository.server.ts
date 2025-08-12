@@ -40,7 +40,7 @@ export default interface CustomerSyncRepository {
    * Updates an existing customer sync record identified by customer ID.
    *
    * @param {String} customerId: Shopify customer ID to the update customer sync record.
-   * @param {CustomerSyncCreate} data - The data to be update customer sync record.
+   * @param {CustomerSyncUpdate} data - The data to be update customer sync record.
    * @returns {Promise<CustomerSync>} A promise that resolves to the updated customer sync record.
    */
   updateCustomerSync(

@@ -5,6 +5,8 @@ import EventDataRepositoryImpl from "~/repositories/eventData/eventDataRepositor
 import CustomerRepositoryImpl from "~/repositories/customer/customerRepositoryImpl.server";
 import CustomerSyncRepositoryImpl from "~/repositories/customerSync/customerSyncRepositoryImpl.server";
 import CustomerSyncLogRepositoryImpl from "~/repositories/customerSyncLog/customerSyncLogRepositoryImpl.server";
+import OrderSyncRepositoryImpl from "~/repositories/orderSync/orderSyncRepositoryImpl.server";
+import OrderSyncLogRepositoryImpl from "~/repositories/orderSyncLog/orderSyncLogRepositoryImpl.server";
 
 /**
  * An instance of the ShopRepository implementation, initialized with the Prisma database client.
@@ -61,6 +63,24 @@ const customerSyncRepository = new CustomerSyncRepositoryImpl(database);
  */
 const customerSyncLogRepository = new CustomerSyncLogRepositoryImpl(database);
 
+/**
+ * An instance of the OrderSyncRepository implementation, initialized with the Prisma database client.
+ *
+ * Provides methods to retrieve, create, update, and upsert order sync records in the data store.
+ *
+ * @type {OrderSyncRepositoryImpl}
+ */
+const orderSyncRepository = new OrderSyncRepositoryImpl(database);
+
+/**
+ * An instance of the OrderSyncLogRepository implementation, initialized with the Prisma database client.
+ *
+ * Provides methods to retrieve, create and update order sync log record in the data store.
+ *
+ * @type {OrderSyncLogRepositoryImpl}
+ */
+const orderSyncLogRepository = new OrderSyncLogRepositoryImpl(database);
+
 export {
   shopRepository,
   gdprCustomerDataRepository,
@@ -68,4 +88,6 @@ export {
   customerRepository,
   customerSyncRepository,
   customerSyncLogRepository,
+  orderSyncRepository,
+  orderSyncLogRepository,
 };
