@@ -44,7 +44,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       await sendPurchasedItemsService(payload, shop);
 
       if (shop?.isOrderSyncEnabled) {
-        await createOrderService(payload as any, shop.apiKey);
+        await createOrderService(payload as any, shop.apiKey, shop.id);
       }
       break;
 

@@ -1,4 +1,5 @@
 import { createOrders } from "~/api/create-orders";
+import { orderSyncRepository } from "~/repositories/repositories.server";
 import type { OrderCreatePayload } from "~/@types/order";
 
 /**
@@ -8,11 +9,13 @@ import type { OrderCreatePayload } from "~/@types/order";
  *
  * @param {OrderCreatePayload} payload - The order data payload containing order info.
  * @param {string} apiKey - The API key used for authentication with the contact service.
+ * @param {string} shopId - The shop id for connect order sync log to shop.
  * @returns {Promise<void>} A promise that resolves when the order creation completes.
  */
 export const createOrderService = async (
   payload: OrderCreatePayload,
   apiKey: string,
+  shopId: number,
 ) => {
   try {
     const formatAddress = (address: OrderCreatePayload["shipping_address"]) =>
@@ -58,6 +61,17 @@ export const createOrderService = async (
     await createOrders({
       apiKey,
       orders: [order],
+    });
+
+    await orderSyncRepository.createOrUpdateOrderSync({
+      orderId: payload.admin_graphql_api_id,
+      createdAt: payload.created_at,
+      updatedAt: payload.updated_at,
+      shop: {
+        connect: {
+          id: shopId,
+        },
+      },
     });
   } catch (error: any) {
     console.error("Error occurred in Create Order Service", error);
