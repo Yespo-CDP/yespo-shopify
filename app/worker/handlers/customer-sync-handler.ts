@@ -11,6 +11,31 @@ import { getContactByCustomer } from "../services/get-contact-by-customer";
 
 const CUSTOMERS_CHUNK_SIZE = 200; // Shopify max limit 250
 
+/**
+ * Syncs customer list from Shopify with contact list in Yespo.
+ *
+ * This handler synchronizes all customers available in Shopify with Yespo contacts. 
+ * Synchronization occurs in a cycle with chunks of 200 pieces (`CUSTOMERS_CHUNK_SIZE`). 
+ * Based on the `CustomerSync` table in the database, we check the contacts that have 
+ * already been synchronized and filter them out.
+ * 
+ *
+ * @param {any} shop - The unique URL identifier of the shop.
+ * @param {string} accessToken - Access token from shopify session.
+ * @param {string} apiKey - The API key to connect with the account.
+ * @param {string} shopId - The unique shop id in our database.
+ *
+ * @returns {Promise<void>} A promise that resolves once the synchronization has been complete or logs an error on failure.
+ *
+ * @example
+ * await customerSyncHandler(
+ *   shop, 
+ *   accessToken, 
+ *   shopData.apiKey, 
+ *   shopData.id
+ * );
+ */
+
 export const customerSyncHandler = async (
   shop: string,
   accessToken: string,
