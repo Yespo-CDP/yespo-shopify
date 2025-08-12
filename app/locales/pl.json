@@ -42,9 +42,9 @@
       "notDisabled": "Śledzenie sieci nie jest wyłączone"
     }
   },
-  "ContactSyncSection": {
-    "title": "Synchronizacja kontaktów",
-    "description": "Synchronizacja kontaktów umożliwia synchronizację klientów z kontaktami Yespo.",
+  "DataSyncSection": {
+    "title": "Synchronizacja danych",
+    "description": "Synchronizacja danych umożliwia synchronizację klientów i zamówień z Shopify z Yespo.",
     "enable": "Włączać",
     "disable": "Wyłączyć",
     "status": {
@@ -59,8 +59,8 @@
       "totalCount": "Razem"
     },
     "errors": {
-      "notEnabled": "Synchronizacja kontaktów nie jest włączone",
-      "notDisabled": "Synchronizacja kontaktów nie jest wyłączone"
+      "notEnabled": "Synchronizacja danych nie jest włączone",
+      "notDisabled": "Synchronizacja danych nie jest wyłączone"
     }
   },
   "ConnectionStatusSection": {

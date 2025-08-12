@@ -42,9 +42,9 @@
       "notDisabled": "Rastreamento da Web não desativado"
     }
   },
-  "ContactSyncSection": {
-    "title": "Sincronização de Contatos",
-    "description": "A sincronização de contatos permite sincronizar os clientes com os contatos do Yespo.",
+  "DataSyncSection": {
+    "title": "Sincronização de dados",
+    "description": "A sincronização de dados permite sincronizar clientes e pedidos do Shopify com o Yespo.",
     "enable": "Habilitar",
     "disable": "Desativar",
     "status": {
@@ -59,8 +59,8 @@
       "totalCount": "Total"
     },
     "errors": {
-      "notEnabled": "A sincronização de contatos não ativado",
-      "notDisabled": "A sincronização de contatos não desativado"
+      "notEnabled": "A sincronização de dados não ativado",
+      "notDisabled": "A sincronização de dados não desativado"
     }
   },
   "ConnectionStatusSection": {

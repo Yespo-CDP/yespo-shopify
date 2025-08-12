@@ -105,6 +105,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     apiKey?: string;
     script?: string;
     webTracking?: string;
+    dataSync?: string;
   } = {};
   const success: {
     apiKey?: boolean;
@@ -237,38 +238,40 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
-  if (intent === "contact-sync-enable") {
+  if (intent === "data-sync-enable") {
     try {
       const shop = await shopRepository.getShop(session.shop);
       if (!shop) {
-        errors.webTracking = t("General.errors.shopNotFound");
+        errors.dataSync = t("General.errors.shopNotFound");
         return { success, errors };
       }
 
       await shopRepository.updateShop(shop.domain, {
         isContactSyncEnabled: true,
+        isOrderSyncEnabled: true,
       });
 
       await enqueueDataSyncTasks({ session });
     } catch (error: any) {
-      errors.webTracking = t("ContactSyncSection.errors.notEnabled");
+      errors.dataSync = t("DataSyncSection.errors.notEnabled");
       return { success, errors };
     }
   }
 
-  if (intent === "contact-sync-disable") {
+  if (intent === "data-sync-disable") {
     try {
       const shop = await shopRepository.getShop(session.shop);
       if (!shop) {
-        errors.webTracking = t("General.errors.shopNotFound");
+        errors.dataSync = t("General.errors.shopNotFound");
         return { success, errors };
       }
 
       await shopRepository.updateShop(shop.domain, {
         isContactSyncEnabled: false,
+        isOrderSyncEnabled: false,
       });
     } catch (error: any) {
-      errors.webTracking = t("ContactSyncSection.errors.notDisabled");
+      errors.dataSync = t("DataSyncSection.errors.notDisabled");
       return { success, errors };
     }
   }

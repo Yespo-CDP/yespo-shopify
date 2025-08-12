@@ -24,7 +24,7 @@ import ConnectionStatusSection from "~/components/ConnectionStatusSection";
 import UsefulLinksSection from "~/components/UsefulLinksSection";
 import { loaderHandler, actionHandler } from "~/lib/app.server";
 import WebTrackingSection from "~/components/WebTrackingSection";
-import ContactSyncSection from "~/components/ContactSyncSection";
+import DataSyncSection from "~/components/DataSyncSection";
 
 /**
  * The loader function to fetch initial data for the page.
@@ -179,8 +179,9 @@ export default function Index() {
               />
             </Layout.Section>
             <Layout.Section>
-              <ContactSyncSection
-                contactSyncEnabled={shop?.isContactSyncEnabled ?? false}
+              <DataSyncSection
+                contactSyncEnabled={Boolean(shop?.isContactSyncEnabled)}
+                orderSyncEnabled={Boolean(shop?.isOrderSyncEnabled)}
                 disabled={
                   isMarketsOverflowing || isSubmitting || isLoading || !account
                 }

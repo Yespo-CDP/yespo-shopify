@@ -42,9 +42,9 @@
       "notDisabled": "Web tracking not disabled"
     }
   },
-  "ContactSyncSection": {
-    "title": "Contact Sync",
-    "description": "Contact sync allows syncing customers with Yespo contacts.",
+  "DataSyncSection": {
+    "title": "Data Sync",
+    "description": "Data sync allows syncing customers and orders from Shopify with Yespo.",
     "enable": "Enable",
     "disable": "Disable",
     "status": {
@@ -59,8 +59,8 @@
       "totalCount": "Total"
     },
     "errors": {
-      "notEnabled": "Contact sync not enabled",
-      "notDisabled": "Contact sync not disabled"
+      "notEnabled": "Data sync not enabled",
+      "notDisabled": "Data sync not disabled"
     }
   },
   "ConnectionStatusSection": {
