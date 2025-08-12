@@ -17,6 +17,14 @@ export const customerSyncHandler = async (
   apiKey: string,
   shopId: number,
 ) => {
+  const customerSyncLog =
+    await customerSyncLogRepository.getCustomerSyncLogByShop(shop);
+
+  if (customerSyncLog?.status === "IN_PROGRESS") {
+    console.log(`⚠️ Synchronization already running for ${shop}`);
+    return;
+  }
+
   console.log(`⏳ Synchronizing customers start for ${shop}`);
   console.log("shop", shop);
   console.log("accessToken", accessToken);
@@ -43,115 +51,135 @@ export const customerSyncHandler = async (
   let totalFailedCount = 0;
   let totalSyncedCount = 0;
 
-  do {
-    try {
-      console.log("\n", "Chunk start:");
-      const response = await getCustomers({
-        client,
-        count: CUSTOMERS_CHUNK_SIZE,
-        cursor,
-      });
-      const customers = response.customers;
-      cursor = response.cursor;
-
-      const customerIds = customers.map((customer) => customer.id);
-      const customerSyncs =
-        await customerSyncRepository.getCustomerSyncByCustomerIds(customerIds);
-
-      const contactsData: Contact[] = [];
-
-      let chunkSkippedCount = 0;
-      let chunkFailedCount = 0;
-
-      for (const customer of customers) {
-        const customerSync = customerSyncs.find(
-          (val) => val.customerId === customer.id,
-        );
-
-        const customerUpdatedDate =
-          new Date(customer.updatedAt)?.getTime() ?? 0;
-        const customerSyncUpdatedDate = customerSync?.updatedAt?.getTime() ?? 0;
-
-        if (customerUpdatedDate > customerSyncUpdatedDate) {
-          const contact = getContactByCustomer(customer);
-          contactsData.push(contact);
-
-          await customerSyncRepository.createOrUpdateCustomerSync({
-            customerId: customer.id,
-            createdAt: customer.createdAt,
-            updatedAt: customer.updatedAt,
-            shop: {
-              connect: {
-                id: shopId,
-              },
-            },
-          });
-        } else {
-          chunkSkippedCount++;
-        }
-      }
-
-      if (contactsData?.length > 0) {
-        const contactsUpdateResponse = await updateContacts({
-          apiKey,
-          contactsData,
+  try {
+    do {
+      try {
+        console.log("\n", "Chunk start:");
+        const response = await getCustomers({
+          client,
+          count: CUSTOMERS_CHUNK_SIZE,
+          cursor,
         });
+        const customers = response.customers;
+        cursor = response.cursor;
 
-        if (contactsUpdateResponse?.failedContacts) {
-          if (Array.isArray(contactsUpdateResponse?.failedContacts)) {
-            chunkFailedCount = contactsUpdateResponse?.failedContacts?.length;
+        const customerIds = customers.map((customer) => customer.id);
+        const customerSyncs =
+          await customerSyncRepository.getCustomerSyncByCustomerIds(
+            customerIds,
+          );
+
+        const contactsData: Contact[] = [];
+
+        let chunkSkippedCount = 0;
+        let chunkFailedCount = 0;
+
+        for (const customer of customers) {
+          const customerSync = customerSyncs.find(
+            (val) => val.customerId === customer.id,
+          );
+
+          const customerUpdatedDate =
+            new Date(customer.updatedAt)?.getTime() ?? 0;
+          const customerSyncUpdatedDate =
+            customerSync?.updatedAt?.getTime() ?? 0;
+
+          if (customerUpdatedDate > customerSyncUpdatedDate) {
+            const contact = getContactByCustomer(customer);
+            contactsData.push(contact);
+
+            await customerSyncRepository.createOrUpdateCustomerSync({
+              customerId: customer.id,
+              createdAt: customer.createdAt,
+              updatedAt: customer.updatedAt,
+              shop: {
+                connect: {
+                  id: shopId,
+                },
+              },
+            });
           } else {
-            chunkFailedCount = 1;
+            chunkSkippedCount++;
           }
         }
+
+        if (contactsData?.length > 0) {
+          const contactsUpdateResponse = await updateContacts({
+            apiKey,
+            contactsData,
+          });
+
+          if (contactsUpdateResponse?.failedContacts) {
+            if (Array.isArray(contactsUpdateResponse?.failedContacts)) {
+              chunkFailedCount = contactsUpdateResponse?.failedContacts?.length;
+            } else {
+              chunkFailedCount = 1;
+            }
+          }
+        }
+
+        totalFailedCount += chunkFailedCount;
+        totalSkippedCount += chunkSkippedCount;
+        totalSyncedCount += contactsData?.length - chunkFailedCount;
+
+        console.log("Total customers in chunk:", customers?.length);
+        console.log("Total skipped customers in chunk:", chunkSkippedCount);
+        console.log("Total sent customers to sync:", contactsData?.length);
+        console.log("Total failed customers sync:", chunkFailedCount);
+
+        await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
+          skippedCount: totalSkippedCount,
+          failedCount: totalFailedCount,
+          syncedCount: totalSyncedCount,
+          totalCount: customersCount,
+          shop: {
+            connect: {
+              id: shopId,
+            },
+          },
+        });
+      } catch {
+        console.error("Error customers sync in chunk");
+        await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
+          status: "ERROR",
+          shop: {
+            connect: {
+              id: shopId,
+            },
+          },
+        });
+        cursor = null;
       }
+    } while (cursor);
 
-      totalFailedCount += chunkFailedCount;
-      totalSkippedCount += chunkSkippedCount;
-      totalSyncedCount += contactsData?.length - chunkFailedCount;
-
-      console.log("Total customers in chunk:", customers?.length);
-      console.log("Total skipped customers in chunk:", chunkSkippedCount);
-      console.log("Total sent customers to sync:", contactsData?.length);
-      console.log("Total failed customers sync:", chunkFailedCount);
-
-      await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
-        skippedCount: totalSkippedCount,
-        failedCount: totalFailedCount,
-        syncedCount: totalSyncedCount,
-        totalCount: customersCount,
-        shop: {
-          connect: {
-            id: shopId,
-          },
+    await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
+      status: "COMPLETE",
+      skippedCount: totalSkippedCount,
+      failedCount: totalFailedCount,
+      syncedCount: totalSyncedCount,
+      totalCount: customersCount,
+      shop: {
+        connect: {
+          id: shopId,
         },
-      });
-    } catch {
-      console.error("Error customers sync in chunk");
-      await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
-        status: "ERROR",
-        shop: {
-          connect: {
-            id: shopId,
-          },
-        },
-      });
-      cursor = null;
-    }
-  } while (cursor);
-
-  await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
-    status: "COMPLETE",
-    skippedCount: totalSkippedCount,
-    failedCount: totalFailedCount,
-    syncedCount: totalSyncedCount,
-    totalCount: customersCount,
-    shop: {
-      connect: {
-        id: shopId,
       },
-    },
-  });
+    });
 
-  console.log(`✅ Synchronizing customers finish for ${shop}`);
+    console.log(`✅ Synchronizing customers finish for ${shop}`);
+  } catch (error) {
+    console.error("Synchronization error", error);
+    await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
+      status: "ERROR",
+      skippedCount: totalSkippedCount,
+      failedCount: totalFailedCount,
+      syncedCount: totalSyncedCount,
+      totalCount: customersCount,
+      shop: {
+        connect: {
+          id: shopId,
+        },
+      },
+    });
+    return;
+  }
 };
