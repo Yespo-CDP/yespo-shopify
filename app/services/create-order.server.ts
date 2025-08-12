@@ -37,7 +37,7 @@ export const createOrderService = async (
       firstName: payload?.customer?.first_name ?? "",
       lastName: payload?.customer?.last_name ?? "",
       email: payload?.email ?? "",
-      pgone: payload?.phone ?? "",
+      phone: payload?.phone ?? "",
       externalOrderId: payload.id.toString(),
       externalCustomerId: payload?.customer?.id?.toString(),
       totalCost: parseFloat(payload?.current_total_price ?? "0"),

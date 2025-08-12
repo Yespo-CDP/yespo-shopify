@@ -14,11 +14,11 @@ const CUSTOMERS_CHUNK_SIZE = 200; // Shopify max limit 250
 /**
  * Syncs customer list from Shopify with contact list in Yespo.
  *
- * This handler synchronizes all customers available in Shopify with Yespo contacts. 
- * Synchronization occurs in a cycle with chunks of 200 pieces (`CUSTOMERS_CHUNK_SIZE`). 
- * Based on the `CustomerSync` table in the database, we check the contacts that have 
+ * This handler synchronizes all customers available in Shopify with Yespo contacts.
+ * Synchronization occurs in a cycle with chunks of 200 pieces (`CUSTOMERS_CHUNK_SIZE`).
+ * Based on the `CustomerSync` table in the database, we check the contacts that have
  * already been synchronized and filter them out.
- * 
+ *
  *
  * @param {any} shop - The unique URL identifier of the shop.
  * @param {string} accessToken - Access token from shopify session.
@@ -29,9 +29,9 @@ const CUSTOMERS_CHUNK_SIZE = 200; // Shopify max limit 250
  *
  * @example
  * await customerSyncHandler(
- *   shop, 
- *   accessToken, 
- *   shopData.apiKey, 
+ *   shop,
+ *   accessToken,
+ *   shopData.apiKey,
  *   shopData.id
  * );
  */

@@ -21,6 +21,105 @@ export interface Order {
   }[];
 }
 
+export interface OrderData {
+  id: string;
+  email?: string | null;
+  phone?: string | null;
+  currencyCode: string;
+  totalPriceSet?: {
+    shopMoney: {
+      amount: string;
+      currencyCode: string;
+    };
+  };
+  totalTaxSet?: {
+    shopMoney: {
+      amount: string;
+      currencyCode: string;
+    };
+  };
+  totalShippingPriceSet?: {
+    shopMoney: {
+      amount: string;
+      currencyCode: string;
+    };
+  };
+  totalDiscountsSet?: {
+    shopMoney: {
+      amount: string;
+      currencyCode: string;
+    };
+  };
+  shippingAddress?: {
+    id: string;
+    address1?: string;
+    address2?: string;
+    city?: string;
+    province?: string;
+    country?: string;
+    zip?: string;
+    phone?: string;
+    provinceCode?: string;
+    countryCodeV2?: string;
+  };
+  customer?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    defaultEmailAddress?: {
+      emailAddress: string;
+    };
+    defaultPhoneNumber?: {
+      phoneNumber: string;
+    };
+    defaultAddress?: {
+      id: string;
+      address1?: string;
+      address2?: string;
+      city?: string;
+      province?: string;
+      country?: string;
+      zip?: string;
+      phone?: string;
+      provinceCode?: string;
+      countryCodeV2?: string;
+    };
+  };
+  lineItems: {
+    nodes: {
+      id: string;
+      name: string;
+      quantity: number;
+      originalTotalSet?: {
+        shopMoney: {
+          amount: string;
+          currencyCode: string;
+        };
+      };
+    }[];
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrdersResponse {
+  orders: {
+    nodes: CustomerData[];
+    pageInfo: {
+      startCursor?: string;
+      endCursor?: string;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    };
+  };
+}
+
+export interface OrdersCreateResponse {
+  failedOrders?: object | object[];
+  asyncSessionId?: string;
+  id?: number;
+}
+
 export interface OrderCreatePayload {
   id: number;
   admin_graphql_api_id: string;

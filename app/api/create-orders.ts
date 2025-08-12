@@ -1,6 +1,6 @@
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
-import type { Order } from "~/@types/order";
+import type { Order, OrdersCreateResponse } from "~/@types/order";
 
 /**
  * Sends a POST request to create the orders in the Yespo API.
@@ -8,7 +8,7 @@ import type { Order } from "~/@types/order";
  * @param {Object} params - The function parameters.
  * @param {string} params.apiKey - The API key used for authentication.
  * @param {Order} params.orders - The orders data array to be created.
- * @returns {Promise<void>} A promise that resolves when the orders is created successfully.
+ * @returns {Promise<OrdersCreateResponse>} A promise that resolves when the orders is created successfully.
  *
  * @throws Will re-throw errors unless the error message includes 'Duplicated request'.
  *
@@ -21,7 +21,7 @@ export const createOrders = async ({
 }: {
   apiKey: string;
   orders: Order[];
-}): Promise<void> => {
+}): Promise<OrdersCreateResponse> => {
   const url = `${process.env.API_URL}/orders`;
   const authHeader = getAuthHeader(apiKey);
   const options = {
@@ -35,11 +35,13 @@ export const createOrders = async ({
 
   try {
     const response = await fetchWithErrorHandling(url, options);
-    return response;
+    return response as OrdersCreateResponse;
   } catch (error: any) {
     console.error("Error creating orders:", error?.message);
     if (!error?.message?.includes("Duplicated request")) {
       throw new Error(error.message);
+    } else {
+      throw new Error("Error updating contacts");
     }
   }
 };
