@@ -33,6 +33,7 @@ export const updateContacts = async ({
     body: JSON.stringify({
       contacts: contactsData,
       dedupeOn: "externalCustomerId",
+      restoreDeleted: true,
     }),
   };
 
