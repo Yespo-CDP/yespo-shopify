@@ -43,13 +43,6 @@ export const orderSyncHandler = async (
   apiKey: string,
   shopId: number,
 ) => {
-  const orderSyncLog = await orderSyncLogRepository.getOrderSyncLogByShop(shop);
-
-  if (orderSyncLog?.status === "IN_PROGRESS") {
-    console.log(`⚠️ Synchronization already running for ${shop}`);
-    return;
-  }
-
   console.log(`⏳ Synchronizing orders start for ${shop}`);
   console.log("shop", shop);
   console.log("accessToken", accessToken);
@@ -57,19 +50,6 @@ export const orderSyncHandler = async (
   const client = createClient({ shop, accessToken });
   const ordersCount = await getOrdersCount({ client });
   console.log("Total orders count", ordersCount, "\n");
-
-  await orderSyncLogRepository.createOrUpdateOrderSyncLog({
-    status: "IN_PROGRESS",
-    skippedCount: 0,
-    syncedCount: 0,
-    failedCount: 0,
-    totalCount: ordersCount,
-    shop: {
-      connect: {
-        id: shopId,
-      },
-    },
-  });
 
   let cursor: string | null | undefined = null;
   let totalSkippedCount = 0;
@@ -152,6 +132,7 @@ export const orderSyncHandler = async (
           console.log("Total failed orders sync:", chunkFailedCount);
 
           await orderSyncLogRepository.createOrUpdateOrderSyncLog({
+            status: "IN_PROGRESS",
             skippedCount: totalSkippedCount,
             failedCount: totalFailedCount,
             syncedCount: totalSyncedCount,

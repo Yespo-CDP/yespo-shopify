@@ -1,4 +1,4 @@
-import { useCallback, type FC } from "react";
+import { useCallback, useEffect, useState, type FC } from "react";
 import {
   Badge,
   BlockStack,
@@ -32,20 +32,29 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
 }) => {
   const { t } = useTranslation();
   const fetcher = useFetcher();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSyncToggle = useCallback(
     (intent: "data-sync-enable" | "data-sync-disable") => {
       try {
+        setIsSubmitting(true);
         fetcher.submit({ intent }, { method: "post" });
       } catch (error) {
         console.error(
           `Error during data sync ${intent.replace("data-sync-", "")}:`,
           error,
         );
+        setIsSubmitting(false);
       }
     },
     [fetcher],
   );
+
+  useEffect(() => {
+    if (fetcher.state === "idle") {
+      setIsSubmitting(false);
+    }
+  }, [fetcher.state]);
 
   return (
     <Card>
@@ -75,8 +84,8 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
               variant="primary"
               tone="critical"
               onClick={() => handleSyncToggle("data-sync-disable")}
-              loading={fetcher.state === "submitting"}
-              disabled={disabled || fetcher.state === "submitting"}
+              loading={isSubmitting}
+              disabled={disabled || isSubmitting}
             >
               {t("DataSyncSection.disable")}
             </Button>
@@ -86,8 +95,8 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
               variant="primary"
               tone="success"
               onClick={() => handleSyncToggle("data-sync-enable")}
-              loading={fetcher.state === "submitting"}
-              disabled={disabled || fetcher.state === "submitting"}
+              loading={isSubmitting}
+              disabled={disabled || isSubmitting}
             >
               {t("DataSyncSection.enable")}
             </Button>
