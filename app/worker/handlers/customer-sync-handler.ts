@@ -7,7 +7,7 @@ import { updateContacts } from "~/api/update-contacts";
 import { createClient } from "../services/create-client";
 import { getCustomers } from "../services/get-customers";
 import { getCustomersCount } from "../services/get-customers-count";
-import { getContactByCustomer } from "../services/get-contact-by-customer";
+import { createContactPayload } from "../services/create-contact-payload";
 
 const CUSTOMERS_CHUNK_SIZE = 200; // Shopify max limit 250
 
@@ -110,7 +110,7 @@ export const customerSyncHandler = async (
             customerSync?.updatedAt?.getTime() ?? 0;
 
           if (customerUpdatedDate > customerSyncUpdatedDate) {
-            const contact = getContactByCustomer(customer);
+            const contact = createContactPayload(customer);
             contactsData.push(contact);
 
             await customerSyncRepository.createOrUpdateCustomerSync({

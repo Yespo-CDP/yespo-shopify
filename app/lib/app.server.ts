@@ -5,6 +5,7 @@ import { getAccountInfo } from "~/api/get-account-info.server";
 import {
   shopRepository,
   customerSyncLogRepository,
+  orderSyncLogRepository,
 } from "~/repositories/repositories.server";
 import { connectAccountService } from "~/services/connect-account.server";
 import { disconnectAccountService } from "~/services/disconnect-account.server";
@@ -44,6 +45,9 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const shop = await shopRepository.getShop(session.shop);
   const customersSyncLog =
     await customerSyncLogRepository.getCustomerSyncLogByShop(session.shop);
+  const orderSyncLog = await orderSyncLogRepository.getOrderSyncLogByShop(
+    session.shop,
+  );
   const isMarketsOverflowing = await checkMarketsService({ admin });
   const scriptConnectionStatus = await checkScriptConnectionService({ admin });
 
@@ -63,6 +67,7 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
     scriptConnectionStatus,
     isMarketsOverflowing,
     customersSyncLog,
+    orderSyncLog,
     ENV: {
       DOCK_URL: process.env.DOCK_URL ?? "https://docs.yespo.io",
       PLATFORM_URL: process.env.PLATFORM_URL ?? "https://my.yespo.io",

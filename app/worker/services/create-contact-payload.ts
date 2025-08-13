@@ -8,11 +8,11 @@ import type { CustomerData } from "~/@types/customer";
  * @returns {Promise<Contact>} A promise that resolves when the contact is created successfully.
  *
  * @example
- * const contact = await getContactByCustomer(customer);
+ * const contact = await createContactPayload(customer);
  * console.log(contact);
  */
 
-export const getContactByCustomer = (customer: CustomerData): Contact => {
+export const createContactPayload = (customer: CustomerData): Contact => {
   const channels = [];
   const customerFirstName = customer?.firstName ?? "";
   const customerLastName = customer?.lastName ?? "";

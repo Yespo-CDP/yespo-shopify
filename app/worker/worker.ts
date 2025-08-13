@@ -3,6 +3,7 @@ import { Worker } from "bullmq";
 import { redisConfig } from "~/config/redis";
 import { shopRepository } from "~/repositories/repositories.server";
 import { customerSyncHandler } from "./handlers/customer-sync-handler";
+import { orderSyncHandler } from "./handlers/order-sync-handler";
 
 interface JobData {
   shop?: string;
@@ -30,6 +31,7 @@ new Worker<JobData>(
       }
 
       await customerSyncHandler(shop, accessToken, apiKey, shopData.id);
+      await orderSyncHandler(shop, accessToken, apiKey, shopData.id);
     } catch (error: any) {
       console.error(`Worker error:`, error);
     }

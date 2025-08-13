@@ -62,6 +62,8 @@ export const getOrders = async ({
               }
               shippingAddress {
                 id
+                firstName
+                lastName
                 address1
                 address2
                 city
@@ -130,8 +132,6 @@ export const getOrders = async ({
     const orders = ordersData?.orders?.nodes;
     const endCursor = ordersData?.orders?.pageInfo?.endCursor;
     const hasNextPage = ordersData?.orders?.pageInfo?.hasNextPage;
-
-    console.log(response?.errors?.graphQLErrors);
 
     return {
       orders: orders ?? [],

@@ -52,7 +52,8 @@
       "disabled": "Wyłączony"
     },
     "syncLog": {
-      "title": "Ostatnia synchronizacja",
+      "titleCustomer": "Ostatnia synchronizacja klientów",
+      "titleOrder": "Ostatnia synchronizacja zamówień",
       "syncedCount": "Zsynchronizowano",
       "skippedCount": "Pominięto",
       "failedCount": "Nieudane",

@@ -2,7 +2,7 @@ export interface Order {
   firstName?: string;
   lastName?: string;
   email?: string;
-  pgone?: string;
+  phone?: string;
   externalOrderId: string;
   externalCustomerId: string;
   totalCost: number;
@@ -52,6 +52,8 @@ export interface OrderData {
   };
   shippingAddress?: {
     id: string;
+    firstName?: string;
+    lastName?: string;
     address1?: string;
     address2?: string;
     city?: string;

@@ -68,6 +68,7 @@ export default function Index() {
     isMarketsOverflowing,
     scriptConnectionStatus,
     customersSyncLog,
+    orderSyncLog,
     ENV,
   } = loaderData;
   const navigation = useNavigation();
@@ -186,6 +187,7 @@ export default function Index() {
                   isMarketsOverflowing || isSubmitting || isLoading || !account
                 }
                 customersSyncLog={customersSyncLog as any}
+                orderSyncLog={orderSyncLog as any}
               />
             </Layout.Section>
             <Layout.Section>

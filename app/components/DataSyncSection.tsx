@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { useFetcher } from "@remix-run/react";
 
 import type { CustomerSyncLog } from "~/@types/customerSyncLog";
+import type { OrderSyncLog } from "~/@types/orderSyncLog";
 import ContactSyncStatusBadge from "./ui/ContactSyncStatusBadge";
 
 export interface DataSyncSectionProps {
@@ -18,12 +19,14 @@ export interface DataSyncSectionProps {
   contactSyncEnabled?: boolean;
   orderSyncEnabled?: boolean;
   customersSyncLog?: CustomerSyncLog;
+  orderSyncLog?: OrderSyncLog;
 }
 
 const DataSyncSection: FC<DataSyncSectionProps> = ({
   disabled,
   customersSyncLog,
-  orderSyncEnabled,
+  orderSyncLog,
+  orderSyncEnabled = false,
   contactSyncEnabled = false,
 }) => {
   const { t } = useTranslation();
@@ -45,7 +48,7 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
 
   return (
     <Card>
-      <BlockStack gap="100">
+      <BlockStack gap="200">
         <InlineStack align="space-between" blockAlign="baseline">
           <BlockStack>
             <InlineStack align="start" gap="200">
@@ -91,8 +94,8 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
         </InlineStack>
         {contactSyncEnabled && customersSyncLog && (
           <BlockStack>
-            <Text as="h2" variant="headingMd">
-              {t("DataSyncSection.syncLog.title")}
+            <Text as="h3" variant="headingSm">
+              {t("DataSyncSection.syncLog.titleCustomer")}
             </Text>
             <InlineStack align="space-between">
               <Text as="span">
@@ -112,6 +115,32 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
                 {customersSyncLog.totalCount}
               </Text>
               <ContactSyncStatusBadge status={customersSyncLog?.status} />
+            </InlineStack>
+          </BlockStack>
+        )}
+        {orderSyncEnabled && orderSyncLog && (
+          <BlockStack>
+            <Text as="h3" variant="headingSm">
+              {t("DataSyncSection.syncLog.titleOrder")}
+            </Text>
+            <InlineStack align="space-between">
+              <Text as="span">
+                {t("DataSyncSection.syncLog.syncedCount")}:{" "}
+                {orderSyncLog.syncedCount}
+              </Text>
+              <Text as="span">
+                {t("DataSyncSection.syncLog.skippedCount")}:{" "}
+                {orderSyncLog.skippedCount}
+              </Text>
+              <Text as="span">
+                {t("DataSyncSection.syncLog.failedCount")}:{" "}
+                {orderSyncLog.failedCount}
+              </Text>
+              <Text as="span">
+                {t("DataSyncSection.syncLog.totalCount")}:{" "}
+                {orderSyncLog.totalCount}
+              </Text>
+              <ContactSyncStatusBadge status={orderSyncLog?.status} />
             </InlineStack>
           </BlockStack>
         )}
