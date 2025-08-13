@@ -30,11 +30,7 @@ const ContactSyncStatusBadge: FC<ContactSyncStatusBadgeProps> = ({
         </Badge>
       );
     default:
-      return (
-        <Badge tone="success" progress="incomplete">
-          Not started
-        </Badge>
-      );
+      return <Badge progress="incomplete">Not started</Badge>;
   }
 };
 

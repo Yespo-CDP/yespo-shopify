@@ -52,8 +52,9 @@
       "disabled": "Disabled"
     },
     "syncLog": {
-      "titleCustomer": "Last customers synchronization",
-      "titleOrder": "Last orders synchronization",
+      "title": "Last synchronization",
+      "orders": "Orders",
+      "customers": "Customers",
       "syncedCount": "Synchronized",
       "skippedCount": "Skipped",
       "failedCount": "Failed",
