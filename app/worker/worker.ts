@@ -8,6 +8,7 @@ import { orderSyncHandler } from "./handlers/order-sync-handler";
 interface JobData {
   shop?: string;
   accessToken?: string;
+  type: "order" | "customer";
 }
 
 console.log("===RUN WORKER===");
@@ -16,7 +17,7 @@ new Worker<JobData>(
   "data-sync",
   async (job) => {
     try {
-      const { shop, accessToken } = job?.data;
+      const { shop, accessToken, type } = job?.data;
 
       if (!shop || !accessToken) return;
 
@@ -30,8 +31,14 @@ new Worker<JobData>(
         return;
       }
 
-      await customerSyncHandler(shop, accessToken, apiKey, shopData.id);
-      await orderSyncHandler(shop, accessToken, apiKey, shopData.id);
+      switch (type) {
+        case "customer":
+          await customerSyncHandler(shop, accessToken, apiKey, shopData.id);
+          break;
+        case "order":
+          await orderSyncHandler(shop, accessToken, apiKey, shopData.id);
+          break;
+      }
     } catch (error: any) {
       console.error(`Worker error:`, error);
     }

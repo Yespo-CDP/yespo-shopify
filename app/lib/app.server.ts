@@ -256,6 +256,32 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         isOrderSyncEnabled: true,
       });
 
+      await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
+        status: "NOT_STARTED",
+        skippedCount: 0,
+        syncedCount: 0,
+        failedCount: 0,
+        totalCount: 0,
+        shop: {
+          connect: {
+            id: shop.id,
+          },
+        },
+      });
+
+      await orderSyncLogRepository.createOrUpdateOrderSyncLog({
+        status: "NOT_STARTED",
+        skippedCount: 0,
+        syncedCount: 0,
+        failedCount: 0,
+        totalCount: 0,
+        shop: {
+          connect: {
+            id: shop.id,
+          },
+        },
+      });
+
       await enqueueDataSyncTasks({ session });
     } catch (error: any) {
       errors.dataSync = t("DataSyncSection.errors.notEnabled");
