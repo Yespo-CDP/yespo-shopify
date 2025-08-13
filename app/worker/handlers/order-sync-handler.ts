@@ -1,5 +1,6 @@
 import type { Order } from "~/@types/order";
 import {
+  shopRepository,
   orderSyncRepository,
   orderSyncLogRepository,
 } from "~/repositories/repositories.server";
@@ -79,94 +80,95 @@ export const orderSyncHandler = async (
     do {
       try {
         console.log("\n", "Chunk start:");
-        const response = await getOrders({
-          client,
-          count: ORDERS_CHUNK_SIZE,
-          cursor,
-        });
-        const orders = response.orders;
-        cursor = response.cursor;
+        const shopData = await shopRepository.getShop(shop);
 
-        const orderIds = orders.map((order) => order.id);
-        const orderSyncs =
-          await orderSyncRepository.getOrderSyncByOrderIds(orderIds);
-
-        const ordersData: Order[] = [];
-
-        let chunkSkippedCount = 0;
-        let chunkFailedCount = 0;
-
-        for (const order of orders) {
-          const orderSync = orderSyncs.find((val) => val.orderId === order.id);
-
-          const orderUpdatedDate = new Date(order.updatedAt)?.getTime() ?? 0;
-          const orderSyncUpdatedDate = orderSync?.updatedAt?.getTime() ?? 0;
-
-          if (orderUpdatedDate > orderSyncUpdatedDate) {
-            const orderData = createOrderPayload(order);
-            ordersData.push(orderData);
-
-            await orderSyncRepository.createOrUpdateOrderSync({
-              orderId: order.id,
-              createdAt: order.createdAt,
-              updatedAt: order.updatedAt,
-              shop: {
-                connect: {
-                  id: shopId,
-                },
-              },
-            });
-          } else {
-            chunkSkippedCount++;
-          }
-        }
-
-        if (ordersData?.length > 0) {
-          const contactsUpdateResponse = await createOrders({
-            apiKey,
-            orders: ordersData,
+        if (shopData?.isOrderSyncEnabled) {
+          const response = await getOrders({
+            client,
+            count: ORDERS_CHUNK_SIZE,
+            cursor,
           });
+          const orders = response.orders;
+          cursor = response.cursor;
 
-          if (contactsUpdateResponse?.failedOrders) {
-            if (Array.isArray(contactsUpdateResponse?.failedOrders)) {
-              chunkFailedCount = contactsUpdateResponse?.failedOrders?.length;
+          const orderIds = orders.map((order) => order.id);
+          const orderSyncs =
+            await orderSyncRepository.getOrderSyncByOrderIds(orderIds);
+
+          const ordersData: Order[] = [];
+
+          let chunkSkippedCount = 0;
+          let chunkFailedCount = 0;
+
+          for (const order of orders) {
+            const orderSync = orderSyncs.find(
+              (val) => val.orderId === order.id,
+            );
+
+            const orderUpdatedDate = new Date(order.updatedAt)?.getTime() ?? 0;
+            const orderSyncUpdatedDate = orderSync?.updatedAt?.getTime() ?? 0;
+
+            if (orderUpdatedDate > orderSyncUpdatedDate) {
+              const orderData = createOrderPayload(order);
+              ordersData.push(orderData);
+
+              await orderSyncRepository.createOrUpdateOrderSync({
+                orderId: order.id,
+                createdAt: order.createdAt,
+                updatedAt: order.updatedAt,
+                shop: {
+                  connect: {
+                    id: shopId,
+                  },
+                },
+              });
             } else {
-              chunkFailedCount = 1;
+              chunkSkippedCount++;
             }
           }
+
+          if (ordersData?.length > 0) {
+            const contactsUpdateResponse = await createOrders({
+              apiKey,
+              orders: ordersData,
+            });
+
+            if (contactsUpdateResponse?.failedOrders) {
+              if (Array.isArray(contactsUpdateResponse?.failedOrders)) {
+                chunkFailedCount = contactsUpdateResponse?.failedOrders?.length;
+              } else {
+                chunkFailedCount = 1;
+              }
+            }
+          }
+
+          totalFailedCount += chunkFailedCount;
+          totalSkippedCount += chunkSkippedCount;
+          totalSyncedCount += ordersData?.length - chunkFailedCount;
+
+          console.log("Total orders in chunk:", orders?.length);
+          console.log("Total skipped orders in chunk:", chunkSkippedCount);
+          console.log("Total sent orders to sync:", ordersData?.length);
+          console.log("Total failed orders sync:", chunkFailedCount);
+
+          await orderSyncLogRepository.createOrUpdateOrderSyncLog({
+            skippedCount: totalSkippedCount,
+            failedCount: totalFailedCount,
+            syncedCount: totalSyncedCount,
+            totalCount: ordersCount,
+            shop: {
+              connect: {
+                id: shopId,
+              },
+            },
+          });
+        } else {
+          console.log(`⚠️ Synchronization orders cancelled for ${shop}`);
+          cursor = null;
         }
-
-        totalFailedCount += chunkFailedCount;
-        totalSkippedCount += chunkSkippedCount;
-        totalSyncedCount += ordersData?.length - chunkFailedCount;
-
-        console.log("Total orders in chunk:", orders?.length);
-        console.log("Total skipped orders in chunk:", chunkSkippedCount);
-        console.log("Total sent orders to sync:", ordersData?.length);
-        console.log("Total failed orders sync:", chunkFailedCount);
-
-        await orderSyncLogRepository.createOrUpdateOrderSyncLog({
-          skippedCount: totalSkippedCount,
-          failedCount: totalFailedCount,
-          syncedCount: totalSyncedCount,
-          totalCount: ordersCount,
-          shop: {
-            connect: {
-              id: shopId,
-            },
-          },
-        });
-      } catch {
-        console.error("Error orders sync in chunk");
-        await orderSyncLogRepository.createOrUpdateOrderSyncLog({
-          status: "ERROR",
-          shop: {
-            connect: {
-              id: shopId,
-            },
-          },
-        });
-        cursor = null;
+      } catch (error: any) {
+        console.error("Error orders sync in chunk", error);
+        throw Error(error);
       }
     } while (cursor);
 
