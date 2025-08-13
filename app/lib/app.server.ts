@@ -16,7 +16,7 @@ import checkScriptConnectionService from "~/services/check-script-connection.ser
 import checkThemeExtensionService from "~/services/check-theme-extension.server";
 import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
-import { toggleWebTrackingServer } from "~/services/toggleWebTracking.server";
+import { toggleWebTrackingServer } from "~/services/toggle-web-tracking.server";
 import { createGeneralDomain } from "~/api/create-general-domain.server";
 import { enqueueDataSyncTasks } from "~/services/queue";
 
