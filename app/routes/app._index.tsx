@@ -119,7 +119,7 @@ export default function Index() {
       const updated = await res.json();
       setCustomersSyncLogData(updated?.customersSyncLog);
       setOrderSyncLogData(updated?.orderSyncLog);
-    }, 2000);
+    }, 3000);
 
     return () => clearInterval(intervalId);
   }, [customersSyncLogData, orderSyncLogData]);
