@@ -10,7 +10,7 @@ export interface Order {
   shipping?: number;
   discount?: number;
   currency: string;
-  date: Date;
+  date: string;
   status: string;
   deliveryAddress?: string;
   items: {
@@ -131,7 +131,7 @@ export interface OrderCreatePayload {
   confirmation_number: number | null;
   confirmed: boolean;
   contact_email: string;
-  created_at: Date;
+  created_at: string;
   currency: string;
   current_shipping_price_set?: {
     shop_money: {

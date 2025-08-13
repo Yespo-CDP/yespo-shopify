@@ -1,4 +1,5 @@
 import type { Order, OrderData } from "~/@types/order";
+import { convertDateToUTC } from "~/utils/convert-date-to-utc";
 
 /**
  * Convert Shopify Order data to Yespo order data
@@ -48,7 +49,7 @@ export const createOrderPayload = (order: OrderData): Order => {
     ),
     taxes: parseFloat(order?.totalTaxSet?.shopMoney?.amount ?? "0"),
     currency: order.currencyCode,
-    date: new Date(order.createdAt),
+    date: convertDateToUTC(order.createdAt),
     status: "INITIALIZED",
     deliveryAddress: formatAddress(order?.shippingAddress),
     items: order?.lineItems?.nodes?.map((lineItem) => ({

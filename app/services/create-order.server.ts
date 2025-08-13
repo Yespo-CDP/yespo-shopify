@@ -1,4 +1,5 @@
 import { createOrders } from "~/api/create-orders";
+import { convertDateToUTC } from "~/utils/convert-date-to-utc";
 import { orderSyncRepository } from "~/repositories/repositories.server";
 import type { OrderCreatePayload } from "~/@types/order";
 
@@ -47,7 +48,7 @@ export const createOrderService = async (
       ),
       taxes: parseFloat(payload?.current_total_tax ?? "0"),
       currency: payload.currency,
-      date: payload.created_at,
+      date: convertDateToUTC(payload.created_at),
       status: "INITIALIZED",
       deliveryAddress: formatAddress(payload?.shipping_address ?? {}),
       items: payload?.line_items?.map((lineItem) => ({
