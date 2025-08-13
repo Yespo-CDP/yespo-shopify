@@ -13,7 +13,7 @@ import { useFetcher } from "@remix-run/react";
 
 import type { CustomerSyncLog } from "~/@types/customerSyncLog";
 import type { OrderSyncLog } from "~/@types/orderSyncLog";
-import ContactSyncStatusBadge from "./ui/ContactSyncStatusBadge";
+import DataSyncStatusBadge from "./ui/DataSyncStatusBadge";
 
 export interface DataSyncSectionProps {
   disabled?: boolean;
@@ -147,7 +147,7 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
                 </Grid.Cell>
                 <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 1, lg: 2, xl: 2 }}>
                   <InlineStack align="end">
-                    <ContactSyncStatusBadge status={customersSyncLog?.status} />
+                    <DataSyncStatusBadge status={customersSyncLog?.status} />
                   </InlineStack>
                 </Grid.Cell>
               </Grid>
@@ -201,7 +201,7 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
                 </Grid.Cell>
                 <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 1, lg: 2, xl: 2 }}>
                   <InlineStack align="end">
-                    <ContactSyncStatusBadge status={orderSyncLog?.status} />
+                    <DataSyncStatusBadge status={orderSyncLog?.status} />
                   </InlineStack>
                 </Grid.Cell>
               </Grid>

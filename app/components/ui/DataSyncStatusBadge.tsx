@@ -1,15 +1,18 @@
 import type { FC } from "react";
 import { Badge } from "@shopify/polaris";
 
-import type { CustomerSyncLog } from "~/@types/customerSyncLog";
+import type { SyncLogStatus } from "~/@types/customerSyncLog";
 
-interface ContactSyncStatusBadgeProps {
-  status: CustomerSyncLog["status"];
+/**
+ * Props for the DataSyncStatusBadge component.
+ *
+ * @property {SyncLogStatus} [status] - Data sync status.
+ */
+interface DataSyncStatusBadgeProps {
+  status: SyncLogStatus;
 }
 
-const ContactSyncStatusBadge: FC<ContactSyncStatusBadgeProps> = ({
-  status,
-}) => {
+const DataSyncStatusBadge: FC<DataSyncStatusBadgeProps> = ({ status }) => {
   switch (status) {
     case "ERROR":
       return (
@@ -34,4 +37,4 @@ const ContactSyncStatusBadge: FC<ContactSyncStatusBadgeProps> = ({
   }
 };
 
-export default ContactSyncStatusBadge;
+export default DataSyncStatusBadge;
