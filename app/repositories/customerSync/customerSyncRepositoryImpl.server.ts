@@ -88,7 +88,7 @@ export default class CustomerSyncRepositoryImpl
    *
    * If a record with the given `customerId` exists, it is updated.
    *
-   * @param {String} customerId: Shopify customer ID to the update customer sync record.
+   * @param {string} customerId: Shopify customer ID to the update customer sync record.
    * @param {CustomerSyncUpdate} data - The customer sync data to update.
    * @returns {Promise<CustomerSync>} A promise resolving to the updated customer sync record.
    */
