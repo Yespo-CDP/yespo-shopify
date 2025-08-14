@@ -60,6 +60,12 @@
       "failedCount": "Failed",
       "totalCount": "Total"
     },
+    "tooltip": {
+      "synchronized": "Number of successfully synchronized records.",
+      "skipped": "Records that didn’t require synchronization.",
+      "failed": "Records that failed to synchronize.",
+      "total": "Total records to be synchronized."
+    },
     "errors": {
       "notEnabled": "Data sync not enabled",
       "notDisabled": "Data sync not disabled"

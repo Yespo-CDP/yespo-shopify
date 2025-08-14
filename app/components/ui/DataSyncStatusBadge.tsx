@@ -12,6 +12,18 @@ interface DataSyncStatusBadgeProps {
   status: SyncLogStatus;
 }
 
+/**
+ * DataSyncStatusBadge component displays the sync status badge.
+ *
+ * @param {DataSyncStatusBadgeProps} props - Component props.
+ *
+ * @returns {JSX.Element} The rendered component.
+ *
+ * @example
+ * <DataSyncStatusBadge
+ *   status="IN_PROGRESS"
+ * />
+ */
 const DataSyncStatusBadge: FC<DataSyncStatusBadgeProps> = ({ status }) => {
   switch (status) {
     case "ERROR":

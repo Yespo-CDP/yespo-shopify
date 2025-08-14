@@ -60,6 +60,12 @@
       "failedCount": "Falhou",
       "totalCount": "Total"
     },
+    "tooltip": {
+      "synchronized": "Quantidade de registros sincronizados com sucesso.",
+      "skipped": "Registros que não precisaram de sincronização.",
+      "failed": "Registros com falha na sincronização.",
+      "total": "Total de registros a serem sincronizados."
+    },
     "errors": {
       "notEnabled": "A sincronização de dados não ativado",
       "notDisabled": "A sincronização de dados não desativado"

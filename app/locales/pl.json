@@ -60,6 +60,12 @@
       "failedCount": "Nieudane",
       "totalCount": "Razem"
     },
+    "tooltip": {
+      "synchronized": "Liczba pomyślnie zsynchronizowanych rekordów.",
+      "skipped": "Rekordy, które nie wymagały synchronizacji.",
+      "failed": "Rekordy, których synchronizacja się nie powiodła.",
+      "total": "Łączna liczba rekordów do zsynchronizowania."
+    },
     "errors": {
       "notEnabled": "Synchronizacja danych nie jest włączone",
       "notDisabled": "Synchronizacja danych nie jest wyłączone"

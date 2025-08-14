@@ -14,6 +14,7 @@ import { useFetcher } from "@remix-run/react";
 import type { CustomerSyncLog } from "~/@types/customerSyncLog";
 import type { OrderSyncLog } from "~/@types/orderSyncLog";
 import DataSyncStatusBadge from "./ui/DataSyncStatusBadge";
+import DataSyncTooltip from "./ui/DataSyncTooltip";
 
 export interface DataSyncSectionProps {
   disabled?: boolean;
@@ -104,9 +105,12 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
         </InlineStack>
         {(contactSyncEnabled || orderSyncEnabled) && (
           <BlockStack gap="200">
-            <Text as="h3" variant="headingSm">
-              {t("DataSyncSection.syncLog.title")}
-            </Text>
+            <InlineStack>
+              <Text as="h3" variant="headingSm">
+                {t("DataSyncSection.syncLog.title")}
+              </Text>
+              <DataSyncTooltip />
+            </InlineStack>
             {contactSyncEnabled && customersSyncLog && (
               <Grid
                 gap={{
