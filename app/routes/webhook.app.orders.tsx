@@ -3,6 +3,7 @@ import { authenticate } from "~/shopify.server";
 import { shopRepository } from "~/repositories/repositories.server";
 import { sendPurchasedItemsService } from "~/services/send-purchased-items.server";
 import { createOrderService } from "~/services/create-order.server";
+import { updateOrderService } from "~/services/update-order.server";
 
 /**
  * Handles incoming Shopify webhooks, authenticates the request, and processes events based on topic.
@@ -10,8 +11,12 @@ import { createOrderService } from "~/services/create-order.server";
  * Supports the "ORDERS_CREATE" webhook topic by forwarding the payload to the purchased items service.
  * Silently ignores requests with no valid session or shops without an API key.
  * Sends PurchasedItems event to Yespo web tracker.
- * Create order in Yespo if option `isOrderSyncEnabled` is enabled.
+ * Create or update order in Yespo if option `isOrderSyncEnabled` is enabled.
  * Returns HTTP 400 for unhandled webhook topics.
+ * 
+ * Supported webhook topics:
+ * - "ORDERS_CREATE": Calls `createOrderService` with payload and shop API key.
+ * - "ORDERS_UPDATED": Calls `updateOrderService` with payload and shop API key.
  *
  * @async
  * @function action
@@ -45,6 +50,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       if (shop?.isOrderSyncEnabled) {
         await createOrderService(payload as any, shop.apiKey, shop.id);
+      }
+      break;
+
+    case "ORDERS_UPDATED":
+      if (shop?.isOrderSyncEnabled) {
+        await updateOrderService(payload as any, shop.apiKey, shop.id);
       }
       break;
 

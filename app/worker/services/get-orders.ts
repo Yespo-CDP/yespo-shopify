@@ -36,6 +36,7 @@ export const getOrders = async ({
               email
               phone
               currencyCode
+              displayFulfillmentStatus
               totalPriceSet {
                 shopMoney {
                   amount

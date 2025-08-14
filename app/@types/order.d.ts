@@ -11,7 +11,12 @@ export interface Order {
   discount?: number;
   currency: string;
   date: string;
-  status: string;
+  status:
+    | "INITIALIZED"
+    | "IN_PROGRESS"
+    | "DELIVERED"
+    | "CANCELLED"
+    | "ABANDONED_SHOPPING_CART";
   deliveryAddress?: string;
   items: {
     externalItemId: string;
@@ -21,11 +26,24 @@ export interface Order {
   }[];
 }
 
+export type OrderDisplayFulfillmentStatus =
+  | "FULFILLED"
+  | "IN_PROGRESS"
+  | "ON_HOLD"
+  | "OPEN"
+  | "PARTIALLY_FULFILLED"
+  | "PENDING_FULFILLMENT"
+  | "REQUEST_DECLINED"
+  | "RESTOCKED"
+  | "SCHEDULED"
+  | "UNFULFILLED";
+
 export interface OrderData {
   id: string;
   email?: string | null;
   phone?: string | null;
   currencyCode: string;
+  displayFulfillmentStatus: OrderDisplayFulfillmentStatus;
   totalPriceSet?: {
     shopMoney: {
       amount: string;
@@ -106,7 +124,7 @@ export interface OrderData {
 
 export interface OrdersResponse {
   orders: {
-    nodes: CustomerData[];
+    nodes: OrderData[];
     pageInfo: {
       startCursor?: string;
       endCursor?: string;
@@ -335,6 +353,7 @@ export interface OrderCreatePayload {
     };
   };
   discount_applications: any[];
+  fulfillment_status: "fulfilled" | "partial" | "restocked" | null;
   fulfillments: any[];
   line_items: {
     id: number;

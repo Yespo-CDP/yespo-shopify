@@ -4,7 +4,7 @@ import { orderSyncRepository } from "~/repositories/repositories.server";
 import type { Order, OrderCreatePayload } from "~/@types/order";
 
 /**
- * Creates a order using the provided payload and API key.
+ * Updates a order using the provided payload and API key.
  *
  * Any errors during the process are caught and logged.
  *
@@ -13,7 +13,7 @@ import type { Order, OrderCreatePayload } from "~/@types/order";
  * @param {string} shopId - The shop id for connect order sync log to shop.
  * @returns {Promise<void>} A promise that resolves when the order creation completes.
  */
-export const createOrderService = async (
+export const updateOrderService = async (
   payload: OrderCreatePayload,
   apiKey: string,
   shopId: number,
@@ -49,7 +49,7 @@ export const createOrderService = async (
       }
     };
 
-    const order = {
+    const order: Order = {
       firstName: payload?.customer?.first_name ?? "",
       lastName: payload?.customer?.last_name ?? "",
       email: payload?.email ?? "",
@@ -90,6 +90,6 @@ export const createOrderService = async (
       },
     });
   } catch (error: any) {
-    console.error("Error occurred in Create Order Service", error);
+    console.error("Error occurred in Update Order Service", error);
   }
 };

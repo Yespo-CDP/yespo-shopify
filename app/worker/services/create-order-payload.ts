@@ -1,4 +1,8 @@
-import type { Order, OrderData } from "~/@types/order";
+import type {
+  Order,
+  OrderData,
+  OrderDisplayFulfillmentStatus,
+} from "~/@types/order";
 import { convertDateToUTC } from "~/utils/convert-date-to-utc";
 
 /**
@@ -35,6 +39,22 @@ export const createOrderPayload = (order: OrderData): Order => {
       .filter(Boolean)
       .join(", ");
 
+  const statusMap = (
+    status: OrderDisplayFulfillmentStatus,
+  ): Order["status"] => {
+    switch (status) {
+      case "REQUEST_DECLINED":
+        return "CANCELLED";
+      case "IN_PROGRESS":
+      case "PARTIALLY_FULFILLED":
+        return "IN_PROGRESS";
+      case "FULFILLED":
+        return "DELIVERED";
+      default:
+        return "INITIALIZED";
+    }
+  };
+
   const orderPayload: Order = {
     externalCustomerId,
     externalOrderId,
@@ -50,7 +70,7 @@ export const createOrderPayload = (order: OrderData): Order => {
     taxes: parseFloat(order?.totalTaxSet?.shopMoney?.amount ?? "0"),
     currency: order.currencyCode,
     date: convertDateToUTC(order.createdAt),
-    status: "INITIALIZED",
+    status: statusMap(order.displayFulfillmentStatus),
     deliveryAddress: formatAddress(order?.shippingAddress),
     items: order?.lineItems?.nodes?.map((lineItem) => ({
       externalItemId: lineItem.id?.split("/").pop() ?? "",

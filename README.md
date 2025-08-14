@@ -67,8 +67,10 @@ Purpose: Automatically sync new orders from Shopify to Yespo.
 Implementation:
 - App requests access to the following scopes:
   - read_orders
+  - read_all_orders
 - Shopify webhooks used:
   - orders/create → creates a new order in Yespo
+  - orders/updated → updates existing order data
 
 Enable orders sync (optional):
 - Open yespo app
@@ -185,6 +187,7 @@ The app requires the following access scopes:
 - `read_customers`
 - `read_markets`
 - `read_orders`
+- `read_all_orders`
 - `read_themes`
 - `write_app_proxy`
 
@@ -202,6 +205,7 @@ Shopify webhooks (API version: 2025-01) used by the app:
 | **app/scopes_update**      | Triggered when the app's permission scopes are updated by the merchant.       | `/webhooks/app/scopes_update` |
 | **app/uninstalled**        | Triggered when a merchant uninstalls the app.                                 | `/webhooks/app/uninstalled`   |
 | **orders/create**          | Triggered when an order is created.                                           | `/webhook/app/orders`         |
+| **orders/updated**         | Triggered when an existing order’s data is updated.                           | `/webhook/app/orders`         |
 | **carts/update**           | Triggered when a cart is updated in the online store.                         | `/webhooks/app/carts`         |
 
 
