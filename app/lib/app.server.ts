@@ -33,6 +33,8 @@ import { enqueueDataSyncTasks } from "~/services/queue";
  *   account: Account | null,
  *   scriptConnectionStatus: any,
  *   isMarketsOverflowing: boolean,
+ *   customersSyncLog: CustomerSyncLog[],
+ *   orderSyncLog: OrderSyncLog[],
  *   ENV: {
  *     DOCK_URL: string,
  *     PLATFORM_URL: string
@@ -254,6 +256,32 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await shopRepository.updateShop(shop.domain, {
         isContactSyncEnabled: true,
         isOrderSyncEnabled: true,
+      });
+
+      await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
+        status: "NOT_STARTED",
+        skippedCount: 0,
+        syncedCount: 0,
+        failedCount: 0,
+        totalCount: 0,
+        shop: {
+          connect: {
+            id: shop.id,
+          },
+        },
+      });
+
+      await orderSyncLogRepository.createOrUpdateOrderSyncLog({
+        status: "NOT_STARTED",
+        skippedCount: 0,
+        syncedCount: 0,
+        failedCount: 0,
+        totalCount: 0,
+        shop: {
+          connect: {
+            id: shop.id,
+          },
+        },
       });
 
       await enqueueDataSyncTasks({ session, shop });

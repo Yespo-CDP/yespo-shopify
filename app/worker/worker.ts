@@ -17,7 +17,7 @@ new Worker<JobData>(
   "data-sync",
   async (job) => {
     try {
-      const { shop, accessToken, type } = job?.data;
+      const { shop, accessToken } = job?.data;
 
       if (!shop || !accessToken) return;
 
@@ -30,15 +30,8 @@ new Worker<JobData>(
         );
         return;
       }
-
-      switch (type) {
-        case "customer":
-          await customerSyncHandler(shop, accessToken, apiKey, shopData.id);
-          break;
-        case "order":
-          await orderSyncHandler(shop, accessToken, apiKey, shopData.id);
-          break;
-      }
+      await customerSyncHandler(shop, accessToken, apiKey, shopData.id);
+      await orderSyncHandler(shop, accessToken, apiKey, shopData.id);
     } catch (error: any) {
       console.error(`Worker error:`, error);
     }

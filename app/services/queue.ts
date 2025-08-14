@@ -26,7 +26,10 @@ export async function enqueueDataSyncTasks({
     session.shop,
   );
 
-  if (customerSyncLog?.status !== "IN_PROGRESS") {
+  if (
+    customerSyncLog?.status !== "IN_PROGRESS" &&
+    orderSyncLog?.status !== "IN_PROGRESS"
+  ) {
     await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
       status: "IN_PROGRESS",
       skippedCount: 0,
@@ -40,17 +43,6 @@ export async function enqueueDataSyncTasks({
       },
     });
 
-    await DataSyncQueue.add(
-      "data-sync",
-      { ...session, type: "customer" },
-      {
-        removeOnComplete: 1000,
-        removeOnFail: 5000,
-      },
-    );
-  }
-
-  if (orderSyncLog?.status !== "IN_PROGRESS") {
     await orderSyncLogRepository.createOrUpdateOrderSyncLog({
       status: "IN_PROGRESS",
       skippedCount: 0,
@@ -66,7 +58,7 @@ export async function enqueueDataSyncTasks({
 
     await DataSyncQueue.add(
       "data-sync",
-      { ...session, type: "order" },
+      { ...session },
       {
         removeOnComplete: 1000,
         removeOnFail: 5000,
