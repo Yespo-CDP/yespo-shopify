@@ -52,13 +52,33 @@ Implementation:
 Enable contacts sync (optional):
 - Open yespo app
 - Connect your yespo account
-- Enable sync in `Contact Sync` section
+- Enable sync in `Data Sync` section
 
 Deduplication in Yespo: Contacts are matched using externalCustomerId, email, and phone. If a contact exists, it is updated instead of duplicated.
+Historical customers data: Enabling sync will also start syncing all existing customers unless they are marked as updated in our database.
 
 Yespo API methods:
-- [POST /contact](https://docs.esputnik.com/reference/addcontact-1) – create or update contact
+- [POST /contact](https://docs.esputnik.com/reference/addcontact) – create or update contact
 - [DELETE /contact](https://docs.esputnik.com/reference/deletecontact-1) (erase=true) – remove contact
+
+### Order Sync (Shopify → Yespo)
+Purpose: Automatically sync new orders from Shopify to Yespo.
+
+Implementation:
+- App requests access to the following scopes:
+  - read_orders
+- Shopify webhooks used:
+  - orders/create → creates a new order in Yespo
+
+Enable orders sync (optional):
+- Open yespo app
+- Connect your yespo account
+- Enable sync in `Data Sync` section
+
+Historical orders data: Enabling sync will also start syncing all existing orders unless they are marked as updated in our database.
+
+Yespo API methods:
+- [POST /orders](https://docs.esputnik.com/reference/ordersbulkinsert-1) – create new order
 
 ### Web Tracker
 Purpose: Allow you to track events within your site.
@@ -150,6 +170,7 @@ Create a `.env` file with the following:
 | **QSTASH_CURRENT_SIGNING_KEY** | **Required.** QSTASH current signing key                                                                | `sig_5**********************S9aU`                  |
 | **QSTASH_NEXT_SIGNING_KEY**    | **Required.** QSTASH next signing key                                                                   | `sig_81*********************WZSrj`                 |
 | **HOST_URL**                   | **Required.** App host url metafiedld name for correct work of extension                                | **Must be** `yespo-app-host`                       |
+| **REDIS_URL**                  | **Required.** Redis url for connecting and configuring the data synchronization worker                  | `redis://localhost:6379`                           |
 
 
 #### Required Shopify Scopes
