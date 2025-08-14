@@ -47,6 +47,7 @@ export const createOrderPayload = (order: OrderData): Order => {
         return "CANCELLED";
       case "IN_PROGRESS":
       case "PARTIALLY_FULFILLED":
+      case "PENDING_FULFILLMENT":
         return "IN_PROGRESS";
       case "FULFILLED":
         return "DELIVERED";
