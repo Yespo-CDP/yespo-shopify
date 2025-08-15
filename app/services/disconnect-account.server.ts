@@ -36,6 +36,7 @@ export const disconnectAccountService = async ({
     apiKey: "",
     isWebTrackingEnabled: false,
     isContactSyncEnabled: false,
+    isOrderSyncEnabled: false,
     siteId: "",
   });
   const shop = await shopRepository.getShop(session.shop);
