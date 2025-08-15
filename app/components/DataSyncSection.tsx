@@ -114,35 +114,29 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
             {contactSyncEnabled && customersSyncLog && (
               <Grid
                 gap={{
-                  xs: "10px",
-                  sm: "10px",
-                  md: "10px",
+                  xs: "5px",
+                  sm: "5px",
+                  md: "5px",
                   lg: "10px",
                   xl: "10px",
                 }}
+                columns={{ xs: 4, sm: 4, md: 12, lg: 12, xl: 12 }}
               >
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 1, lg: 2, xl: 2 }}>
+                <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 3, lg: 3, xl: 3 }}>
                   <Text as="span" variant="headingSm">
                     {t("DataSyncSection.syncLog.customers")}:
                   </Text>
                 </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 1, lg: 2, xl: 2 }}>
+                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 3, lg: 3, xl: 3 }}>
                   <InlineStack align="end">
                     <Text as="span">
                       {t("DataSyncSection.syncLog.syncedCount")}:{" "}
-                      {customersSyncLog.syncedCount}
+                      {customersSyncLog.syncedCount +
+                        customersSyncLog.skippedCount}
                     </Text>
                   </InlineStack>
                 </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 1, lg: 2, xl: 2 }}>
-                  <InlineStack align="end">
-                    <Text as="span">
-                      {t("DataSyncSection.syncLog.skippedCount")}:{" "}
-                      {customersSyncLog.skippedCount}
-                    </Text>
-                  </InlineStack>
-                </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 1, lg: 2, xl: 2 }}>
+                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2 }}>
                   <InlineStack align="end">
                     <Text as="span">
                       {t("DataSyncSection.syncLog.failedCount")}:{" "}
@@ -150,7 +144,7 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
                     </Text>
                   </InlineStack>
                 </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 1, lg: 2, xl: 2 }}>
+                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2 }}>
                   <InlineStack align="end">
                     <Text as="span">
                       {t("DataSyncSection.syncLog.totalCount")}:{" "}
@@ -158,7 +152,7 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
                     </Text>
                   </InlineStack>
                 </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 1, lg: 2, xl: 2 }}>
+                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2 }}>
                   <InlineStack align="end">
                     <DataSyncStatusBadge status={customersSyncLog?.status} />
                   </InlineStack>
@@ -174,29 +168,22 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
                   lg: "10px",
                   xl: "10px",
                 }}
+                columns={{ xs: 4, sm: 4, md: 12, lg: 12, xl: 12 }}
               >
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 1, lg: 2, xl: 2 }}>
+                <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 3, lg: 3, xl: 3 }}>
                   <Text as="span" variant="headingSm">
                     {t("DataSyncSection.syncLog.orders")}:
                   </Text>
                 </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 1, lg: 2, xl: 2 }}>
+                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 3, lg: 3, xl: 3 }}>
                   <InlineStack align="end">
                     <Text as="span">
                       {t("DataSyncSection.syncLog.syncedCount")}:{" "}
-                      {orderSyncLog.syncedCount}
+                      {orderSyncLog.syncedCount + orderSyncLog.skippedCount}
                     </Text>
                   </InlineStack>
                 </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 1, lg: 2, xl: 2 }}>
-                  <InlineStack align="end">
-                    <Text as="span">
-                      {t("DataSyncSection.syncLog.skippedCount")}:{" "}
-                      {orderSyncLog.skippedCount}
-                    </Text>
-                  </InlineStack>
-                </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 1, lg: 2, xl: 2 }}>
+                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2 }}>
                   <InlineStack align="end">
                     <Text as="span">
                       {t("DataSyncSection.syncLog.failedCount")}:{" "}
@@ -204,7 +191,7 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
                     </Text>
                   </InlineStack>
                 </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 1, lg: 2, xl: 2 }}>
+                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2 }}>
                   <InlineStack align="end">
                     <Text as="span">
                       {t("DataSyncSection.syncLog.totalCount")}:{" "}
@@ -212,7 +199,7 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
                     </Text>
                   </InlineStack>
                 </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 1, lg: 2, xl: 2 }}>
+                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2 }}>
                   <InlineStack align="end">
                     <DataSyncStatusBadge status={orderSyncLog?.status} />
                   </InlineStack>

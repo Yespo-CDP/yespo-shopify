@@ -26,10 +26,6 @@ const DataSyncTooltip: FC = () => {
             {t("DataSyncSection.tooltip.synchronized")}
           </Text>
           <Text as="span" variant="bodyXs">
-            <b>{t("DataSyncSection.syncLog.skippedCount")}:</b>{" "}
-            {t("DataSyncSection.tooltip.skipped")}
-          </Text>
-          <Text as="span" variant="bodyXs">
             <b>{t("DataSyncSection.syncLog.failedCount")}:</b>{" "}
             {t("DataSyncSection.tooltip.failed")}
           </Text>
