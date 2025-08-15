@@ -42,6 +42,10 @@ export const createOrderPayload = (order: OrderData): Order => {
   const statusMap = (
     status: OrderDisplayFulfillmentStatus,
   ): Order["status"] => {
+    if (order?.cancelledAt) {
+      return "CANCELLED";
+    }
+
     switch (status) {
       case "REQUEST_DECLINED":
         return "CANCELLED";

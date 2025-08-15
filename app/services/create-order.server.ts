@@ -37,6 +37,10 @@ export const createOrderService = async (
     const statusMap = (
       status: OrderCreatePayload["fulfillment_status"],
     ): Order["status"] => {
+      if (payload?.cancelled_at) {
+        return "CANCELLED";
+      }
+
       switch (status) {
         case "restocked":
           return "CANCELLED";

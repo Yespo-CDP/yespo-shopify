@@ -120,6 +120,7 @@ export interface OrderData {
   };
   createdAt: string;
   updatedAt: string;
+  cancelledAt?: string | null;
 }
 
 export interface OrdersResponse {

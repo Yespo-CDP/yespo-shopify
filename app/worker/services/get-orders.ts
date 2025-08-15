@@ -113,6 +113,7 @@ export const getOrders = async ({
               }
               createdAt
               updatedAt
+              cancelledAt
             }
             pageInfo {
               endCursor

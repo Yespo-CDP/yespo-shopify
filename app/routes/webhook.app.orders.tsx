@@ -13,7 +13,7 @@ import { updateOrderService } from "~/services/update-order.server";
  * Sends PurchasedItems event to Yespo web tracker.
  * Create or update order in Yespo if option `isOrderSyncEnabled` is enabled.
  * Returns HTTP 400 for unhandled webhook topics.
- * 
+ *
  * Supported webhook topics:
  * - "ORDERS_CREATE": Calls `createOrderService` with payload and shop API key.
  * - "ORDERS_UPDATED": Calls `updateOrderService` with payload and shop API key.
