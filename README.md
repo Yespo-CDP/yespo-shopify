@@ -356,7 +356,7 @@ The app requires the following access scopes:
 - `write_app_proxy`
 
 #### Webhooks
-Shopify webhooks (API version: 2025-01) used by the app:
+Shopify webhooks (API version: 2025-07) used by the app:
 
 | Event Topic                | Description                                                                   | Endpoint                      |
 |----------------------------|-------------------------------------------------------------------------------|-------------------------------|

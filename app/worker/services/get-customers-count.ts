@@ -20,12 +20,17 @@ export const getCustomersCount = async ({
 }): Promise<number> => {
   try {
     const response = await client.request(
-      `query getCustomersCount {
-          customersCount {
+      `query getCustomersCount($limit: Int) {
+          customersCount(limit: $limit) {
             count
           }
         }
       `,
+      {
+        variables: {
+          limit: null,
+        },
+      },
     );
 
     const customersCountData = response?.data as {
