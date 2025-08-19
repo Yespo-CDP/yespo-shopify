@@ -29,7 +29,7 @@ export const createClient = ({
   accessToken: string;
 }): GraphQLClient => {
   return createGraphQLClient({
-    url: `https://${shop}/admin/api/${ApiVersion.April25}/graphql.json`,
+    url: `https://${shop}/admin/api/${ApiVersion.July25}/graphql.json`,
     headers: {
       "Content-Type": "application/json",
       "X-Shopify-Access-Token": accessToken,
