@@ -38,49 +38,213 @@ Service Worker Installation:
 - The worker file is exposed at a predefined path (/apps/yespo/sw.js) to comply with browser requirements
 
 ### Contact Sync (Shopify → Yespo)
-Purpose: Automatically sync new, updated, and deleted customers from Shopify to Yespo as contacts.
 
-Implementation:
+**Purpose:** Automatically sync new, updated, and deleted customers from Shopify to Yespo as contacts.
+The process covers both **historical synchronization** and **real-time synchronization** through Shopify webhooks.
+
+---
+
+#### Implementation
+
 - App requests access to the following scopes:
-  - read_customers
-  - write_customers
+
+  - `read_customers`
+  - `write_customers`
 - Shopify webhooks used:
-  - customers/create → creates a new contact in Yespo
-  - customers/update → updates existing contact data
-  - customers/redact → removes contact in Yespo
+  - `customers/create` → creates a new contact in Yespo
+  - `customers/update` → updates existing contact data
+  - `customers/redact` → removes contact in Yespo
 
-Enable contacts sync (optional):
-- Open yespo app
-- Connect your yespo account
-- Enable sync in `Data Sync` section
+---
 
-Deduplication in Yespo: Contacts are matched using externalCustomerId, email, and phone. If a contact exists, it is updated instead of duplicated.
-Historical customers data: Enabling sync will also start syncing all existing customers unless they are marked as updated in our database.
+#### Enabling contact sync
 
-Yespo API methods:
+- Open the Yespo app
+- Connect your Yespo account
+- Enable sync in the **Data Sync** section
+
+When sync is enabled:
+
+- A new synchronization job is added to the **Redis queue**
+- A dedicated **worker** processes the job and starts **historical synchronization**
+
+---
+
+#### Historical customers sync
+
+1. **Counting customers**
+
+   * First, a request is made to Shopify using [customersCount](https://shopify.dev/docs/api/admin-graphql/latest/queries/customerscount) to get the total number of customers.
+   * This value is stored as `totalCount` for logging and statistics.
+
+2. **Fetching customers in batches**
+
+   * Customers are fetched in **chunks of 200** using the [customers query](https://shopify.dev/docs/api/admin-graphql/latest/queries/customers).
+   * Each page is retrieved iteratively until all customers are processed.
+
+3. **Validation by `updatedAt`**
+
+   * For every customer, the `updatedAt` field from Shopify is compared against the local database:
+
+     * If the value matches → the customer is **skipped** (no sync needed).
+     * If the value differs or the customer does not exist locally → the customer is **added to the sync batch**.
+     * We update the database to save the clients we synchronize
+4. **Bulk sending to Yespo**
+
+   * Filtered customers are grouped and sent to Yespo using [Contacts Bulk Update](https://docs.esputnik.com/reference/contactsbulkupdate-1).
+   * Deduplication in Yespo is based on:
+
+     * `externalCustomerId`
+     * `email`
+     * `phone`
+   * If a customer exists in Yespo, it is **updated**, not duplicated.
+
+5. **Repeat until completion**
+
+   * The process continues page by page until all customers are checked and either skipped or sent.
+
+---
+
+#### Logging & Status Tracking
+
+- `totalCount` – total number of customers from Shopify
+- `skippedCount` – customers that were already up-to-date
+- `syncedCount` – customers sent to Yespo
+- `failedCount` – customers rejected by Yespo
+
+Final synchronization status:
+- `COMPLETE` → all customers processed successfully
+- `ERROR` → failure occurred during sync
+
+---
+
+#### Real-time customers sync
+
+Webhooks are triggered immediately when events occur in Shopify:
+
+  - `customers/create` → new contact sent to Yespo.
+  - `customers/update` → existing contact updated in Yespo.
+  - `customers/redact` → contact removed from Yespo using.
+
+---
+#### Shopify API methods:
+
+- [query /customersCount](https://shopify.dev/docs/api/admin-graphql/latest/queries/customerscount) – returns the count of customers for the given shop
+- [query /customers](https://shopify.dev/docs/api/admin-graphql/latest/queries/customers) – returns a list of customers placed in the stores.
+
+
+#### Yespo API methods:
+
 - [POST /contact](https://docs.esputnik.com/reference/addcontact) – create or update contact
 - [DELETE /contact](https://docs.esputnik.com/reference/deletecontact-1) (erase=true) – remove contact
 
 ### Order Sync (Shopify → Yespo)
-Purpose: Automatically sync new orders from Shopify to Yespo.
 
-Implementation:
-- App requests access to the following scopes:
-  - read_orders
-  - read_all_orders
-- Shopify webhooks used:
-  - orders/create → creates a new order in Yespo
-  - orders/updated → updates existing order data
+**Purpose:** Automatically sync new and updated orders from Shopify to Yespo.
+Supports both **historical synchronization** and **real-time synchronization**.
 
-Enable orders sync (optional):
-- Open yespo app
-- Connect your yespo account
-- Enable sync in `Data Sync` section
+---
 
-Historical orders data: Enabling sync will also start syncing all existing orders unless they are marked as updated in our database.
+#### Implementation
 
-Yespo API methods:
-- [POST /orders](https://docs.esputnik.com/reference/ordersbulkinsert-1) – create new order
+App requests access to the following scopes:
+  - `read_orders`
+  - `read_all_orders`
+
+Shopify webhooks used:
+  - `orders/create` → creates a new order in Yespo
+  - `orders/updated` → updates existing order data
+
+---
+
+#### Enabling order sync
+
+- Open the Yespo app
+- Connect your Yespo account
+- Enable sync in the **Data Sync** section
+
+When sync is enabled:
+
+- A new job is added to **Redis**
+- A worker begins **historical orders synchronization**
+
+---
+
+#### Historical orders sync
+
+1. **Counting orders**
+
+   * Shopify [ordersCount](https://shopify.dev/docs/api/admin-graphql/latest/queries/orderscount) is called to get the total number of orders (`totalCount`).
+
+2. **Fetching orders in batches**
+
+   * Orders are fetched using the [orders query](https://shopify.dev/docs/api/admin-graphql/latest/queries/orders).
+   * Since each order includes `lineItems`, the batch size is **150** (instead of 200 for customers) to stay within Shopify’s API limits.
+
+3. **Validation by `updatedAt`**
+
+   * Each order’s `updatedAt` is compared with the local database:
+
+     * If the order is unchanged → skipped
+     * If new or updated → added to sync batch
+     * We update the database to save the orders we synchronize
+
+4. **Bulk sending to Yespo**
+
+   * Orders are sent to Yespo using [Orders Bulk Insert](https://docs.esputnik.com/reference/ordersbulkinsert-1).
+
+---
+
+#### Status Mapping
+
+Order statuses from Shopify are mapped to Yespo statuses:
+
+**Webhook `fulfillment_status` → Yespo status**
+
+* `restocked`, `cancelledAt` → `CANCELLED`
+* `partial` → `IN_PROGRESS`
+* `fulfilled` → `DELIVERED`
+* `null` → `INITIALIZED`
+
+**`displayFulfillmentStatus` → Yespo status**
+
+* `REQUEST_DECLINED`, `cancelledAt` → `CANCELLED`
+* `PARTIALLY_FULFILLED`, `PENDING_FULFILLMENT`, `IN_PROGRESS` → `IN_PROGRESS`
+* `FULFILLED` → `DELIVERED`
+* `other` → `INITIALIZED`
+
+---
+
+#### Logging & Status Tracking
+
+- `totalCount` – total number of orders from Shopify
+- `skippedCount` – orders already up-to-date
+- `syncedCount` – orders successfully sent to Yespo
+- `failedCount` – orders rejected by Yespo
+
+Final synchronization status:
+- `COMPLETE` → sync finished successfully
+- `ERROR` → failure occurred
+
+---
+
+#### Real-time orders sync
+
+Webhooks are triggered when orders are created or updated in Shopify:
+
+  - `orders/create` → new order sent to Yespo
+  - `orders/updated` → existing order updated in Yespo
+
+---
+
+#### Shopify API methods:
+
+- [query /ordersCount](https://shopify.dev/docs/api/admin-graphql/latest/queries/orderscount) – returns the count of orders for the given shop.
+- [query /orders](https://shopify.dev/docs/api/admin-graphql/latest/queries/orders) – returns a list of orders placed in the stores.
+
+#### Yespo API methods:
+
+- [POST /orders](https://docs.esputnik.com/reference/ordersbulkinsert-1) – the method is used for transferring orders.
 
 ### Web Tracker
 Purpose: Allow you to track events within your site.
