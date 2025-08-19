@@ -135,7 +135,7 @@ Webhooks are triggered immediately when events occur in Shopify:
 
 #### Yespo API methods:
 
-- [POST /contact](https://docs.esputnik.com/reference/addcontact) – create or update contact
+- [POST /contact](https://docs.esputnik.com/reference/addcontact-1) – create or update contact
 - [DELETE /contact](https://docs.esputnik.com/reference/deletecontact-1) (erase=true) – remove contact
 
 ### Order Sync (Shopify → Yespo)
