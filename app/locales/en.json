@@ -52,7 +52,7 @@
       "disabled": "Disabled"
     },
     "syncLog": {
-      "title": "Last synchronization",
+      "title": "Historical data sync",
       "orders": "Orders",
       "customers": "Customers",
       "syncedCount": "Synchronized",
