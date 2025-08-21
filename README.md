@@ -104,6 +104,19 @@ When sync is enabled:
    * The process continues page by page until all customers are checked and either skipped or sent.
 
 ---
+ 
+#### Field Mapping [Shopify Customers](https://shopify.dev/docs/api/admin-graphql/latest/queries/customers) →  [Yespo Contacts](https://docs.esputnik.com/reference/contactsbulkupdate-1):
+  - `customer.id` → `externalCustomerId`
+  - `customer.firstName` → `firstName`
+  - `customer.lastName` → `lastName`
+  - `customer.defaultEmailAddress.emailAddress` → `channels[type=email].value`
+  - `customer.defaultPhoneNumber.phoneNumber` → `channels[type=sms].value`
+  - `customer.defaultAddress.phone` (if defaultPhoneNumber not exist) → `channels[type=sms].value`
+  - `customer.defaultAddress.city` → `address.town`
+  - `customer.defaultAddress.address1` → `address.address`
+  - `customer.defaultAddress.zip` → `address.postcode`
+
+---
 
 #### Logging & Status Tracking
 
@@ -192,6 +205,29 @@ When sync is enabled:
 4. **Bulk sending to Yespo**
 
    * Orders are sent to Yespo using [Orders Bulk Insert](https://docs.esputnik.com/reference/ordersbulkinsert-1).
+
+---
+  
+#### Field Mapping [Shopify Order](https://shopify.dev/docs/api/admin-graphql/latest/queries/orders) →  [Yespo Order](https://docs.esputnik.com/reference/ordersbulkinsert-1):
+- `order.id` → `externalOrderId`
+- `order.customer.id` → `externalCustomerId`
+- `order.customer.firstName` → `firstName`
+- `order.customer.lastName` → `lastName`
+- `order.customer.defaultEmailAddress.emailAddress` → `email`
+- `order.customer.defaultPhoneNumber.phoneNumber` → `phone`
+- `order.totalPriceSet.shopMoney.amount` → `totalCost`
+- `order.totalDiscountsSet.shopMoney.amount` → `discount`
+- `order.totalShippingPriceSet.shopMoney.amount` → `shipping`
+- `order.totalTaxSet.shopMoney.amount` → `taxes`
+- `order.currencyCode` → `currency`
+- `order.createdAt` (converted to UTC) → `date`
+- `order.displayFulfillmentStatus` (+ cancelledAt check) → `status`
+- `order.shippingAddress` (formatted string) → `deliveryAddress`
+- `order.lineItems.nodes[]`:
+  - `lineItem.id` → `externalItemId`
+  - `lineItem.name` → `name`
+  - `lineItem.quantity` → `quantity`
+  - `lineItem.originalTotalSet.shopMoney.amount` → `cost`
 
 ---
 

@@ -2,7 +2,26 @@ import type { Contact } from "~/@types/contact";
 import type { CustomerData } from "~/@types/customer";
 
 /**
- * Convert Shopify Customer data to Yespo contact data
+ * Convert Shopify Customer data to Yespo Contact data.
+ *
+ * This function maps Shopify `CustomerData` fields into Yespo `Contact` format.
+ *
+ * **Shopify Customers API (GraphQL):**  
+ * https://shopify.dev/docs/api/admin-graphql/latest/queries/customers
+ *
+ * **Yespo Contacts Bulk Update API:**  
+ * https://docs.esputnik.com/reference/contactsbulkupdate-1
+ *
+ * **Field Mapping:**
+ * - `customer.id` → `externalCustomerId`
+ * - `customer.firstName` → `firstName`
+ * - `customer.lastName` → `lastName`
+ * - `customer.defaultEmailAddress.emailAddress` → `channels[type=email].value`
+ * - `customer.defaultPhoneNumber.phoneNumber` → `channels[type=sms].value`
+ * - `customer.defaultAddress.phone` (if defaultPhoneNumber not exist) → `channels[type=sms].value`
+ * - `customer.defaultAddress.city` → `address.town`
+ * - `customer.defaultAddress.address1` → `address.address`
+ * - `customer.defaultAddress.zip` → `address.postcode`
  *
  * @param {CustomerData} customer - Shopify customer data.
  * @returns {Promise<Contact>} A promise that resolves when the contact is created successfully.

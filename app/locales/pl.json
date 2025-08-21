@@ -52,7 +52,7 @@
       "disabled": "Wyłączony"
     },
     "syncLog": {
-      "title": "Ostatnia synchronizacja",
+      "title": "Synchronizacja danych historycznych",
       "orders": "Zamówienia",
       "customers": "Klienci",
       "syncedCount": "Zsynchronizowano",
