@@ -5,6 +5,7 @@
 <li>Automatically register their store domain in Yespo (to get site and web push scripts)</li>
 <li>Inject site and push scripts into the storefront via Theme App Extensions</li>
 <li>Install the service worker file for web push notifications using a Shopify App Proxy</li>
+<li>Send tracking events like MainPage, 404 Page, ProductPage, CustomerData, StatusCart and PurchasedItems from your store to Yespo</li>
 </ul>
 <h2 id="features-and-implementation-details" class="tsd-anchor-link">Features and Implementation Details<a href="#features-and-implementation-details" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2><h3 id="widgets" class="tsd-anchor-link">Widgets<a href="#widgets" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><p>Purpose: Register the store domain and inject the Yespo site script into the storefront automatically.</p>
 <p>Implementation:</p>
@@ -27,28 +28,253 @@
 <li>A Shopify App Proxy is used to serve the service worker content dynamically from Yespo</li>
 <li>The worker file is exposed at a predefined path (/apps/yespo/sw.js) to comply with browser requirements</li>
 </ul>
-<h3 id="contact-sync-shopify-→-yespo" class="tsd-anchor-link">Contact Sync (Shopify → Yespo)<a href="#contact-sync-shopify-→-yespo" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><p>Purpose: Automatically sync new, updated, and deleted customers from Shopify to Yespo as contacts.</p>
-<p>Implementation:</p>
+<h3 id="contact-sync-shopify-→-yespo" class="tsd-anchor-link">Contact Sync (Shopify → Yespo)<a href="#contact-sync-shopify-→-yespo" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><p><strong>Purpose:</strong> Automatically sync new, updated, and deleted customers from Shopify to Yespo as contacts.
+The process covers both <strong>historical synchronization</strong> and <strong>real-time synchronization</strong> through Shopify webhooks.</p>
+<hr>
+<h4 id="implementation" class="tsd-anchor-link">Implementation<a href="#implementation" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><ul>
+<li>
+<p>App requests access to the following scopes:</p>
 <ul>
-<li>App requests access to the following scopes:
-<ul>
-<li>read_customers</li>
-<li>write_customers</li>
+<li><code>read_customers</code></li>
+<li><code>write_customers</code></li>
 </ul>
 </li>
-<li>Shopify webhooks used:
+<li>
+<p>Shopify webhooks used:</p>
 <ul>
-<li>customers/create → creates a new contact in Yespo</li>
-<li>customers/update → updates existing contact data</li>
-<li>customers/redact → removes contact in Yespo</li>
+<li><code>customers/create</code> → creates a new contact in Yespo</li>
+<li><code>customers/update</code> → updates existing contact data</li>
+<li><code>customers/redact</code> → removes contact in Yespo</li>
 </ul>
 </li>
 </ul>
-<p>Deduplication in Yespo: Contacts are matched using externalCustomerId, email, and phone. If a contact exists, it is updated instead of duplicated.</p>
-<p>Yespo API methods:</p>
+<hr>
+<h4 id="enabling-contact-sync" class="tsd-anchor-link">Enabling contact sync<a href="#enabling-contact-sync" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><ul>
+<li>Open the Yespo app</li>
+<li>Connect your Yespo account</li>
+<li>Enable sync in the <strong>Data Sync</strong> section</li>
+</ul>
+<p>When sync is enabled:</p>
 <ul>
+<li>A new synchronization job is added to the <strong>Redis queue</strong></li>
+<li>A dedicated <strong>worker</strong> processes the job and starts <strong>historical synchronization</strong></li>
+</ul>
+<hr>
+<h4 id="historical-customers-sync" class="tsd-anchor-link">Historical customers sync<a href="#historical-customers-sync" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><ol>
+<li>
+<p><strong>Counting customers</strong></p>
+<ul>
+<li>First, a request is made to Shopify using <a href="https://shopify.dev/docs/api/admin-graphql/latest/queries/customerscount">customersCount</a> to get the total number of customers.</li>
+<li>This value is stored as <code>totalCount</code> for logging and statistics.</li>
+</ul>
+</li>
+<li>
+<p><strong>Fetching customers in batches</strong></p>
+<ul>
+<li>Customers are fetched in <strong>chunks of 200</strong> using the <a href="https://shopify.dev/docs/api/admin-graphql/latest/queries/customers">customers query</a>.</li>
+<li>Each page is retrieved iteratively until all customers are processed.</li>
+</ul>
+</li>
+<li>
+<p><strong>Validation by <code>updatedAt</code></strong></p>
+<ul>
+<li>
+<p>For every customer, the <code>updatedAt</code> field from Shopify is compared against the local database:</p>
+<ul>
+<li>If the value matches → the customer is <strong>skipped</strong> (no sync needed).</li>
+<li>If the value differs or the customer does not exist locally → the customer is <strong>added to the sync batch</strong>.</li>
+<li>We update the database to save the clients we synchronize</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Bulk sending to Yespo</strong></p>
+<ul>
+<li>
+<p>Filtered customers are grouped and sent to Yespo using <a href="https://docs.esputnik.com/reference/contactsbulkupdate-1">Contacts Bulk Update</a>.</p>
+</li>
+<li>
+<p>Deduplication in Yespo is based on:</p>
+<ul>
+<li><code>externalCustomerId</code></li>
+<li><code>email</code></li>
+<li><code>phone</code></li>
+</ul>
+</li>
+<li>
+<p>If a customer exists in Yespo, it is <strong>updated</strong>, not duplicated.</p>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Repeat until completion</strong></p>
+<ul>
+<li>The process continues page by page until all customers are checked and either skipped or sent.</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h4 id="logging--status-tracking" class="tsd-anchor-link">Logging &amp; Status Tracking<a href="#logging--status-tracking" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><ul>
+<li><code>totalCount</code> – total number of customers from Shopify</li>
+<li><code>skippedCount</code> – customers that were already up-to-date</li>
+<li><code>syncedCount</code> – customers sent to Yespo</li>
+<li><code>failedCount</code> – customers rejected by Yespo</li>
+</ul>
+<p>Final synchronization status:</p>
+<ul>
+<li><code>COMPLETE</code> → all customers processed successfully</li>
+<li><code>ERROR</code> → failure occurred during sync</li>
+</ul>
+<hr>
+<h4 id="real-time-customers-sync" class="tsd-anchor-link">Real-time customers sync<a href="#real-time-customers-sync" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><p>Webhooks are triggered immediately when events occur in Shopify:</p>
+<ul>
+<li><code>customers/create</code> → new contact sent to Yespo.</li>
+<li><code>customers/update</code> → existing contact updated in Yespo.</li>
+<li><code>customers/redact</code> → contact removed from Yespo using.</li>
+</ul>
+<hr>
+<h4 id="shopify-api-methods" class="tsd-anchor-link">Shopify API methods:<a href="#shopify-api-methods" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><ul>
+<li><a href="https://shopify.dev/docs/api/admin-graphql/latest/queries/customerscount">query /customersCount</a> – returns the count of customers for the given shop</li>
+<li><a href="https://shopify.dev/docs/api/admin-graphql/latest/queries/customers">query /customers</a> – returns a list of customers placed in the stores.</li>
+</ul>
+<h4 id="yespo-api-methods" class="tsd-anchor-link">Yespo API methods:<a href="#yespo-api-methods" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><ul>
 <li><a href="https://docs.esputnik.com/reference/addcontact-1">POST /contact</a> – create or update contact</li>
 <li><a href="https://docs.esputnik.com/reference/deletecontact-1">DELETE /contact</a> (erase=true) – remove contact</li>
+</ul>
+<h3 id="order-sync-shopify-→-yespo" class="tsd-anchor-link">Order Sync (Shopify → Yespo)<a href="#order-sync-shopify-→-yespo" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><p><strong>Purpose:</strong> Automatically sync new and updated orders from Shopify to Yespo.
+Supports both <strong>historical synchronization</strong> and <strong>real-time synchronization</strong>.</p>
+<hr>
+<h4 id="implementation-1" class="tsd-anchor-link">Implementation<a href="#implementation-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><p>App requests access to the following scopes:</p>
+<ul>
+<li><code>read_orders</code></li>
+<li><code>read_all_orders</code></li>
+</ul>
+<p>Shopify webhooks used:</p>
+<ul>
+<li><code>orders/create</code> → creates a new order in Yespo</li>
+<li><code>orders/updated</code> → updates existing order data</li>
+</ul>
+<hr>
+<h4 id="enabling-order-sync" class="tsd-anchor-link">Enabling order sync<a href="#enabling-order-sync" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><ul>
+<li>Open the Yespo app</li>
+<li>Connect your Yespo account</li>
+<li>Enable sync in the <strong>Data Sync</strong> section</li>
+</ul>
+<p>When sync is enabled:</p>
+<ul>
+<li>A new job is added to <strong>Redis</strong></li>
+<li>A worker begins <strong>historical orders synchronization</strong></li>
+</ul>
+<hr>
+<h4 id="historical-orders-sync" class="tsd-anchor-link">Historical orders sync<a href="#historical-orders-sync" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><ol>
+<li>
+<p><strong>Counting orders</strong></p>
+<ul>
+<li>Shopify <a href="https://shopify.dev/docs/api/admin-graphql/latest/queries/orderscount">ordersCount</a> is called to get the total number of orders (<code>totalCount</code>).</li>
+</ul>
+</li>
+<li>
+<p><strong>Fetching orders in batches</strong></p>
+<ul>
+<li>Orders are fetched using the <a href="https://shopify.dev/docs/api/admin-graphql/latest/queries/orders">orders query</a>.</li>
+<li>Since each order includes <code>lineItems</code>, the batch size is <strong>150</strong> (instead of 200 for customers) to stay within Shopify’s API limits.</li>
+</ul>
+</li>
+<li>
+<p><strong>Validation by <code>updatedAt</code></strong></p>
+<ul>
+<li>
+<p>Each order’s <code>updatedAt</code> is compared with the local database:</p>
+<ul>
+<li>If the order is unchanged → skipped</li>
+<li>If new or updated → added to sync batch</li>
+<li>We update the database to save the orders we synchronize</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>
+<p><strong>Bulk sending to Yespo</strong></p>
+<ul>
+<li>Orders are sent to Yespo using <a href="https://docs.esputnik.com/reference/ordersbulkinsert-1">Orders Bulk Insert</a>.</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h4 id="status-mapping" class="tsd-anchor-link">Status Mapping<a href="#status-mapping" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><p>Order statuses from Shopify are mapped to Yespo statuses:</p>
+<p><strong>Webhook <code>fulfillment_status</code> → Yespo status</strong></p>
+<ul>
+<li><code>restocked</code>, <code>cancelledAt</code> → <code>CANCELLED</code></li>
+<li><code>partial</code> → <code>IN_PROGRESS</code></li>
+<li><code>fulfilled</code> → <code>DELIVERED</code></li>
+<li><code>null</code> → <code>INITIALIZED</code></li>
+</ul>
+<p><strong><code>displayFulfillmentStatus</code> → Yespo status</strong></p>
+<ul>
+<li><code>REQUEST_DECLINED</code>, <code>cancelledAt</code> → <code>CANCELLED</code></li>
+<li><code>PARTIALLY_FULFILLED</code>, <code>PENDING_FULFILLMENT</code>, <code>IN_PROGRESS</code> → <code>IN_PROGRESS</code></li>
+<li><code>FULFILLED</code> → <code>DELIVERED</code></li>
+<li><code>other</code> → <code>INITIALIZED</code></li>
+</ul>
+<hr>
+<h4 id="logging--status-tracking-1" class="tsd-anchor-link">Logging &amp; Status Tracking<a href="#logging--status-tracking-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><ul>
+<li><code>totalCount</code> – total number of orders from Shopify</li>
+<li><code>skippedCount</code> – orders already up-to-date</li>
+<li><code>syncedCount</code> – orders successfully sent to Yespo</li>
+<li><code>failedCount</code> – orders rejected by Yespo</li>
+</ul>
+<p>Final synchronization status:</p>
+<ul>
+<li><code>COMPLETE</code> → sync finished successfully</li>
+<li><code>ERROR</code> → failure occurred</li>
+</ul>
+<hr>
+<h4 id="real-time-orders-sync" class="tsd-anchor-link">Real-time orders sync<a href="#real-time-orders-sync" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><p>Webhooks are triggered when orders are created or updated in Shopify:</p>
+<ul>
+<li><code>orders/create</code> → new order sent to Yespo</li>
+<li><code>orders/updated</code> → existing order updated in Yespo</li>
+</ul>
+<hr>
+<h4 id="shopify-api-methods-1" class="tsd-anchor-link">Shopify API methods:<a href="#shopify-api-methods-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><ul>
+<li><a href="https://shopify.dev/docs/api/admin-graphql/latest/queries/orderscount">query /ordersCount</a> – returns the count of orders for the given shop.</li>
+<li><a href="https://shopify.dev/docs/api/admin-graphql/latest/queries/orders">query /orders</a> – returns a list of orders placed in the stores.</li>
+</ul>
+<h4 id="yespo-api-methods-1" class="tsd-anchor-link">Yespo API methods:<a href="#yespo-api-methods-1" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><ul>
+<li><a href="https://docs.esputnik.com/reference/ordersbulkinsert-1">POST /orders</a> – the method is used for transferring orders.</li>
+</ul>
+<h3 id="web-tracker" class="tsd-anchor-link">Web Tracker<a href="#web-tracker" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h3><p>Purpose: Allow you to track events within your site.</p>
+<p>Implementation:</p>
+<ul>
+<li>Stores the enable flag in the web-tracking-enabled metafield</li>
+<li>Send tracking events from the site to Yespo through Theme extension.</li>
+</ul>
+<h4 id="frontend-events" class="tsd-anchor-link">Frontend Events<a href="#frontend-events" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><ul>
+<li><strong>MainPage</strong> - <a href="https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#main-page">MainPage event</a> occurs when user visited Home page of the site</li>
+<li><strong>404 Page</strong> - <a href="https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#404-page">404 Page event</a> occurs when user visited 404 page of the site</li>
+<li><strong>Status Cart Page</strong> - <a href="https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#additional-events-required-for-recommendations-on-the-site">StatusCartPage event</a> occurs when user visited /cart page of the site</li>
+<li><strong>Category Page</strong> - <a href="https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#category">StatusCartPage event</a> occurs when user visited category page of the site</li>
+<li><strong>ProductPage</strong> - <a href="https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#product-card">ProductPage event</a> occurs when user visited product page of the site and send payload with product data:
+<ul>
+<li>productKey - product id</li>
+<li>price - product price</li>
+<li>isInStock - indicates if product is in stock</li>
+</ul>
+</li>
+<li><strong>CustomerData</strong> - <a href="https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#customer">CustomerData event</a> occurs when there is a logged in user on the site and send payload with customer data:
+<ul>
+<li>externalCustomerId - customer id</li>
+<li>user_email - customer email</li>
+<li>user_name - customer name</li>
+<li>phone - customer phone</li>
+</ul>
+</li>
+</ul>
+<h4 id="backend-events" class="tsd-anchor-link">Backend Events<a href="#backend-events" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><ul>
+<li><strong>StatusCart</strong> - <a href="https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#statuscart">StatusCart event</a>
+occurs when CARTS_UPDATE webhook happened and send payload with cart data.</li>
+<li><strong>PurchasedItems</strong> - <a href="https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#purchaseditems">PurchasedItems</a>
+occurs when ORDERS_CREATE webhook happened and send payload with purchased products data.</li>
 </ul>
 <h2 id="technologies-and-shopify-tools-used" class="tsd-anchor-link">Technologies and Shopify Tools Used<a href="#technologies-and-shopify-tools-used" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h2><ul>
 <li><a href="https://shopify.dev/docs/api/shopify-app-remix">Shopify App Remix</a> provides authentication and methods for interacting with Shopify APIs.</li>
@@ -59,6 +285,7 @@ You can find the extension code in the <code>./extensions/yespo-extension</code>
 This extension includes:
 <ul>
 <li><code>blocks/</code> – Contains Liquid files that act as entry points for injecting Yespo scripts into the theme. These blocks can be enabled via the Shopify theme editor.</li>
+<li><code>assests/</code> - Contains JavaScript script that send events using eS.JS.</li>
 </ul>
 </li>
 <li><a href="https://polaris.shopify.com/">Polaris</a>: Design system that enables apps to create Shopify-like experiences</li>
@@ -154,6 +381,36 @@ used for storing tracking and scripts configurations (custom namespace: $app)</l
 <td><strong>Required.</strong> Relative path on site, where service worker will be stored. Must start and end with slash</td>
 <td><code>/apps/yespo-proxy/</code></td>
 </tr>
+<tr>
+<td><strong>WEB_TRACKING_ENABLED</strong></td>
+<td><strong>Required.</strong> Handle for enabled metafield and extension name</td>
+<td><strong>Must be</strong> <code>web-tracking-enabled</code></td>
+</tr>
+<tr>
+<td><strong>WEB_TRACKER_URL</strong></td>
+<td><strong>Required.</strong> Yespo tracker api url</td>
+<td><strong>Must be</strong> <code>https://tracker.yespo.io/api/v2</code></td>
+</tr>
+<tr>
+<td><strong>QSTASH_CURRENT_SIGNING_KEY</strong></td>
+<td><strong>Required.</strong> QSTASH current signing key</td>
+<td><code>sig_5**********************S9aU</code></td>
+</tr>
+<tr>
+<td><strong>QSTASH_NEXT_SIGNING_KEY</strong></td>
+<td><strong>Required.</strong> QSTASH next signing key</td>
+<td><code>sig_81*********************WZSrj</code></td>
+</tr>
+<tr>
+<td><strong>HOST_URL</strong></td>
+<td><strong>Required.</strong> App host url metafiedld name for correct work of extension</td>
+<td><strong>Must be</strong> <code>yespo-app-host</code></td>
+</tr>
+<tr>
+<td><strong>REDIS_URL</strong></td>
+<td><strong>Required.</strong> Redis url for connecting and configuring the data synchronization worker</td>
+<td><code>redis://localhost:6379</code></td>
+</tr>
 </tbody>
 </table>
 <h4 id="required-shopify-scopes" class="tsd-anchor-link">Required Shopify Scopes<a href="#required-shopify-scopes" aria-label="Permalink" class="tsd-anchor-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="assets/icons.svg#icon-anchor"></use></svg></a></h4><p>You can <a href="https://shopify.dev/docs/apps/build/cli-for-apps/app-configuration">configure app</a> locally with TOML files.
@@ -167,6 +424,7 @@ file shopify.app.{your-config-name}.toml is generated in your root directory.</p
 <li><code>read_customers</code></li>
 <li><code>read_markets</code></li>
 <li><code>read_orders</code></li>
+<li><code>read_all_orders</code></li>
 <li><code>read_themes</code></li>
 <li><code>write_app_proxy</code></li>
 </ul>
@@ -219,6 +477,21 @@ file shopify.app.{your-config-name}.toml is generated in your root directory.</p
 <td><strong>app/uninstalled</strong></td>
 <td>Triggered when a merchant uninstalls the app.</td>
 <td><code>/webhooks/app/uninstalled</code></td>
+</tr>
+<tr>
+<td><strong>orders/create</strong></td>
+<td>Triggered when an order is created.</td>
+<td><code>/webhook/app/orders</code></td>
+</tr>
+<tr>
+<td><strong>orders/updated</strong></td>
+<td>Triggered when an existing order’s data is updated.</td>
+<td><code>/webhook/app/orders</code></td>
+</tr>
+<tr>
+<td><strong>carts/update</strong></td>
+<td>Triggered when a cart is updated in the online store.</td>
+<td><code>/webhooks/app/carts</code></td>
 </tr>
 </tbody>
 </table>
@@ -293,5 +566,6 @@ Use the Shopify CLI to deploy both:</p>
 <li><a href="https://docs.yespo.io/reference/api-keys">Generate an API key</a> and add it to the <code>Account connection</code> section</li>
 <li>Connect general script</li>
 <li>Connect webpush script</li>
+<li>Enable/disable web tracker on your site</li>
 </ul>
-</div></div><div class="col-sidebar"><div class="page-menu"><div class="tsd-navigation settings"><details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>Settings</h3></summary><div class="tsd-accordion-details"><div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span><ul id="tsd-filter-options"><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-external" name="external"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>External</span></label></li></ul></div><div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div><details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>On This Page</h3></summary><div class="tsd-accordion-details"><a href="#yespo-shopify-app"><span>Yespo <wbr/>Shopify <wbr/>App</span></a><ul><li><a href="#purpose"><span>Purpose</span></a></li><li><a href="#features-and-implementation-details"><span>Features and <wbr/>Implementation <wbr/>Details</span></a></li><li><ul><li><a href="#widgets"><span>Widgets</span></a></li><li><a href="#web-push-subscription"><span>Web <wbr/>Push <wbr/>Subscription</span></a></li><li><a href="#contact-sync-shopify-→-yespo"><span>Contact <wbr/>Sync (<wbr/>Shopify → <wbr/>Yespo)</span></a></li></ul></li><li><a href="#technologies-and-shopify-tools-used"><span>Technologies and <wbr/>Shopify <wbr/>Tools <wbr/>Used</span></a></li><li><a href="#yespo-api-authentication"><span>Yespo <wbr/>API <wbr/>Authentication</span></a></li><li><a href="#quick-start"><span>Quick start</span></a></li><li><ul><li><a href="#prerequisites"><span>Prerequisites</span></a></li><li><a href="#setup"><span>Setup</span></a></li><li><ul><li><a href="#environment-variables"><span>Environment variables</span></a></li><li><a href="#required-shopify-scopes"><span>Required <wbr/>Shopify <wbr/>Scopes</span></a></li><li><a href="#webhooks"><span>Webhooks</span></a></li><li><a href="#setup-app-proxy"><span>Setup <wbr/>App <wbr/>Proxy</span></a></li></ul></li><li><a href="#development"><span>Development</span></a></li><li><ul><li><ul><li><a href="#install-dependencies"><span>Install dependencies</span></a></li><li><a href="#database-development--migration"><span>Database development &amp; migration</span></a></li></ul></li><li><a href="#run"><span>Run</span></a></li></ul></li><li><a href="#production"><span>Production</span></a></li><li><ul><li><a href="#install-dependencies-1"><span>Install dependencies</span></a></li><li><a href="#database-development--migration-1"><span>Database development &amp; migration</span></a></li><li><a href="#build"><span>Build</span></a></li><li><a href="#run-1"><span>Run</span></a></li></ul></li><li><a href="#app-deployment"><span>App <wbr/>Deployment</span></a></li><li><ul><li><a href="#hosting--source-code-deployment"><span>Hosting &amp; <wbr/>Source <wbr/>Code <wbr/>Deployment</span></a></li><li><a href="#deployment-of-theme-extension--toml-configuration"><span>Deployment of <wbr/>Theme <wbr/>Extension &amp; .toml <wbr/>Configuration</span></a></li></ul></li><li><a href="#using-the-app"><span>Using the <wbr/>App</span></a></li></ul></li></ul></div></details></div><div class="site-menu"><nav class="tsd-navigation"><a href="modules.html">yespo-app</a><ul class="tsd-small-nested-navigation" id="tsd-nav-container"><li>Loading...</li></ul></nav></div></div></div><footer></footer><div class="overlay"></div></body></html>
+</div></div><div class="col-sidebar"><div class="page-menu"><div class="tsd-navigation settings"><details class="tsd-accordion"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>Settings</h3></summary><div class="tsd-accordion-details"><div class="tsd-filter-visibility"><span class="settings-label">Member Visibility</span><ul id="tsd-filter-options"><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-inherited" name="inherited" checked/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>Inherited</span></label></li><li class="tsd-filter-item"><label class="tsd-filter-input"><input type="checkbox" id="tsd-filter-external" name="external"/><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true"><rect class="tsd-checkbox-background" width="30" height="30" x="1" y="1" rx="6" fill="none"></rect><path class="tsd-checkbox-checkmark" d="M8.35422 16.8214L13.2143 21.75L24.6458 10.25" stroke="none" stroke-width="3.5" stroke-linejoin="round" fill="none"></path></svg><span>External</span></label></li></ul></div><div class="tsd-theme-toggle"><label class="settings-label" for="tsd-theme">Theme</label><select id="tsd-theme"><option value="os">OS</option><option value="light">Light</option><option value="dark">Dark</option></select></div></div></details></div><details open class="tsd-accordion tsd-page-navigation"><summary class="tsd-accordion-summary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><use href="assets/icons.svg#icon-chevronDown"></use></svg><h3>On This Page</h3></summary><div class="tsd-accordion-details"><a href="#yespo-shopify-app"><span>Yespo <wbr/>Shopify <wbr/>App</span></a><ul><li><a href="#purpose"><span>Purpose</span></a></li><li><a href="#features-and-implementation-details"><span>Features and <wbr/>Implementation <wbr/>Details</span></a></li><li><ul><li><a href="#widgets"><span>Widgets</span></a></li><li><a href="#web-push-subscription"><span>Web <wbr/>Push <wbr/>Subscription</span></a></li><li><a href="#contact-sync-shopify-→-yespo"><span>Contact <wbr/>Sync (<wbr/>Shopify → <wbr/>Yespo)</span></a></li><li><ul><li><a href="#implementation"><span>Implementation</span></a></li><li><a href="#enabling-contact-sync"><span>Enabling contact sync</span></a></li><li><a href="#historical-customers-sync"><span>Historical customers sync</span></a></li><li><a href="#logging--status-tracking"><span>Logging &amp; <wbr/>Status <wbr/>Tracking</span></a></li><li><a href="#real-time-customers-sync"><span>Real-<wbr/>time customers sync</span></a></li><li><a href="#shopify-api-methods"><span>Shopify <wbr/>API methods:</span></a></li><li><a href="#yespo-api-methods"><span>Yespo <wbr/>API methods:</span></a></li></ul></li><li><a href="#order-sync-shopify-→-yespo"><span>Order <wbr/>Sync (<wbr/>Shopify → <wbr/>Yespo)</span></a></li><li><ul><li><a href="#implementation-1"><span>Implementation</span></a></li><li><a href="#enabling-order-sync"><span>Enabling order sync</span></a></li><li><a href="#historical-orders-sync"><span>Historical orders sync</span></a></li><li><a href="#status-mapping"><span>Status <wbr/>Mapping</span></a></li><li><a href="#logging--status-tracking-1"><span>Logging &amp; <wbr/>Status <wbr/>Tracking</span></a></li><li><a href="#real-time-orders-sync"><span>Real-<wbr/>time orders sync</span></a></li><li><a href="#shopify-api-methods-1"><span>Shopify <wbr/>API methods:</span></a></li><li><a href="#yespo-api-methods-1"><span>Yespo <wbr/>API methods:</span></a></li></ul></li><li><a href="#web-tracker"><span>Web <wbr/>Tracker</span></a></li><li><ul><li><a href="#frontend-events"><span>Frontend <wbr/>Events</span></a></li><li><a href="#backend-events"><span>Backend <wbr/>Events</span></a></li></ul></li></ul></li><li><a href="#technologies-and-shopify-tools-used"><span>Technologies and <wbr/>Shopify <wbr/>Tools <wbr/>Used</span></a></li><li><a href="#yespo-api-authentication"><span>Yespo <wbr/>API <wbr/>Authentication</span></a></li><li><a href="#quick-start"><span>Quick start</span></a></li><li><ul><li><a href="#prerequisites"><span>Prerequisites</span></a></li><li><a href="#setup"><span>Setup</span></a></li><li><ul><li><a href="#environment-variables"><span>Environment variables</span></a></li><li><a href="#required-shopify-scopes"><span>Required <wbr/>Shopify <wbr/>Scopes</span></a></li><li><a href="#webhooks"><span>Webhooks</span></a></li><li><a href="#setup-app-proxy"><span>Setup <wbr/>App <wbr/>Proxy</span></a></li></ul></li><li><a href="#development"><span>Development</span></a></li><li><ul><li><ul><li><a href="#install-dependencies"><span>Install dependencies</span></a></li><li><a href="#database-development--migration"><span>Database development &amp; migration</span></a></li></ul></li><li><a href="#run"><span>Run</span></a></li></ul></li><li><a href="#production"><span>Production</span></a></li><li><ul><li><a href="#install-dependencies-1"><span>Install dependencies</span></a></li><li><a href="#database-development--migration-1"><span>Database development &amp; migration</span></a></li><li><a href="#build"><span>Build</span></a></li><li><a href="#run-1"><span>Run</span></a></li></ul></li><li><a href="#app-deployment"><span>App <wbr/>Deployment</span></a></li><li><ul><li><a href="#hosting--source-code-deployment"><span>Hosting &amp; <wbr/>Source <wbr/>Code <wbr/>Deployment</span></a></li><li><a href="#deployment-of-theme-extension--toml-configuration"><span>Deployment of <wbr/>Theme <wbr/>Extension &amp; .toml <wbr/>Configuration</span></a></li></ul></li><li><a href="#using-the-app"><span>Using the <wbr/>App</span></a></li></ul></li></ul></div></details></div><div class="site-menu"><nav class="tsd-navigation"><a href="modules.html">yespo-app</a><ul class="tsd-small-nested-navigation" id="tsd-nav-container"><li>Loading...</li></ul></nav></div></div></div><footer></footer><div class="overlay"></div></body></html>
