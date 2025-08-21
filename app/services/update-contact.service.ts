@@ -10,6 +10,25 @@ import type { Contact } from "~/@types/contact";
  * Also extracts address information from the payload's default address.
  * Constructs a `Contact` object with personal and contact details,
  * then calls `updateContact` service to perform the update.
+ * 
+ * **Shopify Customer Webhook (REST):**  
+ * https://shopify.dev/docs/api/admin-rest/latest/resources/customer#resource-object
+ *
+ * **Yespo Add Contact API:**  
+ * https://docs.esputnik.com/reference/addcontact-1
+ *
+ * **Field Mapping:**
+ * - `payload.id` → `externalCustomerId`
+ * - `payload.first_name` → `firstName`
+ * - `payload.last_name` → `lastName`
+ * - `payload.email` → `channels[type=email].value`
+ * - `payload.phone` → `channels[type=sms].value`
+ * - `payload.default_address.city` → `town`
+ * - `payload.default_address.address1` → `address`
+ * - `payload.default_address.zip` → `postcode`
+ * - `payload.admin_graphql_api_id` → `customerId` (for db sync log)
+ * - `payload.created_at` → `createdAt` (for db sync log)
+ * - `payload.updated_at` → `updatedAt` (for db sync log)
  *
  * @param {any} payload - The customer data payload containing updated contact info.
  * @param {string} apiKey - The API key used for authentication with the contact service.

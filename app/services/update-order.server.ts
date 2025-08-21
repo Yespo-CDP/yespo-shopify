@@ -7,6 +7,36 @@ import type { Order, OrderCreatePayload } from "~/@types/order";
  * Updates a order using the provided payload and API key.
  *
  * Any errors during the process are caught and logged.
+ * 
+  * **Shopify Order Webhook (REST):**  
+ * https://shopify.dev/docs/api/admin-rest/latest/resources/order#resource-object
+ *
+ * **Yespo Orders Bulk Insert API:**  
+ * https://docs.esputnik.com/reference/ordersbulkinsert-1
+ *
+ * **Field Mapping:**
+ * - `payload.id` → `externalOrderId`
+ * - `payload.customer.id` → `externalCustomerId`
+ * - `payload.customer.first_name` → `firstName`
+ * - `payload.customer.last_name` → `lastName`
+ * - `payload.email` → `email`
+ * - `payload.phone` → `phone`
+ * - `payload.current_total_price` → `totalCost`
+ * - `payload.total_discounts` → `discount`
+ * - `payload.total_shipping_price_set.shop_money.amount` → `shipping`
+ * - `payload.current_total_tax` → `taxes`
+ * - `payload.currency` → `currency`
+ * - `payload.created_at` (converted to UTC) → `date`
+ * - `payload.fulfillment_status` (+ cancelled_at check) → `status`
+ * - `payload.shipping_address` (formatted string) → `deliveryAddress`
+ * - `payload.line_items[]`:
+ *    - `lineItem.id` → `externalItemId`
+ *    - `lineItem.name` → `name`
+ *    - `lineItem.quantity` → `quantity`
+ *    - `lineItem.price` → `cost`
+ * - `payload.admin_graphql_api_id` → `orderId` (for db sync log)
+ * - `payload.created_at` → `createdAt` (for db sync log)
+ * - `payload.updated_at` → `updatedAt` (for db sync log)
  *
  * @param {OrderCreatePayload} payload - The order data payload containing order info.
  * @param {string} apiKey - The API key used for authentication with the contact service.

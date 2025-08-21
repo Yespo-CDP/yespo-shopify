@@ -6,7 +6,36 @@ import type {
 import { convertDateToUTC } from "~/utils/convert-date-to-utc";
 
 /**
- * Convert Shopify Order data to Yespo order data
+ * Convert Shopify Order data to Yespo order data.
+ *
+ * This function maps Shopify `OrderData` fields into Yespo `Order` format.
+ *
+ * **Shopify Orders API (GraphQL):**  
+ * https://shopify.dev/docs/api/admin-graphql/latest/queries/orders
+ *
+ * **Yespo Orders Bulk Insert API:**  
+ * https://docs.esputnik.com/reference/ordersbulkinsert-1
+ * 
+ * **Field Mapping:**
+ * - `order.id` → `externalOrderId`
+ * - `order.customer.id` → `externalCustomerId`
+ * - `order.customer.firstName` → `firstName`
+ * - `order.customer.lastName` → `lastName`
+ * - `order.customer.defaultEmailAddress.emailAddress` → `email`
+ * - `order.customer.defaultPhoneNumber.phoneNumber` → `phone`
+ * - `order.totalPriceSet.shopMoney.amount` → `totalCost`
+ * - `order.totalDiscountsSet.shopMoney.amount` → `discount`
+ * - `order.totalShippingPriceSet.shopMoney.amount` → `shipping`
+ * - `order.totalTaxSet.shopMoney.amount` → `taxes`
+ * - `order.currencyCode` → `currency`
+ * - `order.createdAt` (converted to UTC) → `date`
+ * - `order.displayFulfillmentStatus` (+ cancelledAt check) → `status`
+ * - `order.shippingAddress` (formatted string) → `deliveryAddress`
+ * - `order.lineItems.nodes[]`:
+ *    - `lineItem.id` → `externalItemId`
+ *    - `lineItem.name` → `name`
+ *    - `lineItem.quantity` → `quantity`
+ *    - `lineItem.originalTotalSet.shopMoney.amount` → `cost`
  *
  * @param {OrderData} order - Shopify order data.
  * @returns {Promise<Order>} A promise that resolves when the order payload is created successfully.
