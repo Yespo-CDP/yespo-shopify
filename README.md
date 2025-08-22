@@ -325,17 +325,17 @@ occurs when ORDERS_CREATE webhook happened and sends payload with purchased prod
 
 ## Technologies and Shopify Tools Used
 
-- [Shopify App Remix](https://shopify.dev/docs/api/shopify-app-remix) - provides authentication and methods for interacting with Shopify APIs.
-- [Shopify App Bridge](https://shopify.dev/docs/apps/tools/app-bridge) - allows your app to seamlessly integrate your app within Shopify's Admin.
-- [App extensions](https://shopify.dev/docs/apps/build/app-extensions) - Theme app extensions allow the Yespo app to 
+- [Shopify App Remix](https://shopify.dev/docs/api/shopify-app-remix) – provides authentication and methods for interacting with Shopify APIs.
+- [Shopify App Bridge](https://shopify.dev/docs/apps/tools/app-bridge) – allows your app to seamlessly integrate your app within Shopify's Admin.
+- [App extensions](https://shopify.dev/docs/apps/build/app-extensions) – Theme app extensions allow the Yespo app to 
 seamlessly inject scripts into a merchant’s theme without manual code edits.
   You can find the extension code in the `./extensions/yespo-extension` directory.
   This extension includes:
   - `blocks/` – Contains Liquid files that act as entry points for injecting Yespo scripts into the theme. These blocks can be enabled via the Shopify theme editor.
-  - `assests/` - Contains JavaScript script that sends events using eS.JS.
-- [Polaris](https://polaris.shopify.com/) - Design system that enables apps to create Shopify-like experiences
-- [Webhooks](https://shopify.dev/docs/api/webhooks?reference=toml) - to receive notifications about particular events in a shop such as customer-related changes.
-- [Metafields](https://shopify.dev/docs/apps/build/online-store/theme-app-extensions/configuration#metafield-namespaces) - 
+  - `assests/` – Contains JavaScript script that sends events using eS.JS.
+- [Polaris](https://polaris.shopify.com/) – Design system that enables apps to create Shopify-like experiences
+- [Webhooks](https://shopify.dev/docs/api/webhooks?reference=toml) – to receive notifications about particular events in a shop such as customer-related changes.
+- [Metafields](https://shopify.dev/docs/apps/build/online-store/theme-app-extensions/configuration#metafield-namespaces) – 
 used for storing tracking and scripts configurations (custom namespace: $app)
 
 ## Yespo API Authentication
