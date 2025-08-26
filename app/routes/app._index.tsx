@@ -24,10 +24,39 @@ import ConnectionStatusSection from "~/components/ConnectionStatusSection";
 import UsefulLinksSection from "~/components/UsefulLinksSection";
 import { loaderHandler, actionHandler } from "~/lib/app.server";
 import WebTrackingSection from "~/components/WebTrackingSection";
+import ContactSyncSection from "~/components/ContactSyncSection";
 
+/**
+ * The loader function to fetch initial data for the page.
+ * Delegates to `loaderHandler`.
+ */
 export const loader = loaderHandler;
+
+/**
+ * The action function to handle form submissions or interactions on the page.
+ * Delegates to `actionHandler`.
+ */
 export const action = actionHandler;
 
+/**
+ * Main component for the index route.
+ *
+ * Fetches initial data and handles form submission results,
+ * displaying appropriate UI sections and toast notifications.
+ *
+ * It renders:
+ * - A welcome section with logo and description.
+ * - Account connection section (with API key and account info).
+ * - Connection status section (showing connection status script and app extension status).
+ * - Enable/disable web tracking section.
+ * - Enable/disable sync contacts section.
+ * - Unsupported markets warning if applicable.
+ * - Useful links section.
+ *
+ * Uses Shopify App Bridge for toast notifications.
+ *
+ * @returns {JSX.Element} The rendered page component.
+ */
 export default function Index() {
   const { t } = useTranslation();
   const shopify = useAppBridge();
@@ -127,7 +156,29 @@ export default function Index() {
               />
             </Layout.Section>
             <Layout.Section>
-              <WebTrackingSection webTrackerEnabled={shop?.isWebTrackingEnabled ?? false} disabled={isMarketsOverflowing || isSubmitting || isLoading || !account}/>
+              <WebTrackingSection
+                isGeneralScriptExist={
+                  scriptConnectionStatus?.isGeneralScriptExist
+                }
+                isWebPushScriptExist={
+                  scriptConnectionStatus?.isWebPushScriptExist
+                }
+                isAppExtensionActive={
+                  scriptConnectionStatus.isThemeExtensionActive
+                }
+                webTrackerEnabled={shop?.isWebTrackingEnabled ?? false}
+                disabled={
+                  isMarketsOverflowing || isSubmitting || isLoading || !account
+                }
+              />
+            </Layout.Section>
+            <Layout.Section>
+              <ContactSyncSection
+                contactSyncEnabled={shop?.isContactSyncEnabled ?? false}
+                disabled={
+                  isMarketsOverflowing || isSubmitting || isLoading || !account
+                }
+              />
             </Layout.Section>
             <Layout.Section>
               <UsefulLinksSection />

@@ -1,5 +1,18 @@
 import {createContact} from "~/api/create-contact";
 
+/**
+ * Creates a contact using the provided payload and API key.
+ *
+ * Extracts email and phone from the payload,
+ * constructs contact data with first and last names and external customer ID,
+ * and calls `createContact` service to create the contact in the system.
+ *
+ * Any errors during the process are caught and logged.
+ *
+ * @param {any} payload - The customer data payload containing contact info.
+ * @param {string} apiKey - The API key used for authentication with the contact service.
+ * @returns {Promise<void>} A promise that resolves when the contact creation completes.
+ */
 export const createContactService = async (payload: any, apiKey: string) => {
   try {
     const channels = []
@@ -30,6 +43,6 @@ export const createContactService = async (payload: any, apiKey: string) => {
       contactData
     })
   } catch (error: any) {
-    console.error(error);
+    console.error("Error occurred in Create Contact Service", error);
   }
 }

@@ -12,7 +12,28 @@ import checkScriptConnectionService from "~/services/check-script-connection.ser
 import checkThemeExtensionService from "~/services/check-theme-extension.server";
 import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
-import {toggleWebTrackingServer} from "~/services/toggleWebTracking.server";
+import { toggleWebTrackingServer } from "~/services/toggleWebTracking.server";
+import { createGeneralDomain } from "~/api/create-general-domain.server";
+
+/**
+ * Loader function for initializing data needed on the page.
+ *
+ * This function authenticates the admin, retrieves shop information,
+ * checks whether there are too many markets, verifies script connection status,
+ * and fetches account info from an external API if an API key exists.
+ *
+ * @param {LoaderFunctionArgs} args - The arguments containing the request.
+ * @returns {Promise<{
+ *   shop: Shop | null,
+ *   account: Account | null,
+ *   scriptConnectionStatus: any,
+ *   isMarketsOverflowing: boolean,
+ *   ENV: {
+ *     DOCK_URL: string,
+ *     PLATFORM_URL: string
+ *   }
+ * }>} - The data needed by the page.
+ */
 
 export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
@@ -42,6 +63,32 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   };
 };
 
+/**
+ * Action handler for processing form submissions related to account and script connections.
+ *
+ * Handles different `intent` types:
+ * - "account-connection": Connects an account using the provided API key.
+ * - "account-disconnection": Disconnects the currently connected account.
+ * - "connection-status": Verifies the status of scripts and theme extension.
+ *
+ * @param {ActionFunctionArgs} args - The arguments containing the request.
+ * @returns {Promise<{
+ *   success: {
+ *     apiKey?: boolean;
+ *     connection?: {
+ *       ok?: boolean;
+ *       isGeneralScriptExist?: boolean;
+ *       isWebPushScriptExist?: boolean;
+ *       isThemeExtensionActive?: boolean;
+ *     };
+ *   };
+ *   errors: {
+ *     apiKey?: string;
+ *     script?: string;
+ *   };
+ * }>} - The result of the action including success flags and error messages.
+ */
+
 export const actionHandler = async ({ request }: ActionFunctionArgs) => {
   const { session, admin } = await authenticate.admin(request);
   const t = await i18n.getFixedT(request);
@@ -50,7 +97,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
   const errors: {
     apiKey?: string;
     script?: string;
-    webTracking?: string
+    webTracking?: string;
   } = {};
   const success: {
     apiKey?: boolean;
@@ -132,7 +179,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
-  if (intent === 'tracking-enable') {
+  if (intent === "tracking-enable") {
     try {
       const shop = await shopRepository.getShop(session.shop);
       if (!shop) {
@@ -140,19 +187,30 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         return { success, errors };
       }
 
+      if (!shop.siteId && shop.apiKey) {
+        const connectedData = await createGeneralDomain({
+          apiKey: shop.apiKey,
+          domain: shop.domain,
+        });
+
+        await shopRepository.updateShop(shop.domain, {
+          siteId: connectedData.siteId,
+        });
+      }
+
       await toggleWebTrackingServer({
         shopId: shop.shopId,
         domain: shop.domain,
         enabled: true,
-        admin
-      })
+        admin,
+      });
     } catch (error: any) {
       errors.webTracking = t("WebTrackingSection.errors.notEnabled");
       return { success, errors };
     }
   }
 
-  if (intent === 'tracking-disable') {
+  if (intent === "tracking-disable") {
     try {
       const shop = await shopRepository.getShop(session.shop);
       if (!shop) {
@@ -164,10 +222,44 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         shopId: shop.shopId,
         domain: shop.domain,
         enabled: false,
-        admin
-      })
+        admin,
+      });
     } catch (error: any) {
       errors.webTracking = t("WebTrackingSection.errors.notDisabled");
+      return { success, errors };
+    }
+  }
+
+  if (intent === "contact-sync-enable") {
+    try {
+      const shop = await shopRepository.getShop(session.shop);
+      if (!shop) {
+        errors.webTracking = t("General.errors.shopNotFound");
+        return { success, errors };
+      }
+
+      await shopRepository.updateShop(shop.domain, {
+        isContactSyncEnabled: true,
+      });
+    } catch (error: any) {
+      errors.webTracking = t("ContactSyncSection.errors.notEnabled");
+      return { success, errors };
+    }
+  }
+
+  if (intent === "contact-sync-disable") {
+    try {
+      const shop = await shopRepository.getShop(session.shop);
+      if (!shop) {
+        errors.webTracking = t("General.errors.shopNotFound");
+        return { success, errors };
+      }
+
+      await shopRepository.updateShop(shop.domain, {
+        isContactSyncEnabled: false,
+      });
+    } catch (error: any) {
+      errors.webTracking = t("ContactSyncSection.errors.notDisabled");
       return { success, errors };
     }
   }

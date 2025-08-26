@@ -10,6 +10,16 @@ import {
 import { CheckCircleIcon, XCircleIcon } from "@shopify/polaris-icons";
 import { Trans, useTranslation } from "react-i18next";
 
+/**
+ * Props for the ConnectionStatusList component.
+ *
+ * @property {boolean} [isApiKeyActive] - Indicates if the Yespo API key is active.
+ * @property {boolean} [isGeneralScriptExist] - Indicates if the general script is installed.
+ * @property {boolean} [isWebPushScriptExist] - Indicates if the web push script is installed.
+ * @property {boolean} [isAppExtensionActive] - Indicates if the app extension is active.
+ * @property {string} dockUrl - Base URL for the Dock documentation site.
+ * @property {string} platformUrl - Base URL for the platform (used for API keys link).
+ */
 export interface ConnectionStatusListProps {
   isApiKeyActive?: boolean;
   isGeneralScriptExist?: boolean;
@@ -19,6 +29,26 @@ export interface ConnectionStatusListProps {
   platformUrl: string;
 }
 
+/**
+ * Displays the connection status list with icons indicating success or failure
+ * for API key activity and script/app extension installation statuses.
+ *
+ * Each list item is accompanied by a message and relevant links to support or documentation.
+ *
+ * @param {ConnectionStatusListProps} props - Component properties.
+ *
+ * @returns {JSX.Element} The rendered list of connection status indicators.
+ *
+ * @example
+ * <ConnectionStatusList
+ *   isApiKeyActive={true}
+ *   isGeneralScriptExist={true}
+ *   isWebPushScriptExist={false}
+ *   isAppExtensionActive={true}
+ *   dockUrl="https://docs.example.com"
+ *   platformUrl="https://platform.example.com"
+ * />
+ */
 const ConnectionStatusList: FC<ConnectionStatusListProps> = ({
   isApiKeyActive,
   isGeneralScriptExist,

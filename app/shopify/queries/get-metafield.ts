@@ -1,5 +1,24 @@
 import type { MetafieldResponse, Metafield } from "~/@types/metafield";
 
+/**
+ * Retrieves a specific shop-level metafield from the Shopify store using the Admin GraphQL API.
+ *
+ * This function queries a single metafield by its `key` from the `$app` namespace.
+ * If the metafield exists, it returns its metadata including ID, value, and type.
+ * If the metafield is not found or an error occurs, it returns `null`.
+ *
+ * @param {Object} params - The input parameters.
+ * @param {any} params.admin - The authenticated Shopify Admin API client instance.
+ * @param {string} params.key - The key of the metafield to retrieve.
+ *
+ * @returns {Promise<Metafield | null>} A promise that resolves to the metafield object if found, or `null` otherwise.
+ *
+ * @example
+ * const metafield = await getMetafield({ admin, key: "custom_config" });
+ * if (metafield) {
+ *   console.log("Metafield value:", metafield.value);
+ * }
+ */
 const getMetafield = async ({
   admin,
   key,
