@@ -133,9 +133,9 @@ If a network error or unknown error occurs during sync, the synchronization proc
 #### Logging & Status Tracking:
 
 - `totalCount` – total number of customers from Shopify.
-- `skippedCount` – customers that were already up-to-date (not displayed in the UI).
 - `syncedCount` – customers sent to Yespo.
 - `failedCount` – customers rejected by Yespo.
+- `skippedCount` – customers who are already synced and skipped during sync, this is not displayed in the UI but is saved in the last sync log.
 
 Final synchronization status:
 - `COMPLETE` → all customers processed successfully.
@@ -274,9 +274,9 @@ Order statuses from Shopify are mapped to Yespo statuses:
 #### Logging & Status Tracking:
 
 - `totalCount` – total number of orders from Shopify.
-- `skippedCount` – orders already up-to-date.
 - `syncedCount` – orders successfully sent to Yespo.
 - `failedCount` – orders rejected by Yespo.
+- `skippedCount` – orders who are already synced and skipped during sync, this is not displayed in the UI but is saved in the last sync log.
 
 Final synchronization status:
 - `COMPLETE` → all orders processed successfully.
