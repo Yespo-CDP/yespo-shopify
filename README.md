@@ -123,7 +123,7 @@ If a network error or unknown error occurs during sync, the synchronization proc
   - `customer.lastName` → `lastName`
   - `customer.defaultEmailAddress.emailAddress` → `channels[type=email].value`
   - `customer.defaultPhoneNumber.phoneNumber` → `channels[type=sms].value`
-  - `customer.defaultAddress.phone` (if defaultPhoneNumber not exist) → `channels[type=sms].value`
+  - `customer.defaultAddress.phone` (if defaultPhoneNumber doesn't exist) → `channels[type=sms].value`
   - `customer.defaultAddress.city` → `address.town`
   - `customer.defaultAddress.address1` → `address.address`
   - `customer.defaultAddress.zip` → `address.postcode`
@@ -139,7 +139,7 @@ If a network error or unknown error occurs during sync, the synchronization proc
 
 Final synchronization status:
 - `COMPLETE` → all customers processed successfully.
-- `ERROR` → if a network failure or any unknown error occurs during the synchronization process.
+- `ERROR` → shown when a network failure or any unknown error occurs during the synchronization.
 
 ---
 
@@ -155,19 +155,19 @@ Webhooks are triggered immediately when events occur in Shopify:
 #### Shopify API methods:
 
 - [query /customersCount](https://shopify.dev/docs/api/admin-graphql/latest/queries/customerscount) – returns the count of customers for the given shop.
-- [query /customers](https://shopify.dev/docs/api/admin-graphql/latest/queries/customers) – return a list of customers placed in the stores.
+- [query /customers](https://shopify.dev/docs/api/admin-graphql/latest/queries/customers) – returns a list of customers placed in the stores.
 
 
 #### Yespo API methods:
 
-- [POST /contact](https://docs.esputnik.com/reference/addcontact-1) – creates or update contact.
-- [POST /contacts](https://docs.esputnik.com/reference/contactsbulkupdate-1) – create or update contacts.
+- [POST /contact](https://docs.esputnik.com/reference/addcontact-1) – creates or updates contact.
+- [POST /contacts](https://docs.esputnik.com/reference/contactsbulkupdate-1) – creates or updates contacts.
 - [DELETE /contact](https://docs.esputnik.com/reference/deletecontact-1) (erase=true) – removes contact.
 
 ### Order Sync (Shopify → Yespo)
 
 **Purpose:** Automatically sync new and updated orders from Shopify to Yespo.
-Supports both **historical synchronization** and **real-time synchronization**.
+The process covers both historical synchronization and real-time synchronization through Shopify webhooks.
 
 ---
 
@@ -193,7 +193,7 @@ When sync is enabled:
 - A new job is added to **Redis**
 - A worker begins **historical orders synchronization**
 - Runs once after being enabled (or re-enabled)
-- Triggered after customer synchronization
+- Triggered after customers synchronization
 
 ---
 
@@ -276,11 +276,11 @@ Order statuses from Shopify are mapped to Yespo statuses:
 - `totalCount` – total number of orders from Shopify.
 - `syncedCount` – orders successfully sent to Yespo.
 - `failedCount` – orders rejected by Yespo.
-- `skippedCount` – orders who are already synced and skipped during sync, this is not displayed in the UI but is saved in the last sync log.
+- `skippedCount` – orders that are already synced and skipped during sync, this is not displayed in the UI but is saved in the last sync log.
 
 Final synchronization status:
 - `COMPLETE` → all orders processed successfully.
-- `ERROR` → if a network failure or any unknown error occurs during the synchronization process.
+- `ERROR` → shown when a network failure or any unknown error occurs during the synchronization.
 
 ---
 
@@ -300,7 +300,7 @@ Webhooks are triggered when orders are created or updated in Shopify:
 
 #### Yespo API methods:
 
-- [POST /orders](https://docs.esputnik.com/reference/ordersbulkinsert-1) – create or update orders.
+- [POST /orders](https://docs.esputnik.com/reference/ordersbulkinsert-1) – creates or updates orders.
 
 ### Web Tracking
 **Purpose:** Allows you to track events within your site.
@@ -319,6 +319,7 @@ Webhooks are triggered when orders are created or updated in Shopify:
 - Open the Yespo app
 - Connect your Yespo account
 - Enable tracking in the **Web Tracking** section
+- Make sure that the Theme App Extension is activated as the site script is required
 
 ---
 
@@ -339,9 +340,9 @@ Webhooks are triggered when orders are created or updated in Shopify:
 
 #### Backend Events:
 - **StatusCart** - [StatusCart event](https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#statuscart) 
-occurs when CARTS_UPDATE webhook happened and sends payload with cart data.
-- **PurchasedItems** - [PurchasedItems](https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#purchaseditems)
-occurs when ORDERS_CREATE webhook happened and sends payload with purchased products data.
+occurs when CARTS_UPDATE webhook  is triggered and sends payload with cart data.
+- **PurchasedItems** - [PurchasedItems event](https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#purchaseditems)
+occurs when ORDERS_CREATE webhook is triggered  and sends payload with purchased products data.
 
 
 ## Technologies and Shopify Tools Used
@@ -362,8 +363,8 @@ used for storing tracking and scripts configurations (custom namespace: $app).
 ## Yespo API Authentication
 
 The app uses a Yespo API key, provided by the merchant during onboarding, to authorize all API requests. The key is stored securely and used for:
-- Contact sync
-- Order sync
+- Contacts sync
+- Orders sync
 - Domain registration
 - Scripts retrieval
 
@@ -405,7 +406,7 @@ Create a `.env` file with the following:
 | **WEB_TRACKER_URL**            | **Required.** Yespo tracker api url                                                                     | **Must be** `https://tracker.yespo.io/api/v2`      |
 | **QSTASH_CURRENT_SIGNING_KEY** | **Required.** QSTASH current signing key                                                                | `sig_5**********************S9aU`                  |
 | **QSTASH_NEXT_SIGNING_KEY**    | **Required.** QSTASH next signing key                                                                   | `sig_81*********************WZSrj`                 |
-| **HOST_URL**                   | **Required.** App host url metafiedld name for correct work of extension                                | **Must be** `yespo-app-host`                       |
+| **HOST_URL**                   | **Required.** App host url metafield name  for the extension to work correctly                               | **Must be** `yespo-app-host`                       |
 | **REDIS_URL**                  | **Required.** Redis url for connecting and configuring the data synchronization worker                  | `redis://localhost:6379`                           |
 
 
