@@ -406,7 +406,7 @@ Create a `.env` file with the following:
 | **WEB_TRACKER_URL**            | **Required.** Yespo tracker api url                                                                     | **Must be** `https://tracker.yespo.io/api/v2`      |
 | **QSTASH_CURRENT_SIGNING_KEY** | **Required.** QSTASH current signing key                                                                | `sig_5**********************S9aU`                  |
 | **QSTASH_NEXT_SIGNING_KEY**    | **Required.** QSTASH next signing key                                                                   | `sig_81*********************WZSrj`                 |
-| **HOST_URL**                   | **Required.** App host url metafield name  for the extension to work correctly                               | **Must be** `yespo-app-host`                       |
+| **HOST_URL**                   | **Required.** App host url metafield name  for the extension to work correctly                          | **Must be** `yespo-app-host`                       |
 | **REDIS_URL**                  | **Required.** Redis url for connecting and configuring the data synchronization worker                  | `redis://localhost:6379`                           |
 
 
@@ -533,8 +533,8 @@ Make sure you're authenticated via Shopify CLI and connected to the correct Part
 
 ### Using the App:
 
-- Install the app in your Shopify store
-- [Generate an API key](https://docs.yespo.io/reference/api-keys) and add it to the `Account connection` section
-- Connect general script
-- Connect webpush script
-- Enable/disable web tracking on your site
+- 📥 Install the app in your Shopify store.
+- 🔑 [Generate an API key](https://docs.yespo.io/reference/api-keys) and add it in the `Account connection` section.
+- 📜 Connect the general and web push script in `Scripts integration` section.
+- 👀 Enable or disable web tracking on your site in `Web tracking` section.
+- 🔄 Enable or disable customer and order synchronization in `Data sync` section.
