@@ -30,6 +30,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       active: false,
       isWebTrackingEnabled: false,
       isContactSyncEnabled: false,
+      isOrderSyncEnabled: false,
       siteId: null
     });
     await db.session.deleteMany({ where: { shop } });

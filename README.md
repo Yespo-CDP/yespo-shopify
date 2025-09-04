@@ -1,116 +1,373 @@
 # Yespo Shopify App
 
-Shopify app for integration Yespo with Shopify
+Shopify app for integration Yespo with Shopify.
 
-## Purpose
+### Purpose
 The app allows merchants to:
-- Sync customer data (create, update, delete) from Shopify to Yespo
-- Automatically register their store domain in Yespo (to get site and web push scripts)
-- Inject site and push scripts into the storefront via Theme App Extensions
-- Install the service worker file for web push notifications using a Shopify App Proxy
-- Send tracking events like MainPage, 404 Page, ProductPage, CustomerData, StatusCart and PurchasedItems from your store to Yespo
+- Sync customer data (create, update, delete) from Shopify to Yespo.
+- Sync order data (create, update) from Shopify to Yespo.
+- Automatically register their store domain in Yespo (to get site and web push scripts).
+- Inject site and push scripts into the storefront via Theme App Extensions.
+- Install the service worker file for web push notifications using a Shopify App Proxy.
+- Send tracking events like MainPage, 404 Page, ProductPage, CustomerData, StatusCart, CategoryPage and PurchasedItems from your store to Yespo.
 
 
 ## Features and Implementation Details
 
 ### Widgets
 
-Purpose: Register the store domain and inject the Yespo site script into the storefront automatically.
+**Purpose:** Register the store domain and inject the Yespo site script into the storefront automatically.
 
-Implementation:
-- [Registers](https://docs.esputnik.com/reference/createdomain) the current store domain in Yespo
-- [Retrieves](https://docs.esputnik.com/reference/getscript) the Yespo site script
-- Stores the script content in a Shopify metafield: yespo-script
-- Injects the script into the storefront using a Theme App Extension (./extensions/yespo-extension)
+#### Implementation:
+
+- [Register](https://docs.esputnik.com/reference/createdomain) the current store domain in Yespo.
+- [Retrieve](https://docs.esputnik.com/reference/getscript) the Yespo site script.
+- Store the script content in a Shopify metafield: yespo-script.
+- Inject the script into the storefront using a Theme App Extension (./extensions/yespo-extension).
 
 ### Web Push Subscription
 
-Purpose: Enable customer subscriptions to web push notifications by registering the domain and injecting required scripts.
+**Purpose:** Enable customer subscriptions to web push notifications by registering the domain and injecting required scripts.
 
-Implementation:
-- [Registers](https://docs.esputnik.com/reference/addwebpushdomain) the current store domain in Yespo
-- [Retrieves](https://docs.esputnik.com/reference/getscript) the push script and service worker content
-- Stores the push script in the yespo-web-push-script metafield
-- Injects the push script into the storefront using the same Theme App Extension
+#### Implementation:
 
-Service Worker Installation:
-- A Shopify App Proxy is used to serve the service worker content dynamically from Yespo
-- The worker file is exposed at a predefined path (/apps/yespo/sw.js) to comply with browser requirements
+- [Register](https://docs.esputnik.com/reference/addwebpushdomain) the current store domain in Yespo.
+- [Retrieve](https://docs.esputnik.com/reference/getscript) the push script and service worker content.
+- Store the push script in the yespo-web-push-script metafield.
+- Inject the push script into the storefront using the same Theme App Extension.
+
+#### Service Worker Installation:
+
+- A Shopify App Proxy is used to serve the service worker content dynamically from Yespo.
+- The worker file is exposed at a predefined path (/apps/yespo/sw.js) to comply with browser requirements.
 
 ### Contact Sync (Shopify → Yespo)
-Purpose: Automatically sync new, updated, and deleted customers from Shopify to Yespo as contacts.
 
-Implementation:
+**Purpose:** Automatically sync new, updated, and deleted customers from Shopify to Yespo as contacts.
+The process covers both **historical synchronization** and **real-time synchronization** through Shopify webhooks.
+
+---
+
+#### Implementation:
+
 - App requests access to the following scopes:
-  - read_customers
-  - write_customers
+  - `read_customers`
+  - `write_customers`
 - Shopify webhooks used:
-  - customers/create → creates a new contact in Yespo
-  - customers/update → updates existing contact data
-  - customers/redact → removes contact in Yespo
+  - `customers/create` → creates a new contact in Yespo
+  - `customers/update` → updates existing contact data
+  - `customers/redact` → removes contact in Yespo
 
-Enable contacts sync (optional):
-- Open yespo app
-- Connect your yespo account
-- Enable sync in `Contact Sync` section
+---
 
-Deduplication in Yespo: Contacts are matched using externalCustomerId, email, and phone. If a contact exists, it is updated instead of duplicated.
+#### Enabling contact sync:
 
-Yespo API methods:
-- [POST /contact](https://docs.esputnik.com/reference/addcontact-1) – create or update contact
-- [DELETE /contact](https://docs.esputnik.com/reference/deletecontact-1) (erase=true) – remove contact
+- Open the Yespo app
+- Connect your Yespo account
+- Enable sync in the **Data Sync** section
 
-### Web Tracker
-Purpose: Allow you to track events within your site.
+When sync is enabled:
 
-Implementation:
+- A new synchronization job is added to the **Redis queue**
+- A dedicated **worker** processes the job and starts **historical synchronization**
+- Runs once after being enabled (or re-enabled)
+- Triggered before orders synchronization
+
+---
+
+#### Historical customers sync:
+
+1. **Counting customers**
+
+   * First, a request is made to Shopify using [customersCount](https://shopify.dev/docs/api/admin-graphql/latest/queries/customerscount) to get the total number of customers.
+   * This value is stored as `totalCount` for logging and statistics.
+
+2. **Fetching customers in batches**
+
+   * Customers are fetched in **chunks of 200** using the [customers query](https://shopify.dev/docs/api/admin-graphql/latest/queries/customers).
+   * Each page is retrieved iteratively until all customers are processed.
+
+3. **Validation by `updatedAt`**
+
+   * For every customer, the `updatedAt` field from Shopify is compared against the local database:
+
+     * If the value matches → the customer is **skipped** (no sync needed).
+     * If the value differs or the customer does not exist locally → the customer is **added to the sync batch**.
+     * We update the database to save the clients we synchronize.
+
+4. **Bulk sending to Yespo**
+
+   * Filtered customers are grouped and sent to Yespo using [Contacts Bulk Update](https://docs.esputnik.com/reference/contactsbulkupdate-1).
+   * Deduplication in Yespo is based on:
+
+     * `externalCustomerId`
+     * `email`
+     * `phone`
+   * If a customer exists in Yespo, it is **updated**, not duplicated.
+
+5. **Repeat until completion**
+
+   * The process continues page by page until all customers are checked and either skipped or sent.
+
+---
+
+#### Sync failures:
+
+If a network error or unknown error occurs during sync, the synchronization process will receive status ERROR. This status is displayed in the UI. Sync can be re-enabled in the **Data Sync** section. Data that was successfully synchronized will not be re-synchronized after an error.
+
+---
+ 
+#### Field Mapping [Shopify Customers](https://shopify.dev/docs/api/admin-graphql/latest/queries/customers) →  [Yespo Contacts](https://docs.esputnik.com/reference/contactsbulkupdate-1):
+  - `customer.id` → `externalCustomerId`
+  - `customer.firstName` → `firstName`
+  - `customer.lastName` → `lastName`
+  - `customer.defaultEmailAddress.emailAddress` → `channels[type=email].value`
+  - `customer.defaultPhoneNumber.phoneNumber` → `channels[type=sms].value`
+  - `customer.defaultAddress.phone` (if defaultPhoneNumber doesn't exist) → `channels[type=sms].value`
+  - `customer.defaultAddress.city` → `address.town`
+  - `customer.defaultAddress.address1` → `address.address`
+  - `customer.defaultAddress.zip` → `address.postcode`
+
+---
+
+#### Logging & Status Tracking:
+
+- `totalCount` – total number of customers from Shopify.
+- `syncedCount` – customers sent to Yespo.
+- `failedCount` – customers rejected by Yespo.
+- `skippedCount` – customers who are already synced and skipped during sync, this is not displayed in the UI but is saved in the last sync log.
+
+Final synchronization status:
+- `COMPLETE` → all customers processed successfully.
+- `ERROR` → shown when a network failure or any unknown error occurs during the synchronization.
+
+---
+
+#### Real-time customers sync:
+
+Webhooks are triggered immediately when events occur in Shopify:
+
+  - `customers/create` → new contact sent to Yespo.
+  - `customers/update` → existing contact updated in Yespo.
+  - `customers/redact` → contact removed from Yespo.
+
+---
+#### Shopify API methods:
+
+- [query /customersCount](https://shopify.dev/docs/api/admin-graphql/latest/queries/customerscount) – returns the count of customers for the given shop.
+- [query /customers](https://shopify.dev/docs/api/admin-graphql/latest/queries/customers) – returns a list of customers placed in the stores.
+
+
+#### Yespo API methods:
+
+- [POST /contact](https://docs.esputnik.com/reference/addcontact-1) – creates or updates contact.
+- [POST /contacts](https://docs.esputnik.com/reference/contactsbulkupdate-1) – creates or updates contacts.
+- [DELETE /contact](https://docs.esputnik.com/reference/deletecontact-1) (erase=true) – removes contact.
+
+### Order Sync (Shopify → Yespo)
+
+**Purpose:** Automatically sync new and updated orders from Shopify to Yespo.
+The process covers both historical synchronization and real-time synchronization through Shopify webhooks.
+
+---
+
+#### Implementation:
+
+App requests access to the following scopes:
+  - `read_orders`
+  - `read_all_orders`
+
+Shopify webhooks used:
+  - `orders/updated` → creates or updates existing order data
+
+---
+
+#### Enabling order sync:
+
+- Open the Yespo app
+- Connect your Yespo account
+- Enable sync in the **Data Sync** section
+
+When sync is enabled:
+
+- A new job is added to **Redis**
+- A worker begins **historical orders synchronization**
+- Runs once after being enabled (or re-enabled)
+- Triggered after customers synchronization
+
+---
+
+#### Historical orders sync:
+
+1. **Counting orders**
+
+   * Shopify [ordersCount](https://shopify.dev/docs/api/admin-graphql/latest/queries/orderscount) is called to get the total number of orders (`totalCount`).
+
+2. **Fetching orders in batches**
+
+   * Orders are fetched using the [orders query](https://shopify.dev/docs/api/admin-graphql/latest/queries/orders).
+   * Since each order includes `lineItems`, the batch size is **150** (instead of 200 for customers) to stay within Shopify’s API limits.
+
+3. **Validation by `updatedAt`**
+
+   * Each order’s `updatedAt` is compared with the local database:
+
+     * If the order is unchanged → skipped
+     * If new or updated → added to sync batch
+     * We update the database to save the orders we synchronize
+
+4. **Bulk sending to Yespo**
+
+   * Orders are sent to Yespo using [Orders Bulk Insert](https://docs.esputnik.com/reference/ordersbulkinsert-1).
+
+---
+
+#### Sync failures:
+
+If a network error or unknown error occurs during sync, the synchronization process will receive status ERROR. This status is displayed in the UI. Sync can be re-enabled in the **Data Sync** section. Data that was successfully synchronized will not be re-synchronized after an error.
+
+---
+  
+#### Field Mapping [Shopify Order](https://shopify.dev/docs/api/admin-graphql/latest/queries/orders) →  [Yespo Order](https://docs.esputnik.com/reference/ordersbulkinsert-1):
+- `order.id` → `externalOrderId`
+- `order.customer.id` → `externalCustomerId`
+- `order.customer.firstName` → `firstName`
+- `order.customer.lastName` → `lastName`
+- `order.customer.defaultEmailAddress.emailAddress` → `email`
+- `order.customer.defaultPhoneNumber.phoneNumber` → `phone`
+- `order.totalPriceSet.shopMoney.amount` → `totalCost`
+- `order.totalDiscountsSet.shopMoney.amount` → `discount`
+- `order.totalShippingPriceSet.shopMoney.amount` → `shipping`
+- `order.totalTaxSet.shopMoney.amount` → `taxes`
+- `order.currencyCode` → `currency`
+- `order.createdAt` (converted to UTC) → `date`
+- `order.displayFulfillmentStatus` (+ cancelledAt check) → `status`
+- `order.shippingAddress` (formatted string) → `deliveryAddress`
+- `order.lineItems.nodes[]`:
+  - `lineItem.id` → `externalItemId`
+  - `lineItem.name` → `name`
+  - `lineItem.quantity` → `quantity`
+  - `lineItem.originalTotalSet.shopMoney.amount` → `cost`
+
+---
+
+#### Status Mapping:
+
+Order statuses from Shopify are mapped to Yespo statuses:
+
+**Webhook `fulfillment_status` → Yespo status**
+
+* `restocked`, `cancelledAt` → `CANCELLED`
+* `partial` → `IN_PROGRESS`
+* `fulfilled` → `DELIVERED`
+* `null` → `INITIALIZED`
+
+**`displayFulfillmentStatus` → Yespo status**
+
+* `REQUEST_DECLINED`, `cancelledAt` → `CANCELLED`
+* `PARTIALLY_FULFILLED`, `PENDING_FULFILLMENT`, `IN_PROGRESS` → `IN_PROGRESS`
+* `FULFILLED` → `DELIVERED`
+* `other` → `INITIALIZED`
+
+---
+
+#### Logging & Status Tracking:
+
+- `totalCount` – total number of orders from Shopify.
+- `syncedCount` – orders successfully sent to Yespo.
+- `failedCount` – orders rejected by Yespo.
+- `skippedCount` – orders that are already synced and skipped during sync, this is not displayed in the UI but is saved in the last sync log.
+
+Final synchronization status:
+- `COMPLETE` → all orders processed successfully.
+- `ERROR` → shown when a network failure or any unknown error occurs during the synchronization.
+
+---
+
+#### Real-time orders sync:
+
+Webhooks are triggered when orders are created or updated in Shopify:
+
+  - `orders/create` → new order sent to Yespo.
+  - `orders/updated` → existing order updated in Yespo.
+
+---
+
+#### Shopify API methods:
+
+- [query /ordersCount](https://shopify.dev/docs/api/admin-graphql/latest/queries/orderscount) – returns the count of orders for the given shop.
+- [query /orders](https://shopify.dev/docs/api/admin-graphql/latest/queries/orders) – returns a list of orders placed in the stores.
+
+#### Yespo API methods:
+
+- [POST /orders](https://docs.esputnik.com/reference/ordersbulkinsert-1) – creates or updates orders.
+
+### Web Tracking
+**Purpose:** Allows you to track events within your site.
+
+---
+
+#### Implementation:
+
 - Stores the enable flag in the web-tracking-enabled metafield
-- Send tracking events from the site to Yespo through Theme extension.
+- Sends tracking events from the site to Yespo through Theme Extension.
 
-#### Frontend Events
-- **MainPage** - [MainPage event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#main-page) occurs when user visited Home page of the site
-- **404 Page** - [404 Page event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#404-page) occurs when user visited 404 page of the site
-- **Status Cart Page** - [StatusCartPage event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#additional-events-required-for-recommendations-on-the-site) occurs when user visited /cart page of the site
-- **Category Page** - [StatusCartPage event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#category) occurs when user visited category page of the site
-- **ProductPage** - [ProductPage event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#product-card) occurs when user visited product page of the site and send payload with product data:
-  - productKey - product id
-  - price - product price
-  - isInStock - indicates if product is in stock
-- **CustomerData** - [CustomerData event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#customer) occurs when there is a logged in user on the site and send payload with customer data:
-  - externalCustomerId - customer id
-  - user_email - customer email
-  - user_name - customer name
-  - phone - customer phone
+---
 
-#### Backend Events
+#### Enabling web tracking:
+
+- Open the Yespo app
+- Connect your Yespo account
+- Enable tracking in the **Web Tracking** section
+- Make sure that the Theme App Extension is activated as the site script is required
+
+---
+
+#### Frontend Events:
+- **MainPage** – [MainPage event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#main-page) occurs when user visited Home page of the site
+- **404 Page** – [404 Page event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#404-page) occurs when user visited 404 page of the site
+- **Status Cart Page** – [StatusCartPage event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#additional-events-required-for-recommendations-on-the-site) occurs when user visited /cart page of the site
+- **Category Page** – [CategoryPage event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#category) occurs when user visited products collection page of the site
+- **ProductPage** – [ProductPage event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#product-card) occurs when user visited product page of the site and sends payload with product data:
+  - productKey – product id
+  - price – product price
+  - isInStock – indicates if product is in stock
+- **CustomerData** – [CustomerData event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#customer) occurs when there is a logged in user on the site and sends payload with customer data:
+  - externalCustomerId – customer id
+  - user_email – customer email
+  - user_name – customer name
+  - phone – customer phone
+
+#### Backend Events:
 - **StatusCart** - [StatusCart event](https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#statuscart) 
-occurs when CARTS_UPDATE webhook happened and send payload with cart data.
-- **PurchasedItems** - [PurchasedItems](https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#purchaseditems)
-occurs when ORDERS_CREATE webhook happened and send payload with purchased products data.
+occurs when CARTS_UPDATE webhook  is triggered and sends payload with cart data.
+- **PurchasedItems** - [PurchasedItems event](https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#purchaseditems)
+occurs when ORDERS_CREATE webhook is triggered  and sends payload with purchased products data.
 
 
 ## Technologies and Shopify Tools Used
 
-- [Shopify App Remix](https://shopify.dev/docs/api/shopify-app-remix) provides authentication and methods for interacting with Shopify APIs.
-- [Shopify App Bridge](https://shopify.dev/docs/apps/tools/app-bridge) allows your app to seamlessly integrate your app within Shopify's Admin.
-- [App extensions](https://shopify.dev/docs/apps/build/app-extensions) - Theme app extensions allow the Yespo app to 
-seamlessly inject scripts into a merchant’s theme without manual code edits.
+- [Shopify App Remix](https://shopify.dev/docs/api/shopify-app-remix) – provides authentication and methods for interacting with Shopify APIs.
+- [Shopify App Bridge](https://shopify.dev/docs/apps/tools/app-bridge) – allows your app to seamlessly integrate your app within Shopify's Admin.
+- [App extensions](https://shopify.dev/docs/apps/build/app-extensions) – Theme App Extensions allow the Yespo app to 
+seamlessly inject scripts into a merchant’s Theme without manual code edits.
   You can find the extension code in the `./extensions/yespo-extension` directory.
   This extension includes:
-  - `blocks/` – Contains Liquid files that act as entry points for injecting Yespo scripts into the theme. These blocks can be enabled via the Shopify theme editor.
-  - `assests/` - Contains JavaScript script that send events using eS.JS.
-- [Polaris](https://polaris.shopify.com/): Design system that enables apps to create Shopify-like experiences
-- [Webhooks](https://shopify.dev/docs/api/webhooks?reference=toml) - to receive notifications about particular events in a shop such as customer-related changes.
-- [Metafields](https://shopify.dev/docs/apps/build/online-store/theme-app-extensions/configuration#metafield-namespaces) - 
-used for storing tracking and scripts configurations (custom namespace: $app)
+  - `blocks/` – contains Liquid files that act as entry points for injecting Yespo scripts into the Theme. These blocks can be enabled via the Shopify Theme editor.
+  - `assests/` – contains JavaScript script that sends events using eS.JS.
+- [Polaris](https://polaris.shopify.com/) – design system that enables apps to create Shopify-like experiences.
+- [Webhooks](https://shopify.dev/docs/api/webhooks?reference=toml) – allows to receive notifications about particular events in a shop such as customer-related changes.
+- [Metafields](https://shopify.dev/docs/apps/build/online-store/theme-app-extensions/configuration#metafield-namespaces) – 
+used for storing tracking and scripts configurations (custom namespace: $app).
 - [Yespo Dock](https://docs.yespo.io/docs/integration-with-api) – Yespo API documentation.
 
 ## Yespo API Authentication
 
 The app uses a Yespo API key, provided by the merchant during onboarding, to authorize all API requests. The key is stored securely and used for:
-- Contact sync
+- Contacts sync
+- Orders sync
 - Domain registration
-- Script retrieval
+- Scripts retrieval
 
 Full API documentation: https://docs.yespo.io/docs/integration-with-api
 
@@ -127,7 +384,7 @@ Before you begin, you'll need the following:
 
 ### Setup
 
-#### Environment variables
+#### Environment variables:
 
 Create a `.env` file with the following:
 
@@ -150,10 +407,11 @@ Create a `.env` file with the following:
 | **WEB_TRACKER_URL**            | **Required.** Yespo tracker api url                                                                     | **Must be** `https://tracker.yespo.io/api/v2`      |
 | **QSTASH_CURRENT_SIGNING_KEY** | **Required.** QSTASH current signing key                                                                | `sig_5**********************S9aU`                  |
 | **QSTASH_NEXT_SIGNING_KEY**    | **Required.** QSTASH next signing key                                                                   | `sig_81*********************WZSrj`                 |
-| **HOST_URL**                   | **Required.** App host url metafiedld name for correct work of extension                                | **Must be** `yespo-app-host`                       |
+| **HOST_URL**                   | **Required.** App host url metafield name  for the extension to work correctly                          | **Must be** `yespo-app-host`                       |
+| **REDIS_URL**                  | **Required.** Redis url for connecting and configuring the data synchronization worker                  | `redis://localhost:6379`                           |
 
 
-#### Required Shopify Scopes
+#### Required Shopify Scopes:
 You can [configure app](https://shopify.dev/docs/apps/build/cli-for-apps/app-configuration) locally with TOML files.
 In root directory you need have `shopify.app.toml`  or `shopify.app.{your-config-name}.toml`.
 Use shopify app config link to generate additional configuration files for development or staging apps. You can also
@@ -165,11 +423,12 @@ The app requires the following access scopes:
 - `read_customers`
 - `read_markets`
 - `read_orders`
+- `read_all_orders`
 - `read_themes`
 - `write_app_proxy`
 
-#### Webhooks
-Shopify webhooks (API version: 2025-01) used by the app:
+#### Webhooks:
+Shopify webhooks (API version: 2025-07) used by the app:
 
 | Event Topic                | Description                                                                   | Endpoint                      |
 |----------------------------|-------------------------------------------------------------------------------|-------------------------------|
@@ -182,10 +441,11 @@ Shopify webhooks (API version: 2025-01) used by the app:
 | **app/scopes_update**      | Triggered when the app's permission scopes are updated by the merchant.       | `/webhooks/app/scopes_update` |
 | **app/uninstalled**        | Triggered when a merchant uninstalls the app.                                 | `/webhooks/app/uninstalled`   |
 | **orders/create**          | Triggered when an order is created.                                           | `/webhook/app/orders`         |
+| **orders/updated**         | Triggered when an existing order’s data is updated.                           | `/webhook/app/orders`         |
 | **carts/update**           | Triggered when a cart is updated in the online store.                         | `/webhooks/app/carts`         |
 
 
-#### Setup App Proxy
+#### Setup App Proxy:
 App proxy is used for web push notifications.
 
 - Select yespo app in shopify partner
@@ -196,7 +456,7 @@ App proxy is used for web push notifications.
 - Proxy URL: `https://push.yespo.tech/`
 
 
-### Development
+### Development:
 
 ##### Install dependencies
 ```shell
@@ -214,7 +474,7 @@ npx prisma migrate dev
 npm run dev
 ```
 
-### Production
+### Production:
 #### Install dependencies
 ```shell
 npm install
@@ -235,7 +495,8 @@ npm run build
 npm run start
 ```
 
-### App Deployment
+### App Deployment:
+
 #### Hosting & Source Code Deployment
 
 You’ll first need to deploy the app’s source code to your hosting provider. This example uses Heroku, and the 
@@ -258,7 +519,8 @@ git commit -m "Prepare for Heroku deployment"
 git push heroku main
 ```
 
-After deploying your app backend, you need to deploy the Shopify theme extension and app configuration (shopify.app.toml).
+#### Deployment of Theme Extension & .toml Configuration:
+After deploying your app backend, you need to deploy the Shopify Theme Extension and app configuration (shopify.app.toml).
 Use the Shopify CLI to deploy both:
 ```shell
 npm run deploy
@@ -270,8 +532,14 @@ This command will:
 
 Make sure you're authenticated via Shopify CLI and connected to the correct Partner organization and store.
 
-### Using the App
+### Using the App:
 
+- 📥 Install the app in your Shopify store.
+- 🔑 [Generate an API key](https://docs.yespo.io/reference/api-keys) and add it in the `Account connection` section.
+- 📜 Connect the general and web push script in `Scripts integration` section.
+- 👀 Enable or disable web tracking on your site in `Web tracking` section.
+- 🔄 Enable or disable customer and order synchronization in `Data sync` section.
+=======
 - Install the app in your Shopify store
 - [Generate an API key](https://docs.yespo.io/reference/api-keys) and add it to the `Account connection` section
 - Connect general script

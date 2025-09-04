@@ -1,6 +1,6 @@
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
-import type {Contact} from "~/@types/contact";
+import type { Contact } from "~/@types/contact";
 
 /**
  * Sends a POST request to create a contact in the Yespo API.
@@ -17,10 +17,10 @@ import type {Contact} from "~/@types/contact";
 
 export const createContact = async ({
   apiKey,
-  contactData
+  contactData,
 }: {
   apiKey: string;
-  contactData: Contact
+  contactData: Contact;
 }): Promise<void> => {
   const url = `${process.env.API_URL}/contact`;
   const authHeader = getAuthHeader(apiKey);
@@ -38,7 +38,7 @@ export const createContact = async ({
     return response;
   } catch (error: any) {
     console.error("Error creating contact:", error?.message);
-    if (!error?.message?.includes('Duplicated request')) {
+    if (!error?.message?.includes("Duplicated request")) {
       throw new Error(error.message);
     }
   }

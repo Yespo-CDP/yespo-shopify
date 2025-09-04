@@ -42,11 +42,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   switch (topic) {
     case "CUSTOMERS_CREATE":
-      await createContactService(payload, shop.apiKey);
+      await createContactService(payload, shop.apiKey, shop.id);
       break;
 
     case "CUSTOMERS_UPDATE":
-      await updateContactService(payload, shop.apiKey);
+      await updateContactService(payload, shop.apiKey, shop.id);
       break;
 
     default:
