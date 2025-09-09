@@ -35,10 +35,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     });
     await db.session.deleteMany({ where: { shop } });
 
-    await db.customerSync.deleteMany({ where: { shopId: shopData?.id } });
-    await db.customerSyncLog.deleteMany({ where: { shopId: shopData?.id } });
-    await db.orderSync.deleteMany({ where: { shopId: shopData?.id } });
-    await db.orderSyncLog.deleteMany({ where: { shopId: shopData?.id } });
+    if (shopData?.id) {
+      await db.customerSync.deleteMany({ where: { shopId: shopData?.id } });
+      await db.customerSyncLog.deleteMany({ where: { shopId: shopData?.id } });
+      await db.orderSync.deleteMany({ where: { shopId: shopData?.id } });
+      await db.orderSyncLog.deleteMany({ where: { shopId: shopData?.id } });
+    }
   }
 
   return new Response();
