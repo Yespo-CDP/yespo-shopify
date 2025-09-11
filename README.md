@@ -539,12 +539,6 @@ Make sure you're authenticated via Shopify CLI and connected to the correct Part
 - 📜 Connect the general and web push scripts in the `Scripts integration` section.
 - 👀 Enable or disable web tracking on your site in the `Web tracking` section.
 - 🔄 Enable or disable customers and orders synchronization in the `Data sync` section.
-=======
-- Install the app in your Shopify store
-- [Generate an API key](https://docs.yespo.io/reference/api-keys) and add it to the `Account connection` section
-- Connect general script
-- Connect webpush script
-- Enable/disable web tracker on your site
 
 ## Contributing
 
