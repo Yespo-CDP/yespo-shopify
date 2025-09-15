@@ -2,7 +2,11 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 
 import type { Account } from "~/@types/account";
 import { getAccountInfo } from "~/api/get-account-info.server";
-import { shopRepository } from "~/repositories/repositories.server";
+import {
+  shopRepository,
+  customerSyncLogRepository,
+  orderSyncLogRepository,
+} from "~/repositories/repositories.server";
 import { connectAccountService } from "~/services/connect-account.server";
 import { disconnectAccountService } from "~/services/disconnect-account.server";
 import { connectGeneralScriptService } from "~/services/connect-general-script.server";
@@ -12,8 +16,9 @@ import checkScriptConnectionService from "~/services/check-script-connection.ser
 import checkThemeExtensionService from "~/services/check-theme-extension.server";
 import { authenticate } from "~/shopify.server";
 import i18n from "~/i18n.server";
-import { toggleWebTrackingServer } from "~/services/toggleWebTracking.server";
+import { toggleWebTrackingServer } from "~/services/toggle-web-tracking.server";
 import { createGeneralDomain } from "~/api/create-general-domain.server";
+import { enqueueDataSyncTasks } from "~/services/queue";
 
 /**
  * Loader function for initializing data needed on the page.
@@ -28,6 +33,8 @@ import { createGeneralDomain } from "~/api/create-general-domain.server";
  *   account: Account | null,
  *   scriptConnectionStatus: any,
  *   isMarketsOverflowing: boolean,
+ *   customersSyncLog: CustomerSyncLog[],
+ *   orderSyncLog: OrderSyncLog[],
  *   ENV: {
  *     DOCK_URL: string,
  *     PLATFORM_URL: string
@@ -38,6 +45,11 @@ import { createGeneralDomain } from "~/api/create-general-domain.server";
 export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
   const shop = await shopRepository.getShop(session.shop);
+  const customersSyncLog =
+    await customerSyncLogRepository.getCustomerSyncLogByShop(session.shop);
+  const orderSyncLog = await orderSyncLogRepository.getOrderSyncLogByShop(
+    session.shop,
+  );
   const isMarketsOverflowing = await checkMarketsService({ admin });
   const scriptConnectionStatus = await checkScriptConnectionService({ admin });
 
@@ -56,6 +68,8 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
     account,
     scriptConnectionStatus,
     isMarketsOverflowing,
+    customersSyncLog,
+    orderSyncLog,
     ENV: {
       DOCK_URL: process.env.DOCK_URL ?? "https://docs.yespo.io",
       PLATFORM_URL: process.env.PLATFORM_URL ?? "https://my.yespo.io",
@@ -98,6 +112,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     apiKey?: string;
     script?: string;
     webTracking?: string;
+    dataSync?: string;
   } = {};
   const success: {
     apiKey?: boolean;
@@ -230,36 +245,66 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
-  if (intent === "contact-sync-enable") {
+  if (intent === "data-sync-enable") {
     try {
       const shop = await shopRepository.getShop(session.shop);
       if (!shop) {
-        errors.webTracking = t("General.errors.shopNotFound");
+        errors.dataSync = t("General.errors.shopNotFound");
         return { success, errors };
       }
 
       await shopRepository.updateShop(shop.domain, {
         isContactSyncEnabled: true,
+        isOrderSyncEnabled: true,
       });
+
+      await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
+        status: "NOT_STARTED",
+        skippedCount: 0,
+        syncedCount: 0,
+        failedCount: 0,
+        totalCount: 0,
+        shop: {
+          connect: {
+            id: shop.id,
+          },
+        },
+      });
+
+      await orderSyncLogRepository.createOrUpdateOrderSyncLog({
+        status: "NOT_STARTED",
+        skippedCount: 0,
+        syncedCount: 0,
+        failedCount: 0,
+        totalCount: 0,
+        shop: {
+          connect: {
+            id: shop.id,
+          },
+        },
+      });
+
+      await enqueueDataSyncTasks({ session, shop });
     } catch (error: any) {
-      errors.webTracking = t("ContactSyncSection.errors.notEnabled");
+      errors.dataSync = t("DataSyncSection.errors.notEnabled");
       return { success, errors };
     }
   }
 
-  if (intent === "contact-sync-disable") {
+  if (intent === "data-sync-disable") {
     try {
       const shop = await shopRepository.getShop(session.shop);
       if (!shop) {
-        errors.webTracking = t("General.errors.shopNotFound");
+        errors.dataSync = t("General.errors.shopNotFound");
         return { success, errors };
       }
 
       await shopRepository.updateShop(shop.domain, {
         isContactSyncEnabled: false,
+        isOrderSyncEnabled: false,
       });
     } catch (error: any) {
-      errors.webTracking = t("ContactSyncSection.errors.notDisabled");
+      errors.dataSync = t("DataSyncSection.errors.notDisabled");
       return { success, errors };
     }
   }

@@ -1,6 +1,6 @@
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
-import {Contact} from "~/@types/contact";
+import type { Contact } from "~/@types/contact";
 
 /**
  * Sends a POST request to update a contact in the Yespo API.
@@ -17,10 +17,10 @@ import {Contact} from "~/@types/contact";
 
 export const updateContact = async ({
   apiKey,
-  contactData
+  contactData,
 }: {
   apiKey: string;
-  contactData: Contact
+  contactData: Contact;
 }): Promise<void> => {
   const url = `${process.env.API_URL}/contact`;
   const authHeader = getAuthHeader(apiKey);
@@ -38,7 +38,7 @@ export const updateContact = async ({
     return response;
   } catch (error: any) {
     console.error("Error updating contact:", error?.message);
-    if (!error?.message?.includes('Duplicated request')) {
+    if (!error?.message?.includes("Duplicated request")) {
       throw new Error(error.message);
     }
   }

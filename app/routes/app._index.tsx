@@ -16,7 +16,7 @@ import {
 } from "@shopify/polaris";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { Trans, useTranslation } from "react-i18next";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import UnsupportedMarketsSection from "~/components/UnsupportedMarketsSection";
 import AccountConnectionSection from "~/components/AccountConnectionSection";
@@ -24,7 +24,7 @@ import ConnectionStatusSection from "~/components/ConnectionStatusSection";
 import UsefulLinksSection from "~/components/UsefulLinksSection";
 import { loaderHandler, actionHandler } from "~/lib/app.server";
 import WebTrackingSection from "~/components/WebTrackingSection";
-import ContactSyncSection from "~/components/ContactSyncSection";
+import DataSyncSection from "~/components/DataSyncSection";
 
 /**
  * The loader function to fetch initial data for the page.
@@ -62,12 +62,27 @@ export default function Index() {
   const shopify = useAppBridge();
   const loaderData = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
-  const { shop, account, isMarketsOverflowing, scriptConnectionStatus, ENV } =
-    loaderData;
+  const {
+    shop,
+    account,
+    isMarketsOverflowing,
+    scriptConnectionStatus,
+    customersSyncLog,
+    orderSyncLog,
+    ENV,
+  } = loaderData;
   const navigation = useNavigation();
   const revalidator = useRevalidator();
   const isLoading = revalidator.state === "loading";
   const isSubmitting = navigation.state === "submitting";
+  const [customersSyncLogData, setCustomersSyncLogData] =
+    useState(customersSyncLog);
+  const [orderSyncLogData, setOrderSyncLogData] = useState(orderSyncLog);
+
+  useEffect(() => {
+    setCustomersSyncLogData(customersSyncLog);
+    setOrderSyncLogData(orderSyncLog);
+  }, [customersSyncLog, orderSyncLog]);
 
   useEffect(() => {
     if (actionData?.success?.apiKey) {
@@ -89,6 +104,25 @@ export default function Index() {
       });
     }
   }, [actionData, shopify, t]);
+
+  useEffect(() => {
+    const shouldPoll =
+      customersSyncLogData?.status === "NOT_STARTED" ||
+      customersSyncLogData?.status === "IN_PROGRESS" ||
+      orderSyncLogData?.status === "NOT_STARTED" ||
+      orderSyncLogData?.status === "IN_PROGRESS";
+
+    if (!shouldPoll) return;
+
+    const intervalId = setInterval(async () => {
+      const res = await fetch("/api/sync-logs");
+      const updated = await res.json();
+      setCustomersSyncLogData(updated?.customersSyncLog);
+      setOrderSyncLogData(updated?.orderSyncLog);
+    }, 3000);
+
+    return () => clearInterval(intervalId);
+  }, [customersSyncLogData, orderSyncLogData]);
 
   return (
     <Page>
@@ -173,11 +207,14 @@ export default function Index() {
               />
             </Layout.Section>
             <Layout.Section>
-              <ContactSyncSection
-                contactSyncEnabled={shop?.isContactSyncEnabled ?? false}
+              <DataSyncSection
+                contactSyncEnabled={Boolean(shop?.isContactSyncEnabled)}
+                orderSyncEnabled={Boolean(shop?.isOrderSyncEnabled)}
                 disabled={
                   isMarketsOverflowing || isSubmitting || isLoading || !account
                 }
+                customersSyncLog={customersSyncLogData as any}
+                orderSyncLog={orderSyncLogData as any}
               />
             </Layout.Section>
             <Layout.Section>
