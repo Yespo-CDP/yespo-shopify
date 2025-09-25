@@ -9,6 +9,7 @@ import {shopRepository} from "~/repositories/repositories.server";
  *
  * @param {Object} params - Parameters for connecting the general script.
  * @param {string} params.shopId - The ID of the Shopify store.
+ * @param {string} params.shopUrl - The shop's .myshopify.com domain name.
  * @param {string} params.apiKey - The API key used for authentication.
  * @param {string} params.domain - The domain of the Shopify store.
  * @param {any} params.admin - Shopify Admin API client instance.
@@ -20,8 +21,9 @@ import {shopRepository} from "~/repositories/repositories.server";
  * @example
  * await connectGeneralScriptService({
  *   shopId: "gid://shopify/Shop/123456",
+ *   shopUrl: "your-shop-domain.myshopify.com",
  *   apiKey: "your-api-key",
- *   domain: "your-shop-domain.myshopify.com",
+ *   domain: "your-shop-domain.com",
  *   admin,
  * });
  */
@@ -31,11 +33,13 @@ const GENERAL_SCRIPT_HANDLE =
 
 export const connectGeneralScriptService = async ({
   shopId,
+  shopUrl,
   apiKey,
   domain,
   admin,
 }: {
   shopId: string;
+  shopUrl: string;
   apiKey: string;
   domain: string;
   admin: any;
@@ -43,7 +47,7 @@ export const connectGeneralScriptService = async ({
   try {
     const connectedData = await createGeneralDomain({ apiKey, domain });
 
-    await shopRepository.updateShop(domain, {
+    await shopRepository.updateShop(shopUrl, {
       siteId: connectedData.siteId
     });
 
