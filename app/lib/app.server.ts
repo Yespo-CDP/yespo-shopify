@@ -159,6 +159,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
       await connectGeneralScriptService({
         apiKey: shop.apiKey,
+        shopUrl: shop.shopUrl,
         shopId: shop.shopId,
         domain: shop.domain,
         admin,
