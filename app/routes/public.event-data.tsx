@@ -60,6 +60,7 @@ export const action = async ({request}: ActionFunctionArgs) => {
 
   try {
     const data = await request.json();
+    console.log('Public event data', data)
     if (!data.shop || !data.sc || !data.cartToken) {
       return jsonResponse({ success: true }); // early return if data is incomplete
     }

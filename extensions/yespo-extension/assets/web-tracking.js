@@ -56,6 +56,7 @@ class EventTracker {
 
   sendPage404Event() {
     try {
+      console.log('this.data', this.data)
       if (this.data.pageTemplate === '404') {
         window.eS('sendEvent', 'NotFound');
       }
@@ -187,6 +188,7 @@ class EventTracker {
     }
 
     try {
+      console.log('cart token', data.token)
       const res = await fetch(`${data.host}/public/event-data`, {
         method: 'POST',
         body: JSON.stringify({
@@ -271,6 +273,7 @@ class EventTracker {
 
 
   async run() {
+    console.log('Web tracking run')
     if (!this.data) return;
 
     await this.interceptCartCreateFetch()
