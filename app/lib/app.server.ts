@@ -66,7 +66,11 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   return {
     shop,
     account,
-    scriptConnectionStatus,
+    scriptConnectionStatus: {
+      isThemeExtensionActive: scriptConnectionStatus.isThemeExtensionActive,
+      isGeneralScriptExist: shop?.isGeneralScriptInstalled, //|| scriptConnectionStatus.isGeneralScriptExist,
+      isWebPushScriptExist: shop?.isWebPushScriptInstalled //|| scriptConnectionStatus.isWebPushScriptExist,
+    },
     isMarketsOverflowing,
     customersSyncLog,
     orderSyncLog,
@@ -143,6 +147,35 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     try {
       await connectAccountService({ session, apiKey, admin });
       success.apiKey = true;
+
+      //install general script
+      const shop = await shopRepository.getShop(session.shop);
+      if (!shop || !shop?.apiKey) {
+        errors.script = t("AccountConnectionSection.errors.emptyApiKey");
+        return { success, errors };
+      }
+
+      const isGeneralScriptInstalled = await connectGeneralScriptService({
+        apiKey: shop.apiKey,
+        shopUrl: shop.shopUrl,
+        shopId: shop.shopId,
+        domain: shop.domain,
+        admin,
+      });
+
+      //install web push script
+      const isWebPushScriptInstalled = await connectWebPushScriptService({
+        apiKey: shop.apiKey,
+        shopId: shop.shopId,
+        domain: shop.domain,
+        admin,
+      });
+
+      await shopRepository.updateShop(session.shop, {
+        isGeneralScriptInstalled,
+        isWebPushScriptInstalled
+      })
+
     } catch (error: any) {
       errors.apiKey = t(`AccountConnectionSection.errors.${error.message}`);
       return { success, errors };
@@ -151,35 +184,6 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
   if (intent === "connection-status") {
     try {
-      const shop = await shopRepository.getShop(session.shop);
-      if (!shop || !shop?.apiKey) {
-        errors.script = t("AccountConnectionSection.errors.emptyApiKey");
-        return { success, errors };
-      }
-
-      await connectGeneralScriptService({
-        apiKey: shop.apiKey,
-        shopUrl: shop.shopUrl,
-        shopId: shop.shopId,
-        domain: shop.domain,
-        admin,
-      });
-
-      success.connection = {
-        isGeneralScriptExist: true,
-      };
-
-      await connectWebPushScriptService({
-        apiKey: shop.apiKey,
-        shopId: shop.shopId,
-        domain: shop.domain,
-        admin,
-      });
-
-      success.connection = {
-        isWebPushScriptExist: true,
-      };
-
       const isThemeExtensionActive = await checkThemeExtensionService({
         admin,
       });
@@ -310,5 +314,12 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
+  if (intent === "retry-install-general-script") {
+    console.log('<<<<<<<<<<<<<<<retry-install-general-script')
+  }
+
+  if (intent === "retry-install-webpush-script") {
+    console.log('<<<<<<<<<<<<<<<<<<<retry-install-webpush-script')
+  }
   return { success, errors };
 };

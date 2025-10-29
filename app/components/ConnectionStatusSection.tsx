@@ -1,7 +1,6 @@
-import { type FC } from "react";
+import {type FC} from "react";
 import {
   Button,
-  Banner,
   Card,
   Text,
   BlockStack,
@@ -9,10 +8,11 @@ import {
   InlineError,
   Link,
 } from "@shopify/polaris";
-import { Form, useRevalidator } from "@remix-run/react";
-import { RefreshIcon } from "@shopify/polaris-icons";
-import { useTranslation } from "react-i18next";
+import {Form, useRevalidator} from "@remix-run/react";
+import {RefreshIcon} from "@shopify/polaris-icons";
+import {useTranslation} from "react-i18next";
 import ConnectionStatusList from "./ConnectionStatusList";
+import ScriptStatusBanner from "~/components/ui/ScriptStatusBanner";
 
 /**
  * Props for the ConnectionStatusSection component.
@@ -65,8 +65,8 @@ export interface ConnectionStatusSectionProps {
  */
 const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
   isApiKeyActive,
-  isGeneralScriptExist,
-  isWebPushScriptExist,
+  isGeneralScriptExist = false,
+  isWebPushScriptExist = false,
   isAppExtensionActive,
   dockUrl,
   platformUrl,
@@ -74,7 +74,7 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
   disabled,
 }) => {
   const revalidator = useRevalidator();
-  const { t } = useTranslation();
+  const {t} = useTranslation();
   const intent = "connection-status";
 
   return (
@@ -102,40 +102,41 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
           dockUrl={dockUrl}
           platformUrl={platformUrl}
         />
-        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-          <div style={{ flex: 1 }}>
-            {isApiKeyActive &&
-            isGeneralScriptExist &&
-            isWebPushScriptExist &&
-            isAppExtensionActive ? (
-              <Banner tone="success">
-                {t("ConnectionStatusSection.banner.connected")}
-              </Banner>
-            ) : isApiKeyActive &&
-              isAppExtensionActive &&
-              (isGeneralScriptExist || isWebPushScriptExist) ? (
-              <Banner tone="warning">
-                {t("ConnectionStatusSection.banner.incomplete")}
-              </Banner>
-            ) : (
-              <Banner tone="critical">
-                {t("ConnectionStatusSection.banner.disconnected")}
-              </Banner>
-            )}
-          </div>
+        {
+          isApiKeyActive && (
+            <div style={{display: "flex", flexDirection: 'column', gap: 5}}>
+              <ScriptStatusBanner
+                scriptInstalled={isGeneralScriptExist}
+                errorMessage={'Something went wrong with the site script. Please, contact support and try again.'}
+                successMessage={isAppExtensionActive ? 'Site script is installed.' : 'Site script is ready to be installed. Please, activate the theme extension.'}
+                intentName={'retry-install-general-script'}
+              />
+
+              <ScriptStatusBanner
+                scriptInstalled={isWebPushScriptExist}
+                errorMessage={'Something went wrong with the web push script. Please, contact support and try again.'}
+                successMessage={isAppExtensionActive ? 'Web push script is installed.' : 'Web push script is ready to be installed. Please, activate the theme extension.'}
+                intentName={'retry-install-webpush-script'}
+              />
+            </div>
+          )
+        }
+
+        <div style={{display: "flex", alignItems: "center", justifyContent: 'end', gap: 5}}>
           <Form method="post" name={intent}>
-            <input type="hidden" name="intent" value={intent} />
+            <input type="hidden" name="intent" value={intent}/>
             {(!isApiKeyActive ||
-              !isGeneralScriptExist ||
-              !isWebPushScriptExist ||
               !isAppExtensionActive) && (
               <Button
                 size="large"
                 variant="primary"
                 disabled={disabled}
+                tone="success"
                 submit
               >
-                {t("ConnectionStatusSection.button.configure")}
+                {/*{t("ConnectionStatusSection.button.configure")}*/}
+                {/*TODO: change locales*/}
+                Activate theme extension
               </Button>
             )}
           </Form>
