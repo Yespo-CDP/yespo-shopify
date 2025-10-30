@@ -13,7 +13,7 @@ import {
 } from "@shopify/polaris";
 import { ViewIcon, HideIcon } from "@shopify/polaris-icons";
 import { Form, useFetcher } from "@remix-run/react";
-import { useTranslation } from "react-i18next";
+import {Trans, useTranslation} from "react-i18next";
 
 import type { Account } from "~/@types/account";
 
@@ -30,6 +30,7 @@ export interface AccountConnectionSectionProps {
   account?: Account | null;
   errors?: { [key: string]: string };
   disabled?: boolean;
+  platformUrl?: string;
 }
 
 /**
@@ -56,6 +57,7 @@ const AccountConnectionSection: FC<AccountConnectionSectionProps> = ({
   account,
   errors,
   disabled,
+                                                                       platformUrl
 }) => {
   const { t } = useTranslation();
   const fetcher = useFetcher();
@@ -119,10 +121,24 @@ const AccountConnectionSection: FC<AccountConnectionSectionProps> = ({
             onChange={handleValueChange}
             helpText={
               <p>
-                {t("AccountConnectionSection.helpText")}{" "}
-                <Link url={t("AccountConnectionSection.link")} target="_blank">
-                  docs.yespo.io
-                </Link>
+                <Trans
+                  i18nKey="AccountConnectionSection.connectText"
+                  t={t}
+                  components={{
+                    fullAccessLink: (
+                      <Link
+                        url={t("AccountConnectionSection.link")}
+                        target="_blank"
+                      />
+                    ),
+                    apiKeysLink: (
+                      <Link
+                        url={`${platformUrl}/settings-ui/#/api-keys-list`}
+                        target="_blank"
+                      />
+                    ),
+                  }}
+                />
               </p>
             }
             error={errors?.apiKey}

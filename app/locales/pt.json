@@ -11,6 +11,7 @@
   "AccountConnectionSection": {
     "title": "Conexão de conta",
     "helpText": "Se precisar de ajuda",
+    "connectText": "Conecte sua conta Yespo usando o <fullAccessLink>Chave de API de Acesso Total</fullAccessLink>. Você pode encontrar a chave na sua conta Yespo: <apiKeysLink>Chaves de API do Yespo</apiKeysLink>.",
     "status": {
       "active": "Ativo",
       "inactive": "Inativo"
@@ -75,18 +76,26 @@
     "title": "Integração de scripts",
     "refresh": "Atualizar",
     "list": {
-      "first": "Conecte sua conta Yespo usando a chave API de Acesso Total. Você pode encontrar a chave na sua conta Yespo: <apiKeysLink>Yespo API Keys</apiKeysLink>.",
-      "second": "Depois de conectar a conta, você precisa instalar os scripts. Para isso, clique no botão correspondente e ative a extensão para o tema.",
+      "first": "Depois de conectar a conta, é necessário instalar os scripts. Para isso, clique no botão correspondente e ative a extensão para o tema. Tenha em atenção que, se houver algum problema com um dos scripts, ele não será instalado após a ativação da extensão do tema até que o problema seja resolvido. Se houver um problema com ambos os scripts, a ativação da extensão do tema não estará disponível e nenhum script será adicionado ao seu tema. A extensão só precisa ser ativada uma vez.",
+      "second": "Após a instalação dos scripts, você pode acessar o Yespo para mais configurações.",
       "third": "Após a instalação dos scripts, você pode acessar o Yespo para mais configurações.",
-      "more": "Para mais informações detalhadas, siga este <detailedLink>link</detailedLink> ou entre em contato com o suporte Yespo: <supportLink>Documentação Yespo</supportLink>."
+      "more": "Para mais informações detalhadas, siga este <detailedLink>link</detailedLink> ou entre em contato com o <supportLink>suporte Yespo</supportLink>."
     },
     "banner": {
       "connected": "Scripts instalados",
       "incomplete": "Scripts parcialmente instalados",
-      "disconnected": "Scripts não instalados"
+      "disconnected": "Scripts não instalados",
+      "generalScriptError": "Ocorreu um erro com o script do site. Por favor, contacte o suporte e tente novamente.",
+      "generalScriptInstalled": "O script do site foi instalado.",
+      "generalScriptReady": "O script do site está pronto para ser instalado. Por favor, ative a extensão do tema.",
+      "webPushScriptError": "Ocorreu um erro com o script de notificações web push. Por favor, contacte o suporte e tente novamente.",
+      "webPushScriptInstalled": "O script de notificações web push foi instalado.",
+      "webPushScriptReady": "O script de notificações web push está pronto para ser instalado. Por favor, ative a extensão do tema."
     },
     "button": {
-      "configure": "Instalar scripts"
+      "configure": "Instalar scripts",
+      "tryAgain": "Tentar novamente",
+      "activateThemeExtension": "Ativar extensão de tema"
     },
     "success": "Instalado com sucesso.",
     "errors": {
