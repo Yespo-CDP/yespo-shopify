@@ -107,15 +107,15 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
             <div style={{display: "flex", flexDirection: 'column', gap: 5}}>
               <ScriptStatusBanner
                 scriptInstalled={isGeneralScriptExist}
-                errorMessage={'Something went wrong with the site script. Please, contact support and try again.'}
-                successMessage={isAppExtensionActive ? 'Site script is installed.' : 'Site script is ready to be installed. Please, activate the theme extension.'}
+                errorMessage={t("ConnectionStatusSection.banner.generalScriptError")}
+                successMessage={isAppExtensionActive ? t("ConnectionStatusSection.banner.generalScriptInstalled") : t("ConnectionStatusSection.banner.generalScriptReady")}
                 intentName={'retry-install-general-script'}
               />
 
               <ScriptStatusBanner
                 scriptInstalled={isWebPushScriptExist}
-                errorMessage={'Something went wrong with the web push script. Please, contact support and try again.'}
-                successMessage={isAppExtensionActive ? 'Web push script is installed.' : 'Web push script is ready to be installed. Please, activate the theme extension.'}
+                errorMessage={t("ConnectionStatusSection.banner.webPushScriptError")}
+                successMessage={isAppExtensionActive ? t("ConnectionStatusSection.banner.webPushScriptInstalled") : t("ConnectionStatusSection.banner.webPushScriptReady")}
                 intentName={'retry-install-webpush-script'}
               />
             </div>
@@ -134,9 +134,7 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
                 tone="success"
                 submit
               >
-                {/*{t("ConnectionStatusSection.button.configure")}*/}
-                {/*TODO: change locales*/}
-                Activate theme extension
+                {t("ConnectionStatusSection.button.activateThemeExtension")}
               </Button>
             )}
           </Form>

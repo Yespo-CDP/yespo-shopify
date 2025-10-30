@@ -11,6 +11,7 @@
   "AccountConnectionSection": {
     "title": "Połączenie konta",
     "helpText": "Jeśli potrzebujesz pomocy",
+    "connectText": "Połącz swoje konto Yespo, używając <fullAccessLink>Klucza API z pełnym dostępem</fullAccessLink>. Możesz znaleźć klucz w swoim koncie Yespo: <apiKeysLink>Klucze API Yespo.</apiKeysLink>.",
     "status": {
       "active": "Aktywne",
       "inactive": "Nieaktywne"
@@ -75,18 +76,26 @@
     "title": "Integracja skryptów",
     "refresh": "Odśwież",
     "list": {
-      "first": "Połącz swoje konto Yespo, używając klucza API z pełnym dostępem. Klucz znajdziesz w swoim koncie Yespo: <apiKeysLink>Yespo API Keys</apiKeysLink>.",
-      "second": "Po połączeniu konta musisz zainstalować skrypty. Aby to zrobić, kliknij odpowiedni przycisk i aktywuj rozszerzenie dla motywu.",
+      "first": "Po połączeniu konta musisz zainstalować skrypty. Aby to zrobić, kliknij odpowiedni przycisk i aktywuj rozszerzenie dla motywu. Pamiętaj, że jeśli coś jest nie tak z jednym ze skryptów, nie zostanie on zainstalowany po aktywacji rozszerzenia motywu, dopóki problem nie zostanie naprawiony. Jeśli coś jest nie tak z oboma skryptami, aktywacja rozszerzenia motywu nie będzie dostępna i żadne skrypty nie zostaną dodane do Twojego motywu. Rozszerzenie należy aktywować tylko raz.",
+      "second": "Po zainstalowaniu skryptów możesz przejść do Yespo w celu dalszej konfiguracji.",
       "third": "Po zainstalowaniu skryptów możesz przejść do Yespo w celu dalszej konfiguracji.",
-      "more": "Aby uzyskać bardziej szczegółowe informacje, skorzystaj z tego <detailedLink>linku</detailedLink> lub skontaktuj się z pomocą techniczną Yespo: <supportLink>Dokumentacja Yespo</supportLink>."
+      "more": "Aby uzyskać bardziej szczegółowe informacje, skorzystaj z tego <detailedLink>linku</detailedLink> lub skontaktuj się z <supportLink>pomocą techniczną Yespo</supportLink>."
     },
     "banner": {
       "connected": "Skrypty zainstalowane",
       "incomplete": "Skrypty częściowo zainstalowane",
-      "disconnected": "Skrypty niezainstalowane"
+      "disconnected": "Skrypty niezainstalowane",
+      "generalScriptError": "Coś poszło nie tak ze skryptem witryny. Skontaktuj się z pomocą techniczną i spróbuj ponownie.",
+      "generalScriptInstalled": "Skrypt witryny został zainstalowany.",
+      "generalScriptReady": "Skrypt witryny jest gotowy do instalacji. Proszę aktywować rozszerzenie motywu.",
+      "webPushScriptError": "Coś poszło nie tak ze skryptem powiadomień web push. Skontaktuj się z pomocą techniczną i spróbuj ponownie.",
+      "webPushScriptInstalled": "Skrypt powiadomień web push został zainstalowany.",
+      "webPushScriptReady": "Skrypt powiadomień web push jest gotowy do instalacji. Proszę aktywować rozszerzenie motywu."
     },
     "button": {
-      "configure": "Zainstaluj skrypty"
+      "configure": "Zainstaluj skrypty",
+      "tryAgain": "Spróbuj ponownie",
+      "activateThemeExtension": "Aktywuj rozszerzenie motywu"
     },
     "success": "Pomyślnie zainstalowano.",
     "errors": {

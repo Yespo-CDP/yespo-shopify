@@ -164,6 +164,7 @@ export default function Index() {
                 account={account}
                 errors={actionData?.errors}
                 disabled={isMarketsOverflowing || isSubmitting || isLoading}
+                platformUrl={ENV.PLATFORM_URL}
               />
             </Layout.Section>
             <Layout.Section>

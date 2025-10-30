@@ -68,8 +68,8 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
     account,
     scriptConnectionStatus: {
       isThemeExtensionActive: scriptConnectionStatus.isThemeExtensionActive,
-      isGeneralScriptExist: shop?.isGeneralScriptInstalled, //|| scriptConnectionStatus.isGeneralScriptExist,
-      isWebPushScriptExist: shop?.isWebPushScriptInstalled //|| scriptConnectionStatus.isWebPushScriptExist,
+      isGeneralScriptExist: shop?.isGeneralScriptInstalled || scriptConnectionStatus.isGeneralScriptExist,
+      isWebPushScriptExist: shop?.isWebPushScriptInstalled || scriptConnectionStatus.isWebPushScriptExist,
     },
     isMarketsOverflowing,
     customersSyncLog,
@@ -316,10 +316,44 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
   if (intent === "retry-install-general-script") {
     console.log('<<<<<<<<<<<<<<<retry-install-general-script')
+    const shop = await shopRepository.getShop(session.shop);
+
+    if (!shop || !shop?.apiKey) {
+      errors.script = t("General.errors.shopNotFound");
+      return { success, errors };
+    }
+    const isGeneralScriptInstalled = await connectGeneralScriptService({
+      apiKey: shop.apiKey,
+      shopUrl: shop.shopUrl,
+      shopId: shop.shopId,
+      domain: shop.domain,
+      admin,
+    });
+
+    await shopRepository.updateShop(session.shop, {
+      isGeneralScriptInstalled
+    })
   }
 
   if (intent === "retry-install-webpush-script") {
     console.log('<<<<<<<<<<<<<<<<<<<retry-install-webpush-script')
+
+    const shop = await shopRepository.getShop(session.shop);
+
+    if (!shop || !shop?.apiKey) {
+      errors.script = t("General.errors.shopNotFound");
+      return { success, errors };
+    }
+    const isWebPushScriptInstalled = await connectWebPushScriptService({
+      apiKey: shop.apiKey,
+      shopId: shop.shopId,
+      domain: shop.domain,
+      admin,
+    });
+
+    await shopRepository.updateShop(session.shop, {
+      isWebPushScriptInstalled
+    })
   }
   return { success, errors };
 };

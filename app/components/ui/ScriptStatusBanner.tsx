@@ -73,8 +73,7 @@ const ScriptStatusBanner: FC<ScriptStatusBannerProps> = ({scriptInstalled,succes
                 variant="primary"
                 submit
               >
-                {/*TODO: change locales*/}
-                Try again
+                {t("ConnectionStatusSection.button.tryAgain")}
               </Button>
             </Form>
 
