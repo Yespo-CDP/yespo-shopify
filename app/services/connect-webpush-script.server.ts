@@ -53,16 +53,13 @@ export const connectWebPushScriptService = async ({
     });
 
     if (!metafield) {
-      throw new Error("requestScriptError");
+      console.error(`Metafield for web push script not created`);
+      return false
     }
 
     return true;
   } catch (error: any) {
     console.error(`Error connecting webpush script: ${error.message}`);
-    if (error?.message) {
-      throw new Error(error.message);
-    } else {
-      throw new Error("requestScriptError");
-    }
+    return false
   }
 };

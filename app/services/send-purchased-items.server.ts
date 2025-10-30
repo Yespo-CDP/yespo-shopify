@@ -24,6 +24,12 @@ import {sendPurchasedItemsEvent} from "~/api/send-purchased-items-event";
  */
 export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
   try {
+    console.log('sendPurchasedItemsService payload.cart_token', payload.cart_token)
+    if (!payload.cart_token) {
+      console.error("Cart token doesn't exist")
+      return null
+    }
+
     const eventData = await eventDataRepository.getEventData(payload.cart_token)
 
     if (!eventData) {

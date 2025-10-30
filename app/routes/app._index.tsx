@@ -164,16 +164,17 @@ export default function Index() {
                 account={account}
                 errors={actionData?.errors}
                 disabled={isMarketsOverflowing || isSubmitting || isLoading}
+                platformUrl={ENV.PLATFORM_URL}
               />
             </Layout.Section>
             <Layout.Section>
               <ConnectionStatusSection
                 isApiKeyActive={!!account}
                 isGeneralScriptExist={
-                  scriptConnectionStatus?.isGeneralScriptExist
+                  scriptConnectionStatus?.isGeneralScriptExist ?? false
                 }
                 isWebPushScriptExist={
-                  scriptConnectionStatus?.isWebPushScriptExist
+                  scriptConnectionStatus?.isWebPushScriptExist  ?? false
                 }
                 isAppExtensionActive={
                   scriptConnectionStatus.isThemeExtensionActive
@@ -185,17 +186,18 @@ export default function Index() {
                   isMarketsOverflowing ||
                   isSubmitting ||
                   isLoading ||
-                  !shop?.apiKey
+                  !shop?.apiKey ||
+                  (!scriptConnectionStatus?.isGeneralScriptExist && !scriptConnectionStatus?.isWebPushScriptExist)
                 }
               />
             </Layout.Section>
             <Layout.Section>
               <WebTrackingSection
                 isGeneralScriptExist={
-                  scriptConnectionStatus?.isGeneralScriptExist
+                  scriptConnectionStatus?.isGeneralScriptExist  ?? false
                 }
                 isWebPushScriptExist={
-                  scriptConnectionStatus?.isWebPushScriptExist
+                  scriptConnectionStatus?.isWebPushScriptExist  ?? false
                 }
                 isAppExtensionActive={
                   scriptConnectionStatus.isThemeExtensionActive

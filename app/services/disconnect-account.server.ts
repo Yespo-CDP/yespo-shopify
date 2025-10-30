@@ -38,6 +38,8 @@ export const disconnectAccountService = async ({
     isContactSyncEnabled: false,
     isOrderSyncEnabled: false,
     siteId: "",
+    isGeneralScriptInstalled: false,
+    isWebPushScriptInstalled: false
   });
   const shop = await shopRepository.getShop(session.shop);
   if (shop?.shopId) {
