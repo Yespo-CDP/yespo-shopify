@@ -23,7 +23,6 @@ const WebTrackingSection = ({
 
   const isScriptsActive =
     isGeneralScriptExist &&
-    isWebPushScriptExist &&
     isAppExtensionActive;
 
   const handleTrackingToggle = useCallback(
