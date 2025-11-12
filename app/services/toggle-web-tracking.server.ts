@@ -43,6 +43,9 @@ export const toggleWebTrackingServer = async ({
   enabled: boolean;
 }): Promise<boolean> => {
   try {
+    console.log('domain', domain)
+    console.log('enabled', enabled)
+    console.log('shopId', shopId)
     await shopRepository.updateShop(domain, { isWebTrackingEnabled: enabled });
 
     const metafield = await createMetafield({
