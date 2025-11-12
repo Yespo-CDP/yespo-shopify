@@ -220,7 +220,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
       await toggleWebTrackingServer({
         shopId: shop.shopId,
-        domain: shop.domain,
+        domain: shop.shopUrl,
         enabled: true,
         admin,
       });
@@ -240,7 +240,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
       await toggleWebTrackingServer({
         shopId: shop.shopId,
-        domain: shop.domain,
+        domain: shop.shopUrl,
         enabled: false,
         admin,
       });
