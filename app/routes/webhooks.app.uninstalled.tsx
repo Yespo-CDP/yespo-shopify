@@ -3,6 +3,7 @@ import type { ActionFunctionArgs } from "@remix-run/node";
 import { shopRepository } from "~/repositories/repositories.server";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
+import {deleteAccessTokenService} from "~/services/delete-access-token.server";
 
 /**
  * Action handler for Shopify webhook events related to app uninstallation or deactivation.
@@ -25,6 +26,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   // Webhook requests can trigger multiple times and after an app has already been uninstalled.
   // If this webhook already ran, the session may have been deleted previously.
   if (session) {
+    const store = await shopRepository.getShop(session.shop);
+
+    //Delete access token from Yespo
+    if (store?.apiKey) {
+      await deleteAccessTokenService({apiKey: store.apiKey})
+    }
+
     const shopData = await shopRepository.updateShop(shop, {
       apiKey: null,
       active: false,

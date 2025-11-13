@@ -19,6 +19,8 @@ import i18n from "~/i18n.server";
 import { toggleWebTrackingServer } from "~/services/toggle-web-tracking.server";
 import { createGeneralDomain } from "~/api/create-general-domain.server";
 import { enqueueDataSyncTasks } from "~/services/queue";
+import {sendAccessTokenService} from "~/services/send-access-token.server";
+import {deleteAccessTokenService} from "~/services/delete-access-token.server";
 
 /**
  * Loader function for initializing data needed on the page.
@@ -130,7 +132,12 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
   if (intent === "account-disconnection") {
     try {
+      const shop = await shopRepository.getShop(session.shop);
       await disconnectAccountService({ session, admin });
+
+      if (shop?.apiKey) {
+        await deleteAccessTokenService({apiKey: shop.apiKey})
+      }
     } catch (error: any) {
       errors.apiKey = t(`AccountConnectionSection.errors.${error.message}`);
       return { success, errors };
@@ -176,6 +183,15 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         isWebPushScriptInstalled
       })
 
+      if (session.accessToken) {
+        //Send access token to Yespo
+        await sendAccessTokenService({
+          apiKey: shop.apiKey,
+          domain: session.shop,
+          accessToken:session.accessToken
+        })
+      }
+
     } catch (error: any) {
       errors.apiKey = t(`AccountConnectionSection.errors.${error.message}`);
       return { success, errors };
@@ -220,7 +236,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
       await toggleWebTrackingServer({
         shopId: shop.shopId,
-        domain: shop.domain,
+        domain: shop.shopUrl,
         enabled: true,
         admin,
       });
@@ -240,7 +256,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
       await toggleWebTrackingServer({
         shopId: shop.shopId,
-        domain: shop.domain,
+        domain: shop.shopUrl,
         enabled: false,
         admin,
       });

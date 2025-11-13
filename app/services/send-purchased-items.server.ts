@@ -25,12 +25,24 @@ import {sendPurchasedItemsEvent} from "~/api/send-purchased-items-event";
 export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
   try {
     console.log('sendPurchasedItemsService payload.cart_token', payload.cart_token)
-    if (!payload.cart_token) {
-      console.error("Cart token doesn't exist")
-      return null
+    const cartAttribute = payload.note_attributes.find(
+      (attr: { name: string; value: string }) =>
+        attr.name.trim().toLowerCase() === 'cart token'
+    )?.value;
+
+    console.log('cartAttribute:', cartAttribute);
+    console.log('!payload.cart_token:', !payload.cart_token);
+    console.log('!cartAttribute',!cartAttribute);
+
+    const cartToken = payload.cart_token ?? cartAttribute;
+    console.log('cartToken', cartToken)
+
+    if (!cartToken) {
+      console.error("Cart token doesn't exist");
+      return null;
     }
 
-    const eventData = await eventDataRepository.getEventData(payload.cart_token)
+    const eventData = await eventDataRepository.getEventData(cartToken)
 
     if (!eventData) {
       console.error('Event data not exist')
@@ -76,6 +88,8 @@ export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
       apiKey: shop.apiKey,
       purchasedItemsData
     })
+
+    console.log('SUCCESSFULLY SEND PURCHASED ITEMS')
   } catch (error) {
     console.error("Error occurred in Send Purchased Items Service", error);
   }
