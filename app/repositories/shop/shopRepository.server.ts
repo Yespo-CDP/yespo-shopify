@@ -13,6 +13,14 @@ export default interface ShopRepository {
   getShop(shopUrl: string): Promise<Shop | null>;
 
   /**
+   * Retrieves a shop by its domain.
+   *
+   * @param {string} domain - The unique domain identifier of the shop.
+   * @returns {Promise<Shop | null>} A promise that resolves to the Shop object if found, or null otherwise.
+   */
+  getShopByDomain(domain: string): Promise<Shop | null>;
+
+  /**
    * Creates a new shop record in the db.
    *
    * @param {ShopCreate} data - The data used to create the shop.

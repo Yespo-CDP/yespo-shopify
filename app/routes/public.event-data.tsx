@@ -65,7 +65,7 @@ export const action = async ({request}: ActionFunctionArgs) => {
       return jsonResponse({ success: true }); // early return if data is incomplete
     }
 
-    const shop = await shopRepository.getShop(data.shop);
+    const shop = await shopRepository.getShopByDomain(data.shop);
     if (!shop) {
       return jsonResponse({ success: true }); // silently accept even if shop not found
     }

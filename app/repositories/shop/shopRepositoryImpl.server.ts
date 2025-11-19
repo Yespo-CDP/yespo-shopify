@@ -30,6 +30,18 @@ export default class ShopRepositoryImpl implements IShopRepository {
   }
 
   /**
+   * Retrieves a shop by its domain.
+   *
+   * @param {string} domain - The unique domain identifier of the shop.
+   * @returns {Promise<Shop | null>} A promise that resolves to the Shop object if found, or null otherwise.
+   */
+  async getShopByDomain(domain: string): Promise<Shop | null> {
+    return this.database.shop.findFirst({
+      where: { domain },
+    });
+  }
+
+  /**
    * Creates a new shop record.
    *
    * @param {ShopCreate} data - The data used to create the shop.
