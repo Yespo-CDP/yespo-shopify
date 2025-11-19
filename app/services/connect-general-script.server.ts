@@ -61,16 +61,13 @@ export const connectGeneralScriptService = async ({
     });
 
     if (!metafield) {
-      throw new Error("requestScriptError");
+      console.error(`Metafield for general script not created/`);
+      return false;
     }
 
     return true;
   } catch (error: any) {
     console.error(`Error connecting general script: ${error.message}`);
-    if (error?.message) {
-      throw new Error(error.message);
-    } else {
-      throw new Error("requestScriptError");
-    }
+    return false;
   }
 };

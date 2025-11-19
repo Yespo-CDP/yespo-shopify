@@ -11,6 +11,7 @@
   "AccountConnectionSection": {
     "title": "Account connection",
     "helpText": "If you need help",
+    "connectText": "Connect your Yespo account using the <fullAccessLink>Full Access API key</fullAccessLink>. You can find the key in your Yespo account: <apiKeysLink>Yespo API Keys</apiKeysLink>.",
     "status": {
       "active": "Active",
       "inactive": "Inactive"
@@ -75,18 +76,26 @@
     "title": "Scripts integration",
     "refresh": "Refresh",
     "list": {
-      "first": "Connect your Yespo account using the Full Access API key. You can find the key in your Yespo account: <apiKeysLink>Yespo API Keys</apiKeysLink>.",
-      "second": "Once the account is connected, you need to install the scripts. To do this, click the corresponding button and activate the extension for the theme.",
+      "first": "Once the account is connected, you need to install the scripts. To do this, click the corresponding button and activate the extension for the theme. Be aware if something is wrong with one of the scripts then it will not be installed after the theme extension activation unless the issue is fixed. If something is wrong with both scripts theme extension activation will not be available and won't add any scripts to your theme. The extension needs to be activated only once.",
+      "second": "After the scripts are installed, you can proceed to Yespo for further configuration.",
       "third": "After the scripts are installed, you can proceed to Yespo for further configuration.",
-      "more": "For more detailed information, follow this <detailedLink>link</detailedLink> or contact Yespo support: <supportLink>Yespo Documentation</supportLink>."
+      "more": "For more detailed information, follow this <detailedLink>link</detailedLink> or contact <supportLink>Yespo support</supportLink>."
     },
     "banner": {
       "connected": "Scripts are installed",
       "incomplete": "Scripts are partially installed",
-      "disconnected": "Scripts are not installed"
+      "disconnected": "Scripts are not installed",
+      "generalScriptError": "Something went wrong with the site script. Please, contact support and try again.",
+      "generalScriptInstalled": "Site script is installed.",
+      "generalScriptReady": "Site script is ready to be installed. Please, activate the theme extension.",
+      "webPushScriptError": "Something went wrong with the web push script. Please, contact support and try again.",
+      "webPushScriptInstalled": "Web push script is installed.",
+      "webPushScriptReady": "Web push script is ready to be installed. Please, activate the theme extension."
     },
     "button": {
-      "configure": "Install scripts"
+      "configure": "Install scripts",
+      "tryAgain": "Try again",
+      "activateThemeExtension": "Activate theme extension"
     },
     "success": "Installed successfully.",
     "errors": {

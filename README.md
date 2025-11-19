@@ -344,6 +344,20 @@ occurs when CARTS_UPDATE webhook  is triggered and sends payload with cart data.
 - **PurchasedItems** - [PurchasedItems event](https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#purchaseditems)
 occurs when ORDERS_CREATE webhook is triggered  and sends payload with purchased products data.
 
+## Errors handling
+
+Requests are wrapped in the `fetchWithErrorHandling function`, which provides enhanced error management.
+This function:
+- Sends an HTTP request to the specified URL with optional fetch options.
+- Attempts to parse the response as JSON; if parsing fails, it returns the raw text.
+- Throws a FetchError if the response status is not OK (i.e., not in the 2xx range).
+- Wraps unexpected errors into a FetchError with a status code of 500.
+
+Each specific API call (e.g., createGeneralDomain, createWebPushDomain, getGeneralScript etc.) includes its own error-handling logic to provide meaningful, domain-specific error messages to the user interface.
+
+If the request ends with a non-success status code, the user will see an error message displayed in a toast notification.
+
+
 
 ## Technologies and Shopify Tools Used
 

@@ -3,11 +3,8 @@ import {
   BlockStack,
   Text,
   Link,
-  Box,
   InlineStack,
-  Icon,
 } from "@shopify/polaris";
-import { CheckCircleIcon, XCircleIcon } from "@shopify/polaris-icons";
 import { Trans, useTranslation } from "react-i18next";
 
 /**
@@ -59,54 +56,22 @@ const ConnectionStatusList: FC<ConnectionStatusListProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const isScriptsActive =
-    isApiKeyActive &&
-    isGeneralScriptExist &&
-    isWebPushScriptExist &&
-    isAppExtensionActive &&
-    isAppExtensionActive;
+  // const isScriptsActive =
+  //   isApiKeyActive &&
+  //   isGeneralScriptExist &&
+  //   isWebPushScriptExist &&
+  //   isAppExtensionActive &&
+  //   isAppExtensionActive;
 
   return (
     <BlockStack gap="150">
       <InlineStack align="start" blockAlign="center" gap="100" wrap={false}>
-        <Box>
-          <Icon
-            source={isApiKeyActive ? CheckCircleIcon : XCircleIcon}
-            tone={isApiKeyActive ? "textSuccess" : "textCritical"}
-          />
-        </Box>
         <Text as="p">
-          <Trans
-            i18nKey="ConnectionStatusSection.list.first"
-            t={t}
-            components={{
-              apiKeysLink: (
-                <Link
-                  url={`${platformUrl}/settings-ui/#/api-keys-list`}
-                  target="_blank"
-                />
-              ),
-            }}
-          />
+          {t("ConnectionStatusSection.list.first")}
         </Text>
       </InlineStack>
       <InlineStack align="start" blockAlign="center" gap="100" wrap={false}>
-        <Box>
-          <Icon
-            source={isScriptsActive ? CheckCircleIcon : XCircleIcon}
-            tone={isScriptsActive ? "textSuccess" : "textCritical"}
-          />
-        </Box>
         <Text as="p">{t("ConnectionStatusSection.list.second")}</Text>
-      </InlineStack>
-      <InlineStack align="start" blockAlign="center" gap="100" wrap={false}>
-        <Box>
-          <Icon
-            source={isScriptsActive ? CheckCircleIcon : XCircleIcon}
-            tone={isScriptsActive ? "textSuccess" : "textCritical"}
-          />
-        </Box>
-        <Text as="p">{t("ConnectionStatusSection.list.third")}</Text>
       </InlineStack>
       <InlineStack align="start" blockAlign="center" gap="100" wrap={false}>
         <Text as="p">
