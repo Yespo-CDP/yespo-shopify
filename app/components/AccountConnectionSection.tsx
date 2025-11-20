@@ -12,7 +12,7 @@ import {
   Box,
 } from "@shopify/polaris";
 import { ViewIcon, HideIcon } from "@shopify/polaris-icons";
-import { Form, useFetcher } from "@remix-run/react";
+import { Form, useFetcher } from "react-router";
 import {Trans, useTranslation} from "react-i18next";
 
 import type { Account } from "~/@types/account";

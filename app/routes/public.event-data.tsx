@@ -1,4 +1,4 @@
-import type {ActionFunctionArgs} from "@remix-run/node";
+import type {ActionFunctionArgs} from "react-router";
 import {addDays} from "date-fns";
 import {customerRepository, eventDataRepository, shopRepository} from "~/repositories/repositories.server";
 

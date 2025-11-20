@@ -1,6 +1,6 @@
 import {Badge, BlockStack, Button, Card, InlineStack, Text} from "@shopify/polaris";
 import {useTranslation} from "react-i18next";
-import {useFetcher} from "@remix-run/react";
+import {useFetcher} from "react-router";
 import {useCallback} from "react";
 
 export interface WebTrackingSectionProps {

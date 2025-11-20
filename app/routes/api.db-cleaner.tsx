@@ -1,4 +1,4 @@
-import type {ActionFunctionArgs} from "@remix-run/node";
+import type {ActionFunctionArgs} from "react-router";
 import { Receiver } from "@upstash/qstash";
 import {eventDataRepository} from "~/repositories/repositories.server";
 

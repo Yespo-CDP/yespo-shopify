@@ -1,20 +1,12 @@
-import { useEffect } from "react";
-import type { HeadersFunction, LoaderFunctionArgs } from "@remix-run/node";
-import { Link, Outlet, useLoaderData, useRouteError } from "@remix-run/react";
-import { boundary } from "@shopify/shopify-app-remix/server";
-import { AppProvider } from "@shopify/shopify-app-remix/react";
-import { NavMenu, useAppBridge } from "@shopify/app-bridge-react";
-import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
-import { useTranslation } from "react-i18next";
+
+import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
+import {  Outlet, useLoaderData, useRouteError } from "react-router";
+import { boundary } from "@shopify/shopify-app-react-router/server";
+import { AppProvider } from "@shopify/shopify-app-react-router/react";
+
 
 import { authenticate } from "../shopify.server";
 
-/**
- * Links function to load stylesheets for the app.
- *
- * @returns {Array<{ rel: string; href: string }>} Array of link objects for stylesheets.
- */
-export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 /**
  * Loader function that authenticates the admin user and
@@ -38,22 +30,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
  */
 export default function App() {
   const { apiKey } = useLoaderData<typeof loader>();
-  const { i18n } = useTranslation();
-  const appBridge = useAppBridge();
+  // const { i18n } = useTranslation();
+  // const appBridge = useAppBridge();
 
-  useEffect(() => {
-    if (appBridge?.config?.locale) {
-      i18n.changeLanguage(appBridge.config.locale);
-    }
-  }, [i18n, appBridge]);
+  // useEffect(() => {
+  //   if (appBridge?.config?.locale) {
+  //     i18n.changeLanguage(appBridge.config.locale);
+  //   }
+  // }, [i18n, appBridge]);
 
   return (
-    <AppProvider isEmbeddedApp apiKey={apiKey}>
-      <NavMenu>
-        <Link to="/app" rel="home">
-          Home
-        </Link>
-      </NavMenu>
+    <AppProvider embedded apiKey={apiKey}>
+        {/*<NavMenu>*/}
+        {/*  <Link to="/app" rel="home">*/}
+        {/*    Home*/}
+        {/*  </Link>*/}
+        {/*</NavMenu>*/}
+        {/*<Outlet />*/}
+
+      <s-app-nav>
+        <s-link href="/app" >Home</s-link>
+        {/*<s-link href="/app/additional">Additional page</s-link>*/}
+      </s-app-nav>
       <Outlet />
     </AppProvider>
   );
@@ -65,7 +63,7 @@ export default function App() {
  *
  * @returns {JSX.Element} Error boundary UI.
  */
-// Shopify needs Remix to catch some thrown responses, so that their headers are included in the response.
+// Shopify needs React Router to catch some thrown responses, so that their headers are included in the response.
 export function ErrorBoundary() {
   return boundary.error(useRouteError());
 }

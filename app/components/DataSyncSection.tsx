@@ -9,7 +9,7 @@ import {
   Text,
 } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
-import { useFetcher } from "@remix-run/react";
+import { useFetcher } from "react-router";
 
 import type { CustomerSyncLog } from "~/@types/customerSyncLog";
 import type { OrderSyncLog } from "~/@types/orderSyncLog";

@@ -1,4 +1,4 @@
-import type {ActionFunctionArgs} from "@remix-run/node";
+import type {ActionFunctionArgs} from "react-router";
 import {authenticate} from "~/shopify.server";
 import {shopRepository} from "~/repositories/repositories.server";
 import {sendStatusCartService} from "~/services/send-status-cart.server";

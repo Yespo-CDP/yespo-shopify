@@ -2,12 +2,20 @@
 module.exports = {
   root: true,
   extends: [
-    "@remix-run/eslint-config",
-    "@remix-run/eslint-config/node",
-    "@remix-run/eslint-config/jest-testing-library",
+    "eslint:recommended",
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended",
     "prettier",
   ],
   globals: {
     shopify: "readonly"
+  },
+  rules: {
+    "react/no-unknown-property": ["error", { ignore: ["variant"] }],
+  },
+  settings: {
+    react: {
+      version: "detect",
+    },
   },
 };

@@ -8,7 +8,7 @@ import {
   InlineError,
   Link,
 } from "@shopify/polaris";
-import {Form, useRevalidator} from "@remix-run/react";
+import {Form, useRevalidator} from "react-router";
 import {RefreshIcon} from "@shopify/polaris-icons";
 import {useTranslation} from "react-i18next";
 import ConnectionStatusList from "./ConnectionStatusList";

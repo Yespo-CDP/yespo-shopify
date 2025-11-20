@@ -1,7 +1,7 @@
 import type {FC} from "react";
 import {useTranslation} from "react-i18next";
 import {Banner, Button,} from "@shopify/polaris";
-import {Form} from "@remix-run/react";
+import {Form} from "react-router";
 
 /**
  * Props for the ScriptStatusBanner component.

@@ -6,7 +6,7 @@ import {
   orderSyncLogRepository,
 } from "~/repositories/repositories.server";
 import type { Shop } from "~/@types/shop";
-import type { Session } from "@shopify/shopify-app-remix/server";
+import type { Session } from "@shopify/shopify-app-react-router/server";
 
 export const DataSyncQueue = new Queue("data-sync", {
   connection: redisConfig,
