@@ -24,18 +24,12 @@ import {sendPurchasedItemsEvent} from "~/api/send-purchased-items-event";
  */
 export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
   try {
-    console.log('sendPurchasedItemsService payload.cart_token', payload.cart_token)
     const cartAttribute = payload.note_attributes.find(
       (attr: { name: string; value: string }) =>
         attr.name.trim().toLowerCase() === 'cart token'
     )?.value;
 
-    console.log('cartAttribute:', cartAttribute);
-    console.log('!payload.cart_token:', !payload.cart_token);
-    console.log('!cartAttribute',!cartAttribute);
-
     const cartToken = payload.cart_token ?? cartAttribute;
-    console.log('cartToken', cartToken)
 
     if (!cartToken) {
       console.error("Cart token doesn't exist");
