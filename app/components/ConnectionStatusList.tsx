@@ -1,11 +1,5 @@
-import type { FC } from "react";
-import {
-  BlockStack,
-  Text,
-  Link,
-  InlineStack,
-} from "@shopify/polaris";
-import { Trans, useTranslation } from "react-i18next";
+import type {FC} from "react";
+import {Trans, useTranslation} from "react-i18next";
 
 /**
  * Props for the ConnectionStatusList component.
@@ -47,14 +41,14 @@ export interface ConnectionStatusListProps {
  * />
  */
 const ConnectionStatusList: FC<ConnectionStatusListProps> = ({
-  isApiKeyActive,
-  isGeneralScriptExist,
-  isWebPushScriptExist,
-  isAppExtensionActive,
-  dockUrl,
-  platformUrl,
-}) => {
-  const { t } = useTranslation();
+                                                               isApiKeyActive,
+                                                               isGeneralScriptExist,
+                                                               isWebPushScriptExist,
+                                                               isAppExtensionActive,
+                                                               dockUrl,
+                                                               platformUrl,
+                                                             }) => {
+  const {t} = useTranslation();
 
   // const isScriptsActive =
   //   isApiKeyActive &&
@@ -64,35 +58,35 @@ const ConnectionStatusList: FC<ConnectionStatusListProps> = ({
   //   isAppExtensionActive;
 
   return (
-    <BlockStack gap="150">
-      <InlineStack align="start" blockAlign="center" gap="100" wrap={false}>
-        <Text as="p">
+    <s-stack gap="small-100">
+      <s-stack direction="inline" alignItems="start" gap="small-100">
+        <s-paragraph>
           {t("ConnectionStatusSection.list.first")}
-        </Text>
-      </InlineStack>
-      <InlineStack align="start" blockAlign="center" gap="100" wrap={false}>
-        <Text as="p">{t("ConnectionStatusSection.list.second")}</Text>
-      </InlineStack>
-      <InlineStack align="start" blockAlign="center" gap="100" wrap={false}>
-        <Text as="p">
+        </s-paragraph>
+      </s-stack>
+      <s-stack direction="inline" alignItems="start" gap="small-100">
+        <s-paragraph>
+          {t("ConnectionStatusSection.list.second")}
+        </s-paragraph>
+      </s-stack>
+
+      <s-stack direction="inline" alignItems="start" gap="small-100">
+        <s-text>
           <Trans
             i18nKey="ConnectionStatusSection.list.more"
             t={t}
             components={{
               supportLink: (
-                <Link url={`${dockUrl}/docs/what-is-yespo`} target="_blank" />
+                <s-link href={`${dockUrl}/docs/what-is-yespo`} target="_blank"/>
               ),
               detailedLink: (
-                <Link
-                  url={`${dockUrl}/docs/integrating-with-shopify`}
-                  target="_blank"
-                />
+                <s-link href={`${dockUrl}/docs/integrating-with-shopify`} target="_blank"/>
               ),
             }}
           />
-        </Text>
-      </InlineStack>
-    </BlockStack>
+        </s-text>
+      </s-stack>
+    </s-stack>
   );
 };
 

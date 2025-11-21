@@ -1,4 +1,3 @@
-import {Badge, BlockStack, Button, Card, InlineStack, Text} from "@shopify/polaris";
 import {useTranslation} from "react-i18next";
 import {useFetcher} from "react-router";
 import {useCallback} from "react";
@@ -12,12 +11,12 @@ export interface WebTrackingSectionProps {
 }
 
 const WebTrackingSection = ({
-  disabled,
-  webTrackerEnabled = false,
-  isGeneralScriptExist,
-  isWebPushScriptExist,
-  isAppExtensionActive
-}: WebTrackingSectionProps) => {
+                              disabled,
+                              webTrackerEnabled = false,
+                              isGeneralScriptExist,
+                              isWebPushScriptExist,
+                              isAppExtensionActive
+                            }: WebTrackingSectionProps) => {
   const {t} = useTranslation();
   const fetcher = useFetcher();
 
@@ -28,7 +27,7 @@ const WebTrackingSection = ({
   const handleTrackingToggle = useCallback(
     (intent: "tracking-enable" | "tracking-disable") => {
       try {
-        fetcher.submit({ intent }, { method: "post" });
+        fetcher.submit({intent}, {method: "post"});
       } catch (error) {
         console.error(`Error during web tracking ${intent.replace("tracking-", "")}:`, error);
       }
@@ -37,32 +36,32 @@ const WebTrackingSection = ({
   );
 
   return (
-    <Card>
-      <InlineStack align={'space-between'} blockAlign={'baseline'}>
-        <BlockStack>
-          <InlineStack align={'start'} gap="200">
-            <Text as="h2" variant="headingMd">
+    <s-section>
+      <s-stack direction="inline" justifyContent="space-between" alignItems="baseline">
+        <s-stack>
+          <s-stack direction="inline" gap="small-200">
+            <h2 style={{margin: 0, fontSize: '0.875rem', fontWeight: 650}}>
               {t("WebTrackingSection.title")}
-            </Text>
+            </h2>
+
             {webTrackerEnabled && isScriptsActive ? (
-              <Badge tone="success" progress="complete">
+              <s-badge tone="success">
                 {t("WebTrackingSection.status.enabled")}
-              </Badge>
+              </s-badge>
             ) : (
-              <Badge tone="critical" progress="incomplete">
+              <s-badge tone="critical">
                 {t("WebTrackingSection.status.disabled")}
-              </Badge>
+              </s-badge>
             )}
-          </InlineStack>
-          <Text as={'span'}>
+          </s-stack>
+          <s-text>
             {t("WebTrackingSection.description")}
-          </Text>
-        </BlockStack>
+          </s-text>
+        </s-stack>
 
         {
           webTrackerEnabled && isScriptsActive ? (
-            <Button
-              size="large"
+            <s-button
               variant="primary"
               tone="critical"
               onClick={() => handleTrackingToggle("tracking-disable")}
@@ -70,23 +69,20 @@ const WebTrackingSection = ({
               disabled={disabled || fetcher.state === "submitting"}
             >
               {t("WebTrackingSection.disable")}
-            </Button>
+            </s-button>
           ) : (
-            <Button
-              size="large"
+            <s-button
               variant="primary"
-              tone="success"
               onClick={() => handleTrackingToggle("tracking-enable")}
               loading={fetcher.state === "submitting"}
               disabled={disabled || !isScriptsActive || fetcher.state === "submitting"}
             >
               {t("WebTrackingSection.enable")}
-            </Button>
+            </s-button>
           )
         }
-      </InlineStack>
-
-    </Card>
+      </s-stack>
+    </s-section>
   )
 }
 

@@ -1,5 +1,4 @@
 import type { FC } from "react";
-import { Badge } from "@shopify/polaris";
 
 import type { SyncLogStatus } from "~/@types/customerSyncLog";
 
@@ -28,24 +27,24 @@ const DataSyncStatusBadge: FC<DataSyncStatusBadgeProps> = ({ status }) => {
   switch (status) {
     case "ERROR":
       return (
-        <Badge tone="critical" progress="incomplete">
+        <s-badge tone="critical" >
           Error
-        </Badge>
+        </s-badge>
       );
     case "IN_PROGRESS":
       return (
-        <Badge tone="info" progress="partiallyComplete">
+        <s-badge tone="info">
           In progress
-        </Badge>
+        </s-badge>
       );
     case "COMPLETE":
       return (
-        <Badge tone="success" progress="complete">
+        <s-badge tone="success">
           Complete
-        </Badge>
+        </s-badge>
       );
     default:
-      return <Badge progress="incomplete">Not started</Badge>;
+      return <s-badge>Not started</s-badge>;
   }
 };
 

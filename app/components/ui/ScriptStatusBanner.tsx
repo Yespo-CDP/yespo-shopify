@@ -1,6 +1,5 @@
 import type {FC} from "react";
 import {useTranslation} from "react-i18next";
-import {Banner, Button,} from "@shopify/polaris";
 import {Form} from "react-router";
 
 /**
@@ -48,37 +47,39 @@ interface ScriptStatusBannerProps {
  * @returns {JSX.Element} A banner with installation status and optional retry button.
  */
 
-const ScriptStatusBanner: FC<ScriptStatusBannerProps> = ({scriptInstalled,successMessage,errorMessage, intentName }) => {
-  const { t } = useTranslation();
+const ScriptStatusBanner: FC<ScriptStatusBannerProps> = ({
+  scriptInstalled,
+  successMessage,
+  errorMessage,
+  intentName
+}) => {
+  const {t} = useTranslation();
 
   return (
     <>
       {
         scriptInstalled ? (
-          <Banner tone="success" hideIcon>
+          <s-banner tone="success">
             {successMessage}
-          </Banner>
+          </s-banner>
         ) : (
-          <div style={{display: "flex", alignItems: "center", gap: 5}}>
-            <div style={{ flex: 1 }}>
-              <Banner tone="critical" hideIcon>
+          <s-stack gap="base" direction="inline" alignItems="center">
+            <div style={{flex: 1}}>
+              <s-banner tone="critical">
                 {errorMessage}
-              </Banner>
+              </s-banner>
             </div>
 
             <Form method="post" name={intentName}>
               <input type="hidden" name="intent" value={intentName}/>
-              <Button
-                size="large"
+              <s-button
                 variant="primary"
-                submit
+                type="submit"
               >
                 {t("ConnectionStatusSection.button.tryAgain")}
-              </Button>
+              </s-button>
             </Form>
-
-
-          </div>
+          </s-stack>
         )
       }
     </>

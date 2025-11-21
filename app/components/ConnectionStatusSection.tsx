@@ -1,15 +1,5 @@
 import {type FC} from "react";
-import {
-  Button,
-  Card,
-  Text,
-  BlockStack,
-  InlineStack,
-  InlineError,
-  Link,
-} from "@shopify/polaris";
 import {Form, useRevalidator} from "react-router";
-import {RefreshIcon} from "@shopify/polaris-icons";
 import {useTranslation} from "react-i18next";
 import ConnectionStatusList from "./ConnectionStatusList";
 import ScriptStatusBanner from "~/components/ui/ScriptStatusBanner";
@@ -78,22 +68,23 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
   const intent = "connection-status";
 
   return (
-    <Card>
-      <BlockStack gap="300">
-        <InlineStack gap="200">
-          <Text as="h2" variant="headingMd">
+    <s-section>
+      <s-stack gap="small-300">
+        <s-stack direction="inline" gap="small-400" alignItems="center">
+          <h2 style={{margin: 0, fontSize: '0.875rem', fontWeight: 650}}>
             {t("ConnectionStatusSection.title")}
-          </Text>
-          <Button
-            icon={RefreshIcon}
-            size="micro"
-            variant="plain"
+          </h2>
+          <s-button
+            icon="refresh"
             onClick={() => revalidator.revalidate()}
             disabled={disabled}
+            variant="tertiary"
+            accessibilityLabel='refresh-button'
           >
             {t("ConnectionStatusSection.refresh")}
-          </Button>
-        </InlineStack>
+          </s-button>
+        </s-stack>
+
         <ConnectionStatusList
           isApiKeyActive={isApiKeyActive}
           isGeneralScriptExist={isGeneralScriptExist}
@@ -104,7 +95,7 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
         />
         {
           isApiKeyActive && (
-            <div style={{display: "flex", flexDirection: 'column', gap: 5}}>
+            <s-stack gap={"base"}>
               <ScriptStatusBanner
                 scriptInstalled={isGeneralScriptExist}
                 errorMessage={t("ConnectionStatusSection.banner.generalScriptError")}
@@ -118,47 +109,44 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
                 successMessage={isAppExtensionActive ? t("ConnectionStatusSection.banner.webPushScriptInstalled") : t("ConnectionStatusSection.banner.webPushScriptReady")}
                 intentName={'retry-install-webpush-script'}
               />
-            </div>
+            </s-stack>
           )
         }
+      </s-stack>
 
-        <div style={{display: "flex", alignItems: "center", justifyContent: 'end', gap: 5}}>
-          <Form method="post" name={intent}>
-            <input type="hidden" name="intent" value={intent}/>
-            {(!isApiKeyActive ||
-              !isAppExtensionActive) && (
-              <Button
-                size="large"
-                variant="primary"
-                disabled={disabled}
-                tone="success"
-                submit
-              >
-                {t("ConnectionStatusSection.button.activateThemeExtension")}
-              </Button>
-            )}
-          </Form>
-        </div>
-        {errors?.script && (
-          <InlineError
-            message={
-              <BlockStack>
-                <Text as="p">{errors.script}</Text>
-                <InlineStack gap="100">
-                  <Text as="p">
-                    {t("ConnectionStatusSection.errors.support")}
-                  </Text>
-                  <Link url={`${dockUrl}/docs/what-is-yespo`} target="_blank">
-                    {`${dockUrl}/docs/what-is-yespo`}
-                  </Link>
-                </InlineStack>
-              </BlockStack>
-            }
-            fieldID="fieldID"
-          />
-        )}
-      </BlockStack>
-    </Card>
+      <s-stack alignItems="end" justifyContent="end" paddingBlockStart="small-100">
+        <Form method="post" name={intent}>
+          <input type="hidden" name="intent" value={intent}/>
+          {(!isApiKeyActive ||
+            !isAppExtensionActive) && (
+            <s-button
+              variant="primary"
+              disabled={disabled}
+              type="submit"
+            >
+              {t("ConnectionStatusSection.button.activateThemeExtension")}
+            </s-button>
+          )}
+        </Form>
+      </s-stack>
+      {errors?.script && (
+        <s-stack direction="inline" gap="small-400">
+          <s-icon type="alert-circle" tone="critical"/>
+          <s-stack gap="small-500">
+            <s-paragraph tone="critical">
+              {errors.script}
+            </s-paragraph>
+            <s-stack direction="inline" gap="small-400" >
+              <s-paragraph tone="critical">
+                {t("ConnectionStatusSection.errors.support")}
+              </s-paragraph>
+
+              <s-link href={`${dockUrl}/docs/what-is-yespo`} target="_blank">{`${dockUrl}/docs/what-is-yespo`}</s-link>
+            </s-stack>
+          </s-stack>
+        </s-stack>
+      )}
+    </s-section>
   );
 };
 

@@ -4,25 +4,15 @@ import {
   useNavigation,
   useRevalidator,
 } from "react-router";
-import {
-  Page,
-  Layout,
-  BlockStack,
-  Text,
-  Image,
-  InlineStack,
-  Box,
-  Link,
-} from "@shopify/polaris";
-import { useAppBridge } from "@shopify/app-bridge-react";
-import { Trans, useTranslation } from "react-i18next";
-import { useEffect, useState } from "react";
+import {useAppBridge} from "@shopify/app-bridge-react";
+import {Trans, useTranslation} from "react-i18next";
+import {useEffect, useState} from "react";
 
 import UnsupportedMarketsSection from "~/components/UnsupportedMarketsSection";
 import AccountConnectionSection from "~/components/AccountConnectionSection";
 import ConnectionStatusSection from "~/components/ConnectionStatusSection";
 import UsefulLinksSection from "~/components/UsefulLinksSection";
-import { loaderHandler, actionHandler } from "~/lib/app.server";
+import {loaderHandler, actionHandler} from "~/lib/app.server";
 import WebTrackingSection from "~/components/WebTrackingSection";
 import DataSyncSection from "~/components/DataSyncSection";
 
@@ -58,7 +48,7 @@ export const action = actionHandler;
  * @returns {JSX.Element} The rendered page component.
  */
 export default function Index() {
-  const { t } = useTranslation();
+  const {t} = useTranslation();
   const shopify = useAppBridge();
   const loaderData = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
@@ -125,106 +115,98 @@ export default function Index() {
   }, [customersSyncLogData, orderSyncLogData]);
 
   return (
-    <Page>
-      <Box paddingBlockEnd="500">
-        <BlockStack gap="500">
-          <Layout>
-            {isMarketsOverflowing && (
-              <Layout.Section>
-                <UnsupportedMarketsSection />
-              </Layout.Section>
-            )}
-            <Layout.Section>
-              <BlockStack gap="300">
-                <InlineStack gap="300" blockAlign="center">
-                  <Image source="./logo.png" alt="logo" height={48} />
-                  <Text as="h1" variant="heading3xl" fontWeight="medium">
-                    {t("WelcomeSection.title")}
-                  </Text>
-                </InlineStack>
-                <Text as="p">
-                  <Trans
-                    i18nKey="WelcomeSection.description"
-                    t={t}
-                    components={{
-                      supportLink: (
-                        <Link
-                          url={`${ENV.DOCK_URL}/docs/integrating-with-shopify`}
-                          target="_blank"
-                        />
-                      ),
-                    }}
-                  />
-                </Text>
-              </BlockStack>
-            </Layout.Section>
-            <Layout.Section>
-              <AccountConnectionSection
-                apiKey={shop?.apiKey ?? ""}
-                account={account}
-                errors={actionData?.errors}
-                disabled={isMarketsOverflowing || isSubmitting || isLoading}
-                platformUrl={ENV.PLATFORM_URL}
+    <s-page>
+      <s-box paddingBlockEnd="large-500">
+        <s-stack gap="base">
+          {isMarketsOverflowing && (
+            <UnsupportedMarketsSection/>
+          )}
+          <s-stack gap="small-300">
+            <s-stack direction="inline" gap="small-300" alignItems="center">
+              <s-box blockSize={'48px'}>
+                <s-image src="./logo.png" alt="logo"/>
+              </s-box>
+
+              <s-heading accessibilityRole="presentation">
+                <h1 style={{margin: 0, fontSize: '2.25rem', fontWeight: 550}}>
+                  {t("WelcomeSection.title")}
+                </h1>
+              </s-heading>
+            </s-stack>
+            <s-paragraph>
+              <Trans
+                i18nKey="WelcomeSection.description"
+                t={t}
+                components={{
+                  supportLink: (
+                    <s-link
+                      href={`${ENV.DOCK_URL}/docs/integrating-with-shopify`}
+                      target="_blank"
+                    />
+                  ),
+                }}
               />
-            </Layout.Section>
-            <Layout.Section>
-              <ConnectionStatusSection
-                isApiKeyActive={!!account}
-                isGeneralScriptExist={
-                  scriptConnectionStatus?.isGeneralScriptExist ?? false
-                }
-                isWebPushScriptExist={
-                  scriptConnectionStatus?.isWebPushScriptExist  ?? false
-                }
-                isAppExtensionActive={
-                  scriptConnectionStatus.isThemeExtensionActive
-                }
-                errors={actionData?.errors}
-                dockUrl={ENV.DOCK_URL}
-                platformUrl={ENV.PLATFORM_URL}
-                disabled={
-                  isMarketsOverflowing ||
-                  isSubmitting ||
-                  isLoading ||
-                  !shop?.apiKey ||
-                  (!scriptConnectionStatus?.isGeneralScriptExist && !scriptConnectionStatus?.isWebPushScriptExist)
-                }
-              />
-            </Layout.Section>
-            <Layout.Section>
-              <WebTrackingSection
-                isGeneralScriptExist={
-                  scriptConnectionStatus?.isGeneralScriptExist  ?? false
-                }
-                isWebPushScriptExist={
-                  scriptConnectionStatus?.isWebPushScriptExist  ?? false
-                }
-                isAppExtensionActive={
-                  scriptConnectionStatus.isThemeExtensionActive
-                }
-                webTrackerEnabled={shop?.isWebTrackingEnabled ?? false}
-                disabled={
-                  isMarketsOverflowing || isSubmitting || isLoading || !account
-                }
-              />
-            </Layout.Section>
-            <Layout.Section>
-              <DataSyncSection
-                contactSyncEnabled={Boolean(shop?.isContactSyncEnabled)}
-                orderSyncEnabled={Boolean(shop?.isOrderSyncEnabled)}
-                disabled={
-                  isMarketsOverflowing || isSubmitting || isLoading || !account
-                }
-                customersSyncLog={customersSyncLogData as any}
-                orderSyncLog={orderSyncLogData as any}
-              />
-            </Layout.Section>
-            <Layout.Section>
-              <UsefulLinksSection />
-            </Layout.Section>
-          </Layout>
-        </BlockStack>
-      </Box>
-    </Page>
+            </s-paragraph>
+          </s-stack>
+          <AccountConnectionSection
+            apiKey={shop?.apiKey ?? ""}
+            account={account}
+            errors={actionData?.errors}
+            disabled={isMarketsOverflowing || isSubmitting || isLoading}
+            platformUrl={ENV.PLATFORM_URL}
+          />
+          <ConnectionStatusSection
+            isApiKeyActive={!!account}
+            isGeneralScriptExist={
+              scriptConnectionStatus?.isGeneralScriptExist ?? false
+            }
+            isWebPushScriptExist={
+              scriptConnectionStatus?.isWebPushScriptExist ?? false
+            }
+            isAppExtensionActive={
+              scriptConnectionStatus.isThemeExtensionActive
+            }
+            errors={actionData?.errors}
+            dockUrl={ENV.DOCK_URL}
+            platformUrl={ENV.PLATFORM_URL}
+            disabled={
+              isMarketsOverflowing ||
+              isSubmitting ||
+              isLoading ||
+              !shop?.apiKey ||
+              (!scriptConnectionStatus?.isGeneralScriptExist && !scriptConnectionStatus?.isWebPushScriptExist)
+            }
+          />
+
+          <WebTrackingSection
+            isGeneralScriptExist={
+              scriptConnectionStatus?.isGeneralScriptExist ?? false
+            }
+            isWebPushScriptExist={
+              scriptConnectionStatus?.isWebPushScriptExist ?? false
+            }
+            isAppExtensionActive={
+              scriptConnectionStatus.isThemeExtensionActive
+            }
+            webTrackerEnabled={shop?.isWebTrackingEnabled ?? false}
+            disabled={
+              isMarketsOverflowing || isSubmitting || isLoading || !account
+            }
+          />
+
+          <DataSyncSection
+            contactSyncEnabled={Boolean(shop?.isContactSyncEnabled)}
+            orderSyncEnabled={Boolean(shop?.isOrderSyncEnabled)}
+            disabled={
+              isMarketsOverflowing || isSubmitting || isLoading || !account
+            }
+            customersSyncLog={customersSyncLogData as any}
+            orderSyncLog={orderSyncLogData as any}
+          />
+
+          <UsefulLinksSection/>
+        </s-stack>
+      </s-box>
+    </s-page>
   );
 }

@@ -1,13 +1,4 @@
 import { useCallback, useEffect, useState, type FC } from "react";
-import {
-  Badge,
-  BlockStack,
-  Button,
-  Card,
-  Grid,
-  InlineStack,
-  Text,
-} from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
 import { useFetcher } from "react-router";
 
@@ -58,30 +49,30 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
   }, [fetcher.state]);
 
   return (
-    <Card>
-      <BlockStack gap="200">
-        <InlineStack align="space-between" blockAlign="baseline">
-          <BlockStack>
-            <InlineStack align="start" gap="200">
-              <Text as="h2" variant="headingMd">
+    <s-section>
+      <s-stack gap="small-200">
+        <s-stack direction="inline" justifyContent="space-between" alignItems="baseline">
+          <s-stack>
+            <s-stack direction="inline" alignItems="start" gap="small-200">
+              <h2 style={{margin: 0, fontSize: '0.875rem', fontWeight: 650}}>
                 {t("DataSyncSection.title")}
-              </Text>
+              </h2>
+
               {contactSyncEnabled && orderSyncEnabled ? (
-                <Badge tone="success" progress="complete">
+                <s-badge tone="success">
                   {t("DataSyncSection.status.enabled")}
-                </Badge>
+                </s-badge>
               ) : (
-                <Badge tone="critical" progress="incomplete">
+                <s-badge tone="critical">
                   {t("DataSyncSection.status.disabled")}
-                </Badge>
+                </s-badge>
               )}
-            </InlineStack>
-            <Text as="span">{t("DataSyncSection.description")}</Text>
-          </BlockStack>
+            </s-stack>
+            <s-text>{t("DataSyncSection.description")}</s-text>
+          </s-stack>
 
           {contactSyncEnabled && orderSyncEnabled ? (
-            <Button
-              size="large"
+            <s-button
               variant="primary"
               tone="critical"
               onClick={() => handleSyncToggle("data-sync-disable")}
@@ -89,127 +80,115 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
               disabled={disabled || isSubmitting}
             >
               {t("DataSyncSection.disable")}
-            </Button>
+            </s-button>
           ) : (
-            <Button
-              size="large"
+            <s-button
               variant="primary"
-              tone="success"
               onClick={() => handleSyncToggle("data-sync-enable")}
               loading={isSubmitting}
               disabled={disabled || isSubmitting}
             >
               {t("DataSyncSection.enable")}
-            </Button>
+            </s-button>
           )}
-        </InlineStack>
+        </s-stack>
+
         {(contactSyncEnabled || orderSyncEnabled) && (
-          <BlockStack gap="200">
-            <InlineStack>
-              <Text as="h3" variant="headingSm">
-                {t("DataSyncSection.syncLog.title")}
-              </Text>
-              <DataSyncTooltip />
-            </InlineStack>
-            {contactSyncEnabled && customersSyncLog && (
-              <Grid
-                gap={{
-                  xs: "5px",
-                  sm: "5px",
-                  md: "5px",
-                  lg: "10px",
-                  xl: "10px",
-                }}
-                columns={{ xs: 4, sm: 4, md: 12, lg: 12, xl: 12 }}
-              >
-                <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 3, lg: 3, xl: 3 }}>
-                  <Text as="span" variant="headingSm">
-                    {t("DataSyncSection.syncLog.customers")}:
-                  </Text>
-                </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 3, lg: 3, xl: 3 }}>
-                  <InlineStack align="end">
-                    <Text as="span">
-                      {t("DataSyncSection.syncLog.syncedCount")}:{" "}
-                      {customersSyncLog.syncedCount +
-                        customersSyncLog.skippedCount}
-                    </Text>
-                  </InlineStack>
-                </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2 }}>
-                  <InlineStack align="end">
-                    <Text as="span">
-                      {t("DataSyncSection.syncLog.failedCount")}:{" "}
-                      {customersSyncLog.failedCount}
-                    </Text>
-                  </InlineStack>
-                </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2 }}>
-                  <InlineStack align="end">
-                    <Text as="span">
-                      {t("DataSyncSection.syncLog.totalCount")}:{" "}
-                      {customersSyncLog.totalCount}
-                    </Text>
-                  </InlineStack>
-                </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2 }}>
-                  <InlineStack align="end">
-                    <DataSyncStatusBadge status={customersSyncLog?.status} />
-                  </InlineStack>
-                </Grid.Cell>
-              </Grid>
-            )}
-            {orderSyncEnabled && orderSyncLog && (
-              <Grid
-                gap={{
-                  xs: "10px",
-                  sm: "10px",
-                  md: "10px",
-                  lg: "10px",
-                  xl: "10px",
-                }}
-                columns={{ xs: 4, sm: 4, md: 12, lg: 12, xl: 12 }}
-              >
-                <Grid.Cell columnSpan={{ xs: 6, sm: 6, md: 3, lg: 3, xl: 3 }}>
-                  <Text as="span" variant="headingSm">
-                    {t("DataSyncSection.syncLog.orders")}:
-                  </Text>
-                </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 3, lg: 3, xl: 3 }}>
-                  <InlineStack align="end">
-                    <Text as="span">
-                      {t("DataSyncSection.syncLog.syncedCount")}:{" "}
-                      {orderSyncLog.syncedCount + orderSyncLog.skippedCount}
-                    </Text>
-                  </InlineStack>
-                </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2 }}>
-                  <InlineStack align="end">
-                    <Text as="span">
-                      {t("DataSyncSection.syncLog.failedCount")}:{" "}
-                      {orderSyncLog.failedCount}
-                    </Text>
-                  </InlineStack>
-                </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2 }}>
-                  <InlineStack align="end">
-                    <Text as="span">
-                      {t("DataSyncSection.syncLog.totalCount")}:{" "}
-                      {orderSyncLog.totalCount}
-                    </Text>
-                  </InlineStack>
-                </Grid.Cell>
-                <Grid.Cell columnSpan={{ xs: 1, sm: 1, md: 2, lg: 2, xl: 2 }}>
-                  <InlineStack align="end">
-                    <DataSyncStatusBadge status={orderSyncLog?.status} />
-                  </InlineStack>
-                </Grid.Cell>
-              </Grid>
-            )}
-          </BlockStack>
+        <s-stack gap="small-200">
+          <s-stack direction="inline" alignItems="center">
+            <h3 style={{margin: 0, fontSize: '0.8125rem', fontWeight: 650}}>
+              {t("DataSyncSection.title")}
+            </h3>
+            <DataSyncTooltip />
+          </s-stack>
+          {contactSyncEnabled && customersSyncLog && (
+            <s-grid
+              gridTemplateColumns="repeat(12, 1fr)"
+              gap="small-100"
+            >
+              <s-grid-item gridColumn="span 3">
+                <s-text type="strong">
+                  {t("DataSyncSection.syncLog.customers")}:
+                </s-text>
+              </s-grid-item>
+              <s-grid-item gridColumn="span 3">
+                <s-stack direction="inline" justifyContent="end">
+                  <s-text>
+                    {t("DataSyncSection.syncLog.syncedCount")}:{" "}
+                    {customersSyncLog.syncedCount +
+                      customersSyncLog.skippedCount}
+                  </s-text>
+                </s-stack>
+              </s-grid-item>
+              <s-grid-item gridColumn="span 2">
+                <s-stack direction="inline" justifyContent="end">
+                  <s-text>
+                    {t("DataSyncSection.syncLog.failedCount")}:{" "}
+                    {customersSyncLog.failedCount}
+                  </s-text>
+                </s-stack>
+              </s-grid-item>
+              <s-grid-item gridColumn="span 2">
+                <s-stack direction="inline" justifyContent="end">
+                  <s-text>
+                    {t("DataSyncSection.syncLog.totalCount")}:{" "}
+                    {customersSyncLog.totalCount}
+                  </s-text>
+                </s-stack>
+              </s-grid-item>
+              <s-grid-item gridColumn="span 2">
+                <s-stack direction="inline" justifyContent="end">
+                  <DataSyncStatusBadge status={customersSyncLog?.status} />
+                </s-stack>
+              </s-grid-item>
+            </s-grid>
+          )}
+
+          {orderSyncEnabled && orderSyncLog && (
+            <s-grid
+              gridTemplateColumns="repeat(12, 1fr)"
+              gap="small-100"
+            >
+              <s-grid-item gridColumn="span 3">
+                <s-text type="strong">
+                  {t("DataSyncSection.syncLog.orders")}:
+                </s-text>
+              </s-grid-item>
+              <s-grid-item gridColumn="span 3">
+                <s-stack direction="inline" justifyContent="end">
+                  <s-text>
+                    {t("DataSyncSection.syncLog.syncedCount")}:{" "}
+                    {orderSyncLog.syncedCount + orderSyncLog.skippedCount}
+                  </s-text>
+                </s-stack>
+              </s-grid-item>
+              <s-grid-item gridColumn="span 2">
+                <s-stack direction="inline" justifyContent="end">
+                  <s-text>
+                    {t("DataSyncSection.syncLog.failedCount")}:{" "}
+                    {orderSyncLog.failedCount}
+                  </s-text>
+                </s-stack>
+              </s-grid-item>
+              <s-grid-item gridColumn="span 2">
+                <s-stack direction="inline" justifyContent="end">
+                  <s-text>
+                    {t("DataSyncSection.syncLog.totalCount")}:{" "}
+                    {orderSyncLog.totalCount}
+                  </s-text>
+                </s-stack>
+              </s-grid-item>
+              <s-grid-item gridColumn="span 2">
+                <s-stack direction="inline" justifyContent="end">
+                  <DataSyncStatusBadge status={orderSyncLog?.status} />
+                </s-stack>
+              </s-grid-item>
+            </s-grid>
+          )}
+        </s-stack>
         )}
-      </BlockStack>
-    </Card>
+      </s-stack>
+    </s-section>
   );
 };
 

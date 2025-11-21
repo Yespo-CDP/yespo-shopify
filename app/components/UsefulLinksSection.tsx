@@ -1,13 +1,4 @@
 import type { FC } from "react";
-import {
-  Card,
-  Text,
-  BlockStack,
-  List,
-  Link,
-  InlineStack,
-  Box,
-} from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
 
 /**
@@ -33,33 +24,34 @@ const UsefulLinksSection: FC = () => {
   }[];
 
   return (
-    <Card>
-      <BlockStack gap="200">
-        <Text as="h2" variant="headingMd">
+    <s-section>
+      <s-stack gap="small-200">
+        <h2 style={{margin: 0, fontSize: '0.875rem', fontWeight: 650}}>
           {t("UsefulLinksSection.title")}
-        </Text>
-        <Text as="p" variant="bodyMd">
+        </h2>
+        <s-paragraph>
           {t("UsefulLinksSection.helpText")}
-        </Text>
-        <List type="bullet" gap="extraTight">
+        </s-paragraph>
+
+        <s-unordered-list>
           {links.map((link, index) => (
-            <List.Item key={`${link.url}-${index}`}>
-              <Box paddingBlockEnd="200">
-                <InlineStack gap="100" wrap={false}>
+            <s-list-item key={`${link.url}-${index}`}>
+              <s-box paddingBlockEnd="small-200">
+                <s-stack direction="inline" gap="small-100">
                   <div style={{ textWrap: "nowrap" }}>
-                    <Link url={link.url} target="_blank">
-                      {link.label}
-                    </Link>
+                    <s-link href={link.url} target="_blank">{link.label}</s-link>
                   </div>
                   {"—"}
-                  <Text as="p">{link.description}</Text>
-                </InlineStack>
-              </Box>
-            </List.Item>
+                  <s-paragraph>
+                    {link.description}
+                  </s-paragraph>
+                </s-stack>
+              </s-box>
+            </s-list-item>
           ))}
-        </List>
-      </BlockStack>
-    </Card>
+        </s-unordered-list>
+      </s-stack>
+    </s-section>
   );
 };
 
