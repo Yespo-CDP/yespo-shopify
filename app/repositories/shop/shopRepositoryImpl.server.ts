@@ -61,8 +61,21 @@ export default class ShopRepositoryImpl implements IShopRepository {
    * @returns {Promise<Shop>} A promise that resolves to the updated Shop object.
    */
   async updateShop(shopUrl: string, data: ShopUpdate): Promise<Shop> {
+    const shop = await this.database.shop.findFirst({
+      where: {
+        OR: [
+          { shopUrl },
+          { domain: shopUrl },
+        ],
+      },
+    });
+
+    if (!shop) {
+      throw new Error("Shop not found");
+    }
+
     return this.database.shop.update({
-      where: { shopUrl },
+      where: { id: shop.id },
       data,
     });
   }
