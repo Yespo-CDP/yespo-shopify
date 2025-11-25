@@ -30,27 +30,11 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
  */
 export default function App() {
   const { apiKey } = useLoaderData<typeof loader>();
-  // const { i18n } = useTranslation();
-  // const appBridge = useAppBridge();
-
-  // useEffect(() => {
-  //   if (appBridge?.config?.locale) {
-  //     i18n.changeLanguage(appBridge.config.locale);
-  //   }
-  // }, [i18n, appBridge]);
 
   return (
     <AppProvider embedded apiKey={apiKey}>
-        {/*<NavMenu>*/}
-        {/*  <Link to="/app" rel="home">*/}
-        {/*    Home*/}
-        {/*  </Link>*/}
-        {/*</NavMenu>*/}
-        {/*<Outlet />*/}
-
       <s-app-nav>
         <s-link href="/app" >Home</s-link>
-        {/*<s-link href="/app/additional">Additional page</s-link>*/}
       </s-app-nav>
       <Outlet />
     </AppProvider>

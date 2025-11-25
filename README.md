@@ -361,7 +361,7 @@ If the request ends with a non-success status code, the user will see an error m
 
 ## Technologies and Shopify Tools Used
 
-- [Shopify App Remix](https://shopify.dev/docs/api/shopify-app-remix) – provides authentication and methods for interacting with Shopify APIs.
+- [Shopify App React Router](https://shopify.dev/docs/api/shopify-app-react-router/latest) – provides authentication and methods for interacting with Shopify APIs.
 - [Shopify App Bridge](https://shopify.dev/docs/apps/tools/app-bridge) – allows your app to seamlessly integrate your app within Shopify's Admin.
 - [App extensions](https://shopify.dev/docs/apps/build/app-extensions) – Theme App Extensions allow the Yespo app to 
 seamlessly inject scripts into a merchant’s Theme without manual code edits.
@@ -369,7 +369,7 @@ seamlessly inject scripts into a merchant’s Theme without manual code edits.
   This extension includes:
   - `blocks/` – contains Liquid files that act as entry points for injecting Yespo scripts into the Theme. These blocks can be enabled via the Shopify Theme editor.
   - `assests/` – contains JavaScript script that sends events using eS.JS.
-- [Polaris](https://polaris.shopify.com/) – design system that enables apps to create Shopify-like experiences.
+- [Polaris web components](https://shopify.dev/docs/api/app-home/polaris-web-components) – design system that enables apps to create Shopify-like experiences.
 - [Webhooks](https://shopify.dev/docs/api/webhooks?reference=toml) – allows to receive notifications about particular events in a shop such as customer-related changes.
 - [Metafields](https://shopify.dev/docs/apps/build/online-store/theme-app-extensions/configuration#metafield-namespaces) – 
 used for storing tracking and scripts configurations (custom namespace: $app).
@@ -652,7 +652,7 @@ app/
 │   └── customerData/   # Customer data repository
 ├── @types/             # TypeScript type definitions
 ├── utils/              # Helper functions
-└── routes/             # Remix routes
+└── routes/             # React Router routes
 ```
 
 #### Repository Pattern
