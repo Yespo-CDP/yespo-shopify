@@ -1,5 +1,4 @@
 import type { FC } from "react";
-import { Banner, BlockStack, Button } from "@shopify/polaris";
 import { useTranslation } from "react-i18next";
 
 /**
@@ -16,14 +15,14 @@ import { useTranslation } from "react-i18next";
 const UnsupportedMarketsSection: FC = () => {
   const { t } = useTranslation();
   return (
-    <Banner title={t("UnsupportedMarketsSection.title")} tone="warning">
-      <BlockStack inlineAlign="start" gap="200">
-        {t("UnsupportedMarketsSection.description")}
-        <Button variant="primary" url="shopify://admin/settings/markets">
-          {t("UnsupportedMarketsSection.button")}
-        </Button>
-      </BlockStack>
-    </Banner>
+    <s-banner heading={t("UnsupportedMarketsSection.title")} tone="warning" dismissible>
+     <s-stack justifyContent="start" gap="small-200">
+       {t("UnsupportedMarketsSection.description")}
+       <s-button href="shopify://admin/settings/markets" variant="primary">
+         {t("UnsupportedMarketsSection.button")}
+       </s-button>
+     </s-stack>
+    </s-banner>
   );
 };
 

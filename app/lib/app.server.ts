@@ -1,4 +1,4 @@
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 
 import type { Account } from "~/@types/account";
 import { getAccountInfo } from "~/api/get-account-info.server";

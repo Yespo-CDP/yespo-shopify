@@ -3,7 +3,7 @@ import {
   type GraphQLClient,
 } from "@shopify/graphql-client";
 
-import { ApiVersion } from "@shopify/shopify-app-remix/server";
+import { ApiVersion } from "@shopify/shopify-app-react-router/server";
 
 /**
  * Create Shopify GraphQL API.
