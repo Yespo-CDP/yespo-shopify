@@ -59,28 +59,37 @@ const WebTrackingSection = ({
           </s-text>
         </s-stack>
 
-        {
-          webTrackerEnabled && isScriptsActive ? (
-            <s-button
-              variant="primary"
-              tone="critical"
-              onClick={() => handleTrackingToggle("tracking-disable")}
-              loading={fetcher.state === "submitting"}
-              disabled={disabled || fetcher.state === "submitting"}
-            >
-              {t("WebTrackingSection.disable")}
-            </s-button>
-          ) : (
-            <s-button
-              variant="primary"
-              onClick={() => handleTrackingToggle("tracking-enable")}
-              loading={fetcher.state === "submitting"}
-              disabled={disabled || !isScriptsActive || fetcher.state === "submitting"}
-            >
-              {t("WebTrackingSection.enable")}
-            </s-button>
-          )
-        }
+        <s-stack direction={'inline'} gap={'small-200'}>
+          <s-button href='category-settings' variant={'primary'} disabled={disabled || fetcher.state === "submitting" || !webTrackerEnabled}>
+            Category Settings
+          </s-button>
+          {
+            webTrackerEnabled && isScriptsActive ? (
+              <s-button
+                variant="primary"
+                tone="critical"
+                onClick={() => handleTrackingToggle("tracking-disable")}
+                loading={fetcher.state === "submitting"}
+                disabled={disabled || fetcher.state === "submitting"}
+              >
+                {t("WebTrackingSection.disable")}
+              </s-button>
+            ) : (
+              <s-button
+                variant="primary"
+                onClick={() => handleTrackingToggle("tracking-enable")}
+                loading={fetcher.state === "submitting"}
+                disabled={disabled || !isScriptsActive || fetcher.state === "submitting"}
+              >
+                {t("WebTrackingSection.enable")}
+              </s-button>
+            )
+          }
+
+
+        </s-stack>
+
+
       </s-stack>
     </s-section>
   )

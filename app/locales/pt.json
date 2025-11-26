@@ -43,6 +43,13 @@
       "notDisabled": "Rastreamento da Web não desativado"
     }
   },
+  "CategorySettings": {
+    "title": "Configurações de categoria",
+    "sectionTitle": "Coleções",
+    "breadcrumbs": {
+      "mainPage": "Página principal"
+    }
+  },
   "DataSyncSection": {
     "title": "Sincronização de dados históricos",
     "description": "A sincronização de dados permite sincronizar clientes e pedidos do Shopify com o Yespo.",

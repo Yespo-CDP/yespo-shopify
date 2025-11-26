@@ -18,6 +18,7 @@ declare namespace JSX {
       variant?: "auto" | "primary" | "secondary" | "tertiary";
       [key: string]: any;
     };
+    "s-button-group": any;
     "s-text-field": any;
     "s-password-field": any;
     "s-email-field": any;
@@ -39,6 +40,11 @@ declare namespace JSX {
     "s-form": any;
     "s-menu": any;
     "s-table": any;
+    "s-table-header-row": any;
+    "s-table-header": any;
+    "s-table-body": any;
+    "s-table-row": any;
+    "s-table-cell": any;
     "s-list": any;
     "s-list-item": any;
     "s-ordered-list": any;
@@ -55,5 +61,8 @@ declare namespace JSX {
     "s-text-area": any;
     "s-url-field": any;
     "s-query-container": any;
+    "s-popover": any;
+    "s-option-group": any;
+    "s-card": any;
   }
 }

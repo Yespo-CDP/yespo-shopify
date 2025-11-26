@@ -43,6 +43,13 @@
       "notDisabled": "Web tracking not disabled"
     }
   },
+  "CategorySettings": {
+    "title": "Category Settings",
+    "sectionTitle": "Collections",
+    "breadcrumbs": {
+      "mainPage": "Main page"
+    }
+  },
   "DataSyncSection": {
     "title": "Data Sync",
     "description": "Data sync allows syncing customers and orders from Shopify with Yespo.",

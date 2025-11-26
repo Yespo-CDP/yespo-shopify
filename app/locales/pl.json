@@ -43,6 +43,13 @@
       "notDisabled": "Śledzenie sieci nie jest wyłączone"
     }
   },
+  "CategorySettings": {
+    "title": "Ustawienia kategorii",
+    "sectionTitle": "Kolekcje",
+    "breadcrumbs": {
+      "mainPage": "Strona główna"
+    }
+  },
   "DataSyncSection": {
     "title": "Synchronizacja danych",
     "description": "Synchronizacja danych umożliwia synchronizację klientów i zamówień z Shopify z Yespo.",
