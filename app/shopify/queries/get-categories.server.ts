@@ -9,11 +9,16 @@ interface GetCategoriesParams {
   search?: string
 }
 const getCategories = async ({
-                                 admin,
-                                 count = 50,
-                                 after = null,
+  admin,
+  count = 50,
+  after = null,
   search = ''
-                               }: GetCategoriesParams) => {
+}: GetCategoriesParams) => {
+
+  // console.log('[getCategories] Params - search:', search, 'count:', count, 'after:', after);
+
+  // console.log('>>>>>>>>>>>>', search)
+
   try {
     const response = await admin.graphql(`
       #graphql
@@ -45,15 +50,18 @@ const getCategories = async ({
         variables: {
           count,
           after,
+          search,
         },
       }
-    )
+    );
 
     const responseJson = await response.json();
-    const typesData = responseJson?.data as CategoryResponse | undefined;
+    // console.log('[getCategories] Response:', JSON.stringify(responseJson, null, 2));
 
-    const categories = typesData?.taxonomy?.categories?.nodes ?? [];
-    const pageInfo = typesData?.taxonomy?.categories?.pageInfo ?? {
+    const categoriesData = responseJson?.data as CategoryResponse | undefined;
+
+    const categories = categoriesData?.taxonomy?.categories?.nodes ?? [];
+    const pageInfo = categoriesData?.taxonomy?.categories?.pageInfo ?? {
       hasNextPage: false,
       hasPreviousPage: false,
       endCursor: "",

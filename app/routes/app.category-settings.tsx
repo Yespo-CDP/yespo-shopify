@@ -10,8 +10,6 @@ export default function CategorySettingsPage() {
   const {collections, pageInfo, limit, productTypes, categories} = useLoaderData<typeof loader>();
   const [searchParams] = useSearchParams();
 
-  console.log('collections', collections)
-
   const handleNextPageLink = () => {
     const params = new URLSearchParams(searchParams);
     params.set("limit", String(limit));

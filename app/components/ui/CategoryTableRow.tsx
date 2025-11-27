@@ -1,5 +1,6 @@
 import {useState} from "react";
-import Autocomplete from "~/components/ui/Autocomplete";
+import CategoryAutocomplete from "~/components/ui/CategoryAutocomplete";
+import ProductTypeAutocomplete from "~/components/ui/ProductTypeAutocomplete";
 import {useTranslation} from "react-i18next";
 import {ProductTypeOption} from "~/services/get-product-types.server";
 import {CategoryOption} from "~/services/get-categories.server";
@@ -26,15 +27,6 @@ const CategoryTableRow = ({
     {value: 'type', label: 'Type'},
     {value: 'category', label: 'Category'},
   ];
-
-  // Select options based on entity type
-  const autocompleteOptions = selectedEntity === 'type' ? productTypes : categories;
-  const autocompleteLabel = selectedEntity === 'type' 
-    ? t("CategorySettings.selectType", "Select type")
-    : t("CategorySettings.selectCategory", "Select category");
-  const autocompletePlaceholder = selectedEntity === 'type'
-    ? t("CategorySettings.searchTypes", "Search types")
-    : t("CategorySettings.searchCategories", "Search categories");
 
 
   return (
@@ -76,15 +68,26 @@ const CategoryTableRow = ({
             </s-select>
           </s-box>
 
-          <Autocomplete
-            id={`${id}-${selectedEntity}`}
-            label={autocompleteLabel}
-            placeholder={autocompletePlaceholder}
-            options={autocompleteOptions}
-            onChange={(value, label) => {
-              console.log(`Collection ${id} - Entity: ${selectedEntity}, Selected:`, value, label);
-            }}
-          />
+          {selectedEntity === 'type' ? (
+            <ProductTypeAutocomplete
+              id={`${id}-type`}
+              label={t("CategorySettings.selectType", "Select type")}
+              placeholder={t("CategorySettings.searchTypes", "Search types")}
+              options={productTypes}
+              onChange={(value, label) => {
+                console.log(`Collection ${id} - Type selected:`, {value, label});
+              }}
+            />
+          ) : (
+            <CategoryAutocomplete
+              id={`${id}-category`}
+              label={t("CategorySettings.selectCategory", "Select category")}
+              placeholder={t("CategorySettings.searchCategories", "Search categories")}
+              onChange={(value, name) => {
+                console.log(`Collection ${id} - Category selected:`, {id: value, name});
+              }}
+            />
+          )}
         </s-stack>
       </s-table-cell>
     </s-table-row>
