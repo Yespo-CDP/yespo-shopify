@@ -40,6 +40,12 @@ export default function CategorySettingsPage() {
         {t("CategorySettings.breadcrumbs.mainPage")}
       </s-link>
 
+      <s-box paddingBlockEnd={'small-200'}>
+        <s-button icon="caret-left" variant='tertiary' href='/app'>
+          Back
+        </s-button>
+      </s-box>
+
       <s-section>
         <s-text>{t('CategorySettings.description')}</s-text>
       </s-section>
