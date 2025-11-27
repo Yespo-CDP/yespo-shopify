@@ -102,7 +102,7 @@ const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
 
       </s-stack>
 
-      <s-popover id={popoverId}>
+      <s-popover id={popoverId} maxBlockSize={'300px'}>
         <s-box padding="small-200">
           <s-search-field
             label={t("CategorySettings.table.fields.search")}
@@ -124,7 +124,7 @@ const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
             <s-stack gap="none">
               {options.map((option) => (
                 <s-clickable
-                  blockSize={'25px'}
+                  paddingBlock={'small-200'}
                   key={option.value}
                   onClick={() => handleOptionSelect(option.value, option.label)}
                 >

@@ -83,7 +83,7 @@ export const getCategoriesOptionsService = async ({
   // Map to {value, label} format for select/autocomplete components
   return categories.map((category) => ({
     value: category.id,
-    label: category.fullName,
+    label: category.name,
   }));
 };
 

@@ -113,7 +113,7 @@ const CategoryTableRow = ({
             ) : (
               <CategoryAutocomplete
                 id={`${id}-category`}
-                placeholder={t("CategorySettings.table.fields..searchCategories")}
+                placeholder={t("CategorySettings.table.fields.searchCategories")}
                 categoryName={mappingData?.type === 'category' ? mappingData.value : ''}
                 onChange={(value, name) => {
                   handleSaveMapping('category', value, name);
