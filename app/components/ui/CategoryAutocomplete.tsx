@@ -91,7 +91,6 @@ const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
           <s-text-field
             label={label}
             value={selectedName}
-            placeholder={placeholder}
             disabled={disabled}
             readOnly
           />

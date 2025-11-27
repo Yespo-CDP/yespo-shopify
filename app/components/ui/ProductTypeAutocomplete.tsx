@@ -73,7 +73,6 @@ const ProductTypeAutocomplete: FC<ProductTypeAutocompleteProps> = ({
           <s-text-field
             label={label}
             value={selectedLabel}
-            placeholder={placeholder}
             disabled={disabled}
             readOnly
           />
