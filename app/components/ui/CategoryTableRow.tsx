@@ -82,7 +82,7 @@ const CategoryTableRow = ({
         <s-stack direction={'inline'} gap={'small-200'} alignItems={'end'}>
           <s-box inlineSize={'50%'}>
             <s-select
-              label={t("CategorySettings.selectEntity", "Select entity")}
+              label={t("CategorySettings.table.fields.selectEntity")}
               value={selectedEntity}
               onChange={(e: Event) => {
                 const target = e.currentTarget as HTMLSelectElement;
@@ -101,8 +101,8 @@ const CategoryTableRow = ({
           {selectedEntity === 'type' ? (
             <ProductTypeAutocomplete
               id={`${id}-type`}
-              label={t("CategorySettings.selectType", "Select type")}
-              placeholder={t("CategorySettings.searchTypes", "Search types")}
+              label={t("CategorySettings.table.fields.selectType")}
+              placeholder={t("CategorySettings.table.fields.searchTypes")}
               options={productTypes}
               value={mappingData?.type === 'product_type' ? mappingData.value : ''}
               onChange={(value, label) => {
@@ -113,8 +113,8 @@ const CategoryTableRow = ({
           ) : (
             <CategoryAutocomplete
               id={`${id}-category`}
-              label={t("CategorySettings.selectCategory", "Select category")}
-              placeholder={t("CategorySettings.searchCategories", "Search categories")}
+              label={t("CategorySettings.table.fields.selectCategory")}
+              placeholder={t("CategorySettings.table.fields..searchCategories")}
               categoryName={mappingData?.type === 'category' ? mappingData.value : ''}
               onChange={(value, name) => {
                 handleSaveMapping('category', value, name);

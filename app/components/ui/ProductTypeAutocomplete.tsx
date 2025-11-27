@@ -1,4 +1,5 @@
 import {type FC, useState, useEffect} from "react";
+import {useTranslation} from "react-i18next";
 
 interface ProductTypeOption {
   value: string;
@@ -28,6 +29,7 @@ const ProductTypeAutocomplete: FC<ProductTypeAutocompleteProps> = ({
   disabled = false,
   id,
 }) => {
+  const {t} = useTranslation();
   const [searchValue, setSearchValue] = useState("");
   const [selectedLabel, setSelectedLabel] = useState(value);
 
@@ -87,7 +89,7 @@ const ProductTypeAutocomplete: FC<ProductTypeAutocompleteProps> = ({
       <s-popover id={popoverId}>
         <s-box padding="small-200">
           <s-search-field
-            label="Search"
+            label={t("CategorySettings.table.fields.search")}
             labelAccessibilityVisibility="exclusive"
             placeholder={placeholder}
             autocomplete={'on'}
@@ -110,7 +112,7 @@ const ProductTypeAutocomplete: FC<ProductTypeAutocompleteProps> = ({
               ))}
             </s-stack>
           ) : (
-            <s-text>No results found</s-text>
+            <s-text>{t("CategorySettings.noResults")}</s-text>
           )}
         </s-box>
       </s-popover>

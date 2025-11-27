@@ -45,10 +45,9 @@ export default function CategorySettingsPage() {
       </s-section>
 
       <s-section padding="none">
-
         {
           collections.length === 0 ? (
-            <s-text>{t("CategorySettings.collectionsEmpty", "No collections found")}</s-text>
+            <s-text>{t("CategorySettings.collectionsEmpty")}</s-text>
           ) : (
             <s-table
               paginate
@@ -58,8 +57,8 @@ export default function CategorySettingsPage() {
               onPreviousPage={handlePreviousPage}
             >
               <s-table-header-row>
-                <s-table-header listSlot="secondary">Collection Name</s-table-header>
-                <s-table-header listSlot={'primary'}>Set up Category Value</s-table-header>
+                <s-table-header listSlot="secondary">{t("CategorySettings.table.heading.collectionName")}</s-table-header>
+                <s-table-header listSlot={'primary'}>{t("CategorySettings.table.heading.setUpValue")}</s-table-header>
               </s-table-header-row>
 
               <s-table-body>

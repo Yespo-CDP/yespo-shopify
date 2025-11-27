@@ -48,6 +48,24 @@
     "sectionTitle": "Collections",
     "breadcrumbs": {
       "mainPage": "Main page"
+    },
+    "collectionsEmpty":  "No collections found",
+    "noResults": "No results found",
+    "categorySearch": "Start typing to search categories",
+    "loading": "Loading...",
+    "table": {
+      "heading": {
+        "collectionName": "Collection Name",
+        "setUpValue": "Set up Category Value"
+      },
+      "fields": {
+        "selectEntity": "Select entity",
+        "selectType": "Select type",
+        "searchTypes":  "Search types",
+        "selectCategory": "Select category",
+        "searchCategories":  "Search categories",
+        "search": "Search"
+      }
     }
   },
   "DataSyncSection": {

@@ -1,5 +1,6 @@
 import {type FC, useState, useEffect} from "react";
 import {useFetcher} from "react-router";
+import {useTranslation} from "react-i18next";
 
 interface CategoryOption {
   value: string;
@@ -29,6 +30,7 @@ const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
   disabled = false,
   id,
 }) => {
+  const {t} = useTranslation();
   const [searchValue, setSearchValue] = useState("");
   const [selectedName, setSelectedName] = useState(categoryName);
   const [options, setOptions] = useState<CategoryOption[]>([]);
@@ -106,7 +108,7 @@ const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
       <s-popover id={popoverId}>
         <s-box padding="small-200">
           <s-search-field
-            label="Search"
+            label={t("CategorySettings.table.fields.search")}
             labelAccessibilityVisibility="exclusive"
             placeholder={placeholder}
             autocomplete={'on'}
@@ -119,7 +121,7 @@ const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
           {fetcher.state === "loading" ? (
             <s-stack alignItems="center" gap="small-200">
               <s-spinner size="base" />
-              <s-text >Loading...</s-text>
+              <s-text >{t("CategorySettings.loading")}</s-text>
             </s-stack>
           ) : options.length > 0 ? (
             <s-stack gap="none">
@@ -134,9 +136,9 @@ const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
               ))}
             </s-stack>
           ) : searchValue.trim().length > 0 ? (
-            <s-text>No results found</s-text>
+            <s-text>{t("CategorySettings.noResults")}</s-text>
           ) : (
-            <s-text >Start typing to search categories</s-text>
+            <s-text >{t("CategorySettings.categorySearch")}</s-text>
           )}
         </s-box>
       </s-popover>

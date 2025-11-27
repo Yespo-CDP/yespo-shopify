@@ -48,6 +48,24 @@
     "sectionTitle": "Kolekcje",
     "breadcrumbs": {
       "mainPage": "Strona główna"
+    },
+    "collectionsEmpty":  "Nie znaleziono kolekcji",
+    "noResults": "Nie znaleziono żadnych wyników",
+    "categorySearch": "Zacznij pisać, aby wyszukać kategorie",
+    "loading": "Załadunek...",
+    "table": {
+      "heading": {
+        "collectionName": "Nazwa kolekcji",
+        "setUpValue": "Skonfiguruj wartość kategorii"
+      },
+      "fields": {
+        "selectEntity": "Wybierz podmiot",
+        "selectType": "Wybierz typ",
+        "searchTypes":  "Typy wyszukiwania",
+        "selectCategory": "Wybierz kategorię",
+        "searchCategories":  "Kategorie wyszukiwania",
+        "search": "Szukaj"
+      }
     }
   },
   "DataSyncSection": {
