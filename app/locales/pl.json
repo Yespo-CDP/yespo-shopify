@@ -46,6 +46,7 @@
   "CategorySettings": {
     "title": "Ustawienia kategorii",
     "sectionTitle": "Kolekcje",
+    "description": "Zalecamy skonfigurowanie mapowania kolekcji dla pliku feed, który przekazaliście do Yespo.\nNajlepiej byłoby powiązać wartość kolekcji z wartością typu produktu w pliku feed Yespo. Zapewni to prawidłową synchronizację danych i poprawi dokładność kategoryzacji produktów.",
     "breadcrumbs": {
       "mainPage": "Strona główna"
     },

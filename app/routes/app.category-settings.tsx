@@ -41,7 +41,7 @@ export default function CategorySettingsPage() {
       </s-link>
 
       <s-section>
-        <s-text>Update your product information and settings.</s-text>
+        <s-text>{t('CategorySettings.description')}</s-text>
       </s-section>
 
       <s-section padding="none">
