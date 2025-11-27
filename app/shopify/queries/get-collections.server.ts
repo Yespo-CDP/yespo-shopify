@@ -57,8 +57,6 @@ const getCollections = async ({
     const responseJson = await response.json();
     const collectionsData = responseJson?.data as CollectionResponse | undefined;
 
-    console.log('responseJson', JSON.stringify(responseJson, null, 2))
-
     const collections = collectionsData?.collections?.nodes ?? [];
     const pageInfo = collectionsData?.collections?.pageInfo ?? {
       hasNextPage: false,
