@@ -61,7 +61,7 @@ const CategoryTableRow = ({
   return (
     <s-table-row>
       <s-table-cell >
-        <s-stack direction={'inline'} gap={'small-200'} alignItems={'center'}>
+        <s-stack direction={'inline'} gap={'small-200'} alignItems={'center'} >
           {
             imageUrl? (
               <s-thumbnail
@@ -78,59 +78,60 @@ const CategoryTableRow = ({
           <s-text>{title}</s-text>
         </s-stack>
       </s-table-cell>
-      <s-table-cell >
-        <s-stack direction={'inline'} gap={'small-200'} alignItems={'end'}>
-          <s-box inlineSize={'50%'}>
-            <s-select
-              label={t("CategorySettings.table.fields.selectEntity")}
-              value={selectedEntity}
-              onChange={(e: Event) => {
-                const target = e.currentTarget as HTMLSelectElement;
-                setSelectedEntity(target.value);
-              }}
-              disabled={fetcher.state === "submitting"}
-            >
-              {CATEGORY_TYPE_OPTIONS.map((option) => (
-                <s-option key={option.value} value={option.value}>
-                  {option.label}
-                </s-option>
-              ))}
-            </s-select>
-          </s-box>
+      <s-table-cell>
+        {/*<s-box inlineSize={'200px'}>*/}
+          <s-select
+            value={selectedEntity}
+            onChange={(e: Event) => {
+              const target = e.currentTarget as HTMLSelectElement;
+              setSelectedEntity(target.value);
+            }}
+            disabled={fetcher.state === "submitting"}
+          >
+            {CATEGORY_TYPE_OPTIONS.map((option) => (
+              <s-option key={option.value} value={option.value}>
+                {option.label}
+              </s-option>
+            ))}
+          </s-select>
+        {/*</s-box>*/}
 
-          {selectedEntity === 'type' ? (
-            <ProductTypeAutocomplete
-              id={`${id}-type`}
-              label={t("CategorySettings.table.fields.selectType")}
-              placeholder={t("CategorySettings.table.fields.searchTypes")}
-              options={productTypes}
-              value={mappingData?.type === 'product_type' ? mappingData.value : ''}
-              onChange={(value, label) => {
-                handleSaveMapping('type', value, label);
-              }}
-              disabled={fetcher.state === "submitting"}
-            />
-          ) : (
-            <CategoryAutocomplete
-              id={`${id}-category`}
-              label={t("CategorySettings.table.fields.selectCategory")}
-              placeholder={t("CategorySettings.table.fields..searchCategories")}
-              categoryName={mappingData?.type === 'category' ? mappingData.value : ''}
-              onChange={(value, name) => {
-                handleSaveMapping('category', value, name);
-              }}
-              disabled={fetcher.state === "submitting"}
-            />
-          )}
+      </s-table-cell>
+      <s-table-cell>
+          <s-stack direction={'inline'} gap={'small-200'}>
+            {selectedEntity === 'type' ? (
+              <ProductTypeAutocomplete
+                id={`${id}-type`}
+                placeholder={t("CategorySettings.table.fields.searchTypes")}
+                options={productTypes}
+                value={mappingData?.type === 'product_type' ? mappingData.value : ''}
+                onChange={(value, label) => {
+                  handleSaveMapping('type', value, label);
+                }}
+                disabled={fetcher.state === "submitting"}
+              />
+            ) : (
+              <CategoryAutocomplete
+                id={`${id}-category`}
+                placeholder={t("CategorySettings.table.fields..searchCategories")}
+                categoryName={mappingData?.type === 'category' ? mappingData.value : ''}
+                onChange={(value, name) => {
+                  handleSaveMapping('category', value, name);
+                }}
+                disabled={fetcher.state === "submitting"}
+              />
+            )}
 
-          <s-button
-            icon="delete"
-            tone={'critical'}
-            onClick={handleDeleteMapping}
-            disabled={fetcher.state === "submitting" || !mappingData}
-            accessibilityLabel={`delete-${id}`}
-          />
-        </s-stack>
+            <s-button
+              icon="delete"
+              tone={'critical'}
+              onClick={handleDeleteMapping}
+              disabled={fetcher.state === "submitting" || !mappingData}
+              accessibilityLabel={`delete-${id}`}
+            />
+          </s-stack>
+        {/*</div>*/}
+
       </s-table-cell>
     </s-table-row>
   )

@@ -7,7 +7,6 @@ interface ProductTypeOption {
 }
 
 interface ProductTypeAutocompleteProps {
-  label: string;
   placeholder?: string;
   options: ProductTypeOption[];
   value?: string;
@@ -21,7 +20,6 @@ interface ProductTypeAutocompleteProps {
  * Uses client-side filtering of provided options
  */
 const ProductTypeAutocomplete: FC<ProductTypeAutocompleteProps> = ({
-  label,
   placeholder = "Search types...",
   options,
   value = "",
@@ -68,10 +66,9 @@ const ProductTypeAutocomplete: FC<ProductTypeAutocompleteProps> = ({
 
   return (
     <s-box>
-      <s-stack direction={'inline'} gap={'small-200'} alignItems={'end'}>
+      <s-stack direction={'inline'} gap={'small-200'}>
         <s-box>
           <s-text-field
-            label={label}
             value={selectedLabel}
             disabled={disabled}
             readOnly

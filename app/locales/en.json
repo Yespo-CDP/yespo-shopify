@@ -57,6 +57,7 @@
     "table": {
       "heading": {
         "collectionName": "Collection Name",
+        "selectEntity": "Select entity",
         "setUpValue": "Set up Category Value"
       },
       "fields": {

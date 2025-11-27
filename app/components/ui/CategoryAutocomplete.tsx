@@ -8,7 +8,6 @@ interface CategoryOption {
 }
 
 interface CategoryAutocompleteProps {
-  label: string;
   placeholder?: string;
   categoryId?: string;
   categoryName?: string;
@@ -23,7 +22,6 @@ interface CategoryAutocompleteProps {
  * Displays only category name (not full path) in selected field
  */
 const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
-  label,
   placeholder = "Search categories...",
   categoryName = "",
   onChange,
@@ -86,10 +84,9 @@ const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
 
   return (
     <s-box>
-      <s-stack direction={'inline'} gap={'small-200'} alignItems={'end'}>
-        <s-box>
+      <s-stack direction={'inline'} gap={'small-200'}>
+        <s-box >
           <s-text-field
-            label={label}
             value={selectedName}
             disabled={disabled}
             readOnly

@@ -36,35 +36,36 @@ export default function CategorySettingsPage() {
 
   return (
     <s-page heading={t("CategorySettings.title")}>
-      <s-link slot="breadcrumb-actions" href="/app">
-        {t("CategorySettings.breadcrumbs.mainPage")}
-      </s-link>
+        <s-link slot="breadcrumb-actions" href="/app">
+          {t("CategorySettings.breadcrumbs.mainPage")}
+        </s-link>
 
-      <s-box paddingBlockEnd={'small-200'}>
-        <s-button icon="caret-left" variant='tertiary' href='/app'>
-          Back
-        </s-button>
-      </s-box>
+        <s-box paddingBlockEnd={'small-200'}>
+          <s-button icon="caret-left" variant='tertiary' href='/app'>
+            Back
+          </s-button>
+        </s-box>
 
-      <s-section>
-        <s-text>{t('CategorySettings.description')}</s-text>
-      </s-section>
+        <s-section>
+          <s-text>{t('CategorySettings.description')}</s-text>
+        </s-section>
 
-      <s-section padding="none">
-        {
-          collections.length === 0 ? (
-            <s-text>{t("CategorySettings.collectionsEmpty")}</s-text>
-          ) : (
-            <s-table
-              paginate
-              hasPreviousPage={pageInfo.hasPreviousPage}
-              hasNextPage={pageInfo.hasNextPage}
-              onNextPage={handleNextPage}
-              onPreviousPage={handlePreviousPage}
-            >
+        <s-section padding="none">
+          {
+            collections.length === 0 ? (
+              <s-text>{t("CategorySettings.collectionsEmpty")}</s-text>
+            ) : (
+              <s-table
+                paginate
+                hasPreviousPage={pageInfo.hasPreviousPage}
+                hasNextPage={pageInfo.hasNextPage}
+                onNextPage={handleNextPage}
+                onPreviousPage={handlePreviousPage}
+              >
               <s-table-header-row>
-                <s-table-header listSlot="secondary">{t("CategorySettings.table.heading.collectionName")}</s-table-header>
-                <s-table-header listSlot={'primary'}>{t("CategorySettings.table.heading.setUpValue")}</s-table-header>
+                <s-table-header>{t("CategorySettings.table.heading.collectionName")}</s-table-header>
+                <s-table-header>{t("CategorySettings.table.heading.selectEntity")}</s-table-header>
+                <s-table-header>{t("CategorySettings.table.heading.setUpValue")}</s-table-header>
               </s-table-header-row>
 
               <s-table-body>
