@@ -82,6 +82,7 @@ const ProductTypeAutocomplete: FC<ProductTypeAutocompleteProps> = ({
           commandFor={popoverId}
           icon="search"
           disabled={disabled}
+          accessibilityLabel={`search-${popoverId}`}
         />
       </s-stack>
 

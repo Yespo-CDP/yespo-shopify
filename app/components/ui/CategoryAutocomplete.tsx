@@ -100,6 +100,7 @@ const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
           commandFor={popoverId}
           icon="search"
           disabled={disabled}
+          accessibilityLabel={`search-${popoverId}`}
         />
 
       </s-stack>

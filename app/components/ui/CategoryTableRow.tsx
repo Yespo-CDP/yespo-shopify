@@ -128,6 +128,7 @@ const CategoryTableRow = ({
             tone={'critical'}
             onClick={handleDeleteMapping}
             disabled={fetcher.state === "submitting" || !mappingData}
+            accessibilityLabel={`delete-${id}`}
           />
         </s-stack>
       </s-table-cell>
