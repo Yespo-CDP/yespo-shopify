@@ -1,12 +1,17 @@
-import {Market} from "~/@types/market";
-
 interface Image {
   url: string
 }
+
+interface Metafield {
+  key: string;
+  value: string;
+}
+
 export interface Collection {
   id: string;
   title: string;
-  image: Image | null
+  image: Image | null;
+  metafield?: Metafield;
 }
 
 export interface CollectionPageInfo {

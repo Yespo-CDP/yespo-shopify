@@ -11,16 +11,11 @@ export const loader = async ({request}: LoaderFunctionArgs) => {
   const url = new URL(request.url);
   const search = url.searchParams.get("search") || "";
 
-  // console.log('[api.search-categories] Search term:', search);
-
   // Fetch categories with search filter
   const categories = await getCategoriesOptionsService({
     admin,
     search,
   });
-
-  // console.log('[api.search-categories] Found categories:', categories.length);
-  // console.log('[api.search-categories] First 3 categories:', categories.slice(0, 3));
 
   return {categories};
 };

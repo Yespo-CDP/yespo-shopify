@@ -29,8 +29,7 @@ const ProductTypeAutocomplete: FC<ProductTypeAutocompleteProps> = ({
   id,
 }) => {
   const [searchValue, setSearchValue] = useState("");
-  const [selectedValue, setSelectedValue] = useState(value);
-  const [selectedLabel, setSelectedLabel] = useState("");
+  const [selectedLabel, setSelectedLabel] = useState(value);
 
   const popoverId = `type-autocomplete-${id}`;
 
@@ -41,24 +40,11 @@ const ProductTypeAutocomplete: FC<ProductTypeAutocompleteProps> = ({
 
   // Handle option selection
   const handleOptionSelect = (optionValue: string, optionLabel: string) => {
-    setSelectedValue(optionValue);
     setSelectedLabel(optionLabel);
     setSearchValue("");
     onChange?.(optionValue, optionLabel);
-    
-    console.log('[ProductTypeAutocomplete] Selected:', {
-      value: optionValue,
-      label: optionLabel
-    });
   };
 
-  // Handle reset
-  const handleReset = () => {
-    setSelectedValue("");
-    setSelectedLabel("");
-    setSearchValue("");
-    onChange?.("", "");
-  };
 
   // Handle search input change
   const handleSearchChange = (e: Event) => {
@@ -71,11 +57,9 @@ const ProductTypeAutocomplete: FC<ProductTypeAutocompleteProps> = ({
     if (value) {
       const selectedOption = options.find((opt) => opt.value === value);
       if (selectedOption) {
-        setSelectedValue(value);
         setSelectedLabel(selectedOption.label);
       }
     } else {
-      setSelectedValue("");
       setSelectedLabel("");
     }
   }, [value, options]);
@@ -93,20 +77,11 @@ const ProductTypeAutocomplete: FC<ProductTypeAutocompleteProps> = ({
           />
         </s-box>
 
-        <s-button-group>
-          <s-button
-            slot="secondary-actions"
-            commandFor={popoverId}
-            icon="search"
-            disabled={disabled}
-          />
-          <s-button
-            slot="secondary-actions"
-            icon="undo"
-            onClick={handleReset}
-            disabled={disabled || !selectedValue}
-          />
-        </s-button-group>
+        <s-button
+          commandFor={popoverId}
+          icon="search"
+          disabled={disabled}
+        />
       </s-stack>
 
       <s-popover id={popoverId}>

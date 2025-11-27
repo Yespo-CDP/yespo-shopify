@@ -14,11 +14,6 @@ const getCategories = async ({
   after = null,
   search = ''
 }: GetCategoriesParams) => {
-
-  // console.log('[getCategories] Params - search:', search, 'count:', count, 'after:', after);
-
-  // console.log('>>>>>>>>>>>>', search)
-
   try {
     const response = await admin.graphql(`
       #graphql
@@ -56,8 +51,6 @@ const getCategories = async ({
     );
 
     const responseJson = await response.json();
-    // console.log('[getCategories] Response:', JSON.stringify(responseJson, null, 2));
-
     const categoriesData = responseJson?.data as CategoryResponse | undefined;
 
     const categories = categoriesData?.taxonomy?.categories?.nodes ?? [];

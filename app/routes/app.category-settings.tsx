@@ -1,27 +1,37 @@
 import {useTranslation} from "react-i18next";
-import {categoryPageLoaderHandler} from "~/lib/category-settings.server";
-import {useLoaderData, useSearchParams} from "react-router";
+import {categoryPageLoaderHandler, categoryPageActionHandler} from "~/lib/category-settings.server";
+import {useLoaderData, useSearchParams, useNavigate} from "react-router";
 import CategoryTableRow from "~/components/ui/CategoryTableRow";
 
 export const loader = categoryPageLoaderHandler;
+export const action = categoryPageActionHandler;
 
 export default function CategorySettingsPage() {
   const {t} = useTranslation();
-  const {collections, pageInfo, limit, productTypes, categories} = useLoaderData<typeof loader>();
+  const {collections, pageInfo, limit, productTypes} = useLoaderData<typeof loader>();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
-  const handleNextPageLink = () => {
+  const handleNextPage = () => {
+    if (!pageInfo.hasNextPage || !pageInfo.endCursor) return;
+
     const params = new URLSearchParams(searchParams);
     params.set("limit", String(limit));
+    params.delete("before");
+    params.set("after", pageInfo.endCursor);
 
-    // reset cursor
+    navigate(`?${params.toString()}`);
+  };
+
+  const handlePreviousPage = () => {
+    if (!pageInfo.hasPreviousPage || !pageInfo.startCursor) return;
+
+    const params = new URLSearchParams(searchParams);
+    params.set("limit", String(limit));
     params.delete("after");
+    params.set("before", pageInfo.startCursor);
 
-    if (pageInfo.hasNextPage && pageInfo.endCursor) {
-      params.set("after", pageInfo.endCursor);
-    }
-
-    return `?${params.toString()}`;
+    navigate(`?${params.toString()}`);
   };
 
   return (
@@ -40,17 +50,40 @@ export default function CategorySettingsPage() {
           collections.length === 0 ? (
             <s-text>{t("CategorySettings.collectionsEmpty", "No collections found")}</s-text>
           ) : (
-            <s-table paginate hasPreviousPage hasNextPage onNextPage={() => console.log("next")} onPreviousPage={() => console.log("prev")}>
+            <s-table
+              paginate
+              hasPreviousPage={pageInfo.hasPreviousPage}
+              hasNextPage={pageInfo.hasNextPage}
+              onNextPage={handleNextPage}
+              onPreviousPage={handlePreviousPage}
+            >
               <s-table-header-row>
                 <s-table-header listSlot="secondary">Collection Name</s-table-header>
-                <s-table-header listSlot={'primary'}>Status</s-table-header>
+                <s-table-header listSlot={'primary'}>Set up Category Value</s-table-header>
               </s-table-header-row>
 
               <s-table-body>
                 {
-                  collections.map((collection) => (
-                    <CategoryTableRow key={collection.id} title={collection.title} id={collection.id} imageUrl={collection.image?.url} productTypes={productTypes} categories={categories}/>
-                  ))
+                  collections.map((collection) => {
+                    // Extract metafields and parse JSON mapping
+                    let mappingData = null;
+                    const yespoMappingField = collection.metafield
+
+                    if (yespoMappingField?.value) {
+                      mappingData = JSON.parse(yespoMappingField.value);
+                    }
+
+                    return (
+                      <CategoryTableRow
+                        key={collection.id}
+                        title={collection.title}
+                        id={collection.id}
+                        imageUrl={collection.image?.url}
+                        productTypes={productTypes}
+                        mappingData={mappingData}
+                      />
+                    );
+                  })
                 }
               </s-table-body>
             </s-table>

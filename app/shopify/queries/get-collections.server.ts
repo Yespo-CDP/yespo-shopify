@@ -6,6 +6,8 @@ interface GetCollectionsParams {
   count?: number;
   // Cursor for loading next page
   after?: string | null;
+  // Cursor for loading previous page
+  before?: string | null;
 }
 
 export interface GetCollectionsResult {
@@ -17,42 +19,89 @@ const getCollections = async ({
   admin,
   count = 50,
   after = null,
+  before = null,
 }: GetCollectionsParams): Promise<GetCollectionsResult> => {
   try {
-    const response = await admin.graphql(
-      `
-      #graphql
-      query getCollections(
-        $count: Int!
-        $after: String
-      ) {
-        collections(
-          first: $count
-          after: $after
+    // Use 'last' + 'before' for backward pagination, 'first' + 'after' for forward
+    const useBefore = before && !after;
+
+    const query = useBefore
+      ? `
+        #graphql
+        query getCollections(
+          $count: Int!
+          $before: String
+          $key: String!
         ) {
-          nodes {
-            id
-            title
-            image {
-              url
+          collections(
+            last: $count
+            before: $before
+          ) {
+            nodes {
+              id
+              title
+              image {
+                url
+              }
+              metafield(namespace: "$app", key: $key) {
+                  key
+                  value
+              }
+            }
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+              endCursor
+              startCursor
             }
           }
-          pageInfo {
-            hasNextPage
-            hasPreviousPage
-            endCursor
-            startCursor
+        }
+      `
+      : `
+        #graphql
+        query getCollections(
+          $count: Int!
+          $after: String
+          $key: String!
+        ) {
+          collections(
+            first: $count
+            after: $after
+          ) {
+            nodes {
+              id
+              title
+              image {
+                url
+              }
+              metafield(namespace: "$app", key: $key) {
+                  key
+                  value
+              }
+            }
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+              endCursor
+              startCursor
+            }
           }
         }
-      }
-    `,
-      {
-        variables: {
+      `;
+
+    const variables = useBefore
+      ? {
+          count,
+          before,
+          key: process.env.CATEGORY_TYPE_HANDLE || 'yespo_category_type'
+        }
+      : {
           count,
           after,
-        },
-      },
-    );
+          key: process.env.CATEGORY_TYPE_HANDLE || 'yespo_category_type'
+        };
+
+    const response = await admin.graphql(query, { variables });
 
     const responseJson = await response.json();
     const collectionsData = responseJson?.data as CollectionResponse | undefined;

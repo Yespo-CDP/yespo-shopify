@@ -9,7 +9,8 @@ interface CategoryOption {
 interface CategoryAutocompleteProps {
   label: string;
   placeholder?: string;
-  value?: string;
+  categoryId?: string;
+  categoryName?: string;
   onChange?: (value: string, name: string) => void;
   disabled?: boolean;
   id: string;
@@ -23,14 +24,13 @@ interface CategoryAutocompleteProps {
 const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
   label,
   placeholder = "Search categories...",
-  value = "",
+  categoryName = "",
   onChange,
   disabled = false,
   id,
 }) => {
   const [searchValue, setSearchValue] = useState("");
-  const [selectedValue, setSelectedValue] = useState(value);
-  const [selectedName, setSelectedName] = useState("");
+  const [selectedName, setSelectedName] = useState(categoryName);
   const [options, setOptions] = useState<CategoryOption[]>([]);
   const fetcher = useFetcher();
 
@@ -41,33 +41,16 @@ const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
     // Extract only the name (last part after >)
     const nameParts = optionLabel.split('>').map(part => part.trim());
     const name = nameParts[nameParts.length - 1];
-    
-    setSelectedValue(optionValue);
+
     setSelectedName(name);
-    
     // Set the name as search value and trigger search to refine results
     setSearchValue(name);
-    
-    console.log('[CategoryAutocomplete] Selected:', {
-      id: optionValue,
-      fullName: optionLabel,
-      name: name
-    });
-    
+
     // Trigger search with the selected name
     fetcher.load(`/api/search-categories?search=${encodeURIComponent(name)}`);
-    
+
     // Notify parent component
     onChange?.(optionValue, name);
-  };
-
-  // Handle reset
-  const handleReset = () => {
-    setSelectedValue("");
-    setSelectedName("");
-    setSearchValue("");
-    setOptions([]);
-    onChange?.("", "");
   };
 
   // Handle search input change
@@ -78,7 +61,6 @@ const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
 
     // Trigger search when user types
     if (newSearchValue.trim().length > 0) {
-      console.log('[CategoryAutocomplete] Searching for:', newSearchValue);
       fetcher.load(`/api/search-categories?search=${encodeURIComponent(newSearchValue)}`);
     } else {
       // Clear options if search is empty
@@ -89,24 +71,16 @@ const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
   // Update options when fetcher returns data
   useEffect(() => {
     if (fetcher.data && fetcher.data.categories) {
-      console.log('[CategoryAutocomplete] Received categories:', fetcher.data.categories.length);
       setOptions(fetcher.data.categories);
     }
   }, [fetcher.data]);
 
-  // Update selected name when value prop changes
+  // Update state when props change
   useEffect(() => {
-    if (value && !selectedName) {
-      // Try to find the name from current options
-      const selectedOption = options.find((opt) => opt.value === value);
-      if (selectedOption) {
-        const nameParts = selectedOption.label.split('>').map(part => part.trim());
-        const name = nameParts[nameParts.length - 1];
-        setSelectedValue(value);
-        setSelectedName(name);
-      }
+    if (categoryName) {
+      setSelectedName(categoryName);
     }
-  }, [value, options, selectedName]);
+  }, [ categoryName]);
 
   return (
     <s-box>
@@ -121,20 +95,12 @@ const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
           />
         </s-box>
 
-        <s-button-group>
-          <s-button
-            slot="secondary-actions"
-            commandFor={popoverId}
-            icon="search"
-            disabled={disabled}
-          />
-          <s-button
-            slot="secondary-actions"
-            icon="undo"
-            onClick={handleReset}
-            disabled={disabled || !selectedValue}
-          />
-        </s-button-group>
+        <s-button
+          commandFor={popoverId}
+          icon="search"
+          disabled={disabled}
+        />
+
       </s-stack>
 
       <s-popover id={popoverId}>
@@ -152,8 +118,8 @@ const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
         <s-box padding="small-200">
           {fetcher.state === "loading" ? (
             <s-stack alignItems="center" gap="small-200">
-              <s-spinner size="small" />
-              <s-text tone="subdued">Loading...</s-text>
+              <s-spinner size="base" />
+              <s-text >Loading...</s-text>
             </s-stack>
           ) : options.length > 0 ? (
             <s-stack gap="none">
@@ -170,7 +136,7 @@ const CategoryAutocomplete: FC<CategoryAutocompleteProps> = ({
           ) : searchValue.trim().length > 0 ? (
             <s-text>No results found</s-text>
           ) : (
-            <s-text tone="subdued">Start typing to search categories</s-text>
+            <s-text >Start typing to search categories</s-text>
           )}
         </s-box>
       </s-popover>

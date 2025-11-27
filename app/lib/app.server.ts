@@ -331,7 +331,6 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
   }
 
   if (intent === "retry-install-general-script") {
-    console.log('<<<<<<<<<<<<<<<retry-install-general-script')
     const shop = await shopRepository.getShop(session.shop);
 
     if (!shop || !shop?.apiKey) {
@@ -352,8 +351,6 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
   }
 
   if (intent === "retry-install-webpush-script") {
-    console.log('<<<<<<<<<<<<<<<<<<<retry-install-webpush-script')
-
     const shop = await shopRepository.getShop(session.shop);
 
     if (!shop || !shop?.apiKey) {
