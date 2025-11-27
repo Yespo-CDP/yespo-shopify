@@ -116,8 +116,37 @@ class EventTracker {
           }
         });
       }
+
+      if (this.data.pageTemplate === 'collection' && this.data.collection) {
+        const collection = this.data.collection;
+        let categoryKey = null;
+
+        // Try to get category from metafield mapping
+        if (collection?.categoryTypeMapping) {
+          try {
+            const mapping = typeof collection.categoryTypeMapping === 'string'
+              ? JSON.parse(collection.categoryTypeMapping)
+              : collection.categoryTypeMapping;
+
+            categoryKey = mapping.value;
+          } catch (e) {
+            console.error('Failed to parse category mapping:', e);
+          }
+        }
+
+        console.log('categoryKey',categoryKey)
+
+        if (categoryKey) {
+          window.eS('sendEvent', 'CategoryPage', {
+            CategoryPage: {
+              categoryKey: categoryKey,
+            }
+          });
+        }
+      }
+
     } catch (e) {
-      console.error('Failed send product page event')
+      console.error('Failed send category page event:', e)
     }
   }
 
@@ -188,7 +217,6 @@ class EventTracker {
     }
 
     try {
-      console.log('cart token', data.token)
       const res = await fetch(`${data.host}/public/event-data`, {
         method: 'POST',
         body: JSON.stringify({

@@ -21,6 +21,17 @@
     "domain":  {{ shop.domain | json }},
     "product": {{ product | json }},
     "currentVariant": {{ current_variant | json }},
+    "collection":
+      {% if collection %}
+        {
+          "id": {{ collection.id | json }},
+          "title": {{ collection.title | json }},
+          "handle": {{ collection.handle | json }},
+          "categoryTypeMapping": {% if collection.metafields['$app'].yespo_category_type %}{{ collection.metafields['$app'].yespo_category_type }}{% else %}null{% endif %}
+        }
+      {% else %}
+        null
+      {% endif %},
     "customer":
       {% if customer %}
         {
