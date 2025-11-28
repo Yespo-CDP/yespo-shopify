@@ -10,6 +10,8 @@ interface GetCollectionsServiceParams {
   after?: string | null;
   // Cursor for previous page
   before?: string | null;
+  // Search query
+  query?: string;
 }
 
 export const getCollectionsService = async ({
@@ -17,6 +19,7 @@ export const getCollectionsService = async ({
   limit,
   after,
   before,
+  query,
 }: GetCollectionsServiceParams): Promise<GetCollectionsResult> => {
   // map limit -> count for underlying query
   const count = typeof limit === "number" && limit > 0 ? limit : 10;
@@ -26,5 +29,6 @@ export const getCollectionsService = async ({
     count,
     after: after ?? null,
     before: before ?? null,
+    query: query ?? null,
   });
 };

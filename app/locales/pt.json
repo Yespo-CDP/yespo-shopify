@@ -54,6 +54,8 @@
     "noResults": "Nenhum resultado encontrado",
     "categorySearch": "Comece a digitar para pesquisar categorias",
     "loading": "Carregando...",
+    "searchLabel": "Pesquisar coleções",
+    "searchPlaceholder": "Pesquisar por nome da coleção",
     "table": {
       "heading": {
         "collectionName": "Nome da coleção",

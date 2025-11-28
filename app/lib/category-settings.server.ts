@@ -18,6 +18,7 @@ export const categoryPageLoaderHandler = async({ request }: LoaderFunctionArgs) 
   const limitParam = searchParams.get("limit");
   const after = searchParams.get("after");
   const before = searchParams.get("before");
+  const search = searchParams.get("search");
 
   const limit = limitParam ? Number(limitParam) : undefined;
 
@@ -27,6 +28,7 @@ export const categoryPageLoaderHandler = async({ request }: LoaderFunctionArgs) 
     limit,
     after,
     before,
+    query: search || undefined,
   });
 
   // Fetch all product types and categories in parallel

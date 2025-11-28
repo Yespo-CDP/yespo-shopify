@@ -8,6 +8,8 @@ interface GetCollectionsParams {
   after?: string | null;
   // Cursor for loading previous page
   before?: string | null;
+  // Search query
+  query?: string | null;
 }
 
 export interface GetCollectionsResult {
@@ -20,22 +22,25 @@ const getCollections = async ({
   count = 50,
   after = null,
   before = null,
+  query = null,
 }: GetCollectionsParams): Promise<GetCollectionsResult> => {
   try {
     // Use 'last' + 'before' for backward pagination, 'first' + 'after' for forward
     const useBefore = before && !after;
 
-    const query = useBefore
+    const graphqlQuery = useBefore
       ? `
         #graphql
         query getCollections(
           $count: Int!
           $before: String
           $key: String!
+          $query: String
         ) {
           collections(
             last: $count
             before: $before
+            query: $query
           ) {
             nodes {
               id
@@ -63,10 +68,12 @@ const getCollections = async ({
           $count: Int!
           $after: String
           $key: String!
+          $query: String
         ) {
           collections(
             first: $count
             after: $after
+            query: $query
           ) {
             nodes {
               id
@@ -93,15 +100,17 @@ const getCollections = async ({
       ? {
           count,
           before,
-          key: process.env.CATEGORY_TYPE_HANDLE || 'yespo_category_type'
+          key: process.env.CATEGORY_TYPE_HANDLE || 'yespo_category_type',
+          query: query ? `title:*${query}*` : null
         }
       : {
           count,
           after,
-          key: process.env.CATEGORY_TYPE_HANDLE || 'yespo_category_type'
+          key: process.env.CATEGORY_TYPE_HANDLE || 'yespo_category_type',
+          query: query ? `title:*${query}*` : null
         };
 
-    const response = await admin.graphql(query, { variables });
+    const response = await admin.graphql(graphqlQuery, { variables });
 
     const responseJson = await response.json();
     const collectionsData = responseJson?.data as CollectionResponse | undefined;

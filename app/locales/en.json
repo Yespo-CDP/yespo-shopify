@@ -46,7 +46,7 @@
   "CategorySettings": {
     "title": "Category Settings",
     "sectionTitle": "Collections",
-    "description": "We recommend configuring the collection mapping for the feed you’ve provided to Yespo.\nIdeally, you should map the collection value to the product type value in your Yespo feed. This will ensure proper data synchronization and improve the accuracy of product categorization.",
+    "description": "We recommend configuring the collection mapping for the feed you've provided to Yespo.\nIdeally, you should map the collection value to the product type value in your Yespo feed. This will ensure proper data synchronization and improve the accuracy of product categorization.",
     "breadcrumbs": {
       "mainPage": "Main page"
     },
@@ -54,6 +54,8 @@
     "noResults": "No results found",
     "categorySearch": "Start typing to search categories",
     "loading": "Loading...",
+    "searchLabel": "Search collections",
+    "searchPlaceholder": "Search by collection name",
     "table": {
       "heading": {
         "collectionName": "Collection Name",
