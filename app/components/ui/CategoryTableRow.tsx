@@ -47,6 +47,7 @@ const CategoryTableRow = ({
     formData.append("entityName", entityName);
 
     fetcher.submit(formData, { method: "post" });
+    shopify.toast.show('Category type saved', {duration: 2000});
   };
 
   // Handle deleting collection mapping
@@ -56,6 +57,7 @@ const CategoryTableRow = ({
     formData.append("collectionId", id);
 
     fetcher.submit(formData, { method: "post" });
+    shopify.toast.show('Category type deleted', {duration: 2000});
   };
 
   return (
