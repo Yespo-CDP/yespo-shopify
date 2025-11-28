@@ -102,7 +102,11 @@ export default function CategorySettingsPage() {
               <s-table-header-row>
                 <s-table-header>{t("CategorySettings.table.heading.collectionName")}</s-table-header>
                 <s-table-header>{t("CategorySettings.table.heading.selectEntity")}</s-table-header>
-                <s-table-header>{t("CategorySettings.table.heading.setUpValue")}</s-table-header>
+                <s-table-header>
+                  <div style={{textAlign: "center"}}>
+                    {t("CategorySettings.table.heading.setUpValue")}
+                  </div>
+                </s-table-header>
               </s-table-header-row>
 
               <s-table-body>

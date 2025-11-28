@@ -62,8 +62,8 @@ const CategoryTableRow = ({
 
   return (
     <s-table-row>
-      <s-table-cell >
-        <s-stack direction={'inline'} gap={'small-200'} alignItems={'center'} >
+      <s-table-cell>
+        <s-stack direction={'inline'} gap={'small-200'} alignItems={'center'} inlineSize={'100%'}>
           {
             imageUrl? (
               <s-thumbnail
@@ -81,7 +81,7 @@ const CategoryTableRow = ({
         </s-stack>
       </s-table-cell>
       <s-table-cell>
-        {/*<s-box inlineSize={'200px'}>*/}
+        <s-box >
           <s-select
             value={selectedEntity}
             onChange={(e: Event) => {
@@ -96,11 +96,11 @@ const CategoryTableRow = ({
               </s-option>
             ))}
           </s-select>
-        {/*</s-box>*/}
+        </s-box>
 
       </s-table-cell>
       <s-table-cell>
-          <s-stack direction={'inline'} gap={'small-200'}>
+          <s-stack direction={'inline'} gap={'small-200'} justifyContent={'end'}>
             {selectedEntity === 'type' ? (
               <ProductTypeAutocomplete
                 id={`${id}-type`}
