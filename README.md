@@ -344,6 +344,59 @@ occurs when CARTS_UPDATE webhook  is triggered and sends payload with cart data.
 - **PurchasedItems** - [PurchasedItems event](https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#purchaseditems)
 occurs when ORDERS_CREATE webhook is triggered  and sends payload with purchased products data.
 
+### Category Settings
+**Purpose:** Configure collection-to-category mapping for Yespo product feed.
+
+---
+
+#### Implementation:
+
+- Fetches collections from Shopify using [collections query](https://shopify.dev/docs/api/admin-graphql/latest/queries/collections)
+- Stores mapping configuration in collection metafields (namespace: `$app`, key: `yespo_category_type`)
+- Provides search functionality to filter collections by title
+- Supports pagination for large collection lists
+
+---
+
+#### Features:
+
+- **Collection Search** – real-time search with debounce to find collections by title
+- **Entity Mapping** – map collections to:
+  - Product types from your Shopify catalog
+  - Custom categories from Yespo
+- **Metafield Storage** – mapping data is stored as JSON in collection metafields
+- **Batch Operations** – supports bulk collection management with pagination
+
+---
+
+#### Accessing Category Settings:
+
+- Open the Yespo app
+- Navigate to **Category Settings** page
+- Use the search field to filter collections
+- Select entity type (Product Type or Category) for each collection
+- Configure category values and save
+
+---
+
+#### Field Mapping:
+
+Collection mapping data stored in metafield:
+```json
+{
+  "type": "product_type" | "category",
+  "value": "selected_value"
+}
+```
+
+---
+
+#### Shopify API methods:
+
+- [query /collections](https://shopify.dev/docs/api/admin-graphql/latest/queries/collections) – returns list of collections with pagination and search support
+- [mutation /metafieldsSet](https://shopify.dev/docs/api/admin-graphql/latest/mutations/metafieldsset) – creates or updates collection metafield with mapping data
+- [mutation /metafieldsDelete](https://shopify.dev/docs/api/admin-graphql/latest/mutations/metafieldsdelete) – removes collection mapping
+
 ## Errors handling
 
 Requests are wrapped in the `fetchWithErrorHandling function`, which provides enhanced error management.
