@@ -21,6 +21,8 @@ import { createGeneralDomain } from "~/api/create-general-domain.server";
 import { enqueueDataSyncTasks } from "~/services/queue";
 import {sendAccessTokenService} from "~/services/send-access-token.server";
 import {deleteAccessTokenService} from "~/services/delete-access-token.server";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Loader function for initializing data needed on the page.
@@ -306,8 +308,23 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       });
 
       await enqueueDataSyncTasks({ session, shop });
+
+      await sendLogEvent({
+        errorMessage: '',
+        data: JSON.stringify({domain: session.shop}),
+        message: EVENT_MESSAGES.DATA_SYNC_ENABLED,
+        logLevel: 'INFO'
+      })
     } catch (error: any) {
       errors.dataSync = t("DataSyncSection.errors.notEnabled");
+
+      await sendLogEvent({
+        errorMessage: error?.message,
+        data: JSON.stringify({domain: session.shop}),
+        message: EVENT_MESSAGES.DATA_SYNC_FAILED,
+        logLevel: 'ERROR'
+      })
+
       return { success, errors };
     }
   }
@@ -324,8 +341,23 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         isContactSyncEnabled: false,
         isOrderSyncEnabled: false,
       });
+
+      await sendLogEvent({
+        errorMessage: '',
+        data: JSON.stringify({domain: session.shop}),
+        message: EVENT_MESSAGES.DATA_SYNC_DISABLED,
+        logLevel: 'INFO'
+      })
+
     } catch (error: any) {
       errors.dataSync = t("DataSyncSection.errors.notDisabled");
+
+      await sendLogEvent({
+        errorMessage: error?.message,
+        data: JSON.stringify({domain: session.shop}),
+        message: EVENT_MESSAGES.DATA_SYNC_FAILED,
+        logLevel: 'ERROR'
+      })
       return { success, errors };
     }
   }

@@ -1,5 +1,7 @@
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Fetches the general script content from the Yespo API.
@@ -12,7 +14,7 @@ import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
  *
  * @throws Will throw an error with message "requestScriptError" if the request fails.
  */
-export const getGeneralScript = async ({ apiKey }: { apiKey: string }) => {
+export const getGeneralScript = async ({ apiKey, domain }: { apiKey: string, domain: string; }) => {
   const url = `${process.env.API_URL}/site/script`;
   const authHeader = getAuthHeader(apiKey);
   const options = {
@@ -26,9 +28,23 @@ export const getGeneralScript = async ({ apiKey }: { apiKey: string }) => {
   try {
     const response = await fetchWithErrorHandling(url, options);
 
+    await sendLogEvent({
+      errorMessage: '',
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.GET_SCRIPT_SUCCESS,
+      logLevel: 'INFO'
+    })
+
     return response;
   } catch (error: any) {
     console.error("Error fetching general script:", error);
+
+    await sendLogEvent({
+      errorMessage: error?.message,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.GET_SCRIPT_FAILED,
+      logLevel: 'ERROR'
+    })
     throw new Error("requestScriptError");
   }
 };

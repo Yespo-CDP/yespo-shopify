@@ -9,6 +9,8 @@ import { createClient } from "../services/create-client";
 import { getCustomers } from "../services/get-customers";
 import { getCustomersCount } from "../services/get-customers-count";
 import { createContactPayload } from "../services/create-contact-payload";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 const CUSTOMERS_CHUNK_SIZE = 200; // Shopify max limit 250
 
@@ -115,6 +117,7 @@ export const customerSyncHandler = async (
             const contactsUpdateResponse = await updateContacts({
               apiKey,
               contactsData,
+              domain: shop
             });
 
             if (contactsUpdateResponse?.failedContacts) {
@@ -154,9 +157,11 @@ export const customerSyncHandler = async (
         }
       } catch (error: any) {
         console.error("Error customers sync in chunk", error);
+
         throw Error(error);
       }
     } while (cursor);
+
 
     await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
       status: "COMPLETE",
@@ -171,8 +176,15 @@ export const customerSyncHandler = async (
       },
     });
 
+    await sendLogEvent({
+      errorMessage: '',
+      data: JSON.stringify({domain: shop}),
+      message: EVENT_MESSAGES.SEND_CONTACTS_BULK_SUCCESS,
+      logLevel: 'INFO'
+    })
+
     console.log(`✅ Synchronizing customers finish for ${shop}`);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Synchronization error", error);
     await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
       status: "ERROR",
@@ -186,6 +198,14 @@ export const customerSyncHandler = async (
         },
       },
     });
+
+    await sendLogEvent({
+      errorMessage: `Error bulk customers sync ${error?.message}`,
+      data: JSON.stringify({domain: shop}),
+      message: EVENT_MESSAGES.SEND_CONTACTS_BULK_FAILED,
+      logLevel: 'ERROR'
+    })
+
     return;
   }
 };

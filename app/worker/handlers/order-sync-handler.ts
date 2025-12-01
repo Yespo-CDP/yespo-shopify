@@ -9,6 +9,8 @@ import { createClient } from "../services/create-client";
 import { getOrders } from "../services/get-orders";
 import { getOrdersCount } from "../services/get-orders-count";
 import { createOrderPayload } from "../services/create-order-payload";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 const ORDERS_CHUNK_SIZE = 150; // Shopify max limit 250 (this does not include 100 lineItems in each orders)
 
@@ -166,8 +168,15 @@ export const orderSyncHandler = async (
       },
     });
 
+    await sendLogEvent({
+      errorMessage: '',
+      data: JSON.stringify({domain: shop}),
+      message: EVENT_MESSAGES.SEND_ORDERS_BULK_SUCCESS,
+      logLevel: 'INFO'
+    })
+
     console.log(`✅ Synchronizing orders finish for ${shop}`);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Synchronization error", error);
     await orderSyncLogRepository.createOrUpdateOrderSyncLog({
       status: "ERROR",
@@ -181,6 +190,14 @@ export const orderSyncHandler = async (
         },
       },
     });
+
+    await sendLogEvent({
+      errorMessage:  `Error bulk orders sync ${error?.message}`,
+      data: JSON.stringify({domain: shop}),
+      message: EVENT_MESSAGES.SEND_ORDERS_BULK_FAILED,
+      logLevel: 'INFO'
+    })
+
     return;
   }
 };

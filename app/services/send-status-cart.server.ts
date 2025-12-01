@@ -68,7 +68,8 @@ export const sendStatusCartService = async (payload: any, shop: Shop) => {
 
     await sendStatusCartEvent({
       apiKey: shop.apiKey,
-      cartEventData
+      cartEventData,
+      domain: shop.shopUrl
     })
   } catch (error: any) {
     console.error("Error occurred in Send Status Cart Service", error);

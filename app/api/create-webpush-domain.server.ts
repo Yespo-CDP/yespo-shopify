@@ -1,5 +1,7 @@
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Response structure for the web push domain creation API.
@@ -80,12 +82,34 @@ export const createWebPushDomain = async ({
     )) as WebPushDomainResponse;
 
     if (response?.errors?.message?.includes("Domain can't be reached")) {
+      await sendLogEvent({
+        errorMessage: response?.errors?.message,
+        data: JSON.stringify({domain}),
+        message: EVENT_MESSAGES.ADD_WEB_PUSH_DOMAIN_FAILED,
+        logLevel: 'ERROR'
+      })
+
       throw new Error("Domain can't be reached");
     }
+
+    await sendLogEvent({
+      errorMessage: '',
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.ADD_WEB_PUSH_DOMAIN_SUCCESS,
+      logLevel: 'INFO'
+    })
 
     return { result: response?.success?.status ?? "ok" };
   } catch (error: any) {
     console.error("Error creating webpush domain:", error?.message);
+
+    await sendLogEvent({
+      errorMessage: error?.message,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.ADD_WEB_PUSH_DOMAIN_FAILED,
+      logLevel: 'ERROR'
+    })
+
     if (error?.message?.includes("Domain is already registered")) {
       throw new Error("domainAlreadyRegisteredError");
     } else if (error?.message?.includes("Domain can't be reached")) {

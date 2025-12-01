@@ -1,5 +1,7 @@
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Fetches the web push script for a specific domain from the Yespo API.
@@ -39,12 +41,34 @@ export const getWebpushScript = async ({
     const { script } = response;
 
     if (!script) {
+      await sendLogEvent({
+        errorMessage: 'Web push script not retrieved',
+        data: JSON.stringify({domain}),
+        message: EVENT_MESSAGES.GET_WEB_PUSH_DOMAIN_FAILED,
+        logLevel: 'ERROR'
+      })
+
       throw new Error("requestScriptError");
     }
+
+    await sendLogEvent({
+      errorMessage: '',
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.GET_WEB_PUSH_DOMAIN_SUCCESS,
+      logLevel: 'INFO'
+    })
 
     return script;
   } catch (error: any) {
     console.error("Error fetching webpush script:", error);
+
+    await sendLogEvent({
+      errorMessage: error?.message,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.GET_WEB_PUSH_DOMAIN_FAILED,
+      logLevel: 'ERROR'
+    })
+
     throw new Error("requestScriptError");
   }
 };

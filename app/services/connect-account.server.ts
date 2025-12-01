@@ -1,6 +1,8 @@
 import { getAccountInfo } from "~/api/get-account-info.server";
 import { shopRepository } from "~/repositories/repositories.server";
 import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Connects an account by verifying the API key, updating the shop record,
@@ -44,5 +46,21 @@ export const connectAccountService = async ({
       ownerId: shop?.shopId,
       keys: [GENERAL_SCRIPT_HANDLE, WEB_PUSH_SCRIPT_HANDLE, HOST_URL],
     });
+  }
+
+  if (!shop || !shop.apiKey) {
+    await sendLogEvent({
+      errorMessage: 'API key is empty',
+      data: JSON.stringify({domain: session.shop}),
+      message: EVENT_MESSAGES.ADD_API_KEY_FAILED,
+      logLevel: 'ERROR'
+    })
+  } else {
+    await sendLogEvent({
+      errorMessage: '',
+      data: JSON.stringify({domain: session.shop}),
+      message: EVENT_MESSAGES.ADD_API_KEY_SUCCESS,
+      logLevel: 'INFO'
+    })
   }
 };

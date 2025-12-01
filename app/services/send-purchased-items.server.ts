@@ -80,7 +80,8 @@ export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
 
     await sendPurchasedItemsEvent({
       apiKey: shop.apiKey,
-      purchasedItemsData
+      purchasedItemsData,
+      domain: shop.shopUrl
     })
 
     console.log('SUCCESSFULLY SEND PURCHASED ITEMS')

@@ -1,6 +1,8 @@
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import type {StatusCartEvent} from "~/@types/statusCart";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Sends a "status cart" tracking event to the Yespo web tracker URL.
@@ -29,10 +31,12 @@ import type {StatusCartEvent} from "~/@types/statusCart";
  */
 export const sendStatusCartEvent = async ({
  apiKey,
- cartEventData
+ cartEventData,
+ domain
 }: {
   apiKey: string;
-  cartEventData: StatusCartEvent
+  cartEventData: StatusCartEvent;
+  domain: string;
 }): Promise<void> => {
   const url = `${process.env.WEB_TRACKER_URL}`;
   const authHeader = getAuthHeader(apiKey);
@@ -47,7 +51,21 @@ export const sendStatusCartEvent = async ({
 
   try {
     await fetchWithErrorHandling(url, options);
+
+    await sendLogEvent({
+      errorMessage: '',
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.WEB_TRACKING_STATUSCART_SUCCESS,
+      logLevel: 'INFO'
+    })
   } catch (error: any) {
     console.error("Error sending status cart:", error?.message);
+
+    await sendLogEvent({
+      errorMessage: `Error sending status cart: ${error?.message}`,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.WEB_TRACKING_STATUSCART_ERROR,
+      logLevel: 'ERROR'
+    })
   }
 };

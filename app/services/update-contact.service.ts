@@ -10,11 +10,11 @@ import type { Contact } from "~/@types/contact";
  * Also extracts address information from the payload's default address.
  * Constructs a `Contact` object with personal and contact details,
  * then calls `updateContact` service to perform the update.
- * 
- * **Shopify Customer Webhook (REST):**  
+ *
+ * **Shopify Customer Webhook (REST):**
  * https://shopify.dev/docs/api/admin-rest/latest/resources/customer#resource-object
  *
- * **Yespo Add Contact API:**  
+ * **Yespo Add Contact API:**
  * https://docs.esputnik.com/reference/addcontact-1
  *
  * **Field Mapping:**
@@ -39,6 +39,7 @@ export const updateContactService = async (
   payload: any,
   apiKey: string,
   shopId: number,
+  shopUrl: string
 ) => {
   const channels = [];
   let address = undefined;
@@ -86,6 +87,7 @@ export const updateContactService = async (
   await updateContact({
     apiKey,
     contactData,
+    domain: shopUrl
   });
 
   await customerSyncRepository.createOrUpdateCustomerSync({

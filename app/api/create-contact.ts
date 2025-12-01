@@ -1,6 +1,8 @@
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import type { Contact } from "~/@types/contact";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Sends a POST request to create a contact in the Yespo API.
@@ -18,9 +20,11 @@ import type { Contact } from "~/@types/contact";
 export const createContact = async ({
   apiKey,
   contactData,
+  domain
 }: {
   apiKey: string;
   contactData: Contact;
+  domain: string;
 }): Promise<void> => {
   const url = `${process.env.API_URL}/contact`;
   const authHeader = getAuthHeader(apiKey);
@@ -35,9 +39,24 @@ export const createContact = async ({
 
   try {
     const response = await fetchWithErrorHandling(url, options);
+
+    await sendLogEvent({
+      errorMessage: '',
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.WEB_TRACKING_CUSTOMER_DATA_SUCCESS,
+      logLevel: 'INFO'
+    })
+
     return response;
   } catch (error: any) {
     console.error("Error creating contact:", error?.message);
+    await sendLogEvent({
+      errorMessage: `Error creating contact: ${error?.message}`,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.WEB_TRACKING_CUSTOMER_DATA_ERROR,
+      logLevel: 'ERROR'
+    })
+
     if (!error?.message?.includes("Duplicated request")) {
       throw new Error(error.message);
     }

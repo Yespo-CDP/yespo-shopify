@@ -1,6 +1,8 @@
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import type { Contact, ContactsResponse } from "~/@types/contact";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Sends a POST request to update the contacts array in the Yespo API.
@@ -18,9 +20,11 @@ import type { Contact, ContactsResponse } from "~/@types/contact";
 export const updateContacts = async ({
   apiKey,
   contactsData,
+  domain
 }: {
   apiKey: string;
   contactsData: Contact[];
+  domain: string;
 }): Promise<ContactsResponse> => {
   const url = `${process.env.API_URL}/contacts`;
   const authHeader = getAuthHeader(apiKey);
@@ -43,9 +47,23 @@ export const updateContacts = async ({
       options,
     )) as ContactsResponse;
 
+    await sendLogEvent({
+      errorMessage: '',
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.WEB_TRACKING_CUSTOMER_DATA_SUCCESS,
+      logLevel: 'INFO'
+    })
+
     return response;
   } catch (error: any) {
     console.error("Error updating contacts:", error?.message);
+
+    await sendLogEvent({
+      errorMessage: `Error updating contacts: ${error?.message}`,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.WEB_TRACKING_CUSTOMER_DATA_ERROR,
+      logLevel: 'ERROR'
+    })
     if (!error?.message?.includes("Duplicated request")) {
       throw new Error(error.message);
     } else {

@@ -2,6 +2,8 @@ import { getGeneralScript } from "~/api/get-general-script.server";
 import { createGeneralDomain } from "~/api/create-general-domain.server";
 import createMetafield from "~/shopify/mutations/create-metafield.server";
 import {shopRepository} from "~/repositories/repositories.server";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Connects the general Yespo script to a Shopify store by creating a domain,
@@ -51,7 +53,7 @@ export const connectGeneralScriptService = async ({
       siteId: connectedData.siteId
     });
 
-    const script = await getGeneralScript({ apiKey });
+    const script = await getGeneralScript({ apiKey, domain });
 
     const metafield = await createMetafield({
       shopId,
@@ -61,13 +63,35 @@ export const connectGeneralScriptService = async ({
     });
 
     if (!metafield) {
-      console.error(`Metafield for general script not created/`);
+      console.error(`Metafield for general script not created`);
+
+      await sendLogEvent({
+        errorMessage: `Metafield for general script not created`,
+        data: JSON.stringify({domain}),
+        message: EVENT_MESSAGES.INSERT_SITE_SCRIPT_SUCCESS,
+        logLevel: 'ERROR'
+      })
+
       return false;
     }
+
+    await sendLogEvent({
+      errorMessage: '',
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.INSERT_SITE_SCRIPT_SUCCESS,
+      logLevel: 'INFO'
+    })
 
     return true;
   } catch (error: any) {
     console.error(`Error connecting general script: ${error.message}`);
+
+    await sendLogEvent({
+      errorMessage: `Error connecting general script: ${error.message}`,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.INSERT_SITE_SCRIPT_FAILED,
+      logLevel: 'ERROR'
+    })
     return false;
   }
 };

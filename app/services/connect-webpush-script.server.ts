@@ -1,6 +1,8 @@
 import { getWebpushScript } from "~/api/get-webpush-script.server";
 import { createWebPushDomain } from "~/api/create-webpush-domain.server";
 import createMetafield from "~/shopify/mutations/create-metafield.server";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Connects the web push script to a Shopify store by creating a web push domain,
@@ -54,12 +56,35 @@ export const connectWebPushScriptService = async ({
 
     if (!metafield) {
       console.error(`Metafield for web push script not created`);
+
+      await sendLogEvent({
+        errorMessage: `Metafield for web push script not created`,
+        data: JSON.stringify({domain}),
+        message: EVENT_MESSAGES.INSERT_WEB_PUSH_SCRIPT_FAILED,
+        logLevel: 'ERROR'
+      })
+
       return false
     }
+
+    await sendLogEvent({
+      errorMessage: '',
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.INSERT_WEB_PUSH_SCRIPT_SUCCESS,
+      logLevel: 'INFO'
+    })
 
     return true;
   } catch (error: any) {
     console.error(`Error connecting webpush script: ${error.message}`);
+
+    await sendLogEvent({
+      errorMessage: `Error connecting webpush script: ${error.message}`,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.INSERT_WEB_PUSH_SCRIPT_FAILED,
+      logLevel: 'ERROR'
+    })
+
     return false
   }
 };

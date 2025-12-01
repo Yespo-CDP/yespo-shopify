@@ -1,5 +1,7 @@
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Creates a general domain record in the Yespo API.
@@ -38,9 +40,24 @@ export const createGeneralDomain = async ({
   try {
     const response = await fetchWithErrorHandling(url, options);
 
+    await sendLogEvent({
+      errorMessage: '',
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.ADD_DOMAIN_SUCCESS,
+      logLevel: 'INFO'
+    })
+
     return response;
   } catch (error: any) {
     console.error("Error creating general domain:", error?.message);
+
+    await sendLogEvent({
+      errorMessage: error?.message,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.ADD_DOMAIN_FAILED,
+      logLevel: 'ERROR'
+    })
+
     if (error?.message?.includes("Domain is already registered")) {
       throw new Error("domainAlreadyRegisteredError");
     } else if (error?.message?.includes("Domain can't be reached")) {

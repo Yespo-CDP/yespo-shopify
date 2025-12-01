@@ -1,6 +1,8 @@
 import {getAuthHeader} from "~/utils/auth";
 import {fetchWithErrorHandling} from "~/utils/fetchWithErrorHandling";
 import type {PurchasedItemsEvent} from "~/@types/purchasedItems";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Sends a "purchased items" tracking event to the Yespo web tracker URL.
@@ -31,10 +33,12 @@ import type {PurchasedItemsEvent} from "~/@types/purchasedItems";
  */
 export const sendPurchasedItemsEvent = async ({
   apiKey,
-  purchasedItemsData
+  purchasedItemsData,
+  domain
 }: {
   apiKey: string;
-  purchasedItemsData: PurchasedItemsEvent
+  purchasedItemsData: PurchasedItemsEvent;
+  domain: string;
 }): Promise<void> => {
   const url = `${process.env.WEB_TRACKER_URL}`;
   const authHeader = getAuthHeader(apiKey);
@@ -49,7 +53,22 @@ export const sendPurchasedItemsEvent = async ({
 
   try {
     await fetchWithErrorHandling(url, options);
+
+    await sendLogEvent({
+      errorMessage: '',
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.WEB_TRACKING_PURCHASED_ITEMS_SUCCESS,
+      logLevel: 'INFO'
+    })
   } catch (error: any) {
     console.error("Error sending purchased items:", error?.message);
+
+    await sendLogEvent({
+      errorMessage: `Error sending purchased items: ${error?.message}`,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.WEB_TRACKING_PURCHASED_ITEMS_ERROR,
+      logLevel: 'ERROR'
+    })
+
   }
 };

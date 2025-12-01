@@ -1,6 +1,8 @@
 import createMetafield from "~/shopify/mutations/create-metafield.server";
 import {shopRepository} from "~/repositories/repositories.server";
 import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 const WEB_TRACKING_ENABLED =
   process.env.WEB_TRACKING_ENABLED ?? "web-tracking-enabled";
@@ -43,9 +45,6 @@ export const toggleWebTrackingServer = async ({
   enabled: boolean;
 }): Promise<boolean> => {
   try {
-    console.log('domain', domain)
-    console.log('enabled', enabled)
-    console.log('shopId', shopId)
     await shopRepository.updateShop(domain, { isWebTrackingEnabled: enabled });
 
     const metafield = await createMetafield({
@@ -63,21 +62,51 @@ export const toggleWebTrackingServer = async ({
         value: SHOPIFY_APP_URL,
         key: HOST_URL,
       });
+
+      await sendLogEvent({
+        errorMessage: '',
+        data: JSON.stringify({domain}),
+        message: EVENT_MESSAGES.WEB_TRACKING_ENABLED,
+        logLevel: 'INFO'
+      })
+
     } else {
       await deleteMetafields({
         admin,
         ownerId: shopId,
         keys: [HOST_URL],
       });
+
+      await sendLogEvent({
+        errorMessage: '',
+        data: JSON.stringify({domain}),
+        message: EVENT_MESSAGES.WEB_TRACKING_DISABLED,
+        logLevel: 'INFO'
+      })
     }
 
     if (!metafield) {
+      await sendLogEvent({
+        errorMessage: 'Failed to create metafield for web tracking enabled',
+        data: JSON.stringify({domain}),
+        message: EVENT_MESSAGES.WEB_TRACKING_FAILED,
+        logLevel: 'ERROR'
+      })
+
       throw new Error("requestScriptError");
     }
 
     return true;
   } catch (error: any) {
     console.error(`Error enabling web tracking: ${error.message}`)
+
+    await sendLogEvent({
+      errorMessage: `Error ${enabled ? 'enabling' : 'disabling'} web tracking: ${error.message}`,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.WEB_TRACKING_FAILED,
+      logLevel: 'ERROR'
+    })
+
     if (error?.message) {
       throw new Error(error.message);
     } else {
