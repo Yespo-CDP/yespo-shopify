@@ -1,5 +1,7 @@
 import {fetchWithErrorHandling} from "~/utils/fetchWithErrorHandling";
 import {getAuthHeader} from "~/utils/auth";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Deletes a stored Shopify access token from the backend.
@@ -21,9 +23,11 @@ import {getAuthHeader} from "~/utils/auth";
  */
 
 export const deleteAccessToken = async ({
-  apiKey
+  apiKey,
+  domain
 }: {
   apiKey: string;
+  domain: string;
 }): Promise<void> => {
   const url = `${process.env.API_URL}/shopify/token`;
   const authHeader = getAuthHeader(apiKey);
@@ -39,5 +43,11 @@ export const deleteAccessToken = async ({
     console.log('DELETE access token', res)
   } catch (error: any) {
     console.error("Error deleting access token:", error);
+    await sendLogEvent({
+      errorMessage: `Access token is not deleted`,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.CUSTOM_LOG_DELETE_ACCESS_TOKEN_ERROR,
+      logLevel: 'ERROR'
+    })
   }
 }

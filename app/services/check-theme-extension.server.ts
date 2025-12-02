@@ -1,6 +1,8 @@
 import commentJSON from "comment-json";
 
 import getThemes from "~/shopify/queries/get-themes";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Checks whether the published Shopify theme has the Yespo app's theme extension enabled.
@@ -23,11 +25,13 @@ const GENERAL_SCRIPT_HANDLE =
 
 async function checkThemeExtensionService({
   admin,
+  domain
 }: {
   admin: any;
+  domain: string;
 }): Promise<boolean> {
   try {
-    const themes = await getThemes({ admin });
+    const themes = await getThemes({ admin, domain });
     const publishedTheme = themes?.find((theme) => theme.role === "MAIN");
 
     if (!publishedTheme) {
@@ -53,8 +57,15 @@ async function checkThemeExtensionService({
     );
 
     return antlaBlock ? !antlaBlock?.disabled : false;
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
+    await sendLogEvent({
+      errorMessage: `Failed to check theme extension: ${error.message}`,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.CUSTOM_LOG_CHECK_THEME_EXTENSION_ERROR,
+      logLevel: 'ERROR'
+    })
+
     return false;
   }
 }

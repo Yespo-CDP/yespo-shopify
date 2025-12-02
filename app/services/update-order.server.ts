@@ -7,11 +7,11 @@ import type { Order, OrderCreatePayload } from "~/@types/order";
  * Updates a order using the provided payload and API key.
  *
  * Any errors during the process are caught and logged.
- * 
-  * **Shopify Order Webhook (REST):**  
+ *
+  * **Shopify Order Webhook (REST):**
  * https://shopify.dev/docs/api/admin-rest/latest/resources/order#resource-object
  *
- * **Yespo Orders Bulk Insert API:**  
+ * **Yespo Orders Bulk Insert API:**
  * https://docs.esputnik.com/reference/ordersbulkinsert-1
  *
  * **Field Mapping:**
@@ -47,6 +47,7 @@ export const updateOrderService = async (
   payload: OrderCreatePayload,
   apiKey: string,
   shopId: number,
+  domain: string
 ) => {
   try {
     const formatAddress = (address: OrderCreatePayload["shipping_address"]) =>
@@ -111,6 +112,7 @@ export const updateOrderService = async (
     await createOrders({
       apiKey,
       orders: [order],
+      domain
     });
 
     await orderSyncRepository.createOrUpdateOrderSync({

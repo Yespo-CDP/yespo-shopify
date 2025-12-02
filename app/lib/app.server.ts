@@ -54,13 +54,13 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const orderSyncLog = await orderSyncLogRepository.getOrderSyncLogByShop(
     session.shop,
   );
-  const isMarketsOverflowing = await checkMarketsService({ admin });
-  const scriptConnectionStatus = await checkScriptConnectionService({ admin });
+  const isMarketsOverflowing = await checkMarketsService({ admin, domain: session.shop });
+  const scriptConnectionStatus = await checkScriptConnectionService({ admin, domain: session.shop });
 
   let account: Account | null = null;
   if (shop?.apiKey) {
     try {
-      account = await getAccountInfo({ apiKey: shop.apiKey });
+      account = await getAccountInfo({ apiKey: shop.apiKey, domain: session.shop});
     } catch (error) {
       console.error(error);
       account = null;
@@ -138,10 +138,18 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await disconnectAccountService({ session, admin });
 
       if (shop?.apiKey) {
-        await deleteAccessTokenService({apiKey: shop.apiKey})
+        await deleteAccessTokenService({apiKey: shop.apiKey, domain: shop.shopUrl})
       }
     } catch (error: any) {
       errors.apiKey = t(`AccountConnectionSection.errors.${error.message}`);
+
+      await sendLogEvent({
+        errorMessage: `Account is not disconnected`,
+        data: JSON.stringify({domain: session.shop}),
+        message: EVENT_MESSAGES.CUSTOM_LOG_DISCONNECT_ACCOUNT_ERROR,
+        logLevel: 'ERROR'
+      })
+
       return { success, errors };
     }
   }
@@ -204,6 +212,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     try {
       const isThemeExtensionActive = await checkThemeExtensionService({
         admin,
+        domain: session.shop
       });
 
       success.connection = {

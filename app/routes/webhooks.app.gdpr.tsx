@@ -83,6 +83,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           payload.customer.id.toString(),
           store.apiKey,
           true,
+          shop
         );
       }
       break;

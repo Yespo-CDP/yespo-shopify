@@ -1,5 +1,7 @@
 import {fetchWithErrorHandling} from "~/utils/fetchWithErrorHandling";
 import {getAuthHeader} from "~/utils/auth";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Sends a Shopify access token to the specified backend endpoint.
@@ -48,5 +50,11 @@ export const sendAccessToken = async ({
     console.log('SEND access token', res)
   } catch (error: any) {
     console.error("Error sending access token:", error);
+    await sendLogEvent({
+      errorMessage: `Access token not sent: ${error.message}`,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.CUSTOM_LOG_SEND_ACCESS_TOKEN_ERROR,
+      logLevel: 'ERROR'
+    })
   }
 }

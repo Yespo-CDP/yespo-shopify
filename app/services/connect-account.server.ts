@@ -37,7 +37,7 @@ export const connectAccountService = async ({
   apiKey: string;
   admin: any;
 }) => {
-  await getAccountInfo({ apiKey });
+  await getAccountInfo({ apiKey, domain: session.shop });
   await shopRepository.updateShop(session.shop, { apiKey });
   const shop = await shopRepository.getShop(session.shop);
   if (shop?.shopId) {

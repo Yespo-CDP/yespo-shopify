@@ -1,5 +1,7 @@
 import type { Account } from "~/@types/account";
 import { getAuthHeader } from "~/utils/auth";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Retrieves account information from the Yespo API using the provided API key.
@@ -17,8 +19,10 @@ import { getAuthHeader } from "~/utils/auth";
  */
 export const getAccountInfo = async ({
   apiKey,
+  domain
 }: {
   apiKey: string;
+  domain: string;
 }): Promise<Account> => {
   const url = `${process.env.API_URL}/account/info`;
   const authHeader = getAuthHeader(apiKey);
@@ -35,16 +39,35 @@ export const getAccountInfo = async ({
     const responseParse = (await response.json()) as Account;
 
     if (response.status === 401) {
+      await sendLogEvent({
+        errorMessage: `Get account info error: invalid api key`,
+        data: JSON.stringify({domain}),
+        message: EVENT_MESSAGES.CUSTOM_LOG_GET_ACCOUNT_INFO_ERROR,
+        logLevel: 'ERROR'
+      })
       throw new Error("invalidApiKey");
     }
 
     if (!response.ok) {
+      await sendLogEvent({
+        errorMessage: `Get account info error`,
+        data: JSON.stringify({domain}),
+        message: EVENT_MESSAGES.CUSTOM_LOG_GET_ACCOUNT_INFO_ERROR,
+        logLevel: 'ERROR'
+      })
       throw new Error("unknownError");
     }
 
     return responseParse;
   } catch (error: any) {
     const message = error?.message ?? "unknownError";
+
+    await sendLogEvent({
+      errorMessage: `Get account info error: ${error.message}`,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.CUSTOM_LOG_GET_ACCOUNT_INFO_ERROR,
+      logLevel: 'ERROR'
+    })
     throw new Error(message);
   }
 };

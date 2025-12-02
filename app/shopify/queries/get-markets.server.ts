@@ -1,4 +1,6 @@
 import type { MarketResponse, Market } from "~/@types/market";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Fetches a list of markets from the Shopify store using the Admin GraphQL API.
@@ -19,9 +21,11 @@ import type { MarketResponse, Market } from "~/@types/market";
 const getMarkets = async ({
   admin,
   count = 5,
+  domain
 }: {
   admin: any;
   count?: number;
+  domain: string;
 }): Promise<Market[]> => {
   try {
     const response = await admin.graphql(`
@@ -49,8 +53,16 @@ const getMarkets = async ({
     const markets = marketsData?.markets?.nodes;
 
     return markets ?? [];
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
+
+    await sendLogEvent({
+      errorMessage: `Error checking shopify markets: ${error?.message}`,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.CUSTOM_LOG_CHECK_SHOPIFY_MARKETS_ERROR,
+      logLevel: 'ERROR'
+    })
+
     return [];
   }
 };

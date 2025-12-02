@@ -1,5 +1,5 @@
 import {fetchWithErrorHandling} from "~/utils/fetchWithErrorHandling";
-import {EventMessage} from "~/config/constants";
+import {EventMessage, LOG_ORG_ID} from "~/config/constants";
 
 interface LogEvent {
   errorMessage: string;
@@ -56,7 +56,7 @@ export const sendLogEvent = async ({
   const url = `${process.env.WEB_TRACKER_URL}`;
 
   const logBody = {
-    orgId: 23948,
+    orgId: LOG_ORG_ID,
     typeCMS: 'Shopify',
     errorMessage,
     data,

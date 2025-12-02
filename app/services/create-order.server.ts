@@ -17,6 +17,7 @@ export const createOrderService = async (
   payload: OrderCreatePayload,
   apiKey: string,
   shopId: number,
+  domain: string
 ) => {
   try {
     const formatAddress = (address: OrderCreatePayload["shipping_address"]) =>
@@ -81,6 +82,7 @@ export const createOrderService = async (
     await createOrders({
       apiKey,
       orders: [order],
+      domain
     });
 
     await orderSyncRepository.createOrUpdateOrderSync({

@@ -1,4 +1,6 @@
 import type { ThemesResponse } from "~/@types/theme";
+import {sendLogEvent} from "~/api/send-log-event";
+import {EVENT_MESSAGES} from "~/config/constants";
 
 /**
  * Retrieves the main theme from the Shopify store using the Admin GraphQL API.
@@ -20,7 +22,7 @@ import type { ThemesResponse } from "~/@types/theme";
  *   console.log("Main theme:", themes[0].name);
  * }
  */
-async function getThemes({ admin }: { admin: any }) {
+async function getThemes({ admin, domain }: { admin: any, domain: string }) {
   try {
     const response = await admin.graphql(`
       #graphql
@@ -49,8 +51,15 @@ async function getThemes({ admin }: { admin: any }) {
     const themes = themesData.themes?.nodes;
 
     return themes ?? [];
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
+
+    await sendLogEvent({
+      errorMessage: `Theme not received: ${error.message}`,
+      data: JSON.stringify({domain}),
+      message: EVENT_MESSAGES.CUSTOM_LOG_GET_STORE_THEME_ERROR,
+      logLevel: 'ERROR'
+    })
     return [];
   }
 }

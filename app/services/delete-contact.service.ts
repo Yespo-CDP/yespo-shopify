@@ -11,10 +11,11 @@ import {deleteContact} from "~/api/delete-contact";
  * @param {boolean} erase - If true, permanently erases the contact data.
  * @returns {Promise<void>} A promise that resolves when the contact deletion is complete.
  */
-export const deleteContactService = async (externalCustomerId: string, apiKey: string, erase: boolean) => {
+export const deleteContactService = async (externalCustomerId: string, apiKey: string, erase: boolean, domain: string) => {
   await deleteContact({
     apiKey,
     externalCustomerId,
-    erase
+    erase,
+    domain
   })
 }

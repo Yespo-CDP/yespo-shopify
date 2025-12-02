@@ -113,6 +113,7 @@ export const orderSyncHandler = async (
             const contactsUpdateResponse = await createOrders({
               apiKey,
               orders: ordersData,
+              domain: shop
             });
 
             if (contactsUpdateResponse?.failedOrders) {
