@@ -39,6 +39,7 @@ export async function fetchWithErrorHandling(
 ) {
   try {
     const response = await fetch(url, options);
+    console.log('options', options)
 
     const rawResponse = await response.text();
     let responseData: any = rawResponse;
@@ -55,7 +56,12 @@ export async function fetchWithErrorHandling(
       throw new FetchError(message, response.status);
     }
 
-    return responseData;
+    // console.log('>>>>>>>>>>>>>>>>>',response)
+
+    return {
+      responseData,
+      status: response.status
+    };
   } catch (error: any) {
     if (error instanceof FetchError) {
       throw error;

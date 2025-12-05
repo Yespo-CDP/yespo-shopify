@@ -52,11 +52,16 @@ export const sendPurchasedItemsEvent = async ({
   };
 
   try {
-    await fetchWithErrorHandling(url, options);
+    const response = await fetchWithErrorHandling(url, options);
 
     await sendLogEvent({
       errorMessage: '',
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody: purchasedItemsData,
+        responseBody: response.responseData,
+        statusCode: response.status
+      }),
       message: EVENT_MESSAGES.WEB_TRACKING_PURCHASED_ITEMS_SUCCESS,
       logLevel: 'INFO'
     })
@@ -65,7 +70,12 @@ export const sendPurchasedItemsEvent = async ({
 
     await sendLogEvent({
       errorMessage: `Error sending purchased items: ${error?.message}`,
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody: purchasedItemsData,
+        responseBody: error,
+        statusCode: error?.status ?? 400
+      }),
       message: EVENT_MESSAGES.WEB_TRACKING_PURCHASED_ITEMS_ERROR,
       logLevel: 'ERROR'
     })

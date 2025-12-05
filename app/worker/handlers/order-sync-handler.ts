@@ -123,6 +123,18 @@ export const orderSyncHandler = async (
                 chunkFailedCount = 1;
               }
             }
+
+            await sendLogEvent({
+              errorMessage: '',
+              data: JSON.stringify({
+                domain: shop,
+                offset: ORDERS_CHUNK_SIZE,
+                responseBody: contactsUpdateResponse,
+                statusCode: 200
+              }),
+              message: EVENT_MESSAGES.SEND_ORDERS_BULK_SUCCESS,
+              logLevel: 'INFO'
+            })
           }
 
           totalFailedCount += chunkFailedCount;
@@ -152,6 +164,19 @@ export const orderSyncHandler = async (
         }
       } catch (error: any) {
         console.error("Error orders sync in chunk", error);
+
+        await sendLogEvent({
+          errorMessage:  `Error bulk orders sync ${error?.message}`,
+          data: JSON.stringify({
+            domain: shop,
+            offset: ORDERS_CHUNK_SIZE,
+            responseBody: {},
+            statusCode: error?.status ?? 400
+          }),
+          message: EVENT_MESSAGES.SEND_ORDERS_BULK_FAILED,
+          logLevel: 'ERROR'
+        })
+
         throw Error(error);
       }
     } while (cursor);
@@ -169,13 +194,6 @@ export const orderSyncHandler = async (
       },
     });
 
-    await sendLogEvent({
-      errorMessage: '',
-      data: JSON.stringify({domain: shop}),
-      message: EVENT_MESSAGES.SEND_ORDERS_BULK_SUCCESS,
-      logLevel: 'INFO'
-    })
-
     console.log(`✅ Synchronizing orders finish for ${shop}`);
   } catch (error: any) {
     console.error("Synchronization error", error);
@@ -191,13 +209,6 @@ export const orderSyncHandler = async (
         },
       },
     });
-
-    await sendLogEvent({
-      errorMessage:  `Error bulk orders sync ${error?.message}`,
-      data: JSON.stringify({domain: shop}),
-      message: EVENT_MESSAGES.SEND_ORDERS_BULK_FAILED,
-      logLevel: 'INFO'
-    })
 
     return;
   }

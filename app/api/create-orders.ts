@@ -39,13 +39,18 @@ export const createOrders = async ({
 
   try {
     const response = await fetchWithErrorHandling(url, options);
-    return response as OrdersCreateResponse;
+    return response.responseData as OrdersCreateResponse;
   } catch (error: any) {
     console.error("Error creating orders:", error?.message);
 
     await sendLogEvent({
       errorMessage: `Error creating orders: ${error?.message}`,
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody: orders,
+        responseBody: error,
+        statusCode: error?.status ?? 500
+      }),
       message: EVENT_MESSAGES.CUSTOM_LOG_CREATE_YESPO_ORDERS_ERROR,
       logLevel: 'ERROR'
     })

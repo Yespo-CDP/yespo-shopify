@@ -145,7 +145,12 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
       await sendLogEvent({
         errorMessage: `Account is not disconnected`,
-        data: JSON.stringify({domain: session.shop}),
+        data: JSON.stringify({
+          domain: session.shop,
+          requestBody: {},
+          responseBody: error,
+          statusCode: error?.status ?? 500
+        }),
         message: EVENT_MESSAGES.CUSTOM_LOG_DISCONNECT_ACCOUNT_ERROR,
         logLevel: 'ERROR'
       })

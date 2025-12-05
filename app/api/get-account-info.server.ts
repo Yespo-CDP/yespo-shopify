@@ -41,17 +41,27 @@ export const getAccountInfo = async ({
     if (response.status === 401) {
       await sendLogEvent({
         errorMessage: `Get account info error: invalid api key`,
-        data: JSON.stringify({domain}),
+        data: JSON.stringify({
+          domain,
+          requestBody: { apiKey },
+          responseBody: responseParse,
+          statusCode: response.status
+        }),
         message: EVENT_MESSAGES.CUSTOM_LOG_GET_ACCOUNT_INFO_ERROR,
         logLevel: 'ERROR'
       })
-      throw new Error("invalidApiKey");
+      throw new Error("invalidApiKey", );
     }
 
     if (!response.ok) {
       await sendLogEvent({
         errorMessage: `Get account info error`,
-        data: JSON.stringify({domain}),
+        data: JSON.stringify({
+          domain,
+          requestBody: { apiKey },
+          responseBody: responseParse,
+          statusCode: response.status
+        }),
         message: EVENT_MESSAGES.CUSTOM_LOG_GET_ACCOUNT_INFO_ERROR,
         logLevel: 'ERROR'
       })
@@ -60,11 +70,17 @@ export const getAccountInfo = async ({
 
     return responseParse;
   } catch (error: any) {
+    console.log('>>>>>>>>?????????<<<<<<<<<<<<', error)
     const message = error?.message ?? "unknownError";
 
     await sendLogEvent({
       errorMessage: `Get account info error: ${error.message}`,
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody: { apiKey },
+        responseBody: error,
+        statusCode: error?.status ?? 500
+      }),
       message: EVENT_MESSAGES.CUSTOM_LOG_GET_ACCOUNT_INFO_ERROR,
       logLevel: 'ERROR'
     })

@@ -30,18 +30,26 @@ export const getGeneralScript = async ({ apiKey, domain }: { apiKey: string, dom
 
     await sendLogEvent({
       errorMessage: '',
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        responseBody: {},
+        statusCode: response.status
+      }),
       message: EVENT_MESSAGES.GET_SCRIPT_SUCCESS,
       logLevel: 'INFO'
     })
 
-    return response;
+    return response.responseData;
   } catch (error: any) {
     console.error("Error fetching general script:", error);
 
     await sendLogEvent({
       errorMessage: error?.message,
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        responseBody: {},
+        statusCode: error?.status ?? 500
+      }),
       message: EVENT_MESSAGES.GET_SCRIPT_FAILED,
       logLevel: 'ERROR'
     })

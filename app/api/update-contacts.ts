@@ -42,14 +42,20 @@ export const updateContacts = async ({
   };
 
   try {
-    const response = (await fetchWithErrorHandling(
+    const res = (await fetchWithErrorHandling(
       url,
       options,
-    )) as ContactsResponse;
+    ));
+    const response = res.responseData as ContactsResponse;
 
     await sendLogEvent({
       errorMessage: '',
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody: contactsData,
+        responseBody: res.responseData,
+        statusCode: res.status
+      }),
       message: EVENT_MESSAGES.WEB_TRACKING_CUSTOMER_DATA_SUCCESS,
       logLevel: 'INFO'
     })
@@ -60,7 +66,12 @@ export const updateContacts = async ({
 
     await sendLogEvent({
       errorMessage: `Error updating contacts: ${error?.message}`,
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody: contactsData,
+        responseBody: error,
+        statusCode: error?.status ?? 400
+      }),
       message: EVENT_MESSAGES.WEB_TRACKING_CUSTOMER_DATA_ERROR,
       logLevel: 'ERROR'
     })

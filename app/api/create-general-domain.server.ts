@@ -28,32 +28,46 @@ export const createGeneralDomain = async ({
 }): Promise<{ result: string, siteId: string }> => {
   const url = `${process.env.API_URL}/site/domains`;
   const authHeader = getAuthHeader(apiKey);
+
+  const requestBody = { domain }
   const options = {
     method: "POST",
     headers: {
       "content-type": "application/json",
       Authorization: authHeader,
     },
-    body: JSON.stringify({ domain }),
+    body: JSON.stringify(requestBody),
   };
 
   try {
     const response = await fetchWithErrorHandling(url, options);
 
+    console.log('response', JSON.stringify(response, null, 2))
+
     await sendLogEvent({
       errorMessage: '',
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody,
+        responseBody: response.responseData,
+        statusCode: response.status
+      }),
       message: EVENT_MESSAGES.ADD_DOMAIN_SUCCESS,
       logLevel: 'INFO'
     })
 
-    return response;
+    return response.responseData;
   } catch (error: any) {
     console.error("Error creating general domain:", error?.message);
 
     await sendLogEvent({
       errorMessage: error?.message,
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody,
+        responseBody: error,
+        statusCode: error?.status ?? 500
+      }),
       message: EVENT_MESSAGES.ADD_DOMAIN_FAILED,
       logLevel: 'ERROR'
     })

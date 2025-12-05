@@ -42,17 +42,27 @@ export const createContact = async ({
 
     await sendLogEvent({
       errorMessage: '',
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody: contactData,
+        responseBody: response.responseData,
+        statusCode: response.status
+      }),
       message: EVENT_MESSAGES.WEB_TRACKING_CUSTOMER_DATA_SUCCESS,
       logLevel: 'INFO'
     })
 
-    return response;
+    return response.responseData;
   } catch (error: any) {
     console.error("Error creating contact:", error?.message);
     await sendLogEvent({
       errorMessage: `Error creating contact: ${error?.message}`,
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody: contactData,
+        responseBody: error,
+        statusCode: error?.status ?? 400
+      }),
       message: EVENT_MESSAGES.WEB_TRACKING_CUSTOMER_DATA_ERROR,
       logLevel: 'ERROR'
     })

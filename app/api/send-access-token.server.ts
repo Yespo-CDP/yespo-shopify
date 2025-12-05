@@ -37,13 +37,14 @@ export const sendAccessToken = async ({
 }): Promise<void> => {
   const url = `${process.env.API_URL}/shopify/token`;
   const authHeader = getAuthHeader(apiKey);
+  const requestBody = { domain, accessToken }
   const options = {
     method: "POST",
     headers: {
       "content-type": "application/json",
       Authorization: authHeader,
     },
-    body: JSON.stringify({ domain, accessToken }),
+    body: JSON.stringify(requestBody),
   };
   try {
    const res = await fetchWithErrorHandling(url, options);
@@ -52,7 +53,12 @@ export const sendAccessToken = async ({
     console.error("Error sending access token:", error);
     await sendLogEvent({
       errorMessage: `Access token not sent: ${error.message}`,
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody,
+        responseBody: error,
+        statusCode: error?.status ?? 500
+      }),
       message: EVENT_MESSAGES.CUSTOM_LOG_SEND_ACCESS_TOKEN_ERROR,
       logLevel: 'ERROR'
     })

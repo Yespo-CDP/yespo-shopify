@@ -45,7 +45,12 @@ export const deleteAccessToken = async ({
     console.error("Error deleting access token:", error);
     await sendLogEvent({
       errorMessage: `Access token is not deleted`,
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody: {},
+        responseBody: error,
+        statusCode: error?.status ?? 500
+      }),
       message: EVENT_MESSAGES.CUSTOM_LOG_DELETE_ACCESS_TOKEN_ERROR,
       logLevel: 'ERROR'
     })

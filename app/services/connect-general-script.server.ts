@@ -68,7 +68,7 @@ export const connectGeneralScriptService = async ({
       await sendLogEvent({
         errorMessage: `Metafield for general script not created`,
         data: JSON.stringify({domain}),
-        message: EVENT_MESSAGES.INSERT_SITE_SCRIPT_SUCCESS,
+        message: EVENT_MESSAGES.INSERT_SITE_SCRIPT_FAILED,
         logLevel: 'ERROR'
       })
 

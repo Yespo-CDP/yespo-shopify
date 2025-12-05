@@ -50,11 +50,16 @@ export const sendStatusCartEvent = async ({
   };
 
   try {
-    await fetchWithErrorHandling(url, options);
+    const response = await fetchWithErrorHandling(url, options);
 
     await sendLogEvent({
       errorMessage: '',
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody: cartEventData,
+        responseBody: response.responseData,
+        statusCode: response.status
+      }),
       message: EVENT_MESSAGES.WEB_TRACKING_STATUSCART_SUCCESS,
       logLevel: 'INFO'
     })
@@ -63,7 +68,12 @@ export const sendStatusCartEvent = async ({
 
     await sendLogEvent({
       errorMessage: `Error sending status cart: ${error?.message}`,
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody: cartEventData,
+        responseBody: error,
+        statusCode: error?.status ?? 400
+      }),
       message: EVENT_MESSAGES.WEB_TRACKING_STATUSCART_ERROR,
       logLevel: 'ERROR'
     })

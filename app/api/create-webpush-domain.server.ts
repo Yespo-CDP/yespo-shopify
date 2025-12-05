@@ -57,34 +57,41 @@ export const createWebPushDomain = async ({
 }): Promise<{ result: string }> => {
   const url = `${process.env.API_URL}/site/webpush/domains`;
   const authHeader = getAuthHeader(apiKey);
+  const requestBody = {
+    domains: [
+      {
+        domain: `https://${domain}`,
+        serviceWorkerName: SERVICE_WORKER_NAME,
+        serviceWorkerPath: SERVICE_WORKER_PATH,
+        serviceWorkerScope: SERVICE_WORKER_PATH,
+      },
+    ],
+  }
   const options = {
     method: "POST",
     headers: {
       "content-type": "application/json",
       Authorization: authHeader,
     },
-    body: JSON.stringify({
-      domains: [
-        {
-          domain: `https://${domain}`,
-          serviceWorkerName: SERVICE_WORKER_NAME,
-          serviceWorkerPath: SERVICE_WORKER_PATH,
-          serviceWorkerScope: SERVICE_WORKER_PATH,
-        },
-      ],
-    }),
+    body: JSON.stringify(requestBody),
   };
 
   try {
-    const response = (await fetchWithErrorHandling(
+    const res = (await fetchWithErrorHandling(
       url,
       options,
-    )) as WebPushDomainResponse;
+    ));
+    const response = res.responseData as WebPushDomainResponse;
 
     if (response?.errors?.message?.includes("Domain can't be reached")) {
       await sendLogEvent({
         errorMessage: response?.errors?.message,
-        data: JSON.stringify({domain}),
+        data: JSON.stringify({
+          domain,
+          requestBody,
+          responseBody: response,
+          statusCode: res.status
+        }),
         message: EVENT_MESSAGES.ADD_WEB_PUSH_DOMAIN_FAILED,
         logLevel: 'ERROR'
       })
@@ -94,7 +101,12 @@ export const createWebPushDomain = async ({
 
     await sendLogEvent({
       errorMessage: '',
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody,
+        responseBody: response,
+        statusCode: res.status
+      }),
       message: EVENT_MESSAGES.ADD_WEB_PUSH_DOMAIN_SUCCESS,
       logLevel: 'INFO'
     })
@@ -105,7 +117,12 @@ export const createWebPushDomain = async ({
 
     await sendLogEvent({
       errorMessage: error?.message,
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody,
+        responseBody: error,
+        statusCode: error?.status ?? 400
+      }),
       message: EVENT_MESSAGES.ADD_WEB_PUSH_DOMAIN_FAILED,
       logLevel: 'ERROR'
     })

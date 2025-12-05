@@ -61,7 +61,12 @@ async function checkThemeExtensionService({
     console.error(error);
     await sendLogEvent({
       errorMessage: `Failed to check theme extension: ${error.message}`,
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody: {},
+        responseBody: error,
+        statusCode: error?.status ?? 500
+      }),
       message: EVENT_MESSAGES.CUSTOM_LOG_CHECK_THEME_EXTENSION_ERROR,
       logLevel: 'ERROR'
     })

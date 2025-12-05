@@ -58,7 +58,12 @@ const getMarkets = async ({
 
     await sendLogEvent({
       errorMessage: `Error checking shopify markets: ${error?.message}`,
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody: {},
+        responseBody: error,
+        statusCode: error?.status ?? 500
+      }),
       message: EVENT_MESSAGES.CUSTOM_LOG_CHECK_SHOPIFY_MARKETS_ERROR,
       logLevel: 'ERROR'
     })

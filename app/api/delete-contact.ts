@@ -41,12 +41,17 @@ export const deleteContact = async ({
 
   try {
     const response = await fetchWithErrorHandling(url, options);
-    return response;
+    return response.responseData;
   } catch (error: any) {
     console.error("Error deleting contact:", error?.message);
     await sendLogEvent({
       errorMessage: `Error deleting contact: ${error?.message}`,
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        requestBody: {},
+        responseBody: error,
+        statusCode: error?.status ?? 500
+      }),
       message: EVENT_MESSAGES.CUSTOM_LOG_DELETE_YESPO_CONTACTS_ERROR,
       logLevel: 'ERROR'
     })

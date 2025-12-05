@@ -35,7 +35,8 @@ export const getWebpushScript = async ({
   };
 
   try {
-    const response = (await fetchWithErrorHandling(url, options)) as {
+    const res = (await fetchWithErrorHandling(url, options))
+    const response = res.responseData as {
       script?: string;
     };
     const { script } = response;
@@ -43,7 +44,11 @@ export const getWebpushScript = async ({
     if (!script) {
       await sendLogEvent({
         errorMessage: 'Web push script not retrieved',
-        data: JSON.stringify({domain}),
+        data: JSON.stringify({
+          domain,
+          responseBody: response,
+          statusCode: res.status
+        }),
         message: EVENT_MESSAGES.GET_WEB_PUSH_DOMAIN_FAILED,
         logLevel: 'ERROR'
       })
@@ -53,7 +58,11 @@ export const getWebpushScript = async ({
 
     await sendLogEvent({
       errorMessage: '',
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        responseBody: response,
+        statusCode: res.status
+      }),
       message: EVENT_MESSAGES.GET_WEB_PUSH_DOMAIN_SUCCESS,
       logLevel: 'INFO'
     })
@@ -64,7 +73,11 @@ export const getWebpushScript = async ({
 
     await sendLogEvent({
       errorMessage: error?.message,
-      data: JSON.stringify({domain}),
+      data: JSON.stringify({
+        domain,
+        responseBody: error,
+        statusCode: error?.status ?? 500
+      }),
       message: EVENT_MESSAGES.GET_WEB_PUSH_DOMAIN_FAILED,
       logLevel: 'ERROR'
     })
