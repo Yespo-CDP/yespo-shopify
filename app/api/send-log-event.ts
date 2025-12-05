@@ -63,7 +63,7 @@ export const sendLogEvent = async ({
   }
 
   const logBody = {
-    orgId: LOG_ORG_ID,
+    orgId: orgId,
     typeCMS: 'Shopify',
     errorMessage,
     data,
