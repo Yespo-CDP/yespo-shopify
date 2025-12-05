@@ -9,13 +9,22 @@ import {deleteContact} from "~/api/delete-contact";
  * @param {string} externalCustomerId - The external ID of the customer to delete.
  * @param {string} apiKey - The API key used for authentication with the contact service.
  * @param {boolean} erase - If true, permanently erases the contact data.
+ * @param domain
+ * @param orgId
  * @returns {Promise<void>} A promise that resolves when the contact deletion is complete.
  */
-export const deleteContactService = async (externalCustomerId: string, apiKey: string, erase: boolean, domain: string) => {
+export const deleteContactService = async (
+  externalCustomerId: string,
+  apiKey: string,
+  erase: boolean,
+  domain: string,
+  orgId?: number | null
+) => {
   await deleteContact({
     apiKey,
     externalCustomerId,
     erase,
-    domain
+    domain,
+    orgId
   })
 }

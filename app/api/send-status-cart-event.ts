@@ -32,11 +32,13 @@ import {EVENT_MESSAGES} from "~/config/constants";
 export const sendStatusCartEvent = async ({
  apiKey,
  cartEventData,
- domain
+ domain,
+ orgId
 }: {
   apiKey: string;
   cartEventData: StatusCartEvent;
   domain: string;
+  orgId?: number | null;
 }): Promise<void> => {
   const url = `${process.env.WEB_TRACKER_URL}`;
   const authHeader = getAuthHeader(apiKey);
@@ -53,6 +55,7 @@ export const sendStatusCartEvent = async ({
     const response = await fetchWithErrorHandling(url, options);
 
     await sendLogEvent({
+      orgId,
       errorMessage: '',
       data: JSON.stringify({
         domain,
@@ -67,6 +70,7 @@ export const sendStatusCartEvent = async ({
     console.error("Error sending status cart:", error?.message);
 
     await sendLogEvent({
+      orgId,
       errorMessage: `Error sending status cart: ${error?.message}`,
       data: JSON.stringify({
         domain,

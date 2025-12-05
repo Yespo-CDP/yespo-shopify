@@ -30,7 +30,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     //Delete access token from Yespo
     if (store?.apiKey) {
-      await deleteAccessTokenService({apiKey: store.apiKey})
+      await deleteAccessTokenService({apiKey: store.apiKey, domain: shop, orgId: store.orgId})
     }
 
     const shopData = await shopRepository.updateShop(shop, {
@@ -40,6 +40,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       isContactSyncEnabled: false,
       isOrderSyncEnabled: false,
       siteId: null,
+      orgId: null
     });
     await db.session.deleteMany({ where: { shop } });
 

@@ -19,10 +19,12 @@ import {EVENT_MESSAGES} from "~/config/constants";
  */
 export const getAccountInfo = async ({
   apiKey,
-  domain
+  domain,
+  orgId
 }: {
   apiKey: string;
   domain: string;
+  orgId?: number | null;
 }): Promise<Account> => {
   const url = `${process.env.API_URL}/account/info`;
   const authHeader = getAuthHeader(apiKey);
@@ -40,6 +42,7 @@ export const getAccountInfo = async ({
 
     if (response.status === 401) {
       await sendLogEvent({
+        orgId,
         errorMessage: `Get account info error: invalid api key`,
         data: JSON.stringify({
           domain,
@@ -55,6 +58,7 @@ export const getAccountInfo = async ({
 
     if (!response.ok) {
       await sendLogEvent({
+        orgId,
         errorMessage: `Get account info error`,
         data: JSON.stringify({
           domain,
@@ -70,10 +74,10 @@ export const getAccountInfo = async ({
 
     return responseParse;
   } catch (error: any) {
-    console.log('>>>>>>>>?????????<<<<<<<<<<<<', error)
     const message = error?.message ?? "unknownError";
 
     await sendLogEvent({
+      orgId,
       errorMessage: `Get account info error: ${error.message}`,
       data: JSON.stringify({
         domain,

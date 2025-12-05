@@ -28,6 +28,7 @@ const ORDERS_CHUNK_SIZE = 150; // Shopify max limit 250 (this does not include 1
  * @param {string} apiKey - The API key to connect with the account.
  * @param {string} shopId - The unique shop id in our database.
  *
+ * @param orgId
  * @returns {Promise<void>} A promise that resolves once the synchronization has been complete or logs an error on failure.
  *
  * @example
@@ -44,6 +45,7 @@ export const orderSyncHandler = async (
   accessToken: string,
   apiKey: string,
   shopId: number,
+  orgId?: number | null
 ) => {
   console.log(`⏳ Synchronizing orders start for ${shop}`);
   console.log("shop", shop);
@@ -113,7 +115,8 @@ export const orderSyncHandler = async (
             const contactsUpdateResponse = await createOrders({
               apiKey,
               orders: ordersData,
-              domain: shop
+              domain: shop,
+              orgId
             });
 
             if (contactsUpdateResponse?.failedOrders) {
@@ -125,6 +128,7 @@ export const orderSyncHandler = async (
             }
 
             await sendLogEvent({
+              orgId,
               errorMessage: '',
               data: JSON.stringify({
                 domain: shop,
@@ -166,6 +170,7 @@ export const orderSyncHandler = async (
         console.error("Error orders sync in chunk", error);
 
         await sendLogEvent({
+          orgId,
           errorMessage:  `Error bulk orders sync ${error?.message}`,
           data: JSON.stringify({
             domain: shop,

@@ -27,16 +27,18 @@ const WEB_PUSH_SCRIPT_HANDLE =
 
 const checkScriptConnectionService = async ({
   admin,
-  domain
+  domain,
+  orgId
 }: {
   admin: any;
   domain: string;
+  orgId?: number | null;
 }): Promise<{
   isThemeExtensionActive: boolean;
   isGeneralScriptExist: boolean;
   isWebPushScriptExist: boolean;
 }> => {
-  const isThemeExtensionActive = await checkThemeExtensionService({ admin, domain });
+  const isThemeExtensionActive = await checkThemeExtensionService({ admin, domain, orgId });
   const metafield = await getMetafield({
     admin,
     key: GENERAL_SCRIPT_HANDLE,

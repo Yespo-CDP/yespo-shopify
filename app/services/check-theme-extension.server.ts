@@ -25,13 +25,15 @@ const GENERAL_SCRIPT_HANDLE =
 
 async function checkThemeExtensionService({
   admin,
-  domain
+  domain,
+  orgId
 }: {
   admin: any;
   domain: string;
+  orgId?: number | null;
 }): Promise<boolean> {
   try {
-    const themes = await getThemes({ admin, domain });
+    const themes = await getThemes({ admin, domain,orgId });
     const publishedTheme = themes?.find((theme) => theme.role === "MAIN");
 
     if (!publishedTheme) {
@@ -60,6 +62,7 @@ async function checkThemeExtensionService({
   } catch (error: any) {
     console.error(error);
     await sendLogEvent({
+      orgId,
       errorMessage: `Failed to check theme extension: ${error.message}`,
       data: JSON.stringify({
         domain,

@@ -34,11 +34,13 @@ import {EVENT_MESSAGES} from "~/config/constants";
 export const sendPurchasedItemsEvent = async ({
   apiKey,
   purchasedItemsData,
-  domain
+  domain,
+  orgId
 }: {
   apiKey: string;
   purchasedItemsData: PurchasedItemsEvent;
   domain: string;
+  orgId?: number | null;
 }): Promise<void> => {
   const url = `${process.env.WEB_TRACKER_URL}`;
   const authHeader = getAuthHeader(apiKey);
@@ -55,6 +57,7 @@ export const sendPurchasedItemsEvent = async ({
     const response = await fetchWithErrorHandling(url, options);
 
     await sendLogEvent({
+      orgId,
       errorMessage: '',
       data: JSON.stringify({
         domain,
@@ -69,6 +72,7 @@ export const sendPurchasedItemsEvent = async ({
     console.error("Error sending purchased items:", error?.message);
 
     await sendLogEvent({
+      orgId,
       errorMessage: `Error sending purchased items: ${error?.message}`,
       data: JSON.stringify({
         domain,

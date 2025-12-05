@@ -37,15 +37,17 @@ export const toggleWebTrackingServer = async ({
   shopId,
   admin,
   domain,
-  enabled
+  enabled,
+  orgId
 }: {
   shopId: string;
   admin: any;
   domain: string;
   enabled: boolean;
+  orgId?: number | null;
 }): Promise<boolean> => {
   try {
-    await shopRepository.updateShop(domain, { isWebTrackingEnabled: enabled });
+    const store = await shopRepository.updateShop(domain, { isWebTrackingEnabled: enabled });
 
     const metafield = await createMetafield({
       shopId,
@@ -64,6 +66,7 @@ export const toggleWebTrackingServer = async ({
       });
 
       await sendLogEvent({
+        orgId: store?.orgId,
         errorMessage: '',
         data: JSON.stringify({domain}),
         message: EVENT_MESSAGES.WEB_TRACKING_ENABLED,
@@ -78,6 +81,7 @@ export const toggleWebTrackingServer = async ({
       });
 
       await sendLogEvent({
+        orgId: store?.orgId,
         errorMessage: '',
         data: JSON.stringify({domain}),
         message: EVENT_MESSAGES.WEB_TRACKING_DISABLED,
@@ -87,6 +91,7 @@ export const toggleWebTrackingServer = async ({
 
     if (!metafield) {
       await sendLogEvent({
+        orgId: store?.orgId,
         errorMessage: 'Failed to create metafield for web tracking enabled',
         data: JSON.stringify({domain}),
         message: EVENT_MESSAGES.WEB_TRACKING_FAILED,
@@ -101,6 +106,7 @@ export const toggleWebTrackingServer = async ({
     console.error(`Error enabling web tracking: ${error.message}`)
 
     await sendLogEvent({
+      orgId,
       errorMessage: `Error ${enabled ? 'enabling' : 'disabling'} web tracking: ${error.message}`,
       data: JSON.stringify({domain}),
       message: EVENT_MESSAGES.WEB_TRACKING_FAILED,

@@ -22,7 +22,7 @@ import {EVENT_MESSAGES} from "~/config/constants";
  *   console.log("Main theme:", themes[0].name);
  * }
  */
-async function getThemes({ admin, domain }: { admin: any, domain: string }) {
+async function getThemes({ admin, domain, orgId }: { admin: any, domain: string, orgId?: number | null; }) {
   try {
     const response = await admin.graphql(`
       #graphql
@@ -55,6 +55,7 @@ async function getThemes({ admin, domain }: { admin: any, domain: string }) {
     console.error(error);
 
     await sendLogEvent({
+      orgId,
       errorMessage: `Theme not received: ${error.message}`,
       data: JSON.stringify({
         domain,

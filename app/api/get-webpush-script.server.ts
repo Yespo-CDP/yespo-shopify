@@ -20,9 +20,11 @@ import {EVENT_MESSAGES} from "~/config/constants";
 export const getWebpushScript = async ({
   apiKey,
   domain,
+  orgId
 }: {
   apiKey: string;
   domain: string;
+  orgId?: number | null;
 }): Promise<string> => {
   const url = `${process.env.API_URL}/site/webpush/script?domain=https://${domain}`;
   const authHeader = getAuthHeader(apiKey);
@@ -43,6 +45,7 @@ export const getWebpushScript = async ({
 
     if (!script) {
       await sendLogEvent({
+        orgId,
         errorMessage: 'Web push script not retrieved',
         data: JSON.stringify({
           domain,
@@ -57,6 +60,7 @@ export const getWebpushScript = async ({
     }
 
     await sendLogEvent({
+      orgId,
       errorMessage: '',
       data: JSON.stringify({
         domain,
@@ -72,6 +76,7 @@ export const getWebpushScript = async ({
     console.error("Error fetching webpush script:", error);
 
     await sendLogEvent({
+      orgId,
       errorMessage: error?.message,
       data: JSON.stringify({
         domain,

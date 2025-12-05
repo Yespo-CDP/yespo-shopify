@@ -39,21 +39,23 @@ export const connectGeneralScriptService = async ({
   apiKey,
   domain,
   admin,
+  orgId
 }: {
   shopId: string;
   shopUrl: string;
   apiKey: string;
   domain: string;
   admin: any;
+  orgId?: number | null;
 }) => {
   try {
-    const connectedData = await createGeneralDomain({ apiKey, domain });
+    const connectedData = await createGeneralDomain({ apiKey, domain, orgId });
 
     await shopRepository.updateShop(shopUrl, {
       siteId: connectedData.siteId
     });
 
-    const script = await getGeneralScript({ apiKey, domain });
+    const script = await getGeneralScript({ apiKey, domain, orgId });
 
     const metafield = await createMetafield({
       shopId,
@@ -66,6 +68,7 @@ export const connectGeneralScriptService = async ({
       console.error(`Metafield for general script not created`);
 
       await sendLogEvent({
+        orgId,
         errorMessage: `Metafield for general script not created`,
         data: JSON.stringify({domain}),
         message: EVENT_MESSAGES.INSERT_SITE_SCRIPT_FAILED,
@@ -76,6 +79,7 @@ export const connectGeneralScriptService = async ({
     }
 
     await sendLogEvent({
+      orgId,
       errorMessage: '',
       data: JSON.stringify({domain}),
       message: EVENT_MESSAGES.INSERT_SITE_SCRIPT_SUCCESS,
@@ -87,6 +91,7 @@ export const connectGeneralScriptService = async ({
     console.error(`Error connecting general script: ${error.message}`);
 
     await sendLogEvent({
+      orgId,
       errorMessage: `Error connecting general script: ${error.message}`,
       data: JSON.stringify({domain}),
       message: EVENT_MESSAGES.INSERT_SITE_SCRIPT_FAILED,

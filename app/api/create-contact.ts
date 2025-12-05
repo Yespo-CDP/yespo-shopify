@@ -20,11 +20,13 @@ import {EVENT_MESSAGES} from "~/config/constants";
 export const createContact = async ({
   apiKey,
   contactData,
-  domain
+  domain,
+  orgId
 }: {
   apiKey: string;
   contactData: Contact;
   domain: string;
+  orgId?: number | null;
 }): Promise<void> => {
   const url = `${process.env.API_URL}/contact`;
   const authHeader = getAuthHeader(apiKey);
@@ -41,6 +43,7 @@ export const createContact = async ({
     const response = await fetchWithErrorHandling(url, options);
 
     await sendLogEvent({
+      orgId,
       errorMessage: '',
       data: JSON.stringify({
         domain,
@@ -56,6 +59,7 @@ export const createContact = async ({
   } catch (error: any) {
     console.error("Error creating contact:", error?.message);
     await sendLogEvent({
+      orgId,
       errorMessage: `Error creating contact: ${error?.message}`,
       data: JSON.stringify({
         domain,

@@ -36,16 +36,18 @@ export const connectWebPushScriptService = async ({
   apiKey,
   domain,
   admin,
+  orgId
 }: {
   shopId: string;
   apiKey: string;
   domain: string;
   admin: any;
+  orgId?: number | null;
 }) => {
   try {
-    await createWebPushDomain({ apiKey, domain });
+    await createWebPushDomain({ apiKey, domain, orgId });
 
-    const script = await getWebpushScript({ apiKey, domain });
+    const script = await getWebpushScript({ apiKey, domain, orgId });
 
     const metafield = await createMetafield({
       shopId,
@@ -58,6 +60,7 @@ export const connectWebPushScriptService = async ({
       console.error(`Metafield for web push script not created`);
 
       await sendLogEvent({
+        orgId,
         errorMessage: `Metafield for web push script not created`,
         data: JSON.stringify({domain}),
         message: EVENT_MESSAGES.INSERT_WEB_PUSH_SCRIPT_FAILED,
@@ -68,6 +71,7 @@ export const connectWebPushScriptService = async ({
     }
 
     await sendLogEvent({
+      orgId,
       errorMessage: '',
       data: JSON.stringify({domain}),
       message: EVENT_MESSAGES.INSERT_WEB_PUSH_SCRIPT_SUCCESS,
@@ -79,6 +83,7 @@ export const connectWebPushScriptService = async ({
     console.error(`Error connecting webpush script: ${error.message}`);
 
     await sendLogEvent({
+      orgId,
       errorMessage: `Error connecting webpush script: ${error.message}`,
       data: JSON.stringify({domain}),
       message: EVENT_MESSAGES.INSERT_WEB_PUSH_SCRIPT_FAILED,

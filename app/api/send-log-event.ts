@@ -2,6 +2,7 @@ import {fetchWithErrorHandling} from "~/utils/fetchWithErrorHandling";
 import {EventMessage, LOG_ORG_ID} from "~/config/constants";
 
 interface LogEvent {
+  orgId?: number | null;
   errorMessage: string;
   data: string;
   message: EventMessage;
@@ -48,12 +49,18 @@ interface LogEvent {
  */
 
 export const sendLogEvent = async ({
+  orgId,
   errorMessage,
   data,
   message,
   logLevel
 }: LogEvent): Promise<void> => {
   const url = `${process.env.WEB_TRACKER_URL}`;
+
+  if (!orgId) {
+    console.log('OrgId is not provided for logging')
+    return
+  }
 
   const logBody = {
     orgId: LOG_ORG_ID,

@@ -33,13 +33,16 @@ import type { Contact } from "~/@types/contact";
  * @param {any} payload - The customer data payload containing updated contact info.
  * @param {string} apiKey - The API key used for authentication with the contact service.
  * @param {string} shopId - The shop id for connect customer sync log to shop.
+ * @param shopUrl
+ * @param orgId
  * @returns {Promise<void>} A promise that resolves when the contact update completes.
  */
 export const updateContactService = async (
   payload: any,
   apiKey: string,
   shopId: number,
-  shopUrl: string
+  shopUrl: string,
+  orgId?: number | null
 ) => {
   const channels = [];
   let address = undefined;
@@ -87,7 +90,8 @@ export const updateContactService = async (
   await updateContact({
     apiKey,
     contactData,
-    domain: shopUrl
+    domain: shopUrl,
+    orgId
   });
 
   await customerSyncRepository.createOrUpdateCustomerSync({

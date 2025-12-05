@@ -20,11 +20,13 @@ import {EVENT_MESSAGES} from "~/config/constants";
 export const createOrders = async ({
   apiKey,
   orders,
-  domain
+  domain,
+  orgId
 }: {
   apiKey: string;
   orders: Order[];
   domain: string;
+  orgId?: number | null;
 }): Promise<OrdersCreateResponse> => {
   const url = `${process.env.API_URL}/orders`;
   const authHeader = getAuthHeader(apiKey);
@@ -44,6 +46,7 @@ export const createOrders = async ({
     console.error("Error creating orders:", error?.message);
 
     await sendLogEvent({
+      orgId,
       errorMessage: `Error creating orders: ${error?.message}`,
       data: JSON.stringify({
         domain,

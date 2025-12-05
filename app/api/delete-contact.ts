@@ -22,12 +22,14 @@ export const deleteContact = async ({
   apiKey,
   externalCustomerId,
   erase = false,
-  domain
+  domain,
+  orgId
 }: {
   apiKey: string;
   externalCustomerId: string,
   erase: boolean
   domain: string;
+  orgId?: number | null;
 }): Promise<void> => {
   const url = `${process.env.API_URL}/contact?externalCustomerId=${externalCustomerId}&erase=${erase}`;
   const authHeader = getAuthHeader(apiKey);
@@ -45,6 +47,7 @@ export const deleteContact = async ({
   } catch (error: any) {
     console.error("Error deleting contact:", error?.message);
     await sendLogEvent({
+      orgId,
       errorMessage: `Error deleting contact: ${error?.message}`,
       data: JSON.stringify({
         domain,

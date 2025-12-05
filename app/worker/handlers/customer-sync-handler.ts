@@ -44,6 +44,7 @@ export const customerSyncHandler = async (
   accessToken: string,
   apiKey: string,
   shopId: number,
+  orgId?: number | null
 ) => {
   console.log(`⏳ Synchronizing customers start for ${shop}`);
   console.log("shop", shop);
@@ -117,7 +118,8 @@ export const customerSyncHandler = async (
             const contactsUpdateResponse = await updateContacts({
               apiKey,
               contactsData,
-              domain: shop
+              domain: shop,
+              orgId
             });
 
             if (contactsUpdateResponse?.failedContacts) {
@@ -130,6 +132,7 @@ export const customerSyncHandler = async (
             }
 
             await sendLogEvent({
+              orgId,
               errorMessage: '',
               data: JSON.stringify({
                 domain: shop,
@@ -171,6 +174,7 @@ export const customerSyncHandler = async (
         console.error("Error customers sync in chunk", error);
 
         await sendLogEvent({
+          orgId,
           errorMessage: `Error bulk customers sync ${error?.message}`,
           data: JSON.stringify({
             domain: shop,

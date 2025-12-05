@@ -8,7 +8,7 @@ import type { Order, OrderCreatePayload } from "~/@types/order";
  *
  * Any errors during the process are caught and logged.
  *
-  * **Shopify Order Webhook (REST):**
+ * **Shopify Order Webhook (REST):**
  * https://shopify.dev/docs/api/admin-rest/latest/resources/order#resource-object
  *
  * **Yespo Orders Bulk Insert API:**
@@ -41,13 +41,16 @@ import type { Order, OrderCreatePayload } from "~/@types/order";
  * @param {OrderCreatePayload} payload - The order data payload containing order info.
  * @param {string} apiKey - The API key used for authentication with the contact service.
  * @param {string} shopId - The shop id for connect order sync log to shop.
+ * @param domain
+ * @param orgId
  * @returns {Promise<void>} A promise that resolves when the order creation completes.
  */
 export const updateOrderService = async (
   payload: OrderCreatePayload,
   apiKey: string,
   shopId: number,
-  domain: string
+  domain: string,
+  orgId?: number | null
 ) => {
   try {
     const formatAddress = (address: OrderCreatePayload["shipping_address"]) =>
@@ -112,7 +115,8 @@ export const updateOrderService = async (
     await createOrders({
       apiKey,
       orders: [order],
-      domain
+      domain,
+      orgId
     });
 
     await orderSyncRepository.createOrUpdateOrderSync({

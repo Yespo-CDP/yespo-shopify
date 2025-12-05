@@ -29,11 +29,13 @@ import {EVENT_MESSAGES} from "~/config/constants";
 export const sendAccessToken = async ({
   apiKey,
   domain,
-  accessToken
+  accessToken,
+  orgId
 }: {
   apiKey: string;
   domain: string;
   accessToken: string;
+  orgId?: number | null;
 }): Promise<void> => {
   const url = `${process.env.API_URL}/shopify/token`;
   const authHeader = getAuthHeader(apiKey);
@@ -52,6 +54,7 @@ export const sendAccessToken = async ({
   } catch (error: any) {
     console.error("Error sending access token:", error);
     await sendLogEvent({
+      orgId,
       errorMessage: `Access token not sent: ${error.message}`,
       data: JSON.stringify({
         domain,

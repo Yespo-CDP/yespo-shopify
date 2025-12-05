@@ -32,13 +32,15 @@ export const connectAccountService = async ({
   session,
   apiKey,
   admin,
+  orgId
 }: {
   session: any;
   apiKey: string;
   admin: any;
+  orgId?: number | null;
 }) => {
-  await getAccountInfo({ apiKey, domain: session.shop });
-  await shopRepository.updateShop(session.shop, { apiKey });
+  const accountInfo = await getAccountInfo({ apiKey, domain: session.shop });
+  await shopRepository.updateShop(session.shop, { apiKey, orgId: accountInfo.orgId });
   const shop = await shopRepository.getShop(session.shop);
   if (shop?.shopId) {
     await deleteMetafields({
@@ -50,6 +52,7 @@ export const connectAccountService = async ({
 
   if (!shop || !shop.apiKey) {
     await sendLogEvent({
+      orgId,
       errorMessage: 'API key is empty',
       data: JSON.stringify({domain: session.shop}),
       message: EVENT_MESSAGES.ADD_API_KEY_FAILED,
@@ -57,6 +60,7 @@ export const connectAccountService = async ({
     })
   } else {
     await sendLogEvent({
+      orgId,
       errorMessage: '',
       data: JSON.stringify({domain: session.shop}),
       message: EVENT_MESSAGES.ADD_API_KEY_SUCCESS,

@@ -11,13 +11,16 @@ import type { Order, OrderCreatePayload } from "~/@types/order";
  * @param {OrderCreatePayload} payload - The order data payload containing order info.
  * @param {string} apiKey - The API key used for authentication with the contact service.
  * @param {string} shopId - The shop id for connect order sync log to shop.
+ * @param domain
+ * @param orgId
  * @returns {Promise<void>} A promise that resolves when the order creation completes.
  */
 export const createOrderService = async (
   payload: OrderCreatePayload,
   apiKey: string,
   shopId: number,
-  domain: string
+  domain: string,
+  orgId?: number | null
 ) => {
   try {
     const formatAddress = (address: OrderCreatePayload["shipping_address"]) =>
@@ -82,7 +85,8 @@ export const createOrderService = async (
     await createOrders({
       apiKey,
       orders: [order],
-      domain
+      domain,
+      orgId
     });
 
     await orderSyncRepository.createOrUpdateOrderSync({

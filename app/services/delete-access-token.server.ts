@@ -21,15 +21,18 @@ import {deleteAccessToken} from "~/api/delete-access-token.server";
 
 export const deleteAccessTokenService = async({
   apiKey,
-  domain
+  domain,
+  orgId
 }: {
   apiKey: string;
   domain: string;
+  orgId?: number | null;
 }): Promise<void> => {
   try {
     await deleteAccessToken({
       apiKey,
-      domain
+      domain,
+      orgId
     })
   } catch (error) {
     console.error("Error occurred in Delete Access Token Service", error);

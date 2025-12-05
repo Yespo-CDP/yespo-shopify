@@ -22,9 +22,11 @@ import {EVENT_MESSAGES} from "~/config/constants";
 export const createGeneralDomain = async ({
   apiKey,
   domain,
+  orgId
 }: {
   apiKey: string;
   domain: string;
+  orgId?: number | null;
 }): Promise<{ result: string, siteId: string }> => {
   const url = `${process.env.API_URL}/site/domains`;
   const authHeader = getAuthHeader(apiKey);
@@ -42,9 +44,8 @@ export const createGeneralDomain = async ({
   try {
     const response = await fetchWithErrorHandling(url, options);
 
-    console.log('response', JSON.stringify(response, null, 2))
-
     await sendLogEvent({
+      orgId,
       errorMessage: '',
       data: JSON.stringify({
         domain,
@@ -61,6 +62,7 @@ export const createGeneralDomain = async ({
     console.error("Error creating general domain:", error?.message);
 
     await sendLogEvent({
+      orgId,
       errorMessage: error?.message,
       data: JSON.stringify({
         domain,

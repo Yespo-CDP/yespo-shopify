@@ -20,11 +20,13 @@ import {EVENT_MESSAGES} from "~/config/constants";
 export const updateContacts = async ({
   apiKey,
   contactsData,
-  domain
+  domain,
+  orgId
 }: {
   apiKey: string;
   contactsData: Contact[];
   domain: string;
+  orgId?: number | null;
 }): Promise<ContactsResponse> => {
   const url = `${process.env.API_URL}/contacts`;
   const authHeader = getAuthHeader(apiKey);
@@ -49,6 +51,7 @@ export const updateContacts = async ({
     const response = res.responseData as ContactsResponse;
 
     await sendLogEvent({
+      orgId,
       errorMessage: '',
       data: JSON.stringify({
         domain,
@@ -65,6 +68,7 @@ export const updateContacts = async ({
     console.error("Error updating contacts:", error?.message);
 
     await sendLogEvent({
+      orgId,
       errorMessage: `Error updating contacts: ${error?.message}`,
       data: JSON.stringify({
         domain,

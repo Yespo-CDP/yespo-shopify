@@ -36,6 +36,7 @@ export const createContactService = async (
   apiKey: string,
   shopId: number,
   shopUrl: string,
+  orgId?: number | null
 ) => {
   try {
     const channels = [];
@@ -64,7 +65,8 @@ export const createContactService = async (
     await createContact({
       apiKey,
       contactData,
-      domain: shopUrl
+      domain: shopUrl,
+      orgId
     });
 
     await customerSyncRepository.createOrUpdateCustomerSync({

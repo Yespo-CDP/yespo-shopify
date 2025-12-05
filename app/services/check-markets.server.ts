@@ -16,12 +16,14 @@ import getMarkets from "~/shopify/queries/get-markets.server";
  */
 const checkMarketsService = async ({
   admin,
-  domain
+  domain,
+  orgId
 }: {
   admin: any;
   domain: string;
+  orgId?: number | null;
 }): Promise<boolean> => {
-  const markets = await getMarkets({ admin, count: 200, domain });
+  const markets = await getMarkets({ admin, count: 200, domain, orgId });
   const activeMarkets = markets.filter((market) => market.enabled);
 
   return activeMarkets.length > 1;

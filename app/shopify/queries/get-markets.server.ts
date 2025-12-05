@@ -21,11 +21,13 @@ import {EVENT_MESSAGES} from "~/config/constants";
 const getMarkets = async ({
   admin,
   count = 5,
-  domain
+  domain,
+  orgId
 }: {
   admin: any;
   count?: number;
   domain: string;
+  orgId?: number | null;
 }): Promise<Market[]> => {
   try {
     const response = await admin.graphql(`
@@ -57,6 +59,7 @@ const getMarkets = async ({
     console.error(error);
 
     await sendLogEvent({
+      orgId,
       errorMessage: `Error checking shopify markets: ${error?.message}`,
       data: JSON.stringify({
         domain,

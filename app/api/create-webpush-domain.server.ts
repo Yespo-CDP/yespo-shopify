@@ -51,9 +51,11 @@ const SERVICE_WORKER_PATH =
 export const createWebPushDomain = async ({
   apiKey,
   domain,
+  orgId
 }: {
   apiKey: string;
   domain: string;
+  orgId?: number | null;
 }): Promise<{ result: string }> => {
   const url = `${process.env.API_URL}/site/webpush/domains`;
   const authHeader = getAuthHeader(apiKey);
@@ -85,6 +87,7 @@ export const createWebPushDomain = async ({
 
     if (response?.errors?.message?.includes("Domain can't be reached")) {
       await sendLogEvent({
+        orgId,
         errorMessage: response?.errors?.message,
         data: JSON.stringify({
           domain,
@@ -100,6 +103,7 @@ export const createWebPushDomain = async ({
     }
 
     await sendLogEvent({
+      orgId,
       errorMessage: '',
       data: JSON.stringify({
         domain,
@@ -116,6 +120,7 @@ export const createWebPushDomain = async ({
     console.error("Error creating webpush domain:", error?.message);
 
     await sendLogEvent({
+      orgId,
       errorMessage: error?.message,
       data: JSON.stringify({
         domain,

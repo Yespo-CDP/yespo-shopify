@@ -24,10 +24,12 @@ import {EVENT_MESSAGES} from "~/config/constants";
 
 export const deleteAccessToken = async ({
   apiKey,
-  domain
+  domain,
+  orgId
 }: {
   apiKey: string;
   domain: string;
+  orgId?: number | null;
 }): Promise<void> => {
   const url = `${process.env.API_URL}/shopify/token`;
   const authHeader = getAuthHeader(apiKey);
@@ -44,6 +46,7 @@ export const deleteAccessToken = async ({
   } catch (error: any) {
     console.error("Error deleting access token:", error);
     await sendLogEvent({
+      orgId,
       errorMessage: `Access token is not deleted`,
       data: JSON.stringify({
         domain,

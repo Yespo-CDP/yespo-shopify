@@ -54,13 +54,13 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const orderSyncLog = await orderSyncLogRepository.getOrderSyncLogByShop(
     session.shop,
   );
-  const isMarketsOverflowing = await checkMarketsService({ admin, domain: session.shop });
-  const scriptConnectionStatus = await checkScriptConnectionService({ admin, domain: session.shop });
+  const isMarketsOverflowing = await checkMarketsService({ admin, domain: session.shop, orgId: shop?.orgId });
+  const scriptConnectionStatus = await checkScriptConnectionService({ admin, domain: session.shop, orgId: shop?.orgId });
 
   let account: Account | null = null;
   if (shop?.apiKey) {
     try {
-      account = await getAccountInfo({ apiKey: shop.apiKey, domain: session.shop});
+      account = await getAccountInfo({ apiKey: shop.apiKey, domain: session.shop, orgId: shop.orgId});
     } catch (error) {
       console.error(error);
       account = null;
@@ -133,17 +133,18 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
   } = {};
 
   if (intent === "account-disconnection") {
+    const shop = await shopRepository.getShop(session.shop);
     try {
-      const shop = await shopRepository.getShop(session.shop);
       await disconnectAccountService({ session, admin });
 
       if (shop?.apiKey) {
-        await deleteAccessTokenService({apiKey: shop.apiKey, domain: shop.shopUrl})
+        await deleteAccessTokenService({apiKey: shop.apiKey, domain: shop.shopUrl, orgId: shop.orgId})
       }
     } catch (error: any) {
       errors.apiKey = t(`AccountConnectionSection.errors.${error.message}`);
 
       await sendLogEvent({
+        orgId: shop?.orgId,
         errorMessage: `Account is not disconnected`,
         data: JSON.stringify({
           domain: session.shop,
@@ -178,6 +179,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       }
 
       const isGeneralScriptInstalled = await connectGeneralScriptService({
+        orgId: shop.orgId,
         apiKey: shop.apiKey,
         shopUrl: shop.shopUrl,
         shopId: shop.shopId,
@@ -187,6 +189,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
       //install web push script
       const isWebPushScriptInstalled = await connectWebPushScriptService({
+        orgId: shop.orgId,
         apiKey: shop.apiKey,
         shopId: shop.shopId,
         domain: shop.domain,
@@ -215,9 +218,11 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
   if (intent === "connection-status") {
     try {
+      const shop = await shopRepository.getShop(session.shop);
       const isThemeExtensionActive = await checkThemeExtensionService({
         admin,
-        domain: session.shop
+        domain: session.shop,
+        orgId: shop?.orgId
       });
 
       success.connection = {
@@ -243,6 +248,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         const connectedData = await createGeneralDomain({
           apiKey: shop.apiKey,
           domain: shop.domain,
+          orgId: shop.orgId
         });
 
         await shopRepository.updateShop(shop.domain, {
@@ -283,8 +289,8 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
   }
 
   if (intent === "data-sync-enable") {
+    const shop = await shopRepository.getShop(session.shop);
     try {
-      const shop = await shopRepository.getShop(session.shop);
       if (!shop) {
         errors.dataSync = t("General.errors.shopNotFound");
         return { success, errors };
@@ -324,6 +330,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await enqueueDataSyncTasks({ session, shop });
 
       await sendLogEvent({
+        orgId: shop.orgId,
         errorMessage: '',
         data: JSON.stringify({domain: session.shop}),
         message: EVENT_MESSAGES.DATA_SYNC_ENABLED,
@@ -333,6 +340,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       errors.dataSync = t("DataSyncSection.errors.notEnabled");
 
       await sendLogEvent({
+        orgId: shop?.orgId,
         errorMessage: error?.message,
         data: JSON.stringify({domain: session.shop}),
         message: EVENT_MESSAGES.DATA_SYNC_FAILED,
@@ -344,8 +352,8 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
   }
 
   if (intent === "data-sync-disable") {
+    const shop = await shopRepository.getShop(session.shop);
     try {
-      const shop = await shopRepository.getShop(session.shop);
       if (!shop) {
         errors.dataSync = t("General.errors.shopNotFound");
         return { success, errors };
@@ -357,6 +365,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       });
 
       await sendLogEvent({
+        orgId: shop?.orgId,
         errorMessage: '',
         data: JSON.stringify({domain: session.shop}),
         message: EVENT_MESSAGES.DATA_SYNC_DISABLED,
@@ -367,6 +376,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       errors.dataSync = t("DataSyncSection.errors.notDisabled");
 
       await sendLogEvent({
+        orgId: shop?.orgId,
         errorMessage: error?.message,
         data: JSON.stringify({domain: session.shop}),
         message: EVENT_MESSAGES.DATA_SYNC_FAILED,
@@ -384,6 +394,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       return { success, errors };
     }
     const isGeneralScriptInstalled = await connectGeneralScriptService({
+      orgId: shop.orgId,
       apiKey: shop.apiKey,
       shopUrl: shop.shopUrl,
       shopId: shop.shopId,
@@ -404,6 +415,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       return { success, errors };
     }
     const isWebPushScriptInstalled = await connectWebPushScriptService({
+      orgId: shop.orgId,
       apiKey: shop.apiKey,
       shopId: shop.shopId,
       domain: shop.domain,

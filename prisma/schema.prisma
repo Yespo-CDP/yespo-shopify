@@ -39,6 +39,7 @@ model Shop {
   name                        String
   domain                      String    @unique @default("")
   apiKey                      String?
+  orgId                       Int?
   siteId                      String?
   isWebTrackingEnabled        Boolean?  @default(false)
   isContactSyncEnabled        Boolean?  @default(false)

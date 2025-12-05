@@ -14,7 +14,15 @@ import {EVENT_MESSAGES} from "~/config/constants";
  *
  * @throws Will throw an error with message "requestScriptError" if the request fails.
  */
-export const getGeneralScript = async ({ apiKey, domain }: { apiKey: string, domain: string; }) => {
+export const getGeneralScript = async ({
+  apiKey,
+  domain,
+  orgId
+}: {
+  apiKey: string,
+  domain: string;
+  orgId?: number | null;
+}) => {
   const url = `${process.env.API_URL}/site/script`;
   const authHeader = getAuthHeader(apiKey);
   const options = {
@@ -29,6 +37,7 @@ export const getGeneralScript = async ({ apiKey, domain }: { apiKey: string, dom
     const response = await fetchWithErrorHandling(url, options);
 
     await sendLogEvent({
+      orgId,
       errorMessage: '',
       data: JSON.stringify({
         domain,
@@ -44,6 +53,7 @@ export const getGeneralScript = async ({ apiKey, domain }: { apiKey: string, dom
     console.error("Error fetching general script:", error);
 
     await sendLogEvent({
+      orgId,
       errorMessage: error?.message,
       data: JSON.stringify({
         domain,
