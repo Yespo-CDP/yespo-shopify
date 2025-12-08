@@ -49,12 +49,12 @@ export const deleteContact = async ({
     await sendLogEvent({
       orgId,
       errorMessage: `Error deleting contact: ${error?.message}`,
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody: {},
         responseBody: error,
         statusCode: error?.status ?? 500
-      }),
+      },
       message: EVENT_MESSAGES.CUSTOM_LOG_DELETE_YESPO_CONTACTS_ERROR,
       logLevel: 'ERROR'
     })

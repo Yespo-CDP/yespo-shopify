@@ -62,11 +62,11 @@ export const getWebpushScript = async ({
     await sendLogEvent({
       orgId,
       errorMessage: '',
-      data: JSON.stringify({
+      data: {
         domain,
         responseBody: response,
         statusCode: res.status
-      }),
+      },
       message: EVENT_MESSAGES.GET_WEB_PUSH_DOMAIN_SUCCESS,
       logLevel: 'INFO'
     })
@@ -78,11 +78,11 @@ export const getWebpushScript = async ({
     await sendLogEvent({
       orgId,
       errorMessage: error?.message,
-      data: JSON.stringify({
+      data: {
         domain,
         responseBody: error,
         statusCode: error?.status ?? 500
-      }),
+      },
       message: EVENT_MESSAGES.GET_WEB_PUSH_DOMAIN_FAILED,
       logLevel: 'ERROR'
     })

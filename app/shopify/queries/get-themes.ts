@@ -57,12 +57,12 @@ async function getThemes({ admin, domain, orgId }: { admin: any, domain: string,
     await sendLogEvent({
       orgId,
       errorMessage: `Theme not received: ${error.message}`,
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody: {},
         responseBody: error,
         statusCode: error?.status ?? 500
-      }),
+      },
       message: EVENT_MESSAGES.CUSTOM_LOG_GET_STORE_THEME_ERROR,
       logLevel: 'ERROR'
     })

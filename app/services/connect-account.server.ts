@@ -54,7 +54,7 @@ export const connectAccountService = async ({
     await sendLogEvent({
       orgId,
       errorMessage: 'API key is empty',
-      data: JSON.stringify({domain: session.shop}),
+      data: {domain: session.shop},
       message: EVENT_MESSAGES.ADD_API_KEY_FAILED,
       logLevel: 'ERROR'
     })
@@ -62,7 +62,7 @@ export const connectAccountService = async ({
     await sendLogEvent({
       orgId,
       errorMessage: '',
-      data: JSON.stringify({domain: session.shop}),
+      data: {domain: session.shop},
       message: EVENT_MESSAGES.ADD_API_KEY_SUCCESS,
       logLevel: 'INFO'
     })

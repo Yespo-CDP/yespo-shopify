@@ -57,12 +57,12 @@ export const sendStatusCartEvent = async ({
     await sendLogEvent({
       orgId,
       errorMessage: '',
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody: cartEventData,
         responseBody: response.responseData,
         statusCode: response.status
-      }),
+      },
       message: EVENT_MESSAGES.WEB_TRACKING_STATUSCART_SUCCESS,
       logLevel: 'INFO'
     })
@@ -72,12 +72,12 @@ export const sendStatusCartEvent = async ({
     await sendLogEvent({
       orgId,
       errorMessage: `Error sending status cart: ${error?.message}`,
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody: cartEventData,
         responseBody: error,
         statusCode: error?.status ?? 400
-      }),
+      },
       message: EVENT_MESSAGES.WEB_TRACKING_STATUSCART_ERROR,
       logLevel: 'ERROR'
     })

@@ -146,12 +146,12 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await sendLogEvent({
         orgId: shop?.orgId,
         errorMessage: `Account is not disconnected`,
-        data: JSON.stringify({
+        data: {
           domain: session.shop,
           requestBody: {},
           responseBody: error,
           statusCode: error?.status ?? 500
-        }),
+        },
         message: EVENT_MESSAGES.CUSTOM_LOG_DISCONNECT_ACCOUNT_ERROR,
         logLevel: 'ERROR'
       })
@@ -332,7 +332,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await sendLogEvent({
         orgId: shop.orgId,
         errorMessage: '',
-        data: JSON.stringify({domain: session.shop}),
+        data: {domain: session.shop},
         message: EVENT_MESSAGES.DATA_SYNC_ENABLED,
         logLevel: 'INFO'
       })
@@ -342,7 +342,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await sendLogEvent({
         orgId: shop?.orgId,
         errorMessage: error?.message,
-        data: JSON.stringify({domain: session.shop}),
+        data: {domain: session.shop},
         message: EVENT_MESSAGES.DATA_SYNC_FAILED,
         logLevel: 'ERROR'
       })
@@ -367,7 +367,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await sendLogEvent({
         orgId: shop?.orgId,
         errorMessage: '',
-        data: JSON.stringify({domain: session.shop}),
+        data: {domain: session.shop},
         message: EVENT_MESSAGES.DATA_SYNC_DISABLED,
         logLevel: 'INFO'
       })
@@ -378,7 +378,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await sendLogEvent({
         orgId: shop?.orgId,
         errorMessage: error?.message,
-        data: JSON.stringify({domain: session.shop}),
+        data: {domain: session.shop},
         message: EVENT_MESSAGES.DATA_SYNC_FAILED,
         logLevel: 'ERROR'
       })

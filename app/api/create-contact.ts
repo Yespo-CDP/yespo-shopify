@@ -45,12 +45,12 @@ export const createContact = async ({
     await sendLogEvent({
       orgId,
       errorMessage: '',
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody: contactData,
         responseBody: response.responseData,
         statusCode: response.status
-      }),
+      },
       message: EVENT_MESSAGES.WEB_TRACKING_CUSTOMER_DATA_SUCCESS,
       logLevel: 'INFO'
     })
@@ -61,12 +61,12 @@ export const createContact = async ({
     await sendLogEvent({
       orgId,
       errorMessage: `Error creating contact: ${error?.message}`,
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody: contactData,
         responseBody: error,
         statusCode: error?.status ?? 400
-      }),
+      },
       message: EVENT_MESSAGES.WEB_TRACKING_CUSTOMER_DATA_ERROR,
       logLevel: 'ERROR'
     })

@@ -39,11 +39,11 @@ export const getGeneralScript = async ({
     await sendLogEvent({
       orgId,
       errorMessage: '',
-      data: JSON.stringify({
+      data: {
         domain,
         responseBody: {},
         statusCode: response.status
-      }),
+      },
       message: EVENT_MESSAGES.GET_SCRIPT_SUCCESS,
       logLevel: 'INFO'
     })
@@ -55,11 +55,11 @@ export const getGeneralScript = async ({
     await sendLogEvent({
       orgId,
       errorMessage: error?.message,
-      data: JSON.stringify({
+      data: {
         domain,
         responseBody: {},
         statusCode: error?.status ?? 500
-      }),
+      },
       message: EVENT_MESSAGES.GET_SCRIPT_FAILED,
       logLevel: 'ERROR'
     })

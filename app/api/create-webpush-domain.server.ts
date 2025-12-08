@@ -89,12 +89,12 @@ export const createWebPushDomain = async ({
       await sendLogEvent({
         orgId,
         errorMessage: response?.errors?.message,
-        data: JSON.stringify({
+        data: {
           domain,
           requestBody,
           responseBody: response,
           statusCode: res.status
-        }),
+        },
         message: EVENT_MESSAGES.ADD_WEB_PUSH_DOMAIN_FAILED,
         logLevel: 'ERROR'
       })
@@ -105,12 +105,12 @@ export const createWebPushDomain = async ({
     await sendLogEvent({
       orgId,
       errorMessage: '',
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody,
         responseBody: response,
         statusCode: res.status
-      }),
+      },
       message: EVENT_MESSAGES.ADD_WEB_PUSH_DOMAIN_SUCCESS,
       logLevel: 'INFO'
     })
@@ -122,12 +122,12 @@ export const createWebPushDomain = async ({
     await sendLogEvent({
       orgId,
       errorMessage: error?.message,
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody,
         responseBody: error,
         statusCode: error?.status ?? 400
-      }),
+      },
       message: EVENT_MESSAGES.ADD_WEB_PUSH_DOMAIN_FAILED,
       logLevel: 'ERROR'
     })

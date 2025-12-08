@@ -59,12 +59,12 @@ export const sendPurchasedItemsEvent = async ({
     await sendLogEvent({
       orgId,
       errorMessage: '',
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody: purchasedItemsData,
         responseBody: response.responseData,
         statusCode: response.status
-      }),
+      },
       message: EVENT_MESSAGES.WEB_TRACKING_PURCHASED_ITEMS_SUCCESS,
       logLevel: 'INFO'
     })
@@ -74,12 +74,12 @@ export const sendPurchasedItemsEvent = async ({
     await sendLogEvent({
       orgId,
       errorMessage: `Error sending purchased items: ${error?.message}`,
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody: purchasedItemsData,
         responseBody: error,
         statusCode: error?.status ?? 400
-      }),
+      },
       message: EVENT_MESSAGES.WEB_TRACKING_PURCHASED_ITEMS_ERROR,
       logLevel: 'ERROR'
     })

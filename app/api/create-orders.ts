@@ -48,12 +48,12 @@ export const createOrders = async ({
     await sendLogEvent({
       orgId,
       errorMessage: `Error creating orders: ${error?.message}`,
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody: orders,
         responseBody: error,
         statusCode: error?.status ?? 500
-      }),
+      },
       message: EVENT_MESSAGES.CUSTOM_LOG_CREATE_YESPO_ORDERS_ERROR,
       logLevel: 'ERROR'
     })

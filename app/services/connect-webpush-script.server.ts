@@ -62,7 +62,7 @@ export const connectWebPushScriptService = async ({
       await sendLogEvent({
         orgId,
         errorMessage: `Metafield for web push script not created`,
-        data: JSON.stringify({domain}),
+        data: {domain},
         message: EVENT_MESSAGES.INSERT_WEB_PUSH_SCRIPT_FAILED,
         logLevel: 'ERROR'
       })
@@ -73,7 +73,7 @@ export const connectWebPushScriptService = async ({
     await sendLogEvent({
       orgId,
       errorMessage: '',
-      data: JSON.stringify({domain}),
+      data: {domain},
       message: EVENT_MESSAGES.INSERT_WEB_PUSH_SCRIPT_SUCCESS,
       logLevel: 'INFO'
     })
@@ -85,7 +85,7 @@ export const connectWebPushScriptService = async ({
     await sendLogEvent({
       orgId,
       errorMessage: `Error connecting webpush script: ${error.message}`,
-      data: JSON.stringify({domain}),
+      data: {domain},
       message: EVENT_MESSAGES.INSERT_WEB_PUSH_SCRIPT_FAILED,
       logLevel: 'ERROR'
     })

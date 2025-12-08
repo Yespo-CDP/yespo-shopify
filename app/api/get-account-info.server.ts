@@ -44,12 +44,12 @@ export const getAccountInfo = async ({
       await sendLogEvent({
         orgId,
         errorMessage: `Get account info error: invalid api key`,
-        data: JSON.stringify({
+        data: {
           domain,
           requestBody: { apiKey },
           responseBody: responseParse,
           statusCode: response.status
-        }),
+        },
         message: EVENT_MESSAGES.CUSTOM_LOG_GET_ACCOUNT_INFO_ERROR,
         logLevel: 'ERROR'
       })
@@ -60,12 +60,12 @@ export const getAccountInfo = async ({
       await sendLogEvent({
         orgId,
         errorMessage: `Get account info error`,
-        data: JSON.stringify({
+        data: {
           domain,
           requestBody: { apiKey },
           responseBody: responseParse,
           statusCode: response.status
-        }),
+        },
         message: EVENT_MESSAGES.CUSTOM_LOG_GET_ACCOUNT_INFO_ERROR,
         logLevel: 'ERROR'
       })
@@ -79,12 +79,12 @@ export const getAccountInfo = async ({
     await sendLogEvent({
       orgId,
       errorMessage: `Get account info error: ${error.message}`,
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody: { apiKey },
         responseBody: error,
         statusCode: error?.status ?? 500
-      }),
+      },
       message: EVENT_MESSAGES.CUSTOM_LOG_GET_ACCOUNT_INFO_ERROR,
       logLevel: 'ERROR'
     })

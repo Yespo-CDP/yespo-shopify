@@ -48,6 +48,10 @@ export async function fetchWithErrorHandling(
       responseData = JSON.parse(rawResponse);
     } catch (e) {}
 
+    console.log('response', response)
+    console.log('responseData',responseData)
+    console.log('rawResponse', rawResponse)
+
     if (!response.ok) {
       const message =
         typeof responseData === "string"

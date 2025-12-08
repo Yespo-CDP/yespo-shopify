@@ -68,7 +68,7 @@ export const toggleWebTrackingServer = async ({
       await sendLogEvent({
         orgId: store?.orgId,
         errorMessage: '',
-        data: JSON.stringify({domain}),
+        data: {domain},
         message: EVENT_MESSAGES.WEB_TRACKING_ENABLED,
         logLevel: 'INFO'
       })
@@ -83,7 +83,7 @@ export const toggleWebTrackingServer = async ({
       await sendLogEvent({
         orgId: store?.orgId,
         errorMessage: '',
-        data: JSON.stringify({domain}),
+        data: {domain},
         message: EVENT_MESSAGES.WEB_TRACKING_DISABLED,
         logLevel: 'INFO'
       })
@@ -93,7 +93,7 @@ export const toggleWebTrackingServer = async ({
       await sendLogEvent({
         orgId: store?.orgId,
         errorMessage: 'Failed to create metafield for web tracking enabled',
-        data: JSON.stringify({domain}),
+        data: {domain},
         message: EVENT_MESSAGES.WEB_TRACKING_FAILED,
         logLevel: 'ERROR'
       })
@@ -108,7 +108,7 @@ export const toggleWebTrackingServer = async ({
     await sendLogEvent({
       orgId,
       errorMessage: `Error ${enabled ? 'enabling' : 'disabling'} web tracking: ${error.message}`,
-      data: JSON.stringify({domain}),
+      data: {domain},
       message: EVENT_MESSAGES.WEB_TRACKING_FAILED,
       logLevel: 'ERROR'
     })

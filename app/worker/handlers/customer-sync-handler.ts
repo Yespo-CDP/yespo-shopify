@@ -134,12 +134,12 @@ export const customerSyncHandler = async (
             await sendLogEvent({
               orgId,
               errorMessage: '',
-              data: JSON.stringify({
+              data: {
                 domain: shop,
                 offset: CUSTOMERS_CHUNK_SIZE,
                 responseBody: contactsUpdateResponse,
                 statusCode: 200
-              }),
+              },
               message: EVENT_MESSAGES.SEND_CONTACTS_BULK_SUCCESS,
               logLevel: 'INFO'
             })
@@ -176,12 +176,12 @@ export const customerSyncHandler = async (
         await sendLogEvent({
           orgId,
           errorMessage: `Error bulk customers sync ${error?.message}`,
-          data: JSON.stringify({
+          data: {
             domain: shop,
             offset: CUSTOMERS_CHUNK_SIZE,
             responseBody: {},
             statusCode: error?.status ?? 400
-          }),
+          },
           message: EVENT_MESSAGES.SEND_CONTACTS_BULK_FAILED,
           logLevel: 'ERROR'
         })
