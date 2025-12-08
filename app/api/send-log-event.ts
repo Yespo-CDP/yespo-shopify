@@ -66,7 +66,7 @@ export const sendLogEvent = async ({
     orgId: orgId,
     typeCMS: 'Shopify',
     errorMessage,
-    data,
+    data: JSON.stringify(data),
     message,
     log_level: logLevel
   }
