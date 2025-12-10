@@ -55,7 +55,7 @@ export const sendLogEvent = async ({
   message,
   logLevel
 }: LogEvent): Promise<void> => {
-  const url = `${process.env.WEB_TRACKER_URL}`;
+  const url = `${process.env.LOGGING_URL}`;
 
   if (!orgId) {
     console.log('OrgId is not provided for logging')
