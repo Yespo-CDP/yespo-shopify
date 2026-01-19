@@ -12,6 +12,7 @@ async function main() {
     .use(initReactI18next) // Tell i18next to use the react-i18next plugin
     .init({
       ...i18n,
+      lng: navigator.language.split('-')[0] || 'en',
     });
 
   startTransition(() => {
