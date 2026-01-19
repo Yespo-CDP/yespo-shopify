@@ -1,11 +1,19 @@
 import en from "~/locales/en.json";
 import pl from "~/locales/pl.json";
 import pt from "~/locales/pt.json";
+import es from "~/locales/es.json";
+import it from "~/locales/it.json";
+import de from "~/locales/de.json";
+import fr from "~/locales/fr.json";
 
 export const supportedLngsOptions = [
   { label: "English", value: "en" },
   { label: "Polish", value: "pl" },
   { label: "Portuguese", value: "pt" },
+  { label: "Spanish", value: "es" },
+  { label: "Italian", value: "it" },
+  { label: "German", value: "de" },
+  { label: "French", value: "fr" },
 ];
 
 // This is the list of languages your application supports
@@ -23,4 +31,8 @@ export const resources = {
   en: { translation: en },
   pl: { translation: pl },
   pt: { translation: pt },
+  es: { translation: es },
+  it: { translation: it },
+  de: { translation: de },
+  fr: { translation: fr },
 };
