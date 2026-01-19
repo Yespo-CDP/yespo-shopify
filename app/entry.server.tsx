@@ -52,6 +52,8 @@ async function handleBrowserRequest(
     ns,
   });
 
+  console.log('>>>>>>>>>>>>>>>>>',lng, '<<<<<<<<<<<<<<<<<<<<<<<')
+
   addDocumentResponseHeaders(request, responseHeaders);
   const userAgent = request.headers.get("user-agent");
   const callbackName = isbot(userAgent ?? "") ? "onAllReady" : "onShellReady";
