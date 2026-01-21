@@ -10,7 +10,7 @@ import { createInstance } from "i18next";
 import { type EntryContext } from "react-router";
 
 import { addDocumentResponseHeaders } from "~/shopify.server";
-import i18nServer from "~/i18n.server";
+import i18nServer, { localeCookie } from "~/i18n.server";
 import * as i18n from "~/i18n";
 
 export const streamTimeout = 5000;
@@ -45,6 +45,7 @@ async function handleBrowserRequest(
   const instance = createInstance();
   const lng = await i18nServer.getLocale(request);
   const ns = i18nServer.getRouteNamespaces(routerContext);
+  const serializedCookie = await localeCookie.serialize(lng);
 
   await instance.use(initReactI18next).init({
     ...i18n,
@@ -53,6 +54,7 @@ async function handleBrowserRequest(
   });
 
   addDocumentResponseHeaders(request, responseHeaders);
+  responseHeaders.append("Set-Cookie", serializedCookie);
   const userAgent = request.headers.get("user-agent");
   const callbackName = isbot(userAgent ?? "") ? "onAllReady" : "onShellReady";
 
@@ -104,6 +106,7 @@ async function handleBotRequest(
   const instance = createInstance();
   const lng = await i18nServer.getLocale(request);
   const ns = i18nServer.getRouteNamespaces(routerContext);
+  const serializedCookie = await localeCookie.serialize(lng);
 
   await instance.use(initReactI18next).init({
     ...i18n,
@@ -111,6 +114,7 @@ async function handleBotRequest(
     ns,
   });
 
+  responseHeaders.append("Set-Cookie", serializedCookie);
   return new Promise((resolve, reject) => {
     let shellRendered = false;
     const { pipe, abort } = renderToPipeableStream(

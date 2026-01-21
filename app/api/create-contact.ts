@@ -51,7 +51,7 @@ export const createContact = async ({
         responseBody: response.responseData,
         statusCode: response.status
       },
-      message: EVENT_MESSAGES.WEB_TRACKING_CUSTOMER_DATA_SUCCESS,
+      message: EVENT_MESSAGES.CUSTOM_LOG_CREATE_YESPO_CONTACT_SUCCESS,
       logLevel: 'INFO'
     })
 
@@ -67,7 +67,7 @@ export const createContact = async ({
         responseBody: error,
         statusCode: error?.status ?? 400
       },
-      message: EVENT_MESSAGES.WEB_TRACKING_CUSTOMER_DATA_ERROR,
+      message: EVENT_MESSAGES.CUSTOM_LOG_CREATE_YESPO_CONTACT_ERROR,
       logLevel: 'ERROR'
     })
 
