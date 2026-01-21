@@ -59,7 +59,7 @@ export const updateContacts = async ({
         responseBody: res.responseData,
         statusCode: res.status
       }),
-      message: EVENT_MESSAGES.WEB_TRACKING_CUSTOMER_DATA_SUCCESS,
+      message: EVENT_MESSAGES.CUSTOM_LOG_UPDATE_YESPO_CONTACTS_SUCCESS,
       logLevel: 'INFO'
     })
 
@@ -76,7 +76,7 @@ export const updateContacts = async ({
         responseBody: error,
         statusCode: error?.status ?? 400
       }),
-      message: EVENT_MESSAGES.WEB_TRACKING_CUSTOMER_DATA_ERROR,
+      message: EVENT_MESSAGES.CUSTOM_LOG_UPDATE_YESPO_CONTACTS_ERROR,
       logLevel: 'ERROR'
     })
     if (!error?.message?.includes("Duplicated request")) {
