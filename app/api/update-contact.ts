@@ -51,7 +51,7 @@ export const updateContact = async ({
         responseBody: response.responseData,
         statusCode: response.status
       },
-      message: EVENT_MESSAGES.CUSTOM_LOG_UPDATE_YESPO_CONTACT_SUCCESS,
+      message: EVENT_MESSAGES.UPDATE_CONTACT_SUCCESS,
       logLevel: 'INFO'
     })
 
@@ -68,7 +68,7 @@ export const updateContact = async ({
         responseBody: error,
         statusCode: error?.status ?? 400
       },
-      message: EVENT_MESSAGES.CUSTOM_LOG_UPDATE_YESPO_CONTACT_ERROR,
+      message: EVENT_MESSAGES.UPDATE_CONTACT_FAILED,
       logLevel: 'ERROR'
     })
 
