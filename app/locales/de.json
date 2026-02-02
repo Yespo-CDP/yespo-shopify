@@ -1,0 +1,191 @@
+{
+    "WelcomeSection": {
+      "title": "Willkommen in der Yespo App",
+      "description": "Wir freuen uns, Sie hier zu haben! Yespo wurde entwickelt, um E-Commerce-Shops ein vollständiges Toolkit für Marketing-Automatisierung bereitzustellen. Wenn Sie Fragen zur Nutzung unserer App haben, deckt unser <supportLink>Support-Artikel</supportLink> alles ab, was Sie benötigen. Sollten Sie weitere Hilfe benötigen, zögern Sie nicht, uns per E-Mail zu kontaktieren. Willkommen an Bord!"
+    },
+    "UnsupportedMarketsSection": {
+      "title": "Achtung!",
+      "description": "Die App unterstützt nur einen aktiven Markt.",
+      "button": "Zu den Einstellungen"
+    },
+    "AccountConnectionSection": {
+      "title": "Kontoverbindung",
+      "helpText": "Wenn Sie Hilfe benötigen",
+      "connectText": "Verbinden Sie Ihr Yespo-Konto mithilfe des <fullAccessLink>Full-Access-API-Schlüssels</fullAccessLink>. Sie finden den Schlüssel in Ihrem Yespo-Konto: <apiKeysLink>Yespo API-Schlüssel</apiKeysLink>.",
+      "status": {
+        "active": "Aktiv",
+        "inactive": "Inaktiv"
+      },
+      "account": "Konto",
+      "button": {
+        "connect": "Verbinden",
+        "disconnect": "Trennen"
+      },
+      "link": "https://docs.yespo.io/reference/api-keys",
+      "success": "API-Schlüssel aktualisiert",
+      "errors": {
+        "invalidApiKey": "Ungültiger API-Schlüssel",
+        "emptyApiKey": "API-Schlüssel ist erforderlich",
+        "unknownError": "Unbekannter Fehler"
+      }
+    },
+    "WebTrackingSection": {
+      "title": "Web-Tracking",
+      "description": "Web-Tracking ermöglicht die Analyse des Nutzerverhaltens auf Ihrer Website",
+      "enable": "Aktivieren",
+      "disable": "Deaktivieren",
+      "status": {
+        "enabled": "Aktiviert",
+        "disabled": "Deaktiviert"
+      },
+      "errors": {
+        "notEnabled": "Web-Tracking ist nicht aktiviert",
+        "notDisabled": "Web-Tracking ist nicht deaktiviert"
+      }
+    },
+    "CategorySettings": {
+      "title": "Kategorieeinstellungen",
+      "sectionTitle": "Kollektionen",
+      "description": "Wir empfehlen, das Mapping der Kollektionen für den Feed zu konfigurieren, den Sie Yespo bereitgestellt haben.\nIdealerweise sollten Sie den Wert der Kollektion dem Produkttyp-Wert in Ihrem Yespo-Feed zuordnen. Dadurch wird eine korrekte Datensynchronisation sichergestellt und die Genauigkeit der Produktkategorisierung verbessert.",
+      "breadcrumbs": {
+        "mainPage": "Hauptseite"
+      },
+      "collectionsEmpty": "Keine Kollektionen gefunden",
+      "noResults": "Keine Ergebnisse gefunden",
+      "categorySearch": "Beginnen Sie mit der Eingabe, um Kategorien zu suchen",
+      "loading": "Laden...",
+      "searchLabel": "Kollektionen suchen",
+      "searchPlaceholder": "Nach Kollektionsname suchen",
+      "table": {
+        "heading": {
+          "collectionName": "Name der Kollektion",
+          "selectEntity": "Entität auswählen",
+          "setUpValue": "Kategoriewert festlegen"
+        },
+        "fields": {
+          "selectEntity": "Entität auswählen",
+          "selectType": "Typ auswählen",
+          "searchTypes": "Typen suchen",
+          "selectCategory": "Kategorie auswählen",
+          "searchCategories": "Kategorien suchen",
+          "search": "Suchen"
+        }
+      }
+    },
+    "DataSyncSection": {
+      "title": "Datensynchronisierung",
+      "description": "Die Datensynchronisierung ermöglicht das Synchronisieren von Kunden und Bestellungen von Shopify mit Yespo.",
+      "enable": "Aktivieren",
+      "disable": "Deaktivieren",
+      "status": {
+        "enabled": "Aktiviert",
+        "disabled": "Deaktiviert"
+      },
+      "syncLog": {
+        "title": "Synchronisierung historischer Daten",
+        "orders": "Bestellungen",
+        "customers": "Kunden",
+        "syncedCount": "Synchronisiert",
+        "skippedCount": "Übersprungen",
+        "failedCount": "Fehlgeschlagen",
+        "totalCount": "Gesamt"
+      },
+      "tooltip": {
+        "synchronized": "Anzahl der erfolgreich synchronisierten Datensätze.",
+        "skipped": "Datensätze, die keine Synchronisierung erforderten.",
+        "failed": "Datensätze, deren Synchronisierung fehlgeschlagen ist.",
+        "total": "Gesamtanzahl der zu synchronisierenden Datensätze."
+      },
+      "errors": {
+        "notEnabled": "Datensynchronisierung ist nicht aktiviert",
+        "notDisabled": "Datensynchronisierung ist nicht deaktiviert"
+      }
+    },
+    "ConnectionStatusSection": {
+      "title": "Skript-Integration",
+      "refresh": "Aktualisieren",
+      "list": {
+        "first": "Sobald das Konto verbunden ist, müssen die Skripte installiert werden. Klicken Sie dazu auf die entsprechende Schaltfläche und aktivieren Sie die Theme-Erweiterung. Wenn eines der Skripte fehlerhaft ist, wird es nach der Aktivierung der Erweiterung nicht installiert, bis das Problem behoben ist. Wenn beide Skripte fehlerhaft sind, ist die Aktivierung der Theme-Erweiterung nicht verfügbar und es werden keine Skripte hinzugefügt. Die Erweiterung muss nur einmal aktiviert werden.",
+        "second": "Nach der Installation der Skripte können Sie mit der weiteren Konfiguration in Yespo fortfahren.",
+        "third": "Nach der Installation der Skripte können Sie mit der weiteren Konfiguration in Yespo fortfahren.",
+        "more": "Für detailliertere Informationen folgen Sie diesem <detailedLink>Link</detailedLink> oder kontaktieren Sie den <supportLink>Yespo-Support</supportLink>."
+      },
+      "banner": {
+        "connected": "Skripte sind installiert",
+        "incomplete": "Skripte sind teilweise installiert",
+        "disconnected": "Skripte sind nicht installiert",
+        "generalScriptError": "Beim Website-Skript ist ein Fehler aufgetreten. Bitte kontaktieren Sie den Support und versuchen Sie es erneut.",
+        "generalScriptInstalled": "Website-Skript ist installiert.",
+        "generalScriptReady": "Website-Skript ist bereit zur Installation. Bitte aktivieren Sie die Theme-Erweiterung.",
+        "webPushScriptError": "Beim Web-Push-Skript ist ein Fehler aufgetreten. Bitte kontaktieren Sie den Support und versuchen Sie es erneut.",
+        "webPushScriptInstalled": "Web-Push-Skript ist installiert.",
+        "webPushScriptReady": "Web-Push-Skript ist bereit zur Installation. Bitte aktivieren Sie die Theme-Erweiterung."
+      },
+      "button": {
+        "configure": "Skripte installieren",
+        "tryAgain": "Erneut versuchen",
+        "activateThemeExtension": "Theme-Erweiterung aktivieren"
+      },
+      "success": "Erfolgreich installiert.",
+      "errors": {
+        "requestScriptError": "Fehler beim Anfordern des Skripts",
+        "createGeneralDomainError": "Fehler beim Erstellen der allgemeinen Domain",
+        "createWebPushDomainError": "Fehler beim Erstellen der Web-Push-Domain",
+        "domainAlreadyRegisteredError": "Domain ist bereits registriert.",
+        "domainCantBeReachedError": "Domain ist nicht erreichbar.",
+        "support": "Bitte wenden Sie sich an den Yespo-Support."
+      }
+    },
+    "UsefulLinksSection": {
+      "title": "Nützliche Links",
+      "helpText": "Hier finden Sie einige Links, die Ihnen den Einstieg in unsere Software erleichtern:",
+      "links": [
+        {
+          "description": "Erkunden Sie alle Funktionen von Yespo CDP, einschließlich fortgeschrittener AI-Funktionen und 9 Marketing-Kanälen.",
+          "label": "https://yespo.io",
+          "url": "https://yespo.io"
+        },
+        {
+          "description": "Der Schnellstart-Guide",
+          "label": "https://docs.yespo.io/docs/support",
+          "url": "https://docs.yespo.io/docs/support"
+        },
+        {
+          "description": "Web Push-Einstellungen",
+          "label": "https://docs.yespo.io/docs/web-push",
+          "url": "https://docs.yespo.io/docs/web-push"
+        },
+        {
+          "description": "Widgets-Einstellungen",
+          "label": "https://docs.yespo.io/docs/widgets",
+          "url": "https://docs.yespo.io/docs/widgets"
+        },
+        {
+          "description": "GDPR-Konformitätsdaten",
+          "label": "https://docs.yespo.io/docs/gdpr-compliance",
+          "url": "https://docs.yespo.io/docs/gdpr-compliance"
+        },
+        {
+          "description": "Ereignis- und Verhaltensverfolgung",
+          "label": "https://docs.yespo.io/docs/gdpr-compliance",
+          "url": "https://docs.yespo.io/docs/gdpr-compliance"
+        },
+        {
+          "description": "Entwickler-Guide",
+          "label": "https://docs.yespo.io/reference/getting-started-with-your-api",
+          "url": "https://docs.yespo.io/reference/getting-started-with-your-api"
+        },
+        {
+          "description": "Kontakt-E-Mail",
+          "label": "support@yespo.io",
+          "url": "mailto:support@yespo.io"
+        }
+      ]
+    },
+    "General": {
+      "errors": {
+        "shopNotFound": "Shop nicht gefunden"
+      }
+    }
+  }
+  

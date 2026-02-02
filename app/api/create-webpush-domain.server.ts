@@ -57,17 +57,13 @@ export const createWebPushDomain = async ({
   domain: string;
   orgId?: number | null;
 }): Promise<{ result: string }> => {
-  const url = `${process.env.API_URL}/site/webpush/domains`;
+  const url = `${process.env.API_URL}/site/webpush/domain`;
   const authHeader = getAuthHeader(apiKey);
   const requestBody = {
-    domains: [
-      {
-        domain: `https://${domain}`,
-        serviceWorkerName: SERVICE_WORKER_NAME,
-        serviceWorkerPath: SERVICE_WORKER_PATH,
-        serviceWorkerScope: SERVICE_WORKER_PATH,
-      },
-    ],
+      domain: `https://${domain}`,
+      serviceWorkerName: SERVICE_WORKER_NAME,
+      serviceWorkerPath: SERVICE_WORKER_PATH,
+      serviceWorkerScope: SERVICE_WORKER_PATH,
   }
   const options = {
     method: "POST",
@@ -83,6 +79,7 @@ export const createWebPushDomain = async ({
       url,
       options,
     ));
+
     const response = res.responseData as WebPushDomainResponse;
 
     if (response?.errors?.message?.includes("Domain can't be reached")) {

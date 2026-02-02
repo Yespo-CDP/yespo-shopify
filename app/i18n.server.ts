@@ -29,22 +29,40 @@ class ReactRouterI18Next {
     this.i18nextConfig = config.i18next;
   }
 
+  private normalizeLanguage(lang: string | null) {
+    if (!lang) return null;
+    const lower = lang.toLowerCase();
+    if (this.supportedLanguages.includes(lower)) return lower;
+    const base = lower.split("-")[0];
+    if (this.supportedLanguages.includes(base)) return base;
+    return null;
+  }
+
   async getLocale(request: Request): Promise<string> {
-    const cookieHeader = request.headers.get("Cookie");
-    const cookieValue = await this.cookie.parse(cookieHeader || "");
-    if (cookieValue) {
-      return cookieValue;
+    // 1) Shopify embeds sends locale in query (?locale=fr), this is the most accurate source
+    const urlLocale = new URL(request.url).searchParams.get("locale");
+    const normalizedUrlLocale = this.normalizeLanguage(urlLocale);
+    if (normalizedUrlLocale) {
+      return normalizedUrlLocale;
     }
 
+    // 2) cookie, we set in the response
+    const cookieHeader = request.headers.get("Cookie");
+    const cookieValue = await this.cookie.parse(cookieHeader || "");
+    const normalizedCookie = this.normalizeLanguage(cookieValue);
+    if (normalizedCookie) {
+      return normalizedCookie;
+    }
+
+    // 3) Accept-Language as fallback
     const acceptLanguage = request.headers.get("Accept-Language");
     if (acceptLanguage) {
       const languages = acceptLanguage
         .split(",")
         .map((lang) => lang.split(";")[0].trim().toLowerCase());
       for (const lang of languages) {
-        if (this.supportedLanguages.includes(lang)) {
-          return lang;
-        }
+        const normalized = this.normalizeLanguage(lang);
+        if (normalized) return normalized;
       }
     }
 

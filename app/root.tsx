@@ -5,10 +5,13 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
+import { useTranslation } from "react-i18next";
 
 export default function App() {
+  const { i18n } = useTranslation();
+
   return (
-    <html>
+    <html lang={i18n.language || "en"}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />

@@ -94,7 +94,7 @@ const AccountConnectionSection: FC<AccountConnectionSectionProps> = ({
           <Form method="post" name="account-connection">
             <input type="hidden" name="intent" value="account-connection"/>
             <s-stack gap="base">
-              <s-grid gridTemplateColumns="1fr auto" gap="base" alignItems="start">
+              <s-grid gridTemplateColumns="1fr auto" gap="base" alignItems="end">
                 <s-grid-item>
                   <s-password-field
                     value={value}
@@ -107,7 +107,7 @@ const AccountConnectionSection: FC<AccountConnectionSectionProps> = ({
                   />
                 </s-grid-item>
                 <s-grid-item>
-                  <s-box paddingBlockStart="large">
+                  <s-box paddingBlockEnd="small-500">
                     {account ? (
                       <s-button
                         variant="primary"
