@@ -34,6 +34,7 @@
       "description": "Web-Tracking ermöglicht die Analyse des Nutzerverhaltens auf Ihrer Website",
       "enable": "Aktivieren",
       "disable": "Deaktivieren",
+      "categorySettings": "Kategorieeinstellungen",
       "status": {
         "enabled": "Aktiviert",
         "disabled": "Deaktiviert"
@@ -99,6 +100,12 @@
       "errors": {
         "notEnabled": "Datensynchronisierung ist nicht aktiviert",
         "notDisabled": "Datensynchronisierung ist nicht deaktiviert"
+      },
+      "statusBadge": {
+        "error": "Fehler",
+        "inProgress": "In Arbeit",
+        "complete": "Abgeschlossen",
+        "notStarted": "Nicht gestartet"
       }
     },
     "ConnectionStatusSection": {

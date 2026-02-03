@@ -34,6 +34,7 @@
     "description": "O rastreamento da Web permite analisar o comportamento do usuário em seu site",
     "enable": "Habilitar",
     "disable": "Desativar",
+    "categorySettings": "Configurações de categoria",
     "status": {
       "enabled": "Habilitado",
       "disabled": "Desabilitado"
@@ -98,6 +99,12 @@
     "errors": {
       "notEnabled": "A sincronização de dados não ativado",
       "notDisabled": "A sincronização de dados não desativado"
+    },
+    "statusBadge": {
+      "error": "Erro",
+      "inProgress": "Em progresso",
+      "complete": "Completo",
+      "notStarted": "Não iniciado"
     }
   },
   "ConnectionStatusSection": {

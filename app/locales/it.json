@@ -34,6 +34,7 @@
       "description": "Il monitoraggio web consente di analizzare il comportamento degli utenti sul tuo sito",
       "enable": "Abilita",
       "disable": "Disabilita",
+      "categorySettings": "Impostazioni categorie",
       "status": {
         "enabled": "Abilitato",
         "disabled": "Disabilitato"
@@ -99,6 +100,12 @@
       "errors": {
         "notEnabled": "La sincronizzazione dei dati non è abilitata",
         "notDisabled": "La sincronizzazione dei dati non è disabilitata"
+      },
+      "statusBadge": {
+        "error": "Errore",
+        "inProgress": "In corso",
+        "complete": "Completato",
+        "notStarted": "Non iniziato"
       }
     },
     "ConnectionStatusSection": {

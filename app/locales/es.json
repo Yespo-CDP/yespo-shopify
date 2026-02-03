@@ -34,6 +34,7 @@
       "description": "El seguimiento web permite analizar el comportamiento de los usuarios en tu sitio web",
       "enable": "Habilitar",
       "disable": "Deshabilitar",
+      "categorySettings": "Configuración de categorías",
       "status": {
         "enabled": "Habilitado",
         "disabled": "Deshabilitado"
@@ -99,6 +100,12 @@
       "errors": {
         "notEnabled": "La sincronización de datos no está habilitada",
         "notDisabled": "La sincronización de datos no está deshabilitada"
+      },
+      "statusBadge": {
+        "error": "Error",
+        "inProgress": "En progreso",
+        "complete": "Completado",
+        "notStarted": "No iniciado"
       }
     },
     "ConnectionStatusSection": {

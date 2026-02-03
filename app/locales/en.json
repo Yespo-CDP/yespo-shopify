@@ -34,6 +34,7 @@
     "description": "Web tracking enables to analyse user behavior on your website",
     "enable": "Enable",
     "disable": "Disable",
+    "categorySettings": "Category Settings",
     "status": {
       "enabled": "Enabled",
       "disabled": "Disabled"
@@ -77,6 +78,7 @@
     "description": "Data sync allows syncing customers and orders from Shopify with Yespo.",
     "enable": "Enable",
     "disable": "Disable",
+
     "status": {
       "enabled": "Enabled",
       "disabled": "Disabled"
@@ -99,6 +101,12 @@
     "errors": {
       "notEnabled": "Data sync not enabled",
       "notDisabled": "Data sync not disabled"
+    },
+    "statusBadge": {
+      "error": "Error",
+      "inProgress": "In progress",
+      "complete": "Complete",
+      "notStarted": "Not started"
     }
   },
   "ConnectionStatusSection": {

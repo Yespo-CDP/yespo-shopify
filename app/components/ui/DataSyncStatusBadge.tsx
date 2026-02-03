@@ -1,6 +1,7 @@
 import type { FC } from "react";
 
 import type { SyncLogStatus } from "~/@types/customerSyncLog";
+import { useTranslation } from "react-i18next";
 
 /**
  * Props for the DataSyncStatusBadge component.
@@ -24,27 +25,29 @@ interface DataSyncStatusBadgeProps {
  * />
  */
 const DataSyncStatusBadge: FC<DataSyncStatusBadgeProps> = ({ status }) => {
+  const { t } = useTranslation();
+
   switch (status) {
     case "ERROR":
       return (
         <s-badge tone="critical" >
-          Error
+          {t("DataSyncSection.statusBadge.error")}
         </s-badge>
       );
     case "IN_PROGRESS":
       return (
         <s-badge tone="info">
-          In progress
+          {t("DataSyncSection.statusBadge.inProgress")}
         </s-badge>
       );
     case "COMPLETE":
       return (
         <s-badge tone="success">
-          Complete
+          {t("DataSyncSection.statusBadge.complete")}
         </s-badge>
       );
     default:
-      return <s-badge>Not started</s-badge>;
+      return <s-badge>{t("DataSyncSection.statusBadge.notStarted")}</s-badge>;
   }
 };
 

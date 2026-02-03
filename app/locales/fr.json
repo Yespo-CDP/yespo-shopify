@@ -34,6 +34,7 @@
       "description": "Le suivi web permet d’analyser le comportement des utilisateurs sur votre site",
       "enable": "Activer",
       "disable": "Désactiver",
+      "categorySettings": "Paramètres des catégories",
       "status": {
         "enabled": "Activé",
         "disabled": "Désactivé"
@@ -99,6 +100,12 @@
       "errors": {
         "notEnabled": "La synchronisation des données n’est pas activée",
         "notDisabled": "La synchronisation des données n’est pas désactivée"
+      },
+      "statusBadge": {
+        "error": "Erreur",
+        "inProgress": "En cours",
+        "complete": "Complet",
+        "notStarted": "Non démarré"
       }
     },
     "ConnectionStatusSection": {

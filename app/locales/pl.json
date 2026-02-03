@@ -34,6 +34,7 @@
     "description": "Śledzenie sieci pozwala analizować zachowanie użytkowników na Twojej stronie internetowej",
     "enable": "Włączać",
     "disable": "Wyłączyć",
+    "categorySettings": "Ustawienia kategorii",
     "status": {
       "enabled": "Włączony",
       "disabled": "Wyłączony"
@@ -98,6 +99,12 @@
     "errors": {
       "notEnabled": "Synchronizacja danych nie jest włączone",
       "notDisabled": "Synchronizacja danych nie jest wyłączone"
+    },
+    "statusBadge": {
+      "error": "Błąd",
+      "inProgress": "W trakcie",
+      "complete": "Zakończone",
+      "notStarted": "Nie rozpoczęte"
     }
   },
   "ConnectionStatusSection": {
