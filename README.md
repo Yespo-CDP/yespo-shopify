@@ -522,6 +522,75 @@ App proxy is used for web push notifications.
 - Subpath: `yespo-proxy`
 - Proxy URL: `https://push.yespo.tech/`
 
+### Events (App Logs)
+App logs are sent to the Tracker service via `sendLogEvent` using `EVENT_MESSAGES` values.
+
+#### Standard event messages
+| Message | Description |
+| --- | --- |
+| `ADD_API_KEY_SUCCESS` | API key was saved and account connected. |
+| `ADD_API_KEY_FAILED` | API key validation/connection failed. |
+| `ADD_DOMAIN_SUCCESS` | Store domain was added in Yespo. |
+| `ADD_DOMAIN_FAILED` | Failed to add store domain in Yespo. |
+| `INSERT_SITE_SCRIPT_SUCCESS` | General site script was inserted into the theme. |
+| `INSERT_SITE_SCRIPT_FAILED` | Failed to insert the general site script. |
+| `GET_SCRIPT_SUCCESS` | General site script was retrieved from Yespo. |
+| `GET_SCRIPT_FAILED` | Failed to retrieve the general site script. |
+| `ADD_WEB_PUSH_DOMAIN_SUCCESS` | Web push domain was registered in Yespo. |
+| `ADD_WEB_PUSH_DOMAIN_FAILED` | Failed to register web push domain. |
+| `GET_WEB_PUSH_DOMAIN_SUCCESS` | Web push script/domain was retrieved for the store. |
+| `GET_WEB_PUSH_DOMAIN_FAILED` | Failed to retrieve the web push script/domain. |
+| `INSERT_WEB_PUSH_SCRIPT_SUCCESS` | Web push script was inserted into the theme. |
+| `INSERT_WEB_PUSH_SCRIPT_FAILED` | Failed to insert the web push script. |
+| `ADD_SERVICE_WORKER_SUCCESS` | Service worker was added/updated for web push. |
+| `ADD_SERVICE_WORKER_FAILED` | Failed to add/update the service worker. |
+| `DATA_SYNC_ENABLED` | Data sync was enabled. |
+| `DATA_SYNC_DISABLED` | Data sync was disabled. |
+| `DATA_SYNC_FAILED` | Data sync toggle failed. |
+| `SEND_CONTACTS_BULK_SUCCESS` | Contacts batch was sent to Yespo. |
+| `SEND_CONTACTS_BULK_FAILED` | Failed to send contacts batch to Yespo. |
+| `SEND_ORDERS_BULK_SUCCESS` | Orders batch was sent to Yespo. |
+| `SEND_ORDERS_BULK_FAILED` | Failed to send orders batch to Yespo. |
+| `WEB_TRACKING_ENABLED` | Web tracking was enabled. |
+| `WEB_TRACKING_DISABLED` | Web tracking was disabled. |
+| `WEB_TRACKING_FAILED` | Web tracking toggle or request failed. |
+| `WEB_TRACKING_STATUSCART_SUCCESS` | Status cart event was sent. |
+| `WEB_TRACKING_STATUSCART_ERROR` | Failed to send status cart event. |
+| `WEB_TRACKING_PURCHASED_ITEMS_SUCCESS` | Purchased items event was sent. |
+| `WEB_TRACKING_PURCHASED_ITEMS_ERROR` | Failed to send purchased items event. |
+| `WEB_TRACKING_CUSTOMER_DATA_SUCCESS` | Customer data event was sent. |
+| `WEB_TRACKING_CUSTOMER_DATA_ERROR` | Failed to send customer data event. |
+
+#### Custom log messages
+| Message | Description |
+| --- | --- |
+| `CUSTOM_LOG_SEND_ACCESS_TOKEN_ERROR` | Failed to send Shopify access token to Yespo. |
+| `CUSTOM_LOG_DELETE_ACCESS_TOKEN_ERROR` | Failed to delete Shopify access token in Yespo. |
+| `CUSTOM_LOG_DISCONNECT_ACCOUNT_ERROR` | Account disconnect flow failed. |
+| `CUSTOM_LOG_GET_ACCOUNT_INFO_ERROR` | Failed to fetch account info from Yespo. |
+| `CUSTOM_LOG_GET_STORE_THEME_ERROR` | Failed to fetch store theme from Shopify. |
+| `CUSTOM_LOG_CHECK_THEME_EXTENSION_ERROR` | Failed to check theme extension status. |
+| `CUSTOM_LOG_CREATE_YESPO_ORDERS_ERROR` | Failed to create orders in Yespo. |
+| `CUSTOM_LOG_DELETE_YESPO_CONTACTS_ERROR` | Failed to delete contacts in Yespo. |
+| `CUSTOM_LOG_CHECK_SHOPIFY_MARKETS_ERROR` | Failed to fetch/check Shopify Markets. |
+| `CUSTOM_LOG_UPDATE_YESPO_CONTACTS_SUCCESS` | Contacts bulk update was sent to Yespo. |
+| `CUSTOM_LOG_UPDATE_YESPO_CONTACTS_ERROR` | Failed to update contacts in Yespo. |
+| `CREATE_CONTACT_SUCCESS` | Contact was created in Yespo. |
+| `CREATE_CONTACT_FAILED` | Failed to create contact in Yespo. |
+| `UPDATE_CONTACT_SUCCESS` | Contact was updated in Yespo. |
+| `UPDATE_CONTACT_FAILED` | Failed to update contact in Yespo. |
+
+### Supported Languages
+The UI language follows the Shopify Admin locale. If the locale is not supported, the app falls back to `en`.
+
+Supported languages:
+- English (`en`)
+- Polish (`pl`)
+- Portuguese (`pt`)
+- Spanish (`es`)
+- Italian (`it`)
+- German (`de`)
+- French (`fr`)
 
 ### Development:
 
