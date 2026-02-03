@@ -61,7 +61,7 @@ const WebTrackingSection = ({
 
         <s-stack direction={'inline'} gap={'small-200'}>
           <s-button href='category-settings' variant={'primary'} disabled={disabled || fetcher.state === "submitting" || !webTrackerEnabled}>
-            Category Settings
+            {t("WebTrackingSection.categorySettings")}
           </s-button>
           {
             webTrackerEnabled && isScriptsActive ? (
