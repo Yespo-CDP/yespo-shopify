@@ -121,6 +121,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     script?: string;
     webTracking?: string;
     dataSync?: string;
+    appInbox?: string;
   } = {};
   const success: {
     apiKey?: boolean;
@@ -426,5 +427,43 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       isWebPushScriptInstalled
     })
   }
+
+  if (intent === "app-inbox-enable") {
+    const shop = await shopRepository.getShop(session.shop);
+    try {
+      if (!shop) {
+        errors.appInbox = t("General.errors.shopNotFound");
+        return { success, errors };
+      }
+
+      await shopRepository.updateShop(shop.domain, {
+        isAppInboxEnabled: true,
+      });
+
+      //TODO: add logger
+    } catch (error: any) {
+      errors.dataSync = t("DataSyncSection.errors.notEnabled");
+      return { success, errors };
+    }
+  }
+  if (intent === "app-inbox-disable") {
+    const shop = await shopRepository.getShop(session.shop);
+    try {
+      if (!shop) {
+        errors.appInbox = t("General.errors.shopNotFound");
+        return { success, errors };
+      }
+
+      await shopRepository.updateShop(shop.domain, {
+        isAppInboxEnabled: false,
+      });
+      //TODO: add logger
+    } catch (error: any) {
+      errors.dataSync = t("DataSyncSection.errors.notDisabled");
+      return { success, errors };
+    }
+  }
+
+
   return { success, errors };
 };

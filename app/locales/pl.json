@@ -107,6 +107,20 @@
       "notStarted": "Nie rozpoczęte"
     }
   },
+   "AppInboxSection": {
+     "title": "Skrzynka odbiorcza aplikacji",
+      "description": "Skrzynka odbiorcza aplikacji to kanał komunikacji, który umożliwia dostarczanie bogatych, spersonalizowanych treści bezpośrednio w aplikacji mobilnej lub na stronie internetowej.",
+      "enable": "Włącz",
+      "disable": "Wyłącz",
+      "status": {
+        "enabled": "Włączone",
+        "disabled": "Wyłączone"
+      },
+      "errors": {
+        "notEnabled": "Skrzynka odbiorcza aplikacji nie jest włączona",
+        "notDisabled": "Skrzynka odbiorcza aplikacji nie jest wyłączona"
+     }
+   },
   "ConnectionStatusSection": {
     "title": "Integracja skryptów",
     "refresh": "Odśwież",

@@ -15,6 +15,7 @@ import UsefulLinksSection from "~/components/UsefulLinksSection";
 import {loaderHandler, actionHandler} from "~/lib/app.server";
 import WebTrackingSection from "~/components/WebTrackingSection";
 import DataSyncSection from "~/components/DataSyncSection";
+import AppInboxSection from "~/components/AppInboxSection";
 
 /**
  * The loader function to fetch initial data for the page.
@@ -175,6 +176,13 @@ export default function Index() {
               isLoading ||
               !shop?.apiKey ||
               (!scriptConnectionStatus?.isGeneralScriptExist && !scriptConnectionStatus?.isWebPushScriptExist)
+            }
+          />
+
+          <AppInboxSection
+            appInboxEnabled={Boolean(shop?.isAppInboxEnabled)}
+            disabled={
+              isMarketsOverflowing || !scriptConnectionStatus?.isGeneralScriptExist || isSubmitting || isLoading || !account
             }
           />
 

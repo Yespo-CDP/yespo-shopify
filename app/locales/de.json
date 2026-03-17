@@ -108,6 +108,20 @@
         "notStarted": "Nicht gestartet"
       }
     },
+    "AppInboxSection": {
+      "title": "APP-Posteingang",
+      "description": "Der App-Posteingang ist ein Kommunikationskanal, mit dem Sie umfangreiche, personalisierte Inhalte direkt in Ihrer mobilen App oder auf Ihrer Website bereitstellen können.",
+      "enable": "Aktivieren",
+      "disable": "Deaktivieren",
+      "status": {
+        "enabled": "Aktiviert",
+        "disabled": "Deaktiviert"
+      },
+      "errors": {
+        "notEnabled": "App-Posteingang ist nicht aktiviert",
+        "notDisabled": "App-Posteingang ist nicht deaktiviert"
+      }
+    },
     "ConnectionStatusSection": {
       "title": "Skript-Integration",
       "refresh": "Aktualisieren",
@@ -195,4 +209,3 @@
       }
     }
   }
-  

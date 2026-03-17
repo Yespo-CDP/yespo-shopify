@@ -108,6 +108,20 @@
         "notStarted": "Non démarré"
       }
     },
+    "AppInboxSection": {
+      "title": "Boîte de réception de l'application",
+      "description": "La boîte de réception de l'application est un canal de communication qui vous permet de fournir du contenu riche et personnalisé directement dans votre application mobile ou sur votre site web.",
+      "enable": "Activer",
+      "disable": "Désactiver",
+      "status": {
+        "enabled": "Activé",
+        "disabled": "Désactivé"
+     },
+      "errors": {
+        "notEnabled": "La boîte de réception de l'application n'est pas activée",
+        "notDisabled": "La boîte de réception de l'application n'est pas désactivée"
+     }
+    },
     "ConnectionStatusSection": {
       "title": "Intégration des scripts",
       "refresh": "Actualiser",
@@ -195,4 +209,3 @@
       }
     }
   }
-  

@@ -44,6 +44,7 @@ model Shop {
   isWebTrackingEnabled        Boolean?  @default(false)
   isContactSyncEnabled        Boolean?  @default(false)
   isOrderSyncEnabled          Boolean?  @default(false)
+  isAppInboxEnabled           Boolean?  @default(false)
   active                      Boolean?  @default(true)
   isGeneralScriptInstalled    Boolean?  @default(false)
   isWebPushScriptInstalled    Boolean?  @default(false)

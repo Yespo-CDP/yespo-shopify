@@ -108,6 +108,20 @@
         "notStarted": "Non iniziato"
       }
     },
+    "AppInboxSection": {
+     "title": "Posta in arrivo dell'app",
+     "description": "La posta in arrivo dell'app è un canale di comunicazione che consente di fornire contenuti ricchi e personalizzati direttamente nella tua app mobile o sul tuo sito web.",
+      "enable": "Abilita",
+      "disable": "Disabilita",
+      "status": {
+        "enabled": "Abilitato",
+        "disabled": "Disabilitato"
+      },
+      "errors": {
+        "notEnabled": "La posta in arrivo dell'app non è abilitata",
+        "notDisabled": "La posta in arrivo dell'app non è disabilitata"
+      }
+   },
     "ConnectionStatusSection": {
       "title": "Integrazione degli script",
       "refresh": "Aggiorna",
@@ -195,4 +209,3 @@
       }
     }
   }
-  
