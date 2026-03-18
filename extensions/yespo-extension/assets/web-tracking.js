@@ -9,6 +9,7 @@ class EventTracker {
     };
 
     this.data = this.getPageData();
+    window.yespo_lang = this.data?.language || navigator.language || 'en';
   }
 
   getPageData() {

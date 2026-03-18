@@ -21,6 +21,7 @@
     "domain":  {{ shop.domain | json }},
     "product": {{ product | json }},
     "currentVariant": {{ current_variant | json }},
+    "language": "{{ localization.language.iso_code }}",
     "collection":
       {% if collection %}
         {
