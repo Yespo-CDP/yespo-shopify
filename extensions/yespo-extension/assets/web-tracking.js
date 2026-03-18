@@ -9,7 +9,10 @@ class EventTracker {
     };
 
     this.data = this.getPageData();
-    window.yespo_lang = this.data?.language || navigator.language || 'en';
+    window.YESPO_APP_CONFIG = {
+      lang_iso_code: this.data?.language || navigator.language || 'en',
+      customer: this.data.customer
+    }
   }
 
   getPageData() {

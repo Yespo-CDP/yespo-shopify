@@ -23,6 +23,7 @@ import {sendAccessTokenService} from "~/services/send-access-token.server";
 import {deleteAccessTokenService} from "~/services/delete-access-token.server";
 import {sendLogEvent} from "~/api/send-log-event";
 import {EVENT_MESSAGES} from "~/config/constants";
+import switchAppInboxScriptServer from "~/services/switch-app-inbox-script-mode.server";
 
 /**
  * Loader function for initializing data needed on the page.
@@ -441,6 +442,12 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       });
 
       //TODO: add logger
+
+      await switchAppInboxScriptServer({
+        enabled: true,
+        admin,
+        shopId: shop.shopId,
+      })
     } catch (error: any) {
       errors.dataSync = t("DataSyncSection.errors.notEnabled");
       return { success, errors };
@@ -458,6 +465,12 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         isAppInboxEnabled: false,
       });
       //TODO: add logger
+
+      await switchAppInboxScriptServer({
+        enabled: false,
+        admin,
+        shopId: shop.shopId,
+      })
     } catch (error: any) {
       errors.dataSync = t("DataSyncSection.errors.notDisabled");
       return { success, errors };
