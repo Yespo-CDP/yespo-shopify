@@ -1,7 +1,75 @@
 {%- assign yespo_script = shop.metafields['$app'].yespo-script -%}
 {%- assign yespo_web_push_script = shop.metafields['$app'].yespo-web-push-script -%}
-{%- assign yespo_web_tracking_enabled = shop.metafields['$app'].web-tracking-enabled -%}
+{%- assign yespo_web_tracking_enabled = shop.metafields['$app'].web-tracking-enabled.value -%}
 {%- assign yespo_app_host = shop.metafields['$app'].yespo-app-host -%}
+
+<script>
+    function yespoAppAuthCallback () {
+       console.log('YESPO AUTH CALLBACK');
+
+       const host = {{ yespo_app_host | json }};
+       const customer = {% if customer %}
+        {
+          id: {{ customer.id | json }},
+          email: {{ customer.email | json }},
+          firstName: {{ customer.first_name | json }},
+          lastName: {{ customer.last_name | json }},
+          phone: {{ customer.phone | json }}
+         }
+        {% else %}
+          null
+          {% endif %};
+       const shop = {{ shop.domain | json }};
+
+      return new Promise((resolve, reject) => {
+        try {
+          if (!customer) {
+            reject('No customer.');
+          }
+
+           if (!shop) {
+              reject('No shop.');
+           }
+
+           const payload = {
+             externalCustomerId: customer.id,
+             email: customer.email ,
+             phone: customer.phone,
+             shop: shop
+           };
+
+           console.log('Yespo get auth token payload', payload)
+           console.log('Yespo get auth token host', host)
+
+           fetch(`${host}/public/app-inbox/get-token`, {
+              method: "POST",
+              body: JSON.stringify(payload),
+              keepalive: true
+            })
+            .then(res => {
+              if (!res.ok) {
+                return res.text().then(text => reject(`HTTP ${res.status}: ${text}`));
+              }
+              return res.json();
+            })
+            .then(data => {
+              console.log('Yespo contact auth token', data.token)
+              resolve(data.token || '')
+            })
+            .catch(err => reject(err));
+        } catch (e) {
+          console.error("[YespoAppAuthCallback] Exception:", e);
+          return;
+        }
+      })
+    }
+</script>
+
+<script>
+    function yespoGetCurrentLanguage () {
+       return "{{ localization.language.iso_code }}" || navigator.language || 'en';
+    }
+</script>
 
 {% if yespo_script != blank %}
   {{ yespo_script }}
@@ -48,7 +116,9 @@
   }
 </script>
 
-{% if yespo_web_tracking_enabled %}
+
+
+{% if yespo_web_tracking_enabled == true %}
   <script>
     console.log('ENABLED')
   </script>

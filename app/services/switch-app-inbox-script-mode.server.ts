@@ -1,16 +1,13 @@
 import getMetafield from "~/shopify/queries/get-metafield";
 import createMetafield from "~/shopify/mutations/create-metafield.server";
-import {getAuthCallbackScript} from "~/utils/get-auth-callback-script";
+import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
 
 const GENERAL_SCRIPT_HANDLE =
   process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
+const HOST_URL =
+  process.env.HOST_URL ?? "yespo-app-host";
 const SHOPIFY_APP_URL = process.env.SHOPIFY_APP_URL ?? ''
 
-type ToggleOptions = {
-  enabled: boolean;
-  getAuthTokenCallback?: string;
-  language?: string;
-};
 
 /**
  * Options for toggling App Inbox mode in the storefront script.
@@ -25,7 +22,7 @@ type ToggleOptions = {
  * Updates the given script content to enable or disable Yespo App Inbox mode.
  *
  * @param {string} scriptValue - Current script content from the Shopify store.
- * @param {ToggleOptions} options - Options for toggling App Inbox mode.
+ * @param {boolean} enabled - Option for toggling App Inbox mode.
  * @returns {string} The updated script content.
  *
  * @example
@@ -38,18 +35,15 @@ type ToggleOptions = {
 
 const toggleAppInboxScriptInit = (
   scriptValue: string,
-  options: ToggleOptions
+  enabled: boolean
 ): string => {
-  const {enabled, getAuthTokenCallback = '() => {}', language = 'en'} = options;
 
   const defaultInitRegex = /eS\(\s*['"]init['"]\s*\)/g;
-  const authCallbackScript = getAuthCallbackScript(SHOPIFY_APP_URL)
 
   const appInboxInit = `
-    ${authCallbackScript}
     eS('init', {APP_INBOX: true}, {
-      getAuthTokenCallback: ${getAuthTokenCallback},
-      language: ${language}
+      getAuthTokenCallback: () => yespoAppAuthCallback(),
+      language: yespoGetCurrentLanguage()
     })`;
 
   if (enabled) {
@@ -58,7 +52,7 @@ const toggleAppInboxScriptInit = (
   }
 
   const appInboxRegex =
-    /(?:\s*function yespoAppAuthCallback\(\)\s*\{[\s\S]*?\}\s*)?eS\(\s*['"]init['"]\s*,\s*\{APP_INBOX:\s*true\}\s*,\s*\{[\s\S]*?\}\s*\)/g;
+    /eS\(\s*['"]init['"]\s*,\s*\{\s*APP_INBOX:\s*true\s*\}\s*,\s*\{\s*getAuthTokenCallback:\s*\(\)\s*=>\s*yespoAppAuthCallback\(\)\s*,\s*language:\s*yespoGetCurrentLanguage\(\)\s*\}\s*\)/g;
 
   // replace APP Inbox mode to default init
   return scriptValue.replace(appInboxRegex, `eS('init')`);
@@ -97,11 +91,7 @@ const switchAppInboxScriptServer = async ({enabled, admin, shopId}: {
 
   const scriptValue = metafield?.value;
 
-  const updatedScript = toggleAppInboxScriptInit(scriptValue, {
-    enabled,
-    getAuthTokenCallback: `() => yespoAppAuthCallback()`,
-    language: `window.YESPO_APP_CONFIG?.lang_iso_code || 'en'`,
-  });
+  const updatedScript = toggleAppInboxScriptInit(scriptValue, enabled);
 
   const updatedMetafield = await createMetafield({
     shopId,
@@ -109,6 +99,20 @@ const switchAppInboxScriptServer = async ({enabled, admin, shopId}: {
     value: updatedScript,
     key: GENERAL_SCRIPT_HANDLE,
   });
+
+  const hostUrl = await getMetafield({
+    admin,
+    key: HOST_URL,
+  });
+
+  if (enabled && !hostUrl) {
+    await createMetafield({
+      shopId,
+      admin,
+      value: SHOPIFY_APP_URL,
+      key: HOST_URL,
+    });
+  }
 
   console.log('updatedMetafield', updatedMetafield)
 }

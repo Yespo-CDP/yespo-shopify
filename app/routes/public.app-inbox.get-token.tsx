@@ -53,7 +53,7 @@ export const action = async ({request}: ActionFunctionArgs) => {
 
     return jsonResponse({ success: true, token });
   } catch (error: any) {
-    console.error("Failed to save event data:", error);
+    console.error("Failed to get contact auth token:", error);
     return jsonResponse({ success: false, error: error.message || "Unknown error" }, 400);
   }
 }
