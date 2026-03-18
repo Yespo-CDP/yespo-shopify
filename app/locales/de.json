@@ -197,6 +197,11 @@
           "url": "https://docs.yespo.io/reference/getting-started-with-your-api"
         },
         {
+          "description": "APP-Posteingang",
+          "label": "https://docs.esputnik.com/docs/app-inbox-setting-up",
+          "url": "https://docs.esputnik.com/docs/app-inbox-setting-up"
+        },
+        {
           "description": "Kontakt-E-Mail",
           "label": "support@yespo.io",
           "url": "mailto:support@yespo.io"

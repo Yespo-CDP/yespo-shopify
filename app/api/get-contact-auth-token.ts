@@ -39,8 +39,6 @@ export const getContactAuthToken = async ({apiKey, contactData}: {apiKey: string
   } catch (error: any) {
     console.error(`Error receiving contact auth token: ${error.message}`);
 
-    //TODO add log
-
     return ''
   }
 }

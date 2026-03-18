@@ -441,15 +441,25 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         isAppInboxEnabled: true,
       });
 
-      //TODO: add logger
-
       await switchAppInboxScriptServer({
         enabled: true,
         admin,
         shopId: shop.shopId,
       })
+
     } catch (error: any) {
       errors.dataSync = t("DataSyncSection.errors.notEnabled");
+
+      await sendLogEvent({
+        orgId: shop?.orgId,
+        errorMessage: `App inbox mode not enabled: ${error.message}`,
+        data: JSON.stringify({
+          domain: shop?.domain,
+        }),
+        message: EVENT_MESSAGES.CUSTOM_LOG_APP_INBOX_MODE_ENABLED_ERROR,
+        logLevel: 'ERROR'
+      })
+
       return { success, errors };
     }
   }
@@ -464,7 +474,6 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await shopRepository.updateShop(shop.domain, {
         isAppInboxEnabled: false,
       });
-      //TODO: add logger
 
       await switchAppInboxScriptServer({
         enabled: false,
@@ -473,6 +482,17 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       })
     } catch (error: any) {
       errors.dataSync = t("DataSyncSection.errors.notDisabled");
+
+      await sendLogEvent({
+        orgId: shop?.orgId,
+        errorMessage: `App inbox mode not disabled: ${error.message}`,
+        data: JSON.stringify({
+          domain: shop?.domain,
+        }),
+        message: EVENT_MESSAGES.CUSTOM_LOG_APP_INBOX_MODE_DISABLED_ERROR,
+        logLevel: 'ERROR'
+      })
+
       return { success, errors };
     }
   }
