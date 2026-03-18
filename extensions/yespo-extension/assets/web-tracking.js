@@ -11,13 +11,14 @@ class EventTracker {
     this.data = this.getPageData();
     window.YESPO_APP_CONFIG = {
       lang_iso_code: this.data?.language || navigator.language || 'en',
-      customer: this.data.customer
+      customer: this.data?.customer || null,
+      shop: this.data?.domain || ''
     }
   }
 
   getPageData() {
     try {
-      const scriptTag = this.document.getElementById('data');
+      const scriptTag = this.document.getElementById('yespo_data');
       return scriptTag ? JSON.parse(scriptTag.textContent) : null;
     } catch (error) {
       console.error('Error parsing JSON from #data script tag:', error);

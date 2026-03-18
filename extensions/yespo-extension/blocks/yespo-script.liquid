@@ -14,7 +14,7 @@
 {% assign current_variant = product.selected_or_first_available_variant %}
 
 
-<script id="data" type="application/json">
+<script id="yespo_data" type="application/json">
   {
     "host": {{ yespo_app_host | json }},
     "pageTemplate": {{ template.name | json }},
