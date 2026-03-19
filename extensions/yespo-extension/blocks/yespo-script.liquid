@@ -68,7 +68,7 @@
 
 <script>
     function yespoGetCurrentLanguage () {
-       return "{{ localization.language.iso_code }}" || navigator.language || 'en';
+       return {{ localization.language.iso_code | json }} || navigator.language || 'en';
     }
 </script>
 
