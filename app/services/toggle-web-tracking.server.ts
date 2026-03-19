@@ -1,8 +1,8 @@
 import createMetafield from "~/shopify/mutations/create-metafield.server";
 import {shopRepository} from "~/repositories/repositories.server";
-import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
 import {sendLogEvent} from "~/api/send-log-event";
 import {EVENT_MESSAGES} from "~/config/constants";
+import getMetafield from "~/shopify/queries/get-metafield";
 
 const WEB_TRACKING_ENABLED =
   process.env.WEB_TRACKING_ENABLED ?? "web-tracking-enabled";
@@ -58,12 +58,20 @@ export const toggleWebTrackingServer = async ({
     });
 
     if (enabled) {
-      await createMetafield({
-        shopId,
+      const hostUrl = await getMetafield({
         admin,
-        value: SHOPIFY_APP_URL,
         key: HOST_URL,
       });
+
+      if (!hostUrl || (hostUrl && hostUrl.value !== SHOPIFY_APP_URL) ) {
+        await createMetafield({
+          shopId,
+          admin,
+          value: SHOPIFY_APP_URL,
+          key: HOST_URL,
+        });
+      }
+
 
       await sendLogEvent({
         orgId: store?.orgId,
@@ -74,12 +82,6 @@ export const toggleWebTrackingServer = async ({
       })
 
     } else {
-      await deleteMetafields({
-        admin,
-        ownerId: shopId,
-        keys: [HOST_URL],
-      });
-
       await sendLogEvent({
         orgId: store?.orgId,
         errorMessage: '',

@@ -108,6 +108,20 @@
         "notStarted": "Nicht gestartet"
       }
     },
+    "AppInboxSection": {
+      "title": "APP-Posteingang",
+      "description": "Der App-Posteingang ist ein Kommunikationskanal, mit dem Sie umfangreiche, personalisierte Inhalte direkt in Ihrer mobilen App oder auf Ihrer Website bereitstellen können.",
+      "enable": "Aktivieren",
+      "disable": "Deaktivieren",
+      "status": {
+        "enabled": "Aktiviert",
+        "disabled": "Deaktiviert"
+      },
+      "errors": {
+        "notEnabled": "App-Posteingang ist nicht aktiviert",
+        "notDisabled": "App-Posteingang ist nicht deaktiviert"
+      }
+    },
     "ConnectionStatusSection": {
       "title": "Skript-Integration",
       "refresh": "Aktualisieren",
@@ -183,6 +197,11 @@
           "url": "https://docs.yespo.io/reference/getting-started-with-your-api"
         },
         {
+          "description": "APP-Posteingang",
+          "label": "https://docs.esputnik.com/docs/app-inbox-setting-up",
+          "url": "https://docs.esputnik.com/docs/app-inbox-setting-up"
+        },
+        {
           "description": "Kontakt-E-Mail",
           "label": "support@yespo.io",
           "url": "mailto:support@yespo.io"
@@ -195,4 +214,3 @@
       }
     }
   }
-  

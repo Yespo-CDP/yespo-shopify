@@ -108,6 +108,20 @@
         "notStarted": "No iniciado"
       }
     },
+    "AppInboxSection": {
+      "title": "Bandeja de entrada de la app",
+      "description": "La bandeja de entrada de la app es un canal de comunicación que le permite ofrecer contenido rico y personalizado directamente en su aplicación móvil o sitio web.",
+      "enable": "Habilitar",
+      "disable": "Deshabilitar",
+      "status": {
+        "enabled": "Habilitado",
+        "disabled": "Deshabilitado"
+      },
+      "errors": {
+        "notEnabled": "La bandeja de entrada de la app no está habilitada",
+        "notDisabled": "La bandeja de entrada de la app no está deshabilitada"
+      }
+  },
     "ConnectionStatusSection": {
       "title": "Integración de scripts",
       "refresh": "Actualizar",
@@ -183,6 +197,11 @@
           "url": "https://docs.yespo.io/reference/getting-started-with-your-api"
         },
         {
+          "description": "Bandeja de entrada de la APP",
+          "label": "https://docs.esputnik.com/docs/app-inbox-setting-up",
+          "url": "https://docs.esputnik.com/docs/app-inbox-setting-up"
+        },
+        {
           "description": "Correo electrónico de contacto",
           "label": "support@yespo.io",
           "url": "mailto:support@yespo.io"
@@ -195,4 +214,3 @@
       }
     }
   }
-  
