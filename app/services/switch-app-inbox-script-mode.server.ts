@@ -100,12 +100,14 @@ const switchAppInboxScriptServer = async ({enabled, admin, shopId}: {
     key: GENERAL_SCRIPT_HANDLE,
   });
 
+  console.log('updatedMetafield', updatedMetafield)
+
   const hostUrl = await getMetafield({
     admin,
     key: HOST_URL,
   });
 
-  if (enabled && !hostUrl) {
+  if (enabled && !hostUrl || (hostUrl && hostUrl.value !== SHOPIFY_APP_URL)) {
     await createMetafield({
       shopId,
       admin,
@@ -113,8 +115,6 @@ const switchAppInboxScriptServer = async ({enabled, admin, shopId}: {
       key: HOST_URL,
     });
   }
-
-  console.log('updatedMetafield', updatedMetafield)
 }
 
 export default switchAppInboxScriptServer;
