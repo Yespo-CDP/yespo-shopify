@@ -28,10 +28,12 @@
         try {
           if (!customer) {
             reject('No customer.');
+            return;
           }
 
            if (!shop) {
               reject('No shop.');
+              return;
            }
 
            const payload = {
