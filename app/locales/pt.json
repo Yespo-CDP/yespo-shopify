@@ -107,6 +107,20 @@
       "notStarted": "Não iniciado"
     }
   },
+  "AppInboxSection": {
+    "title": "Caixa de entrada do app",
+    "description": "A caixa de entrada do app é um canal de comunicação que permite entregar conteúdo rico e personalizado diretamente no seu aplicativo móvel ou site.",
+    "enable": "Ativar",
+    "disable": "Desativar",
+    "status": {
+      "enabled": "Ativado",
+      "disabled": "Desativado"
+    },
+    "errors": {
+      "notEnabled": "A caixa de entrada do app não está ativada",
+      "notDisabled": "A caixa de entrada do app não está desativada"
+    }
+  },
   "ConnectionStatusSection": {
     "title": "Integração de scripts",
     "refresh": "Atualizar",
@@ -180,6 +194,11 @@
         "description": "Guia do Desenvolvedor",
         "label": "https://docs.yespo.io/reference/getting-started-with-your-api",
         "url": "https://docs.yespo.io/reference/getting-started-with-your-api"
+      },
+      {
+        "description": "Caixa de entrada do app",
+        "label": "https://docs.esputnik.com/docs/app-inbox-setting-up",
+        "url": "https://docs.esputnik.com/docs/app-inbox-setting-up"
       },
       {
         "description": "Contato por e-mail",

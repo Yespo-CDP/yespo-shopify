@@ -40,6 +40,7 @@ export const disconnectAccountService = async ({
     siteId: "",
     isGeneralScriptInstalled: false,
     isWebPushScriptInstalled: false,
+    isAppInboxEnabled: false,
     orgId: null
   });
   const shop = await shopRepository.getShop(session.shop);

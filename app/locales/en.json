@@ -109,6 +109,20 @@
       "notStarted": "Not started"
     }
   },
+  "AppInboxSection": {
+    "title": "APP Inbox",
+    "description": "App Inbox is a communication channel that allows you to deliver rich, personalized content to users directly on your mobile app or website.",
+    "enable": "Enable",
+    "disable": "Disable",
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "errors": {
+      "notEnabled": "App Inbox not enabled",
+      "notDisabled": "App Inbox not disabled"
+    }
+  },
   "ConnectionStatusSection": {
     "title": "Scripts integration",
     "refresh": "Refresh",
@@ -182,6 +196,11 @@
         "description": "The Developer Guide",
         "label": "https://docs.yespo.io/reference/getting-started-with-your-api",
         "url": "https://docs.yespo.io/reference/getting-started-with-your-api"
+      },
+      {
+        "description": "App Inbox",
+        "label": "https://docs.esputnik.com/docs/app-inbox-setting-up",
+        "url": "https://docs.esputnik.com/docs/app-inbox-setting-up"
       },
       {
         "description": "Contact Email",

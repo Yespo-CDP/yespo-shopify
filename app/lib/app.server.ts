@@ -23,6 +23,7 @@ import {sendAccessTokenService} from "~/services/send-access-token.server";
 import {deleteAccessTokenService} from "~/services/delete-access-token.server";
 import {sendLogEvent} from "~/api/send-log-event";
 import {EVENT_MESSAGES} from "~/config/constants";
+import switchAppInboxScriptServer from "~/services/switch-app-inbox-script-mode.server";
 
 /**
  * Loader function for initializing data needed on the page.
@@ -121,6 +122,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     script?: string;
     webTracking?: string;
     dataSync?: string;
+    appInbox?: string;
   } = {};
   const success: {
     apiKey?: boolean;
@@ -426,5 +428,75 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       isWebPushScriptInstalled
     })
   }
+
+  if (intent === "app-inbox-enable") {
+    const shop = await shopRepository.getShop(session.shop);
+    try {
+      if (!shop) {
+        errors.appInbox = t("General.errors.shopNotFound");
+        return { success, errors };
+      }
+
+      await shopRepository.updateShop(shop.domain, {
+        isAppInboxEnabled: true,
+      });
+
+      await switchAppInboxScriptServer({
+        enabled: true,
+        admin,
+        shopId: shop.shopId,
+      })
+
+    } catch (error: any) {
+      errors.dataSync = t("DataSyncSection.errors.notEnabled");
+
+      await sendLogEvent({
+        orgId: shop?.orgId,
+        errorMessage: `App inbox mode not enabled: ${error.message}`,
+        data: JSON.stringify({
+          domain: shop?.domain,
+        }),
+        message: EVENT_MESSAGES.CUSTOM_LOG_APP_INBOX_MODE_ENABLED_ERROR,
+        logLevel: 'ERROR'
+      })
+
+      return { success, errors };
+    }
+  }
+  if (intent === "app-inbox-disable") {
+    const shop = await shopRepository.getShop(session.shop);
+    try {
+      if (!shop) {
+        errors.appInbox = t("General.errors.shopNotFound");
+        return { success, errors };
+      }
+
+      await shopRepository.updateShop(shop.domain, {
+        isAppInboxEnabled: false,
+      });
+
+      await switchAppInboxScriptServer({
+        enabled: false,
+        admin,
+        shopId: shop.shopId,
+      })
+    } catch (error: any) {
+      errors.dataSync = t("DataSyncSection.errors.notDisabled");
+
+      await sendLogEvent({
+        orgId: shop?.orgId,
+        errorMessage: `App inbox mode not disabled: ${error.message}`,
+        data: JSON.stringify({
+          domain: shop?.domain,
+        }),
+        message: EVENT_MESSAGES.CUSTOM_LOG_APP_INBOX_MODE_DISABLED_ERROR,
+        logLevel: 'ERROR'
+      })
+
+      return { success, errors };
+    }
+  }
+
+
   return { success, errors };
 };

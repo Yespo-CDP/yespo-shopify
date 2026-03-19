@@ -13,7 +13,7 @@ class EventTracker {
 
   getPageData() {
     try {
-      const scriptTag = this.document.getElementById('data');
+      const scriptTag = this.document.getElementById('yespo_data');
       return scriptTag ? JSON.parse(scriptTag.textContent) : null;
     } catch (error) {
       console.error('Error parsing JSON from #data script tag:', error);
