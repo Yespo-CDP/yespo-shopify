@@ -110,7 +110,7 @@
     }
   },
   "AppInboxSection": {
-    "title": "APP Inbox",
+    "title": "App Inbox",
     "description": "App Inbox is a communication channel that allows you to deliver rich, personalized content to users directly on your mobile app or website.",
     "enable": "Enable",
     "disable": "Disable",

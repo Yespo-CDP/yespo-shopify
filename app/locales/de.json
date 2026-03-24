@@ -109,7 +109,7 @@
       }
     },
     "AppInboxSection": {
-      "title": "APP-Posteingang",
+      "title": "App-Posteingang",
       "description": "Der App-Posteingang ist ein Kommunikationskanal, mit dem Sie umfangreiche, personalisierte Inhalte direkt in Ihrer mobilen App oder auf Ihrer Website bereitstellen können.",
       "enable": "Aktivieren",
       "disable": "Deaktivieren",
