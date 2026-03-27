@@ -112,14 +112,9 @@
 </script>
 
 
-{% comment %}
 {% if yespo_web_tracking_enabled == true %}
-  <script>
-    console.log('ENABLED')
-  </script>
   <script src="{{ "web-tracking.js" | asset_url }}" defer></script>
 {% endif %}
-{% endcomment %}
 
 {% schema %}
 {
