@@ -39,7 +39,6 @@ export async function fetchWithErrorHandling(
 ) {
   try {
     const response = await fetch(url, options);
-    console.log('options', options)
 
     const rawResponse = await response.text();
     let responseData: any = rawResponse;
@@ -55,8 +54,6 @@ export async function fetchWithErrorHandling(
           : responseData?.message || "Unknown error";
       throw new FetchError(message, response.status);
     }
-
-    // console.log('>>>>>>>>>>>>>>>>>',response)
 
     return {
       responseData,

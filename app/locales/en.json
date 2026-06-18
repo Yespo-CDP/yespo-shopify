@@ -87,6 +87,7 @@
       "title": "Historical data sync",
       "orders": "Orders",
       "customers": "Customers",
+      "productVariants": "Products",
       "syncedCount": "Synchronized",
       "skippedCount": "Skipped",
       "failedCount": "Failed",

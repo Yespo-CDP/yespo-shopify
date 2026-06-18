@@ -6,21 +6,26 @@ import type { CustomerSyncLog } from "~/@types/customerSyncLog";
 import type { OrderSyncLog } from "~/@types/orderSyncLog";
 import DataSyncStatusBadge from "./ui/DataSyncStatusBadge";
 import DataSyncTooltip from "./ui/DataSyncTooltip";
+import { ProductVariantSyncLog } from "~/@types/productVariantSyncLog";
 
 export interface DataSyncSectionProps {
   disabled?: boolean;
-  contactSyncEnabled?: boolean;
-  orderSyncEnabled?: boolean;
   customersSyncLog?: CustomerSyncLog;
   orderSyncLog?: OrderSyncLog;
+  productVariantSyncLog?: ProductVariantSyncLog;
+  contactSyncEnabled?: boolean;
+  orderSyncEnabled?: boolean;
+  productVariantSyncEnabled?: boolean;
 }
 
 const DataSyncSection: FC<DataSyncSectionProps> = ({
   disabled,
   customersSyncLog,
   orderSyncLog,
+  productVariantSyncLog,
   orderSyncEnabled = false,
   contactSyncEnabled = false,
+  productVariantSyncEnabled = false,
 }) => {
   const { t } = useTranslation();
   const fetcher = useFetcher();
@@ -51,10 +56,14 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
   return (
     <s-section>
       <s-stack gap="small-200">
-        <s-stack direction="inline" justifyContent="space-between" alignItems="baseline">
+        <s-stack
+          direction="inline"
+          justifyContent="space-between"
+          alignItems="baseline"
+        >
           <s-stack>
             <s-stack direction="inline" alignItems="start" gap="small-200">
-              <h2 style={{margin: 0, fontSize: '0.875rem', fontWeight: 650}}>
+              <h2 style={{ margin: 0, fontSize: "0.875rem", fontWeight: 650 }}>
                 {t("DataSyncSection.title")}
               </h2>
 
@@ -94,98 +103,133 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
         </s-stack>
 
         {(contactSyncEnabled || orderSyncEnabled) && (
-        <s-stack gap="small-200">
-          <s-stack direction="inline" alignItems="center">
-            <h3 style={{margin: 0, fontSize: '0.8125rem', fontWeight: 650}}>
-              {t("DataSyncSection.title")}
-            </h3>
-            <DataSyncTooltip />
-          </s-stack>
-          {contactSyncEnabled && customersSyncLog && (
-            <s-grid
-              gridTemplateColumns="repeat(12, 1fr)"
-              gap="small-100"
-            >
-              <s-grid-item gridColumn="span 3">
-                <s-text type="strong">
-                  {t("DataSyncSection.syncLog.customers")}:
-                </s-text>
-              </s-grid-item>
-              <s-grid-item gridColumn="span 3">
-                <s-stack direction="inline" justifyContent="end">
-                  <s-text>
-                    {t("DataSyncSection.syncLog.syncedCount")}:{" "}
-                    {customersSyncLog.syncedCount +
-                      customersSyncLog.skippedCount}
+          <s-stack gap="small-200">
+            <s-stack direction="inline" alignItems="center">
+              <h3 style={{ margin: 0, fontSize: "0.8125rem", fontWeight: 650 }}>
+                {t("DataSyncSection.title")}
+              </h3>
+              <DataSyncTooltip />
+            </s-stack>
+            {contactSyncEnabled && customersSyncLog && (
+              <s-grid gridTemplateColumns="repeat(12, 1fr)" gap="small-100">
+                <s-grid-item gridColumn="span 3">
+                  <s-text type="strong">
+                    {t("DataSyncSection.syncLog.customers")}:
                   </s-text>
-                </s-stack>
-              </s-grid-item>
-              <s-grid-item gridColumn="span 2">
-                <s-stack direction="inline" justifyContent="end">
-                  <s-text>
-                    {t("DataSyncSection.syncLog.failedCount")}:{" "}
-                    {customersSyncLog.failedCount}
-                  </s-text>
-                </s-stack>
-              </s-grid-item>
-              <s-grid-item gridColumn="span 2">
-                <s-stack direction="inline" justifyContent="end">
-                  <s-text>
-                    {t("DataSyncSection.syncLog.totalCount")}:{" "}
-                    {customersSyncLog.totalCount}
-                  </s-text>
-                </s-stack>
-              </s-grid-item>
-              <s-grid-item gridColumn="span 2">
-                <s-stack direction="inline" justifyContent="end">
-                  <DataSyncStatusBadge status={customersSyncLog?.status} />
-                </s-stack>
-              </s-grid-item>
-            </s-grid>
-          )}
+                </s-grid-item>
+                <s-grid-item gridColumn="span 3">
+                  <s-stack direction="inline" justifyContent="end">
+                    <s-text>
+                      {t("DataSyncSection.syncLog.syncedCount")}:{" "}
+                      {customersSyncLog.syncedCount +
+                        customersSyncLog.skippedCount}
+                    </s-text>
+                  </s-stack>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 2">
+                  <s-stack direction="inline" justifyContent="end">
+                    <s-text>
+                      {t("DataSyncSection.syncLog.failedCount")}:{" "}
+                      {customersSyncLog.failedCount}
+                    </s-text>
+                  </s-stack>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 2">
+                  <s-stack direction="inline" justifyContent="end">
+                    <s-text>
+                      {t("DataSyncSection.syncLog.totalCount")}:{" "}
+                      {customersSyncLog.totalCount}
+                    </s-text>
+                  </s-stack>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 2">
+                  <s-stack direction="inline" justifyContent="end">
+                    <DataSyncStatusBadge status={customersSyncLog?.status} />
+                  </s-stack>
+                </s-grid-item>
+              </s-grid>
+            )}
 
-          {orderSyncEnabled && orderSyncLog && (
-            <s-grid
-              gridTemplateColumns="repeat(12, 1fr)"
-              gap="small-100"
-            >
-              <s-grid-item gridColumn="span 3">
-                <s-text type="strong">
-                  {t("DataSyncSection.syncLog.orders")}:
-                </s-text>
-              </s-grid-item>
-              <s-grid-item gridColumn="span 3">
-                <s-stack direction="inline" justifyContent="end">
-                  <s-text>
-                    {t("DataSyncSection.syncLog.syncedCount")}:{" "}
-                    {orderSyncLog.syncedCount + orderSyncLog.skippedCount}
+            {orderSyncEnabled && orderSyncLog && (
+              <s-grid gridTemplateColumns="repeat(12, 1fr)" gap="small-100">
+                <s-grid-item gridColumn="span 3">
+                  <s-text type="strong">
+                    {t("DataSyncSection.syncLog.orders")}:
                   </s-text>
-                </s-stack>
-              </s-grid-item>
-              <s-grid-item gridColumn="span 2">
-                <s-stack direction="inline" justifyContent="end">
-                  <s-text>
-                    {t("DataSyncSection.syncLog.failedCount")}:{" "}
-                    {orderSyncLog.failedCount}
+                </s-grid-item>
+                <s-grid-item gridColumn="span 3">
+                  <s-stack direction="inline" justifyContent="end">
+                    <s-text>
+                      {t("DataSyncSection.syncLog.syncedCount")}:{" "}
+                      {orderSyncLog.syncedCount + orderSyncLog.skippedCount}
+                    </s-text>
+                  </s-stack>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 2">
+                  <s-stack direction="inline" justifyContent="end">
+                    <s-text>
+                      {t("DataSyncSection.syncLog.failedCount")}:{" "}
+                      {orderSyncLog.failedCount}
+                    </s-text>
+                  </s-stack>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 2">
+                  <s-stack direction="inline" justifyContent="end">
+                    <s-text>
+                      {t("DataSyncSection.syncLog.totalCount")}:{" "}
+                      {orderSyncLog.totalCount}
+                    </s-text>
+                  </s-stack>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 2">
+                  <s-stack direction="inline" justifyContent="end">
+                    <DataSyncStatusBadge status={orderSyncLog?.status} />
+                  </s-stack>
+                </s-grid-item>
+              </s-grid>
+            )}
+            {productVariantSyncEnabled && productVariantSyncLog && (
+              <s-grid gridTemplateColumns="repeat(12, 1fr)" gap="small-100">
+                <s-grid-item gridColumn="span 3">
+                  <s-text type="strong">
+                    {t("DataSyncSection.syncLog.productVariants")}:
                   </s-text>
-                </s-stack>
-              </s-grid-item>
-              <s-grid-item gridColumn="span 2">
-                <s-stack direction="inline" justifyContent="end">
-                  <s-text>
-                    {t("DataSyncSection.syncLog.totalCount")}:{" "}
-                    {orderSyncLog.totalCount}
-                  </s-text>
-                </s-stack>
-              </s-grid-item>
-              <s-grid-item gridColumn="span 2">
-                <s-stack direction="inline" justifyContent="end">
-                  <DataSyncStatusBadge status={orderSyncLog?.status} />
-                </s-stack>
-              </s-grid-item>
-            </s-grid>
-          )}
-        </s-stack>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 3">
+                  <s-stack direction="inline" justifyContent="end">
+                    <s-text>
+                      {t("DataSyncSection.syncLog.syncedCount")}:{" "}
+                      {productVariantSyncLog.syncedCount +
+                        productVariantSyncLog.skippedCount}
+                    </s-text>
+                  </s-stack>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 2">
+                  <s-stack direction="inline" justifyContent="end">
+                    <s-text>
+                      {t("DataSyncSection.syncLog.failedCount")}:{" "}
+                      {productVariantSyncLog.failedCount}
+                    </s-text>
+                  </s-stack>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 2">
+                  <s-stack direction="inline" justifyContent="end">
+                    <s-text>
+                      {t("DataSyncSection.syncLog.totalCount")}:{" "}
+                      {productVariantSyncLog.totalCount}
+                    </s-text>
+                  </s-stack>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 2">
+                  <s-stack direction="inline" justifyContent="end">
+                    <DataSyncStatusBadge
+                      status={productVariantSyncLog?.status}
+                    />
+                  </s-stack>
+                </s-grid-item>
+              </s-grid>
+            )}
+          </s-stack>
         )}
       </s-stack>
     </s-section>

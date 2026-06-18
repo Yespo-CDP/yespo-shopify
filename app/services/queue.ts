@@ -4,6 +4,7 @@ import { redisConfig } from "~/config/redis";
 import {
   customerSyncLogRepository,
   orderSyncLogRepository,
+  productVariantSyncLogRepository,
 } from "~/repositories/repositories.server";
 import type { Shop } from "~/@types/shop";
 import type { Session } from "@shopify/shopify-app-react-router/server";
@@ -25,10 +26,15 @@ export async function enqueueDataSyncTasks({
   const orderSyncLog = await orderSyncLogRepository.getOrderSyncLogByShop(
     session.shop,
   );
+  const productVariantSyncLog =
+    await productVariantSyncLogRepository.getProductVariantSyncLogByShop(
+      session.shop,
+    );
 
   if (
     customerSyncLog?.status !== "IN_PROGRESS" &&
-    orderSyncLog?.status !== "IN_PROGRESS"
+    orderSyncLog?.status !== "IN_PROGRESS" &&
+    productVariantSyncLog?.status !== "IN_PROGRESS"
   ) {
     await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
       status: "IN_PROGRESS",
@@ -44,6 +50,18 @@ export async function enqueueDataSyncTasks({
     });
 
     await orderSyncLogRepository.createOrUpdateOrderSyncLog({
+      status: "IN_PROGRESS",
+      skippedCount: 0,
+      syncedCount: 0,
+      failedCount: 0,
+      totalCount: 0,
+      shop: {
+        connect: {
+          id: shop.id,
+        },
+      },
+    });
+    await productVariantSyncLogRepository.createOrUpdateProductVariantSyncLog({
       status: "IN_PROGRESS",
       skippedCount: 0,
       syncedCount: 0,

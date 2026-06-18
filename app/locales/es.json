@@ -86,6 +86,7 @@
         "title": "Sincronización de datos históricos",
         "orders": "Pedidos",
         "customers": "Clientes",
+        "productVariants": "Productos",
         "syncedCount": "Sincronizados",
         "skippedCount": "Omitidos",
         "failedCount": "Fallidos",

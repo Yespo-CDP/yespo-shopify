@@ -4,15 +4,15 @@ import {
   useNavigation,
   useRevalidator,
 } from "react-router";
-import {useAppBridge} from "@shopify/app-bridge-react";
-import {Trans, useTranslation} from "react-i18next";
-import {useEffect, useState} from "react";
+import { useAppBridge } from "@shopify/app-bridge-react";
+import { Trans, useTranslation } from "react-i18next";
+import { useEffect, useState } from "react";
 
 import UnsupportedMarketsSection from "~/components/UnsupportedMarketsSection";
 import AccountConnectionSection from "~/components/AccountConnectionSection";
 import ConnectionStatusSection from "~/components/ConnectionStatusSection";
 import UsefulLinksSection from "~/components/UsefulLinksSection";
-import {loaderHandler, actionHandler} from "~/lib/app.server";
+import { loaderHandler, actionHandler } from "~/lib/app.server";
 import WebTrackingSection from "~/components/WebTrackingSection";
 import DataSyncSection from "~/components/DataSyncSection";
 import AppInboxSection from "~/components/AppInboxSection";
@@ -49,7 +49,7 @@ export const action = actionHandler;
  * @returns {JSX.Element} The rendered page component.
  */
 export default function Index() {
-  const {t} = useTranslation();
+  const { t } = useTranslation();
   const shopify = useAppBridge();
   const loaderData = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
@@ -60,6 +60,7 @@ export default function Index() {
     scriptConnectionStatus,
     customersSyncLog,
     orderSyncLog,
+    productVariantSyncLog,
     ENV,
   } = loaderData;
   const navigation = useNavigation();
@@ -69,6 +70,9 @@ export default function Index() {
   const [customersSyncLogData, setCustomersSyncLogData] =
     useState(customersSyncLog);
   const [orderSyncLogData, setOrderSyncLogData] = useState(orderSyncLog);
+  const [productVariantSyncLogData, setProductVariantSyncLogData] = useState(
+    productVariantSyncLog,
+  );
 
   useEffect(() => {
     setCustomersSyncLogData(customersSyncLog);
@@ -119,17 +123,15 @@ export default function Index() {
     <s-page>
       <s-box paddingBlockEnd="large-500">
         <s-stack gap="base">
-          {isMarketsOverflowing && (
-            <UnsupportedMarketsSection/>
-          )}
+          {isMarketsOverflowing && <UnsupportedMarketsSection />}
           <s-stack gap="small-300">
             <s-stack direction="inline" gap="small-300" alignItems="center">
-              <s-box blockSize={'48px'}>
-                <s-image src="./logo.png" alt="logo"/>
+              <s-box blockSize={"48px"}>
+                <s-image src="./logo.png" alt="logo" />
               </s-box>
 
               <s-heading accessibilityRole="presentation">
-                <h1 style={{margin: 0, fontSize: '2.25rem', fontWeight: 550}}>
+                <h1 style={{ margin: 0, fontSize: "2.25rem", fontWeight: 550 }}>
                   {t("WelcomeSection.title")}
                 </h1>
               </s-heading>
@@ -164,9 +166,7 @@ export default function Index() {
             isWebPushScriptExist={
               scriptConnectionStatus?.isWebPushScriptExist ?? false
             }
-            isAppExtensionActive={
-              scriptConnectionStatus.isThemeExtensionActive
-            }
+            isAppExtensionActive={scriptConnectionStatus.isThemeExtensionActive}
             errors={actionData?.errors}
             dockUrl={ENV.DOCK_URL}
             platformUrl={ENV.PLATFORM_URL}
@@ -175,14 +175,19 @@ export default function Index() {
               isSubmitting ||
               isLoading ||
               !shop?.apiKey ||
-              (!scriptConnectionStatus?.isGeneralScriptExist && !scriptConnectionStatus?.isWebPushScriptExist)
+              (!scriptConnectionStatus?.isGeneralScriptExist &&
+                !scriptConnectionStatus?.isWebPushScriptExist)
             }
           />
 
           <AppInboxSection
             appInboxEnabled={Boolean(shop?.isAppInboxEnabled)}
             disabled={
-              isMarketsOverflowing || !scriptConnectionStatus?.isGeneralScriptExist || isSubmitting || isLoading || !account
+              isMarketsOverflowing ||
+              !scriptConnectionStatus?.isGeneralScriptExist ||
+              isSubmitting ||
+              isLoading ||
+              !account
             }
           />
 
@@ -193,9 +198,7 @@ export default function Index() {
             isWebPushScriptExist={
               scriptConnectionStatus?.isWebPushScriptExist ?? false
             }
-            isAppExtensionActive={
-              scriptConnectionStatus.isThemeExtensionActive
-            }
+            isAppExtensionActive={scriptConnectionStatus.isThemeExtensionActive}
             webTrackerEnabled={shop?.isWebTrackingEnabled ?? false}
             disabled={
               isMarketsOverflowing || isSubmitting || isLoading || !account
@@ -205,14 +208,18 @@ export default function Index() {
           <DataSyncSection
             contactSyncEnabled={Boolean(shop?.isContactSyncEnabled)}
             orderSyncEnabled={Boolean(shop?.isOrderSyncEnabled)}
+            productVariantSyncEnabled={Boolean(
+              shop?.isProductVariantSyncEnabled,
+            )}
             disabled={
               isMarketsOverflowing || isSubmitting || isLoading || !account
             }
             customersSyncLog={customersSyncLogData as any}
             orderSyncLog={orderSyncLogData as any}
+            productVariantSyncLog={productVariantSyncLogData as any}
           />
 
-          <UsefulLinksSection/>
+          <UsefulLinksSection />
         </s-stack>
       </s-box>
     </s-page>

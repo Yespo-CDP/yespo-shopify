@@ -85,6 +85,7 @@
       "title": "Última sincronização",
       "orders": "Encomendas",
       "customers": "Clientes",
+      "productVariants": "Produtos",
       "syncedCount": "Sincronizado",
       "skippedCount": "Ignorado",
       "failedCount": "Falhou",
