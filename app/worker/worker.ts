@@ -31,9 +31,27 @@ new Worker<JobData>(
         );
         return;
       }
-      await customerSyncHandler(shop, accessToken, apiKey, shopData.id, shopData.orgId);
-      await orderSyncHandler(shop, accessToken, apiKey, shopData.id, shopData.orgId);
-      await productSyncHandler(shop, accessToken, apiKey, shopData.id, shopData.orgId);
+      await customerSyncHandler(
+        shop,
+        accessToken,
+        apiKey,
+        shopData.id,
+        shopData.orgId,
+      );
+      await orderSyncHandler(
+        shop,
+        accessToken,
+        apiKey,
+        shopData.id,
+        shopData.orgId,
+      );
+      await productSyncHandler(
+        shop,
+        accessToken,
+        apiKey,
+        shopData.id,
+        shopData.orgId,
+      );
     } catch (error: any) {
       console.error(`Worker error:`, error);
     }
@@ -43,3 +61,4 @@ new Worker<JobData>(
     concurrency: 10,
   },
 );
+// FIXME: implement  new worker for data-sync-market

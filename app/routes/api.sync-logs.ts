@@ -3,6 +3,7 @@ import { authenticate } from "~/shopify.server";
 import {
   customerSyncLogRepository,
   orderSyncLogRepository,
+  productVariantSyncLogRepository,
 } from "~/repositories/repositories.server";
 
 /**
@@ -20,7 +21,7 @@ import {
  * @example
  * // Send GET request to this endpoint:
  * GET /api/sync-logs
- * 
+ *
  * const res = await fetch("/api/sync-logs");
  * const updated = await res.json();
  */
@@ -33,6 +34,10 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const orderSyncLog = await orderSyncLogRepository.getOrderSyncLogByShop(
     session.shop,
   );
+  const productVariantSyncLog =
+    await productVariantSyncLogRepository.getProductVariantSyncLogByShop(
+      session.shop,
+    );
 
-  return { customersSyncLog, orderSyncLog };
+  return { customersSyncLog, orderSyncLog, productVariantSyncLog };
 }

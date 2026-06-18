@@ -5,7 +5,7 @@ import type {
   ProductVariantsResponse,
 } from "~/@types/product";
 
-const VARIANTS_PAGE_SIZE = 250;
+const VARIANTS_PAGE_SIZE = 100;
 
 /**
  * Fetches the next page of variants for a product.

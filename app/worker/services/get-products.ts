@@ -1,7 +1,7 @@
 import type { GraphQLClient } from "@shopify/graphql-client";
 import type { ProductData, ProductsResponse } from "~/@types/product";
 
-const VARIANTS_PAGE_SIZE = 250;
+const VARIANTS_PAGE_SIZE = 100;
 
 /**
  * Fetches a paginated list of products with the first page of variants from Shopify.

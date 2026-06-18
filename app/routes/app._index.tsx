@@ -77,7 +77,8 @@ export default function Index() {
   useEffect(() => {
     setCustomersSyncLogData(customersSyncLog);
     setOrderSyncLogData(orderSyncLog);
-  }, [customersSyncLog, orderSyncLog]);
+    setProductVariantSyncLogData(productVariantSyncLog);
+  }, [customersSyncLog, orderSyncLog, productVariantSyncLog]);
 
   useEffect(() => {
     if (actionData?.success?.apiKey) {
@@ -105,7 +106,9 @@ export default function Index() {
       customersSyncLogData?.status === "NOT_STARTED" ||
       customersSyncLogData?.status === "IN_PROGRESS" ||
       orderSyncLogData?.status === "NOT_STARTED" ||
-      orderSyncLogData?.status === "IN_PROGRESS";
+      orderSyncLogData?.status === "IN_PROGRESS" ||
+      productVariantSyncLogData?.status === "NOT_STARTED" ||
+      productVariantSyncLogData?.status === "IN_PROGRESS";
 
     if (!shouldPoll) return;
 
@@ -114,10 +117,11 @@ export default function Index() {
       const updated = await res.json();
       setCustomersSyncLogData(updated?.customersSyncLog);
       setOrderSyncLogData(updated?.orderSyncLog);
+      setProductVariantSyncLogData(updated?.productVariantSyncLog);
     }, 3000);
 
     return () => clearInterval(intervalId);
-  }, [customersSyncLogData, orderSyncLogData]);
+  }, [customersSyncLogData, orderSyncLogData, productVariantSyncLogData]);
 
   return (
     <s-page>
