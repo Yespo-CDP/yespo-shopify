@@ -45,7 +45,9 @@ model Shop {
   isContactSyncEnabled        Boolean?  @default(false)
   isOrderSyncEnabled          Boolean?  @default(false)
   isProductVariantSyncEnabled Boolean?  @default(false)
+  isMarketSyncEnabled         Boolean?  @default(false)
   isAppInboxEnabled           Boolean?  @default(false)
+  markets                     Json?
   active                      Boolean?  @default(true)
   isGeneralScriptInstalled    Boolean?  @default(false)
   isWebPushScriptInstalled    Boolean?  @default(false)
@@ -60,6 +62,10 @@ model Shop {
   orderSyncLogs        OrderSyncLog?
   productVariantSyncs    ProductVariantSync[]
   productVariantSyncLogs ProductVariantSyncLog?
+  marketSyncs            MarketSync[]
+  marketSyncLogs         MarketSyncLog[]
+  tmpMarketSyncs         TmpMarketSync[]
+  translationSyncs       TranslationSync[]
 }
 
 model GdprCustomerDataRequest {
@@ -179,4 +185,71 @@ model ProductVariantSync {
 
   shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   shopId Int
+}
+
+model MarketSyncLog {
+  id           Int           @id @default(autoincrement())
+  countryCode  String
+  syncedCount  Int           @default(0)
+  skippedCount Int           @default(0)
+  failedCount  Int           @default(0)
+  totalCount   Int           @default(0)
+  status       SyncLogStatus @default(NOT_STARTED)
+  bulkBatchId  String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime?     @updatedAt
+
+  shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopId Int
+
+  @@unique([shopId, countryCode])
+  @@index([shopId])
+}
+
+model MarketSync {
+  id          Int       @id @default(autoincrement())
+  productId   String
+  variantId   String
+  countryCode String
+  contentHash String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime? @updatedAt
+
+  shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopId Int
+
+  @@unique([shopId, productId, variantId, countryCode])
+  @@index([shopId, variantId])
+}
+
+model TmpMarketSync {
+  id          Int      @id @default(autoincrement())
+  batchId     String
+  productId   String
+  variantId   String?
+  countryCode String?
+  locale      String?
+  marketId    String?
+  payload     Json
+  createdAt   DateTime @default(now())
+
+  shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopId Int
+
+  @@index([shopId, batchId])
+}
+
+model TranslationSync {
+  id          Int       @id @default(autoincrement())
+  productId   String
+  locale      String
+  marketId    String    @default("")
+  contentHash String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime? @updatedAt
+
+  shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopId Int
+
+  @@unique([shopId, productId, locale, marketId])
 }

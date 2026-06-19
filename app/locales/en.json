@@ -88,6 +88,7 @@
       "orders": "Orders",
       "customers": "Customers",
       "productVariants": "Products",
+      "productsByCountry": "Products ({{countryCode}})",
       "syncedCount": "Synchronized",
       "skippedCount": "Skipped",
       "failedCount": "Failed",
@@ -102,6 +103,11 @@
     "errors": {
       "notEnabled": "Data sync not enabled",
       "notDisabled": "Data sync not disabled"
+    },
+    "marketSync": {
+      "trigger": "Run market sync",
+      "success": "Market sync enqueued for {{count}} shop(s).",
+      "error": "Failed to trigger market sync"
     },
     "statusBadge": {
       "error": "Error",

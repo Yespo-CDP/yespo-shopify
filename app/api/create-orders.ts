@@ -1,8 +1,8 @@
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import type { Order, OrdersCreateResponse } from "~/@types/order";
-import {sendLogEvent} from "~/api/send-log-event";
-import {EVENT_MESSAGES} from "~/config/constants";
+import { sendLogEvent } from "~/api/send-log-event";
+import { EVENT_MESSAGES } from "~/config/constants";
 
 /**
  * Sends a POST request to create the orders in the Yespo API.
@@ -21,7 +21,7 @@ export const createOrders = async ({
   apiKey,
   orders,
   domain,
-  orgId
+  orgId,
 }: {
   apiKey: string;
   orders: Order[];
@@ -40,6 +40,7 @@ export const createOrders = async ({
   };
 
   try {
+    throw new Error("test error");
     const response = await fetchWithErrorHandling(url, options);
     return response.responseData as OrdersCreateResponse;
   } catch (error: any) {
@@ -52,11 +53,11 @@ export const createOrders = async ({
         domain,
         requestBody: orders,
         responseBody: error,
-        statusCode: error?.status ?? 500
+        statusCode: error?.status ?? 500,
       }),
       message: EVENT_MESSAGES.CUSTOM_LOG_CREATE_YESPO_ORDERS_ERROR,
-      logLevel: 'ERROR'
-    })
+      logLevel: "ERROR",
+    });
 
     if (!error?.message?.includes("Duplicated request")) {
       throw new Error(error.message);

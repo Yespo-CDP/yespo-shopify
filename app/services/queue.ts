@@ -3,13 +3,20 @@ import { Queue } from "bullmq";
 import { redisConfig } from "~/config/redis";
 import {
   customerSyncLogRepository,
+  marketSyncLogRepository,
   orderSyncLogRepository,
   productVariantSyncLogRepository,
+  shopRepository,
 } from "~/repositories/repositories.server";
 import type { Shop } from "~/@types/shop";
 import type { Session } from "@shopify/shopify-app-react-router/server";
+import { getOfflineAccessToken } from "~/services/get-offline-session.server";
 
 export const DataSyncQueue = new Queue("data-sync", {
+  connection: redisConfig,
+});
+
+export const DataSyncMarketQueue = new Queue("data-sync-market", {
   connection: redisConfig,
 });
 
@@ -83,4 +90,62 @@ export async function enqueueDataSyncTasks({
       },
     );
   }
+}
+
+async function enqueueMarketSyncJobIfEligible(shop: Shop): Promise<boolean> {
+  if (!shop.apiKey) {
+    console.error(`Market sync: Api key not found for ${shop.shopUrl}`);
+    return false;
+  }
+
+  const marketSyncLog = await marketSyncLogRepository.hasInProgressByShop(
+    shop.shopUrl,
+  );
+  if (marketSyncLog) {
+    return false;
+  }
+
+  const accessToken = await getOfflineAccessToken(shop.shopUrl);
+  if (!accessToken) {
+    console.error(`Market sync: no offline session for ${shop.shopUrl}`);
+    return false;
+  }
+
+  await DataSyncMarketQueue.add(
+    "data-sync-market",
+    {
+      shop: shop.shopUrl,
+      accessToken,
+    },
+    {
+      removeOnComplete: 1000,
+      removeOnFail: 5000,
+    },
+  );
+
+  return true;
+}
+
+export async function enqueueMarketSyncTaskForShopUrl(
+  shopUrl: string,
+): Promise<number> {
+  const shop = await shopRepository.getShop(shopUrl);
+  if (!shop) {
+    return 0;
+  }
+
+  return (await enqueueMarketSyncJobIfEligible(shop)) ? 1 : 0;
+}
+
+export async function enqueueMarketSyncTasks(): Promise<number> {
+  const shops = await shopRepository.getShopsForMarketSync();
+  let enqueued = 0;
+
+  for (const shop of shops) {
+    if (await enqueueMarketSyncJobIfEligible(shop)) {
+      enqueued++;
+    }
+  }
+
+  return enqueued;
 }

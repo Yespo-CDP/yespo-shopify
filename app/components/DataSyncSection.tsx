@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState, type FC } from "react";
+import { useAppBridge } from "@shopify/app-bridge-react";
 import { useTranslation } from "react-i18next";
 import { useFetcher } from "react-router";
 
 import type { CustomerSyncLog } from "~/@types/customerSyncLog";
 import type { OrderSyncLog } from "~/@types/orderSyncLog";
+import type { MarketSyncLogRecord } from "~/@types/marketSyncLog";
 import DataSyncStatusBadge from "./ui/DataSyncStatusBadge";
 import DataSyncTooltip from "./ui/DataSyncTooltip";
 import { ProductVariantSyncLog } from "~/@types/productVariantSyncLog";
@@ -13,9 +15,11 @@ export interface DataSyncSectionProps {
   customersSyncLog?: CustomerSyncLog;
   orderSyncLog?: OrderSyncLog;
   productVariantSyncLog?: ProductVariantSyncLog;
+  marketSyncLogs?: MarketSyncLogRecord[];
   contactSyncEnabled?: boolean;
   orderSyncEnabled?: boolean;
   productVariantSyncEnabled?: boolean;
+  onMarketSyncTriggered?: () => void;
 }
 
 const DataSyncSection: FC<DataSyncSectionProps> = ({
@@ -23,13 +27,17 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
   customersSyncLog,
   orderSyncLog,
   productVariantSyncLog,
+  marketSyncLogs = [],
   orderSyncEnabled = false,
   contactSyncEnabled = false,
   productVariantSyncEnabled = false,
+  onMarketSyncTriggered,
 }) => {
   const { t } = useTranslation();
+  const shopify = useAppBridge();
   const fetcher = useFetcher();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMarketSyncSubmitting, setIsMarketSyncSubmitting] = useState(false);
 
   const handleSyncToggle = useCallback(
     (intent: "data-sync-enable" | "data-sync-disable") => {
@@ -52,6 +60,46 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
       setIsSubmitting(false);
     }
   }, [fetcher.state]);
+
+  const handleMarketSync = useCallback(async () => {
+    setIsMarketSyncSubmitting(true);
+
+    try {
+      const response = await fetch("/api/market-sync-cron", { method: "POST" });
+      const data = (await response.json()) as {
+        success?: boolean;
+        enqueued?: number;
+        message?: string;
+      };
+
+      if (response.ok && data.success) {
+        shopify.toast.show(
+          t("DataSyncSection.marketSync.success", {
+            count: data.enqueued ?? 0,
+          }),
+          { duration: 3000 },
+        );
+        onMarketSyncTriggered?.();
+        return;
+      }
+
+      shopify.toast.show(
+        data.message ?? t("DataSyncSection.marketSync.error"),
+        {
+          duration: 3000,
+          isError: true,
+        },
+      );
+    } catch (error) {
+      console.error("Market sync cron trigger failed:", error);
+      shopify.toast.show(t("DataSyncSection.marketSync.error"), {
+        duration: 3000,
+        isError: true,
+      });
+    } finally {
+      setIsMarketSyncSubmitting(false);
+    }
+  }, [onMarketSyncTriggered, shopify, t]);
 
   return (
     <s-section>
@@ -229,8 +277,64 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
                 </s-grid-item>
               </s-grid>
             )}
+            {marketSyncLogs.map((marketSyncLog) => (
+              <s-grid
+                key={marketSyncLog.countryCode}
+                gridTemplateColumns="repeat(12, 1fr)"
+                gap="small-100"
+              >
+                <s-grid-item gridColumn="span 3">
+                  <s-text type="strong">
+                    {t("DataSyncSection.syncLog.productsByCountry", {
+                      countryCode: marketSyncLog.countryCode,
+                    })}
+                    :
+                  </s-text>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 3">
+                  <s-stack direction="inline" justifyContent="end">
+                    <s-text>
+                      {t("DataSyncSection.syncLog.syncedCount")}:{" "}
+                      {marketSyncLog.syncedCount + marketSyncLog.skippedCount}
+                    </s-text>
+                  </s-stack>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 2">
+                  <s-stack direction="inline" justifyContent="end">
+                    <s-text>
+                      {t("DataSyncSection.syncLog.failedCount")}:{" "}
+                      {marketSyncLog.failedCount}
+                    </s-text>
+                  </s-stack>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 2">
+                  <s-stack direction="inline" justifyContent="end">
+                    <s-text>
+                      {t("DataSyncSection.syncLog.totalCount")}:{" "}
+                      {marketSyncLog.totalCount}
+                    </s-text>
+                  </s-stack>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 2">
+                  <s-stack direction="inline" justifyContent="end">
+                    <DataSyncStatusBadge status={marketSyncLog.status} />
+                  </s-stack>
+                </s-grid-item>
+              </s-grid>
+            ))}
           </s-stack>
         )}
+
+        <s-stack direction="inline" justifyContent="end">
+          <s-button
+            variant="secondary"
+            onClick={handleMarketSync}
+            loading={isMarketSyncSubmitting}
+            disabled={isMarketSyncSubmitting || isSubmitting}
+          >
+            {t("DataSyncSection.marketSync.trigger")}
+          </s-button>
+        </s-stack>
       </s-stack>
     </s-section>
   );

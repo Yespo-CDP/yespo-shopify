@@ -91,4 +91,14 @@ export default class ShopRepositoryImpl implements IShopRepository {
       where: { shopUrl },
     });
   }
+
+  async getShopsForMarketSync(): Promise<Shop[]> {
+    return this.database.shop.findMany({
+      where: {
+        active: true,
+        isMarketSyncEnabled: true,
+        apiKey: { not: null },
+      },
+    });
+  }
 }

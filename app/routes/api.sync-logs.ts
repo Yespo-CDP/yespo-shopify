@@ -4,6 +4,7 @@ import {
   customerSyncLogRepository,
   orderSyncLogRepository,
   productVariantSyncLogRepository,
+  marketSyncLogRepository,
 } from "~/repositories/repositories.server";
 
 /**
@@ -38,6 +39,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
     await productVariantSyncLogRepository.getProductVariantSyncLogByShop(
       session.shop,
     );
+  const marketSyncLogs = await marketSyncLogRepository.getByShop(session.shop);
 
-  return { customersSyncLog, orderSyncLog, productVariantSyncLog };
+  return {
+    customersSyncLog,
+    orderSyncLog,
+    productVariantSyncLog,
+    marketSyncLogs,
+  };
 }

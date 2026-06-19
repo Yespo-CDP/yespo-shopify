@@ -7,6 +7,7 @@ import {
   customerSyncLogRepository,
   orderSyncLogRepository,
   productVariantSyncLogRepository,
+  marketSyncLogRepository,
 } from "~/repositories/repositories.server";
 import { connectAccountService } from "~/services/connect-account.server";
 import { disconnectAccountService } from "~/services/disconnect-account.server";
@@ -61,6 +62,7 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
     await productVariantSyncLogRepository.getProductVariantSyncLogByShop(
       session.shop,
     );
+  const marketSyncLogs = await marketSyncLogRepository.getByShop(session.shop);
   const isMarketsOverflowing = await checkMarketsService({
     admin,
     domain: session.shop,
@@ -102,6 +104,7 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
     customersSyncLog,
     orderSyncLog,
     productVariantSyncLog,
+    marketSyncLogs,
     ENV: {
       DOCK_URL: process.env.DOCK_URL ?? "https://docs.yespo.io",
       PLATFORM_URL: process.env.PLATFORM_URL ?? "https://my.yespo.io",

@@ -9,6 +9,10 @@ import OrderSyncRepositoryImpl from "~/repositories/orderSync/orderSyncRepositor
 import OrderSyncLogRepositoryImpl from "~/repositories/orderSyncLog/orderSyncLogRepositoryImpl.server";
 import ProductVariantSyncRepositoryImpl from "~/repositories/productVariantSync/productVariantSyncRepositoryImpl.server";
 import ProductVariantSyncLogRepositoryImpl from "~/repositories/productVariantSyncLog/productVariantSyncLogRepositoryImpl.server";
+import MarketSyncRepositoryImpl from "~/repositories/marketSync/marketSyncRepositoryImpl.server";
+import MarketSyncLogRepositoryImpl from "~/repositories/marketSyncLog/marketSyncLogRepositoryImpl.server";
+import TmpMarketSyncRepositoryImpl from "~/repositories/tmpMarketSync/tmpMarketSyncRepositoryImpl.server";
+import TranslationSyncRepositoryImpl from "~/repositories/translationSync/translationSyncRepositoryImpl.server";
 
 /**
  * An instance of the ShopRepository implementation, initialized with the Prisma database client.
@@ -105,6 +109,11 @@ const productVariantSyncLogRepository = new ProductVariantSyncLogRepositoryImpl(
   database,
 );
 
+const marketSyncRepository = new MarketSyncRepositoryImpl(database);
+const marketSyncLogRepository = new MarketSyncLogRepositoryImpl(database);
+const tmpMarketSyncRepository = new TmpMarketSyncRepositoryImpl(database);
+const translationSyncRepository = new TranslationSyncRepositoryImpl(database);
+
 export {
   shopRepository,
   gdprCustomerDataRepository,
@@ -116,4 +125,8 @@ export {
   orderSyncLogRepository,
   productVariantSyncRepository,
   productVariantSyncLogRepository,
+  marketSyncRepository,
+  marketSyncLogRepository,
+  tmpMarketSyncRepository,
+  translationSyncRepository,
 };

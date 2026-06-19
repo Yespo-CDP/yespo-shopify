@@ -86,6 +86,7 @@
       "orders": "Zamówienia",
       "customers": "Klienci",
       "productVariants": "Produkty",
+      "productsByCountry": "Produkty ({{countryCode}})",
       "syncedCount": "Zsynchronizowano",
       "skippedCount": "Pominięto",
       "failedCount": "Nieudane",

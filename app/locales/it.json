@@ -87,6 +87,7 @@
         "orders": "Ordini",
         "customers": "Clienti",
         "productVariants": "Prodotti",
+        "productsByCountry": "Prodotti ({{countryCode}})",
         "syncedCount": "Sincronizzati",
         "skippedCount": "Saltati",
         "failedCount": "Non riusciti",

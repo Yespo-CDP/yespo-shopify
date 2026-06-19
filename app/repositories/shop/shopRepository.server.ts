@@ -36,4 +36,9 @@ export default interface ShopRepository {
    * @returns {Promise<Shop>} A promise that resolves to the updated Shop object.
    */
   updateShop(shopUrl: string, data: ShopUpdate): Promise<Shop>;
+
+  /**
+   * Returns active shops eligible for market sync cron.
+   */
+  getShopsForMarketSync(): Promise<Shop[]>;
 }
