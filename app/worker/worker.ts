@@ -57,6 +57,7 @@ new Worker<JobData>(
         apiKey,
         shopData.id,
         shopData.orgId,
+        shopData.siteId,
       );
     } catch (error: any) {
       console.error(`Worker error:`, error);
@@ -90,6 +91,7 @@ new Worker<MarketSyncJobData>(
         apiKey,
         shopData.id,
         shopData.orgId,
+        shopData.siteId,
       );
     } catch (error: unknown) {
       console.error(`Market sync worker error:`, error);

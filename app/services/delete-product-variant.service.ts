@@ -20,6 +20,7 @@ export const deleteProductVariantService = async (
   apiKey: string,
   domain: string,
   orgId?: number | null,
+  siteId?: string | null,
 ) => {
   try {
     const externalVariantIds = (payload?.variants ?? []).map(
@@ -32,6 +33,7 @@ export const deleteProductVariantService = async (
 
     await deleteProductVariants({
       apiKey,
+      siteId: siteId ?? "",
       externalVariantIds,
       domain,
       orgId,

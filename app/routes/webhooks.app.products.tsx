@@ -42,6 +42,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         shop.id,
         shop.shopUrl,
         shop.orgId,
+        shop.siteId,
       );
       break;
 
@@ -52,6 +53,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         shop.id,
         shop.shopUrl,
         shop.orgId,
+        shop.siteId,
       );
       break;
 
@@ -61,6 +63,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         shop.apiKey,
         shop.shopUrl,
         shop.orgId,
+        shop.siteId,
       );
       break;
 

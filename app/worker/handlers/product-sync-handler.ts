@@ -28,6 +28,7 @@ export const productSyncHandler = async (
   apiKey: string,
   shopId: number,
   orgId?: number | null,
+  siteId?: string | null,
 ) => {
   console.log(`⏳ Synchronizing products start for ${shop}`);
 
@@ -130,6 +131,7 @@ export const productSyncHandler = async (
 
             const variantsUpdateResponse = await updateProductVariants({
               apiKey,
+              siteId: siteId ?? "",
               productVariants: variantsChunk,
               domain: shop,
               orgId,

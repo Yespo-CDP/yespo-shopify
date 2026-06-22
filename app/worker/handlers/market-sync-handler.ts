@@ -52,6 +52,7 @@ export const marketSyncHandler = async (
   apiKey: string,
   shopId: number,
   orgId?: number | null,
+  siteId?: string | null,
 ) => {
   console.log(`⏳ Market sync start for ${shop}`);
 
@@ -132,6 +133,7 @@ export const marketSyncHandler = async (
         apiKey,
         shop,
         orgId,
+        siteId,
         countries: chunk.countries,
       });
 
@@ -197,6 +199,7 @@ async function processTmpBatch({
   apiKey,
   shop,
   orgId,
+  siteId,
   countries,
 }: {
   shopId: number;
@@ -204,6 +207,7 @@ async function processTmpBatch({
   apiKey: string;
   shop: string;
   orgId?: number | null;
+  siteId?: string | null;
   countries: string[];
 }): Promise<{ pricingByCountry: Record<string, CountrySyncStats> }> {
   const rows = await tmpMarketSyncRepository.getByBatch(shopId, batchId);
@@ -224,6 +228,7 @@ async function processTmpBatch({
     apiKey,
     shop,
     orgId,
+    siteId,
     countries,
   });
 
@@ -240,6 +245,7 @@ async function processTmpBatch({
     apiKey,
     shop,
     orgId,
+    siteId,
   });
 
   return { pricingByCountry };
@@ -251,6 +257,7 @@ async function processPricingRows({
   apiKey,
   shop,
   orgId,
+  siteId,
   countries,
 }: {
   rows: TmpMarketSyncRecord[];
@@ -258,6 +265,7 @@ async function processPricingRows({
   apiKey: string;
   shop: string;
   orgId?: number | null;
+  siteId?: string | null;
   countries: string[];
 }): Promise<
   Record<string, Pick<CountrySyncStats, "synced" | "skipped" | "failed">>
@@ -324,6 +332,7 @@ async function processPricingRows({
     // FIXME: Replace with a real HTTP call once the Yespo endpoint is available:
     const response = await updateMarketProducts({
       apiKey,
+      siteId: siteId ?? "",
       items: chunk,
       domain: shop,
       orgId,
@@ -364,12 +373,14 @@ async function processTranslationRows({
   apiKey,
   shop,
   orgId,
+  siteId,
 }: {
   rows: TmpMarketSyncRecord[];
   shopId: number;
   apiKey: string;
   shop: string;
   orgId?: number | null;
+  siteId?: string | null;
 }): Promise<void> {
   const toSync: MarketTranslationPayload[] = [];
 
@@ -420,6 +431,7 @@ async function processTranslationRows({
     const chunk = toSync.slice(index, index + API_CHUNK_SIZE);
     const response = await updateMarketTranslations({
       apiKey,
+      siteId: siteId ?? "",
       items: chunk,
       domain: shop,
       orgId,

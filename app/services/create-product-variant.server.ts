@@ -37,6 +37,7 @@ export const createProductVariantService = async (
   shopId: number,
   domain: string,
   orgId?: number | null,
+  siteId?: string | null,
 ) => {
   try {
     const variants = payload?.variants ?? [];
@@ -52,6 +53,7 @@ export const createProductVariantService = async (
 
     await updateProductVariants({
       apiKey,
+      siteId: siteId ?? "",
       productVariants,
       domain,
       orgId,
