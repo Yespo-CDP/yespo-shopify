@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import type { ProductVariant } from "~/@types/productVariant";
 import {
   shopRepository,
@@ -10,6 +12,12 @@ import { getProducts } from "../services/get-products";
 import { getProductVariantsCount } from "../services/get-product-variants-count";
 import { fetchAllProductVariants } from "../services/get-product-variants";
 import { createProductVariantPayload } from "../services/create-product-variant-payload";
+import { getShopPrimaryLocale } from "../services/get-shop-primary-locale";
+import { getShopSecondaryLocales } from "../services/get-shop-locales";
+import {
+  getProductTranslations,
+  type ProductTranslationsResult,
+} from "../services/get-product-translations";
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
 
@@ -37,6 +45,32 @@ export const productSyncHandler = async (
 
   console.log("Total product variants count", variantsCount, "\n");
 
+  // Determine languageCode and whether a language change needs to be signalled to Yespo.
+  // Fetch the current Shopify primary locale and all secondary locales once at the start.
+  const [currentLocale, shopData] = await Promise.all([
+    getShopPrimaryLocale({ client }),
+    shopRepository.getShop(shop),
+  ]);
+  const storedLanguageCode = shopData?.defaultLanguageCode ?? null;
+  const languageCode = currentLocale ?? storedLanguageCode ?? "en";
+
+  const secondaryLocales = await getShopSecondaryLocales({
+    client,
+    primaryLocale: languageCode,
+  });
+  const hasTranslations = secondaryLocales.length > 0;
+
+  // pendingLanguageChanged: sent as true on the FIRST API batch only, then flipped to false.
+  // Covers two cases:
+  //   - language intentionally changed: storedLanguageCode !== null && !== languageCode
+  //   - first ever sync: storedLanguageCode === null (Yespo has no record yet, languageChanged: false is fine)
+  let pendingLanguageChanged =
+    storedLanguageCode !== null && storedLanguageCode !== languageCode;
+
+  // needsLanguageCodePersist: true whenever the stored value differs from the current one
+  // (first sync or language change). Flipped to false after the first batch so DB is updated only once.
+  let needsLanguageCodePersist = languageCode !== storedLanguageCode;
+
   let cursor: string | null | undefined = null;
   let shopCurrency = "";
   let totalSkippedCount = 0;
@@ -47,7 +81,6 @@ export const productSyncHandler = async (
     do {
       try {
         console.log("\n", "Chunk start:");
-        const shopData = await shopRepository.getShop(shop);
 
         if (shopData?.isProductVariantSyncEnabled) {
           const response = await getProducts({
@@ -65,6 +98,26 @@ export const productSyncHandler = async (
 
           for (const product of products) {
             const variants = await fetchAllProductVariants({ client, product });
+
+            const productTranslations = hasTranslations
+              ? await getProductTranslations({
+                  client,
+                  productId: product.id,
+                  variantGids: variants.map((v) => v.id),
+                  locales: secondaryLocales,
+                  shopDomain: shop,
+                  productHandle: product.handle,
+                  collections: product.collections?.nodes ?? [],
+                })
+              : ({ product: {}, variants: {} } satisfies ProductTranslationsResult);
+
+            if (Object.keys(productTranslations.product).length > 0) {
+              product.translations = productTranslations.product;
+            }
+            if (Object.keys(productTranslations.variants).length > 0) {
+              product.variantTranslations = productTranslations.variants;
+            }
+
             const variantIds = variants.map((variant) => variant.id);
             const productVariantSyncs =
               await productVariantSyncRepository.getProductVariantSyncByVariantIds(
@@ -88,11 +141,14 @@ export const productSyncHandler = async (
                 productVariantSync?.updatedAt?.getTime() ?? 0;
 
               if (entityUpdatedDate > syncUpdatedDate) {
+                const action = productVariantSync ? "update" : "create";
                 productVariantsData.push(
                   createProductVariantPayload(
                     product,
                     variant,
                     shopCurrency,
+                    shop,
+                    action,
                   ),
                 );
 
@@ -128,14 +184,36 @@ export const productSyncHandler = async (
             if (variantsChunk.length === 0) {
               continue;
             }
+            const debugDir = path.resolve(process.cwd(), "debug");
+            fs.mkdirSync(debugDir, { recursive: true });
+            fs.writeFileSync(
+              path.join(debugDir, `product-sync-chunk-${Date.now()}.json`),
+              JSON.stringify(variantsChunk, null, 2),
+            );
 
             const variantsUpdateResponse = await updateProductVariants({
               apiKey,
               siteId: siteId ?? "",
+              languageCode,
+              languageChanged: pendingLanguageChanged,
               productVariants: variantsChunk,
               domain: shop,
               orgId,
             });
+
+            // After the first successful batch: clear both flags.
+            // pendingLanguageChanged → false so subsequent batches use languageChanged: false.
+            // needsLanguageCodePersist → false so DB is updated only once per sync run.
+            if (pendingLanguageChanged) {
+              pendingLanguageChanged = false;
+            }
+            if (needsLanguageCodePersist) {
+              needsLanguageCodePersist = false;
+              await shopRepository.updateShop(shop, {
+                defaultLanguageCode: languageCode,
+                ...(shopCurrency ? { currency: shopCurrency } : {}),
+              });
+            }
 
             if (variantsUpdateResponse?.failedVariants) {
               if (Array.isArray(variantsUpdateResponse.failedVariants)) {

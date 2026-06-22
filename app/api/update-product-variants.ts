@@ -12,11 +12,15 @@ import { EVENT_MESSAGES } from "~/config/constants";
  * the full Yespo product envelope (action, updatedDate, imageUrl, url, isInStock,
  * categories, translations, etc.).
  *
- * TODO: add `languageCode` to Shop model (= Shopify shop.primaryLocale) and pass here.
+ * languageCode = shop.defaultLanguageCode (Shopify shop.primaryLocale, stored in DB).
+ * languageChanged = true only on the first batch when primaryLocale changed vs stored defaultLanguageCode.
+ * After the first accepted batch the caller must update shop.defaultLanguageCode in DB.
  *
  * @param {Object} params - The input parameters.
  * @param {string} params.apiKey - The API key used for authentication.
  * @param {string} params.siteId - The Yespo site/account identifier.
+ * @param {string} params.languageCode - BCP 47 language tag (e.g. "uk", "en"). Must match shop.primaryLocale.
+ * @param {boolean} [params.languageChanged] - Set to true on the first batch when the language is changing.
  * @param {ProductVariant[]} params.productVariants - The product variant array to sync.
  * @param {string} params.domain - The shop domain for logging.
  * @param {number | null | undefined} params.orgId - The Yespo organization id for logging.
@@ -25,12 +29,16 @@ import { EVENT_MESSAGES } from "~/config/constants";
 export const updateProductVariants = async ({
   apiKey,
   siteId,
+  languageCode,
+  languageChanged = false,
   productVariants,
   domain,
   orgId,
 }: {
   apiKey: string;
   siteId: string;
+  languageCode: string;
+  languageChanged?: boolean;
   productVariants: ProductVariant[];
   domain: string;
   orgId?: number | null;
@@ -51,12 +59,15 @@ export const updateProductVariants = async ({
     //   headers: { "content-type": "application/json", Authorization: authHeader },
     //   body: JSON.stringify({
     //     siteId,
-    //     languageCode: "...", // TODO: pass shop.defaultLanguageCode
+    //     languageCode,
+    //     languageChanged,
     //     products: productVariants,
     //   }),
     // });
     // return response.responseData as ProductVariantsResponse;
     void siteId;
+    void languageCode;
+    void languageChanged;
 
     await sendLogEvent({
       orgId,

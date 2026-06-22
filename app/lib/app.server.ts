@@ -13,7 +13,6 @@ import { connectAccountService } from "~/services/connect-account.server";
 import { disconnectAccountService } from "~/services/disconnect-account.server";
 import { connectGeneralScriptService } from "~/services/connect-general-script.server";
 import { connectWebPushScriptService } from "~/services/connect-webpush-script.server";
-import checkMarketsService from "~/services/check-markets.server";
 import checkScriptConnectionService from "~/services/check-script-connection.server";
 import checkThemeExtensionService from "~/services/check-theme-extension.server";
 import { authenticate } from "~/shopify.server";
@@ -39,7 +38,6 @@ import switchAppInboxScriptServer from "~/services/switch-app-inbox-script-mode.
  *   shop: Shop | null,
  *   account: Account | null,
  *   scriptConnectionStatus: any,
- *   isMarketsOverflowing: boolean,
  *   customersSyncLog: CustomerSyncLog[],
  *   orderSyncLog: OrderSyncLog[],
  *   productVariantSyncLog: ProductVariantSyncLog[],
@@ -63,11 +61,6 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
       session.shop,
     );
   const marketSyncLogs = await marketSyncLogRepository.getByShop(session.shop);
-  const isMarketsOverflowing = await checkMarketsService({
-    admin,
-    domain: session.shop,
-    orgId: shop?.orgId,
-  });
   const scriptConnectionStatus = await checkScriptConnectionService({
     admin,
     domain: session.shop,
@@ -100,7 +93,6 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
         shop?.isWebPushScriptInstalled ||
         scriptConnectionStatus.isWebPushScriptExist,
     },
-    isMarketsOverflowing,
     customersSyncLog,
     orderSyncLog,
     productVariantSyncLog,

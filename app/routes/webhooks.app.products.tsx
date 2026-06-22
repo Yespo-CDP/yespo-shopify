@@ -43,6 +43,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         shop.shopUrl,
         shop.orgId,
         shop.siteId,
+        shop.defaultLanguageCode,
+        session.shop,
+        session.accessToken,
+        shop.currency,
       );
       break;
 
@@ -54,6 +58,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         shop.shopUrl,
         shop.orgId,
         shop.siteId,
+        shop.defaultLanguageCode,
+        session.shop,
+        session.accessToken,
+        shop.currency,
       );
       break;
 

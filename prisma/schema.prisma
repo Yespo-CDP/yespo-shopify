@@ -41,6 +41,8 @@ model Shop {
   apiKey                      String?
   orgId                       Int?
   siteId                      String?
+  currency                    String?
+  defaultLanguageCode         String?
   isWebTrackingEnabled        Boolean?  @default(false)
   isContactSyncEnabled        Boolean?  @default(false)
   isOrderSyncEnabled          Boolean?  @default(false)

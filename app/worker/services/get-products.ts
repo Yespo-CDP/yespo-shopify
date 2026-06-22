@@ -29,7 +29,15 @@ export const getProducts = async ({
           nodes {
             id
             title
+            handle
             description
+            vendor
+            tags
+            onlineStoreUrl
+            featuredImage { url }
+            collections(first: 10) {
+              nodes { id title handle }
+            }
             createdAt
             updatedAt
             variants(first: $variantsCount) {
@@ -37,6 +45,9 @@ export const getProducts = async ({
                 id
                 title
                 price
+                compareAtPrice
+                inventoryQuantity
+                image { url }
                 contextualPricing(context: {}) {
                   price {
                     amount

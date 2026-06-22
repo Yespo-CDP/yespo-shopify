@@ -1,35 +1,31 @@
 import { updateProductVariants } from "~/api/update-product-variants";
-import { productVariantSyncRepository } from "~/repositories/repositories.server";
+import {
+  productVariantSyncRepository,
+} from "~/repositories/repositories.server";
 import {
   createProductVariantPayloadFromWebhook,
   type ProductVariantWebhookPayload,
 } from "./create-product-variant-payload-from-webhook";
+import { createClient } from "~/worker/services/create-client";
+import { getProductCollections } from "~/worker/services/get-product-collections";
 
 /**
- * Creates product variants using the provided payload and API key.
+ * Creates product variants in Yespo from a Shopify PRODUCTS_CREATE webhook payload.
  *
- * Any errors during the process are caught and logged.
+ * Fetches product collections via the GraphQL API (not included in the webhook payload)
+ * to populate the required `categories` field. Determines `action: "create"` for all
+ * variants since this is a new product event.
  *
- * **Shopify Product Webhook (REST):**
- * https://shopify.dev/docs/api/admin-rest/latest/resources/product#resource-object
- *
- * **Field Mapping:**
- * - `payload.id` → `externalProductId`
- * - `payload.title` + `variant.title` → `name`
- * - `payload.body_html` → `description`
- * - `variant.id` → `externalVariantId`
- * - `variant.price` → `price`
- * - `variant.admin_graphql_api_id` → `variantId` (for db sync log)
- * - `payload.admin_graphql_api_id` → `productId` (for db sync log)
- * - `variant.created_at` / `payload.created_at` → `createdAt` (for db sync log)
- * - `variant.updated_at` / `payload.updated_at` → `updatedAt` (for db sync log)
- *
- * @param {any} payload - The product data payload containing variant info.
- * @param {string} apiKey - The API key used for authentication with the Yespo API.
- * @param {number} shopId - The shop id for connect product variant sync log to shop.
- * @param domain
- * @param orgId
- * @returns {Promise<void>} A promise that resolves when the product variant creation completes.
+ * @param payload - Shopify product webhook payload
+ * @param apiKey - Yespo API key for authentication
+ * @param shopId - Internal shop ID for DB relations
+ * @param domain - Shop domain used for logging and URL construction
+ * @param orgId - Yespo organisation ID for logging
+ * @param siteId - Yespo site/account identifier
+ * @param languageCode - BCP 47 language tag stored in DB (shop.defaultLanguageCode)
+ * @param shopifyDomain - Shopify myshopify domain for the GraphQL client (session.shop)
+ * @param accessToken - Shopify access token for the GraphQL client (session.accessToken)
+ * @param shopCurrency - ISO 4217 currency code stored in DB (shop.currency)
  */
 export const createProductVariantService = async (
   payload: any,
@@ -38,22 +34,41 @@ export const createProductVariantService = async (
   domain: string,
   orgId?: number | null,
   siteId?: string | null,
+  languageCode?: string | null,
+  shopifyDomain?: string,
+  accessToken?: string,
+  shopCurrency?: string | null,
 ) => {
   try {
-    const variants = payload?.variants ?? [];
+    const variants: ProductVariantWebhookPayload[] = payload?.variants ?? [];
 
     if (variants.length === 0) {
       return;
     }
 
-    const productVariants = variants.map(
-      (variant: ProductVariantWebhookPayload) =>
-        createProductVariantPayloadFromWebhook(payload, variant),
+    const categories =
+      shopifyDomain && accessToken && payload?.admin_graphql_api_id
+        ? await getProductCollections({
+            client: createClient({ shop: shopifyDomain, accessToken }),
+            productGid: payload.admin_graphql_api_id,
+          })
+        : [];
+
+    const productVariants = variants.map((variant) =>
+      createProductVariantPayloadFromWebhook(
+        payload,
+        variant,
+        shopCurrency ?? "",
+        domain,
+        "create",
+        categories,
+      ),
     );
 
     await updateProductVariants({
       apiKey,
       siteId: siteId ?? "",
+      languageCode: languageCode ?? "",
       productVariants,
       domain,
       orgId,

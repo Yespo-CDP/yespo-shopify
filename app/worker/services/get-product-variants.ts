@@ -28,6 +28,9 @@ export const getProductVariants = async ({
               id
               title
               price
+              compareAtPrice
+              inventoryQuantity
+              image { url }
               contextualPricing(context: {}) {
                 price {
                   amount
