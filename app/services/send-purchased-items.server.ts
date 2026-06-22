@@ -1,10 +1,10 @@
-import type {Shop} from "~/@types/shop";
-import {eventDataRepository} from "~/repositories/repositories.server";
-import type {ICartCustomer} from "~/@types/statusCart";
-import {buildCustomerData} from "~/utils/buildCustomerData";
-import {v4 as uuidv4} from "uuid";
-import type {PurchasedItemsEvent} from "~/@types/purchasedItems";
-import {sendPurchasedItemsEvent} from "~/api/send-purchased-items-event";
+import type { Shop } from "~/@types/shop";
+import { eventDataRepository } from "~/repositories/repositories.server";
+import type { ICartCustomer } from "~/@types/statusCart";
+import { buildCustomerData } from "~/utils/buildCustomerData";
+import { v4 as uuidv4 } from "uuid";
+import type { PurchasedItemsEvent } from "~/@types/purchasedItems";
+import { sendPurchasedItemsEvent } from "~/api/send-purchased-items-event";
 
 /**
  * Sends purchased items event data to the tracking service based on the given webhook payload and shop.
@@ -26,9 +26,9 @@ export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
   try {
     const cartAttribute = payload.note_attributes.find(
       (attr: { name: string; value: string }) =>
-        attr.name.trim().toLowerCase() === 'cart token'
+        attr.name.trim().toLowerCase() === "cart token" ||
+        attr.name.trim() === "cartId",
     )?.value;
-
     const cartToken = payload.cart_token ?? cartAttribute;
 
     if (!cartToken) {
@@ -36,30 +36,30 @@ export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
       return null;
     }
 
-    const eventData = await eventDataRepository.getEventData(cartToken)
+    const eventData = await eventDataRepository.getEventData(cartToken);
 
     if (!eventData) {
-      console.error('Event data not exist')
-      return null
+      console.error("Event data not exist");
+      return null;
     }
 
     if (!shop.apiKey) {
-      console.error('Api key does not provided')
-      return null
+      console.error("Api key does not provided");
+      return null;
     }
 
     if (!shop.siteId) {
-      console.error('Site id does not provided')
-      return null
+      console.error("Site id does not provided");
+      return null;
     }
 
-    const customerData: ICartCustomer = buildCustomerData(payload.customer)
+    const customerData: ICartCustomer = buildCustomerData(payload.customer);
 
     const productsData = payload.line_items.map((item: any) => ({
       productKey: item.variant_id.toString(),
       unit_price: item.price,
       quantity: item.quantity,
-    }))
+    }));
 
     const purchasedItemsData: PurchasedItemsEvent = {
       GeneralInfo: {
@@ -67,26 +67,26 @@ export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
         siteId: shop.siteId,
         datetime: Date.now(),
         cookies: {
-          sc: eventData.sc
+          sc: eventData.sc,
         },
-        ...customerData
+        ...customerData,
       },
       TrackedOrderId: uuidv4(),
       PurchasedItems: {
         Products: productsData,
-        OrderNumber: payload.id.toString()
-      }
-    }
+        OrderNumber: payload.id.toString(),
+      },
+    };
 
     await sendPurchasedItemsEvent({
       apiKey: shop.apiKey,
       purchasedItemsData,
       domain: shop.shopUrl,
-      orgId: shop.orgId
-    })
+      orgId: shop.orgId,
+    });
 
-    console.log('SUCCESSFULLY SEND PURCHASED ITEMS')
+    console.log("SUCCESSFULLY SEND PURCHASED ITEMS");
   } catch (error) {
     console.error("Error occurred in Send Purchased Items Service", error);
   }
-}
+};
