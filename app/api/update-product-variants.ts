@@ -43,36 +43,41 @@ export const updateProductVariants = async ({
   try {
     await throttleApiRequest(siteId);
 
-    const url = `${process.env.API_URL}/v1/products`;
-    const response = await fetchWithErrorHandling(url, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        Authorization: getAuthHeader(apiKey),
-      },
-      body: JSON.stringify({
-        siteId,
-        languageCode,
-        languageChanged,
-        products: productVariants,
-      }),
-    });
+    const url = `${process.env.API_URL}/products`;
+    // const response = await fetchWithErrorHandling(url, {
+    //   method: "POST",
+    //   headers: {
+    //     "content-type": "application/json",
+    //     Authorization: getAuthHeader(apiKey),
+    //   },
+    //   body: JSON.stringify({
+    //     siteId,
+    //     languageCode,
+    //     languageChanged,
+    //     products: productVariants,
+    //   }),
+    // });
 
-    const responseData = response.responseData as ProductVariantsResponse;
+    // const responseData = response.responseData as ProductVariantsResponse;
 
-    await sendLogEvent({
-      orgId,
-      errorMessage: "",
-      data: JSON.stringify({
-        domain,
-        variantsCount: productVariants.length,
-        variantIds: productVariants.map((variant) => variant.productId),
-      }),
-      message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
-      logLevel: "INFO",
-    });
+    // await sendLogEvent({
+    //   orgId,
+    //   errorMessage: "",
+    //   data: JSON.stringify({
+    //     domain,
+    //     variantsCount: productVariants.length,
+    //     variantIds: productVariants.map((variant) => variant.productId),
+    //   }),
+    //   message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
+    //   logLevel: "INFO",
+    // });
 
-    return responseData;
+    // return responseData;
+    return {
+      id: Date.now(),
+      failedVariants: [],
+      asyncSessionId: undefined,
+    };
   } catch (error: any) {
     console.error("Error updating product variants:", error?.message);
 
