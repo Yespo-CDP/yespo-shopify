@@ -6,6 +6,9 @@ export interface ProductVariantWebhookPayload {
   price: string;
   compare_at_price?: string | null;
   inventory_quantity?: number | null;
+  option1?: string | null;
+  option2?: string | null;
+  option3?: string | null;
   admin_graphql_api_id: string;
   created_at?: string;
   updated_at?: string;
@@ -19,16 +22,38 @@ export interface ProductWebhookPayload {
   vendor?: string;
   admin_graphql_api_id: string;
   images?: Array<{ src: string }>;
+  options?: Array<{ name: string; position: number }>;
   created_at: string;
   updated_at: string;
   variants?: ProductVariantWebhookPayload[];
 }
 
-/**
- * Strips HTML tags from a string for plain-text fields.
- */
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, " ").replace(/\s{2,}/g, " ").trim();
+}
+
+/**
+ * Builds Yespo tags from webhook variant option values.
+ * Maps product.options[i].name → variant.option{i+1} value.
+ */
+function mapWebhookOptions(
+  productOptions: Array<{ name: string; position: number }> | undefined,
+  variant: ProductVariantWebhookPayload,
+): Record<string, string[]> {
+  if (!productOptions?.length) return {};
+  const optionValues: (string | null | undefined)[] = [
+    variant.option1,
+    variant.option2,
+    variant.option3,
+  ];
+  const result: Record<string, string[]> = {};
+  for (const opt of productOptions) {
+    const value = optionValues[opt.position - 1];
+    if (value && value !== "Default Title") {
+      result[opt.name] = [value];
+    }
+  }
+  return result;
 }
 
 /**
@@ -84,6 +109,11 @@ export const createProductVariantPayloadFromWebhook = (
     categories,
     itemGroupId: product.id.toString(),
   };
+
+  const tags = mapWebhookOptions(product.options, variant);
+  if (Object.keys(tags).length > 0) {
+    payload.tags = tags;
+  }
 
   if (product.vendor) {
     payload.brand = product.vendor;

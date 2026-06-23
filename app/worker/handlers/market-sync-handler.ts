@@ -1,4 +1,3 @@
-import type { Prisma } from "@prisma/client";
 import {
   updateMarketProducts,
   updateMarketTranslations,
@@ -8,6 +7,7 @@ import {
 import {
   marketSyncLogRepository,
   marketSyncRepository,
+  shopMarketRepository,
   shopRepository,
   tmpMarketSyncRepository,
   translationSyncRepository,
@@ -92,9 +92,7 @@ export const marketSyncHandler = async (
       });
     }
 
-    await shopRepository.updateShop(shop, {
-      markets: marketsConfig as unknown as Prisma.InputJsonValue,
-    });
+    await shopMarketRepository.replaceAll(shopId, marketsConfig.markets);
 
     const queryChunks = buildBulkQueryChunks(marketsConfig);
 

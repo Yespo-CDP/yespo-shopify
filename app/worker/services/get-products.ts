@@ -48,6 +48,7 @@ export const getProducts = async ({
                 compareAtPrice
                 inventoryQuantity
                 image { url }
+                selectedOptions { name value }
                 contextualPricing(context: {}) {
                   price {
                     amount

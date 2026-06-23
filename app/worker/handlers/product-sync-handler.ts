@@ -142,12 +142,16 @@ export const productSyncHandler = async (
 
               if (entityUpdatedDate > syncUpdatedDate) {
                 const action = productVariantSync ? "update" : "create";
+                // Use the public custom domain for URL construction (fallback when
+                // onlineStoreUrl is null). shopData.domain is the primary domain
+                // (custom domain if set, otherwise the myshopify.com domain).
+                const shopDomain = shopData?.domain ?? shop;
                 productVariantsData.push(
                   createProductVariantPayload(
                     product,
                     variant,
                     shopCurrency,
-                    shop,
+                    shopDomain,
                     action,
                   ),
                 );
@@ -211,7 +215,7 @@ export const productSyncHandler = async (
               needsLanguageCodePersist = false;
               await shopRepository.updateShop(shop, {
                 defaultLanguageCode: languageCode,
-                ...(shopCurrency ? { currency: shopCurrency } : {}),
+                ...(shopCurrency ? { defaultCurrency: shopCurrency } : {}),
               });
             }
 

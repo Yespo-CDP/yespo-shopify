@@ -5,6 +5,7 @@ export interface ProductVariantData {
   compareAtPrice?: string | null;
   inventoryQuantity: number;
   image?: { url: string } | null;
+  selectedOptions: Array<{ name: string; value: string }>;
   contextualPricing?: {
     price?: {
       amount: string;

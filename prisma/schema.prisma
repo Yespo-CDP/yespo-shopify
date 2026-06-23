@@ -41,7 +41,7 @@ model Shop {
   apiKey                      String?
   orgId                       Int?
   siteId                      String?
-  currency                    String?
+  defaultCurrency             String?
   defaultLanguageCode         String?
   isWebTrackingEnabled        Boolean?  @default(false)
   isContactSyncEnabled        Boolean?  @default(false)
@@ -49,7 +49,6 @@ model Shop {
   isProductVariantSyncEnabled Boolean?  @default(false)
   isMarketSyncEnabled         Boolean?  @default(false)
   isAppInboxEnabled           Boolean?  @default(false)
-  markets                     Json?
   active                      Boolean?  @default(true)
   isGeneralScriptInstalled    Boolean?  @default(false)
   isWebPushScriptInstalled    Boolean?  @default(false)
@@ -64,10 +63,29 @@ model Shop {
   orderSyncLogs        OrderSyncLog?
   productVariantSyncs    ProductVariantSync[]
   productVariantSyncLogs ProductVariantSyncLog?
+  shopMarkets            ShopMarket[]
   marketSyncs            MarketSync[]
   marketSyncLogs         MarketSyncLog[]
   tmpMarketSyncs         TmpMarketSync[]
   translationSyncs       TranslationSync[]
+}
+
+model ShopMarket {
+  id        Int      @id @default(autoincrement())
+  marketId  String
+  name      String
+  handle    String
+  enabled   Boolean  @default(true)
+  countries String[]
+  locales   String[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopId Int
+
+  @@unique([shopId, marketId])
+  @@index([shopId])
 }
 
 model GdprCustomerDataRequest {

@@ -24,7 +24,7 @@ import { getProductCollections } from "~/worker/services/get-product-collections
  * @param languageCode - BCP 47 language tag stored in DB (shop.defaultLanguageCode)
  * @param shopifyDomain - Shopify myshopify domain for the GraphQL client (session.shop)
  * @param accessToken - Shopify access token for the GraphQL client (session.accessToken)
- * @param shopCurrency - ISO 4217 currency code stored in DB (shop.currency)
+ * @param shopCurrency - ISO 4217 currency code stored in DB (shop.defaultCurrency)
  */
 export const updateProductVariantService = async (
   payload: any,

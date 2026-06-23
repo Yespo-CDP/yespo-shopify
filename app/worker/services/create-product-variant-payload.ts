@@ -2,28 +2,21 @@ import type { ProductData, ProductVariantData } from "~/@types/product";
 import type { ProductVariant, YespoCategory } from "~/@types/productVariant";
 
 /**
- * Maps Shopify tags to the Yespo `{ key: [value] }` structure.
+ * Builds Yespo tags from variant selectedOptions.
  *
- * Shopify tags can follow a "Key:Value" convention (e.g. "Color:Black", "Size:M").
- * Tags that match this pattern are grouped under their key.
- * Plain tags (no colon) are collected under a generic "Tags" key.
+ * Each option becomes a key with the variant's specific value as a single-element array.
  *
- * Example: ["Color:Black", "Size:M", "summer"] →
- *   { "Color": ["Black"], "Size": ["M"], "Tags": ["summer"] }
+ * Example: selectedOptions = [{ name: "Color", value: "Black" }, { name: "Size", value: "M" }]
+ *   → { "Color": ["Black"], "Size": ["M"] }
  */
-function mapTags(tags: string[]): Record<string, string[]> {
+function mapSelectedOptions(
+  selectedOptions: Array<{ name: string; value: string }>,
+): Record<string, string[]> {
   const result: Record<string, string[]> = {};
-  for (const tag of tags) {
-    const colonIdx = tag.indexOf(":");
-    if (colonIdx > 0) {
-      const key = tag.substring(0, colonIdx).trim();
-      const value = tag.substring(colonIdx + 1).trim();
-      if (key && value) {
-        (result[key] ??= []).push(value);
-        continue;
-      }
+  for (const { name, value } of selectedOptions) {
+    if (name && value && value !== "Default Title") {
+      result[name] = [value];
     }
-    (result["Tags"] ??= []).push(tag);
   }
   return result;
 }
@@ -113,8 +106,9 @@ export const createProductVariantPayload = (
     payload.oldPrice = compareAtPrice;
   }
 
-  if (product.tags?.length) {
-    payload.tags = mapTags(product.tags);
+  const tags = mapSelectedOptions(variant.selectedOptions ?? []);
+  if (Object.keys(tags).length > 0) {
+    payload.tags = tags;
   }
 
   if (product.translations && Object.keys(product.translations).length > 0) {

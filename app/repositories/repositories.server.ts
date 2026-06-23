@@ -13,6 +13,7 @@ import MarketSyncRepositoryImpl from "~/repositories/marketSync/marketSyncReposi
 import MarketSyncLogRepositoryImpl from "~/repositories/marketSyncLog/marketSyncLogRepositoryImpl.server";
 import TmpMarketSyncRepositoryImpl from "~/repositories/tmpMarketSync/tmpMarketSyncRepositoryImpl.server";
 import TranslationSyncRepositoryImpl from "~/repositories/translationSync/translationSyncRepositoryImpl.server";
+import ShopMarketRepositoryImpl from "~/repositories/shopMarket/shopMarketRepositoryImpl.server";
 
 /**
  * An instance of the ShopRepository implementation, initialized with the Prisma database client.
@@ -109,6 +110,7 @@ const productVariantSyncLogRepository = new ProductVariantSyncLogRepositoryImpl(
   database,
 );
 
+const shopMarketRepository = new ShopMarketRepositoryImpl(database);
 const marketSyncRepository = new MarketSyncRepositoryImpl(database);
 const marketSyncLogRepository = new MarketSyncLogRepositoryImpl(database);
 const tmpMarketSyncRepository = new TmpMarketSyncRepositoryImpl(database);
@@ -125,6 +127,7 @@ export {
   orderSyncLogRepository,
   productVariantSyncRepository,
   productVariantSyncLogRepository,
+  shopMarketRepository,
   marketSyncRepository,
   marketSyncLogRepository,
   tmpMarketSyncRepository,

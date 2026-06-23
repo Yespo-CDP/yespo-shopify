@@ -40,13 +40,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         payload,
         shop.apiKey,
         shop.id,
-        shop.shopUrl,
+        shop.domain || shop.shopUrl,
         shop.orgId,
         shop.siteId,
         shop.defaultLanguageCode,
         session.shop,
         session.accessToken,
-        shop.currency,
+        shop.defaultCurrency,
       );
       break;
 
@@ -55,13 +55,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         payload,
         shop.apiKey,
         shop.id,
-        shop.shopUrl,
+        shop.domain || shop.shopUrl,
         shop.orgId,
         shop.siteId,
         shop.defaultLanguageCode,
         session.shop,
         session.accessToken,
-        shop.currency,
+        shop.defaultCurrency,
       );
       break;
 
