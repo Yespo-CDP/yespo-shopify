@@ -66,8 +66,7 @@ export const updateProductVariants = async ({
       data: JSON.stringify({
         domain,
         variantsCount: productVariants.length,
-        responseBody: responseData,
-        statusCode: response.status,
+        variantIds: productVariants.map((variant) => variant.productId),
       }),
       message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
       logLevel: "INFO",

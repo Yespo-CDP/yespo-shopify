@@ -13,7 +13,9 @@ export interface YespoCategory {
  * Full (TODO): `tags` — removes specific tag keys; `translations` — removes specific locales.
  */
 export interface ProductRemovePatch {
-  fields?: Array<"oldPrice" | "description" | "brand" | "itemGroupId" | "translations">;
+  fields?: Array<
+    "oldPrice" | "description" | "brand" | "itemGroupId" | "translations"
+  >;
   tags?: string[];
   translations?: string[];
 }
@@ -34,7 +36,21 @@ export interface ProductVariant {
   brand?: string;
   description?: string;
   tags?: Record<string, string[]>;
-  translations?: Array<Record<string, { name?: string; url?: string; description?: string; categories?: Array<{ id: string; name: string; type?: "category" | "collection" }> }>>;
+  translations?: Array<
+    Record<
+      string,
+      {
+        name?: string;
+        url?: string;
+        description?: string;
+        categories?: Array<{
+          id: string;
+          name: string;
+          type?: "category" | "collection";
+        }>;
+      }
+    >
+  >;
   remove?: ProductRemovePatch;
 }
 
