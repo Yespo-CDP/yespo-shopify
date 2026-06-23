@@ -1,4 +1,7 @@
+import fs from "node:fs";
+import path from "node:path";
 import { updateProductVariants } from "~/api/update-product-variants";
+import { deleteProductVariants } from "~/api/delete-product-variants";
 import { productVariantSyncRepository } from "~/repositories/repositories.server";
 import {
   createProductVariantPayloadFromWebhook,
@@ -45,16 +48,24 @@ export const updateProductVariantService = async (
       return;
     }
 
-    const [categories, existingSyncs] = await Promise.all([
-      shopifyDomain && accessToken && payload?.admin_graphql_api_id
+    const productGid: string | undefined = payload?.admin_graphql_api_id;
+
+    const [categories, existingSyncs, trackedVariantGids] = await Promise.all([
+      shopifyDomain && accessToken && productGid
         ? getProductCollections({
             client: createClient({ shop: shopifyDomain, accessToken }),
-            productGid: payload.admin_graphql_api_id,
+            productGid,
           })
         : Promise.resolve([]),
       productVariantSyncRepository.getProductVariantSyncByVariantIds(
         variants.map((v) => v.admin_graphql_api_id),
       ),
+      productGid
+        ? productVariantSyncRepository.getVariantIdsByProductId(
+            shopId,
+            productGid,
+          )
+        : Promise.resolve([] as string[]),
     ]);
 
     const syncMap = new Map(existingSyncs.map((s) => [s.variantId, s]));
@@ -74,6 +85,21 @@ export const updateProductVariantService = async (
         previousTagKeys,
       );
     });
+
+    const debugDir = path.resolve(process.cwd(), "debug");
+    fs.mkdirSync(debugDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(debugDir, `product-update-webhook-${Date.now()}.json`),
+      JSON.stringify(
+        {
+          siteId: siteId ?? "",
+          languageCode: languageCode ?? "",
+          products: productVariants,
+        },
+        null,
+        2,
+      ),
+    );
 
     await updateProductVariants({
       apiKey,
@@ -99,6 +125,53 @@ export const updateProductVariantService = async (
           },
         },
       });
+    }
+
+    // Detect variants removed from the product in Shopify (e.g. an option value
+    // like Size "34" was deleted). A PRODUCTS_UPDATE webhook only carries the
+    // surviving variants, so any previously tracked variant GID absent from this
+    // payload is now orphaned in Yespo and must be deleted explicitly.
+    if (productGid) {
+      const presentVariantGids = new Set(
+        variants.map((v) => v.admin_graphql_api_id),
+      );
+      const orphanedVariantGids = trackedVariantGids.filter(
+        (gid) => !presentVariantGids.has(gid),
+      );
+
+      if (orphanedVariantGids.length > 0) {
+        // Yespo stores products by numeric ID extracted from the GID.
+        const numericOrphanedIds = orphanedVariantGids.map(
+          (gid) => gid.split("/").pop() ?? gid,
+        );
+
+        fs.writeFileSync(
+          path.join(debugDir, `product-delete-webhook-${Date.now()}.json`),
+          JSON.stringify(
+            {
+              siteId: siteId ?? "",
+              products: numericOrphanedIds.map((productId) => ({
+                productId,
+              })),
+            },
+            null,
+            2,
+          ),
+        );
+
+        // await deleteProductVariants({
+        //   apiKey,
+        //   siteId: siteId ?? "",
+        //   externalVariantIds: numericOrphanedIds,
+        //   domain,
+        //   orgId,
+        // });
+
+        await productVariantSyncRepository.deleteByVariantIds(
+          shopId,
+          orphanedVariantGids,
+        );
+      }
     }
   } catch (error: any) {
     console.error("Error occurred in Update Product Variant Service", error);
