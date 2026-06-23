@@ -29,11 +29,14 @@ export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
         attr.name.trim().toLowerCase() === "cart token" ||
         attr.name.trim().toLowerCase() === "cartid",
     )?.value;
-    const cartToken = payload.cart_token ?? cartAttribute;
+    let cartToken = payload.cart_token ?? cartAttribute;
 
     if (!cartToken) {
       console.error("Cart token doesn't exist");
       return null;
+    }
+    if (cartToken.includes("?key=")) {
+      cartToken = cartToken.split("?key=")[0];
     }
 
     const eventData = await eventDataRepository.getEventData(cartToken);
