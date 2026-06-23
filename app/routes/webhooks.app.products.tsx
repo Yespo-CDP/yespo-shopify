@@ -69,7 +69,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       await deleteProductVariantService(
         payload,
         shop.apiKey,
-        shop.shopUrl,
+        shop.id,
+        shop.domain || shop.shopUrl,
         shop.orgId,
         shop.siteId,
       );

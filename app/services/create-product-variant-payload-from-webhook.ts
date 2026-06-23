@@ -1,4 +1,8 @@
-import type { ProductVariant, YespoCategory } from "~/@types/productVariant";
+import type {
+  ProductRemovePatch,
+  ProductVariant,
+  YespoCategory,
+} from "~/@types/productVariant";
 
 export interface ProductVariantWebhookPayload {
   id: number;
@@ -69,6 +73,8 @@ function mapWebhookOptions(
  * @param shopDomain - Shop domain used to construct the product URL
  * @param action - "create" for new variants, "update" for previously synced ones
  * @param categories - Pre-fetched Yespo categories (from separate API call if needed)
+ * @param previousTagKeys - Tag keys sent in the previous sync (from ProductVariantSync.syncedTagKeys)
+ * @param removedLocales - Secondary locales removed from the shop since last sync
  */
 export const createProductVariantPayloadFromWebhook = (
   product: ProductWebhookPayload,
@@ -77,6 +83,8 @@ export const createProductVariantPayloadFromWebhook = (
   shopDomain = "",
   action: "create" | "update" = "create",
   categories: YespoCategory[] = [],
+  previousTagKeys: string[] = [],
+  removedLocales: string[] = [],
 ): ProductVariant => {
   const variantTitle =
     variant.title === "Default Title" ? "" : variant.title.trim();
@@ -127,6 +135,34 @@ export const createProductVariantPayloadFromWebhook = (
   const price = parseFloat(variant.price ?? "0");
   if (compareAtPrice > price) {
     payload.oldPrice = compareAtPrice;
+  }
+
+  // For update operations: explicitly remove fields/keys no longer present in Shopify.
+  // Yespo ignores null — only `remove` clears values.
+  if (action === "update") {
+    const remove: ProductRemovePatch = {};
+
+    const removeFields: ProductRemovePatch["fields"] = [];
+    if (!payload.oldPrice) removeFields.push("oldPrice");
+    if (!payload.description) removeFields.push("description");
+    if (!payload.brand) removeFields.push("brand");
+    if (removeFields.length > 0) remove.fields = removeFields;
+
+    const currentTagKeys = Object.keys(payload.tags ?? {});
+    const removedTagKeys = previousTagKeys.filter(
+      (k) => !currentTagKeys.includes(k),
+    );
+    if (removedTagKeys.length > 0) remove.tags = removedTagKeys;
+
+    if (removedLocales.length > 0) remove.translations = removedLocales;
+
+    if (
+      remove.fields?.length ||
+      remove.tags?.length ||
+      remove.translations?.length
+    ) {
+      payload.remove = remove;
+    }
   }
 
   return payload;

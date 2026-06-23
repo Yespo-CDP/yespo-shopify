@@ -61,6 +61,18 @@ export const productSyncHandler = async (
   });
   const hasTranslations = secondaryLocales.length > 0;
 
+  // Detect locales removed from the shop since the last sync.
+  // removedLocales → included in remove.translations for every update payload.
+  const storedLocales: string[] = shopData?.syncedLocales ?? [];
+  const removedLocales = storedLocales.filter(
+    (l) => !secondaryLocales.includes(l),
+  );
+  // Flag: persist updated syncedLocales after first successful batch.
+  let needsLocalesPersist =
+    storedLocales.length !== secondaryLocales.length ||
+    storedLocales.some((l) => !secondaryLocales.includes(l)) ||
+    secondaryLocales.some((l) => !storedLocales.includes(l));
+
   // pendingLanguageChanged: sent as true on the FIRST API batch only, then flipped to false.
   // Covers two cases:
   //   - language intentionally changed: storedLanguageCode !== null && !== languageCode
@@ -113,7 +125,10 @@ export const productSyncHandler = async (
                   productHandle: product.handle,
                   collections: product.collections?.nodes ?? [],
                 })
-              : ({ product: {}, variants: {} } satisfies ProductTranslationsResult);
+              : ({
+                  product: {},
+                  variants: {},
+                } satisfies ProductTranslationsResult);
 
             if (Object.keys(productTranslations.product).length > 0) {
               product.translations = productTranslations.product;
@@ -152,20 +167,24 @@ export const productSyncHandler = async (
                 // onlineStoreUrl is null). shopData.domain is the primary domain
                 // (custom domain if set, otherwise the myshopify.com domain).
                 const shopDomain = shopData?.domain ?? shop;
-                productVariantsData.push(
-                  createProductVariantPayload(
-                    product,
-                    variant,
-                    shopCurrency,
-                    shopDomain,
-                    action,
-                  ),
+                const previousTagKeys = productVariantSync?.syncedTagKeys ?? [];
+                const payload = createProductVariantPayload(
+                  product,
+                  variant,
+                  shopCurrency,
+                  shopDomain,
+                  action,
+                  previousTagKeys,
+                  removedLocales,
                 );
+                productVariantsData.push(payload);
 
+                const currentTagKeys = Object.keys(payload.tags ?? {});
                 await productVariantSyncRepository.createOrUpdateProductVariantSync(
                   {
                     variantId: variant.id,
                     productId: product.id,
+                    syncedTagKeys: currentTagKeys,
                     createdAt: variant.createdAt ?? product.createdAt,
                     updatedAt: variant.updatedAt ?? product.updatedAt,
                     shop: {
@@ -217,10 +236,12 @@ export const productSyncHandler = async (
             if (pendingLanguageChanged) {
               pendingLanguageChanged = false;
             }
-            if (needsLanguageCodePersist) {
+            if (needsLanguageCodePersist || needsLocalesPersist) {
               needsLanguageCodePersist = false;
+              needsLocalesPersist = false;
               await shopRepository.updateShop(shop, {
                 defaultLanguageCode: languageCode,
+                syncedLocales: secondaryLocales,
                 ...(shopCurrency ? { defaultCurrency: shopCurrency } : {}),
               });
             }
@@ -293,14 +314,18 @@ export const productSyncHandler = async (
       const deletedIds = allTrackedIds.filter((id) => !seenVariantIds.has(id));
 
       if (deletedIds.length > 0) {
-        console.log(`🗑️ Deleting ${deletedIds.length} orphaned variants from Yespo`);
+        console.log(
+          `🗑️ Deleting ${deletedIds.length} orphaned variants from Yespo`,
+        );
 
         for (let i = 0; i < deletedIds.length; i += VARIANTS_API_CHUNK_SIZE) {
           const chunk = deletedIds.slice(i, i + VARIANTS_API_CHUNK_SIZE);
+          // Yespo stores products by numeric ID; extract it from the GID.
+          const numericChunk = chunk.map((gid) => gid.split("/").pop() ?? gid);
           await deleteProductVariants({
             apiKey,
             siteId: siteId ?? "",
-            externalVariantIds: chunk,
+            externalVariantIds: numericChunk,
             domain: shop,
             orgId,
           });

@@ -57,12 +57,13 @@ export const updateProductVariantService = async (
       ),
     ]);
 
-    const syncedIds = new Set(existingSyncs.map((s) => s.variantId));
+    const syncMap = new Map(existingSyncs.map((s) => [s.variantId, s]));
 
     const productVariants = variants.map((variant) => {
-      const action = syncedIds.has(variant.admin_graphql_api_id)
-        ? "update"
-        : "create";
+      const existing = syncMap.get(variant.admin_graphql_api_id);
+      const action = existing ? "update" : "create";
+      const previousTagKeys = existing?.syncedTagKeys ?? [];
+      // Locale removal is a shop-level event — handled in bulk sync, not per webhook.
       return createProductVariantPayloadFromWebhook(
         payload,
         variant,
@@ -70,6 +71,7 @@ export const updateProductVariantService = async (
         domain,
         action,
         categories,
+        previousTagKeys,
       );
     });
 
@@ -82,10 +84,13 @@ export const updateProductVariantService = async (
       orgId,
     });
 
-    for (const variant of variants) {
+    for (let i = 0; i < variants.length; i++) {
+      const variant = variants[i];
+      const currentTagKeys = Object.keys(productVariants[i].tags ?? {});
       await productVariantSyncRepository.createOrUpdateProductVariantSync({
         variantId: variant.admin_graphql_api_id,
         productId: payload.admin_graphql_api_id,
+        syncedTagKeys: currentTagKeys,
         createdAt: variant.created_at ?? payload.created_at,
         updatedAt: variant.updated_at ?? payload.updated_at,
         shop: {

@@ -40,7 +40,6 @@ export const createOrders = async ({
   };
 
   try {
-    throw new Error("test error");
     const response = await fetchWithErrorHandling(url, options);
     return response.responseData as OrdersCreateResponse;
   } catch (error: any) {

@@ -1,5 +1,9 @@
 import type { ProductData, ProductVariantData } from "~/@types/product";
-import type { ProductVariant, YespoCategory } from "~/@types/productVariant";
+import type {
+  ProductRemovePatch,
+  ProductVariant,
+  YespoCategory,
+} from "~/@types/productVariant";
 
 /**
  * Builds Yespo tags from variant selectedOptions.
@@ -44,6 +48,8 @@ function mapCollections(
  * @param shopCurrency - Fallback ISO 4217 currency code from shop settings
  * @param shopDomain - Shop domain used to construct product URL when onlineStoreUrl is null
  * @param action - "create" for new variants, "update" for previously synced ones
+ * @param previousTagKeys - Tag keys that were sent in the previous sync (from ProductVariantSync.syncedTagKeys)
+ * @param removedLocales - Secondary locales removed from the shop since last sync (from Shop.syncedLocales diff)
  */
 export const createProductVariantPayload = (
   product: ProductData,
@@ -51,6 +57,8 @@ export const createProductVariantPayload = (
   shopCurrency = "",
   shopDomain = "",
   action: "create" | "update" = "create",
+  previousTagKeys: string[] = [],
+  removedLocales: string[] = [],
 ): ProductVariant => {
   const variantTitle =
     variant.title === "Default Title" ? "" : variant.title.trim();
@@ -131,6 +139,37 @@ export const createProductVariantPayload = (
         };
       },
     );
+  }
+
+  // For update operations: explicitly remove fields/keys no longer present in Shopify.
+  // Yespo ignores null — only `remove` clears values.
+  if (action === "update") {
+    const remove: ProductRemovePatch = {};
+
+    // Scalar fields: absence in current Shopify data means "remove from Yespo".
+    const removeFields: ProductRemovePatch["fields"] = [];
+    if (!payload.oldPrice) removeFields.push("oldPrice");
+    if (!payload.description) removeFields.push("description");
+    if (!payload.brand) removeFields.push("brand");
+    if (removeFields.length > 0) remove.fields = removeFields;
+
+    // Tags: keys present in previous sync but absent in current selectedOptions.
+    const currentTagKeys = Object.keys(payload.tags ?? {});
+    const removedTagKeys = previousTagKeys.filter(
+      (k) => !currentTagKeys.includes(k),
+    );
+    if (removedTagKeys.length > 0) remove.tags = removedTagKeys;
+
+    // Translations: locales removed from the shop since last sync.
+    if (removedLocales.length > 0) remove.translations = removedLocales;
+
+    if (
+      remove.fields?.length ||
+      remove.tags?.length ||
+      remove.translations?.length
+    ) {
+      payload.remove = remove;
+    }
   }
 
   return payload;

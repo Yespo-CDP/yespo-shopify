@@ -120,13 +120,27 @@ export default class ProductVariantSyncRepositoryImpl
     return records.map((r) => r.variantId);
   }
 
+  async getVariantIdsByProductId(
+    shopId: number,
+    productId: string,
+  ): Promise<string[]> {
+    const records = await this.database.productVariantSync.findMany({
+      where: { shopId, productId },
+      select: { variantId: true },
+    });
+    return records.map((r) => r.variantId);
+  }
+
   async deleteByVariantIds(shopId: number, variantIds: string[]): Promise<void> {
     if (variantIds.length === 0) return;
     await this.database.productVariantSync.deleteMany({
-      where: {
-        shopId,
-        variantId: { in: variantIds },
-      },
+      where: { shopId, variantId: { in: variantIds } },
+    });
+  }
+
+  async deleteByProductId(shopId: number, productId: string): Promise<void> {
+    await this.database.productVariantSync.deleteMany({
+      where: { shopId, productId },
     });
   }
 }

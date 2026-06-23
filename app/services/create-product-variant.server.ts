@@ -62,6 +62,7 @@ export const createProductVariantService = async (
         domain,
         "create",
         categories,
+        // action: "create" → no previous keys, no removed locales
       ),
     );
 
@@ -74,10 +75,13 @@ export const createProductVariantService = async (
       orgId,
     });
 
-    for (const variant of variants) {
+    for (let i = 0; i < variants.length; i++) {
+      const variant = variants[i];
+      const currentTagKeys = Object.keys(productVariants[i].tags ?? {});
       await productVariantSyncRepository.createOrUpdateProductVariantSync({
         variantId: variant.admin_graphql_api_id,
         productId: payload.admin_graphql_api_id,
+        syncedTagKeys: currentTagKeys,
         createdAt: variant.created_at ?? payload.created_at,
         updatedAt: variant.updated_at ?? payload.updated_at,
         shop: {
