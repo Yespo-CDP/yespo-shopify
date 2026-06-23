@@ -1,3 +1,5 @@
+import { throttleApiRequest } from "~/utils/rate-limiter.server";
+
 export interface MarketProductPayload {
   productId: string;
   variantId: string;
@@ -47,6 +49,8 @@ export const updateMarketProducts = async ({
   domain: string;
   orgId?: number | null;
 }): Promise<MarketProductsResponse> => {
+  await throttleApiRequest(siteId);
+
   // FIXME: Replace with a real HTTP call once MarketProductPayload is mapped to Yespo format:
   // const url = `${process.env.API_URL}/v1/markets`;
   // const authHeader = getAuthHeader(apiKey);
@@ -100,6 +104,8 @@ export const updateMarketTranslations = async ({
   domain: string;
   orgId?: number | null;
 }): Promise<MarketProductsResponse> => {
+  await throttleApiRequest(siteId);
+
   void apiKey;
   void siteId;
   void domain;

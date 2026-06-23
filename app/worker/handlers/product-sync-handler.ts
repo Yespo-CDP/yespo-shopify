@@ -22,7 +22,7 @@ import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
 
 const PRODUCTS_CHUNK_SIZE = 50;
-const VARIANTS_API_CHUNK_SIZE = 200;
+const VARIANTS_API_CHUNK_SIZE = 500;
 
 /**
  * Syncs product variants from Shopify with Yespo.

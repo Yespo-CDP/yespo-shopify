@@ -25,7 +25,7 @@ import { fetchShopMarketsConfig } from "../services/fetch-shop-markets-config";
 import { streamBulkJsonlToTmpMarketSync } from "../services/parse-bulk-jsonl";
 import { buildBulkQueryChunks } from "../services/product-sync-bulk-queries";
 
-const API_CHUNK_SIZE = 200;
+const API_CHUNK_SIZE = 500;
 
 interface CountrySyncStats {
   synced: number;

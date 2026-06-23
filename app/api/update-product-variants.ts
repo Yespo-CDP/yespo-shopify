@@ -4,6 +4,7 @@ import type {
 } from "~/@types/productVariant";
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
+import { throttleApiRequest } from "~/utils/rate-limiter.server";
 
 /**
  * Temporary stub for the Yespo POST /v1/products API.
@@ -51,18 +52,15 @@ export const updateProductVariants = async ({
   };
 
   try {
+    await throttleApiRequest(siteId);
+
     // FIXME: Replace with a real HTTP call once product payload builders produce the full Yespo format:
     // const url = `${process.env.API_URL}/v1/products`;
     // const authHeader = getAuthHeader(apiKey);
     // const response = await fetchWithErrorHandling(url, {
     //   method: "POST",
     //   headers: { "content-type": "application/json", Authorization: authHeader },
-    //   body: JSON.stringify({
-    //     siteId,
-    //     languageCode,
-    //     languageChanged,
-    //     products: productVariants,
-    //   }),
+    //   body: JSON.stringify({ siteId, languageCode, languageChanged, products: productVariants }),
     // });
     // return response.responseData as ProductVariantsResponse;
     void siteId;
