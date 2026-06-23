@@ -4,7 +4,10 @@ import type { ReadableStream as WebReadableStream } from "node:stream/web";
 import { finished } from "node:stream/promises";
 
 import type { Prisma } from "@prisma/client";
-import type { ShopMarketsConfig } from "~/@types/shopMarketsConfig";
+import type {
+  ShopMarketConfig,
+  ShopMarketsConfig,
+} from "~/@types/shopMarketsConfig";
 import type { TmpMarketSyncCreate } from "~/@types/tmpMarketSync";
 import { tmpMarketSyncRepository } from "~/repositories/repositories.server";
 
@@ -12,23 +15,33 @@ import {
   createBulkJsonlOutputWriter,
   getBulkJsonlOutputPath,
 } from "./save-bulk-jsonl-output.server";
-import {
-  priceFieldAlias,
-  publishedFieldAlias,
-  translationFieldAlias,
-} from "./product-sync-bulk-queries";
+import { priceFieldAlias, publishedFieldAlias } from "./product-sync-bulk-queries";
 
 const TMP_INSERT_CHUNK_SIZE = 500;
 
 interface BulkJsonlRow {
   id?: string;
   __parentId?: string;
+  handle?: string;
   updatedAt?: string;
+  inventoryQuantity?: number | null;
   [key: string]: unknown;
 }
 
-type ProductPublishedInContext = Map<string, Record<string, boolean>>;
+interface ProductInfo {
+  handle: string;
+  publishContext: Record<string, boolean>;
+}
 
+type ProductInfoMap = Map<string, ProductInfo>;
+
+/**
+ * Streams the bulk-operation JSONL result into the TmpMarketSync staging table.
+ *
+ * Only pricing rows are produced (one per variant × published country). Each row
+ * carries the data needed to build the Yespo /v1/markets product item: raw
+ * contextual pricing, inventory, and the per-locale market URLs.
+ */
 export async function streamBulkJsonlToTmpMarketSync({
   url,
   shop,
@@ -53,12 +66,14 @@ export async function streamBulkJsonlToTmpMarketSync({
     throw new Error("Bulk result response has no body");
   }
 
+  const countryToMarket = buildCountryToMarket(config);
+
   const outputPath = await getBulkJsonlOutputPath(shop, batchId);
   const outputWriter = createBulkJsonlOutputWriter(outputPath);
   const stream = Readable.fromWeb(response.body as WebReadableStream);
   const readline = createInterface({ input: stream, crlfDelay: Infinity });
   let buffer: TmpMarketSyncCreate[] = [];
-  const productPublishedInContext: ProductPublishedInContext = new Map();
+  const productInfo: ProductInfoMap = new Map();
 
   try {
     for await (const line of readline) {
@@ -73,13 +88,7 @@ export async function streamBulkJsonlToTmpMarketSync({
       const id = row.id ?? "";
 
       if (id.includes("/Product/") && !row.__parentId) {
-        recordProductPublishedInContext({
-          row,
-          productId: id,
-          countries,
-          productPublishedInContext,
-        });
-        buffer.push(...parseProductRow({ row, batchId, shopId, config }));
+        recordProductInfo({ row, productId: id, countries, productInfo });
       } else if (id.includes("/ProductVariant/")) {
         buffer.push(
           ...parseVariantRow({
@@ -87,7 +96,8 @@ export async function streamBulkJsonlToTmpMarketSync({
             batchId,
             shopId,
             countries,
-            productPublishedInContext,
+            productInfo,
+            countryToMarket,
           }),
         );
       }
@@ -110,16 +120,33 @@ export async function streamBulkJsonlToTmpMarketSync({
   return outputPath;
 }
 
-function recordProductPublishedInContext({
+/**
+ * Maps each market country to its market config, so URLs can be resolved per
+ * country. marketId is the country code; all countries in a market share the
+ * market's per-locale root URLs.
+ */
+function buildCountryToMarket(
+  config: ShopMarketsConfig,
+): Map<string, ShopMarketConfig> {
+  const map = new Map<string, ShopMarketConfig>();
+  for (const market of config.markets) {
+    for (const country of market.countries) {
+      map.set(country, market);
+    }
+  }
+  return map;
+}
+
+function recordProductInfo({
   row,
   productId,
   countries,
-  productPublishedInContext,
+  productInfo,
 }: {
   row: BulkJsonlRow;
   productId: string;
   countries: string[];
-  productPublishedInContext: ProductPublishedInContext;
+  productInfo: ProductInfoMap;
 }): void {
   const publishContext = Object.fromEntries(
     countries.map((countryCode) => [
@@ -128,68 +155,32 @@ function recordProductPublishedInContext({
     ]),
   );
 
-  productPublishedInContext.set(productId, publishContext);
+  productInfo.set(productId, {
+    handle: row.handle ?? "",
+    publishContext,
+  });
 }
 
-function parseProductRow({
-  row,
-  batchId,
-  shopId,
-  config,
-}: {
-  row: BulkJsonlRow;
-  batchId: string;
-  shopId: number;
-  config: ShopMarketsConfig;
-}): TmpMarketSyncCreate[] {
-  const productId = row.id as string;
-  const rows: TmpMarketSyncCreate[] = [];
-
-  for (const market of config.markets) {
-    for (const locale of market.locales) {
-      const alias = translationFieldAlias(locale, market.handle);
-      const translations = row[alias];
-      if (!Array.isArray(translations) || translations.length === 0) {
-        continue;
-      }
-
-      rows.push({
-        batchId,
-        productId,
-        locale,
-        marketId: market.id,
-        payload: {
-          type: "translation",
-          productUpdatedAt: row.updatedAt,
-          translations,
-        } as Prisma.InputJsonValue,
-        shop: { connect: { id: shopId } },
-      });
-    }
+/**
+ * Builds market-specific URLs for a product: locale → `${rootUrl}/${handle}`.
+ */
+function buildMarketUrls(
+  market: ShopMarketConfig | undefined,
+  handle: string,
+): Record<string, string> | undefined {
+  if (!market || !handle) {
+    return undefined;
   }
 
-  for (const locale of config.locales) {
-    const alias = translationFieldAlias(locale, "global");
-    const translations = row[alias];
-    if (!Array.isArray(translations) || translations.length === 0) {
+  const urls: Record<string, string> = {};
+  for (const [locale, rootUrl] of Object.entries(market.rootUrls)) {
+    if (!rootUrl) {
       continue;
     }
-
-    rows.push({
-      batchId,
-      productId,
-      locale,
-      marketId: "",
-      payload: {
-        type: "translation",
-        productUpdatedAt: row.updatedAt,
-        translations,
-      } as Prisma.InputJsonValue,
-      shop: { connect: { id: shopId } },
-    });
+    urls[locale] = `${rootUrl.replace(/\/$/, "")}/${handle}`;
   }
 
-  return rows;
+  return Object.keys(urls).length > 0 ? urls : undefined;
 }
 
 function parseVariantRow({
@@ -197,29 +188,37 @@ function parseVariantRow({
   batchId,
   shopId,
   countries,
-  productPublishedInContext,
+  productInfo,
+  countryToMarket,
 }: {
   row: BulkJsonlRow;
   batchId: string;
   shopId: number;
   countries: string[];
-  productPublishedInContext: ProductPublishedInContext;
+  productInfo: ProductInfoMap;
+  countryToMarket: Map<string, ShopMarketConfig>;
 }): TmpMarketSyncCreate[] {
   const variantId = row.id as string;
   const productId = row.__parentId as string;
-  const publishContext = productPublishedInContext.get(productId) ?? {};
+  const info = productInfo.get(productId);
+  const publishContext = info?.publishContext ?? {};
   const rows: TmpMarketSyncCreate[] = [];
 
   for (const countryCode of countries) {
+    // Skip products not published in this market.
     if (!publishContext[countryCode]) {
       continue;
     }
 
-    const alias = priceFieldAlias(countryCode);
-    const pricing = row[alias];
+    const pricing = row[priceFieldAlias(countryCode)];
     if (!pricing) {
       continue;
     }
+
+    const urls = buildMarketUrls(
+      countryToMarket.get(countryCode),
+      info?.handle ?? "",
+    );
 
     rows.push({
       batchId,
@@ -229,7 +228,9 @@ function parseVariantRow({
       payload: {
         type: "pricing",
         variantUpdatedAt: row.updatedAt,
+        inventoryQuantity: row.inventoryQuantity ?? null,
         pricing,
+        ...(urls ? { urls } : {}),
       } as Prisma.InputJsonValue,
       shop: { connect: { id: shopId } },
     });

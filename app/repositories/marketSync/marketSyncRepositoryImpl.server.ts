@@ -30,6 +30,31 @@ export default class MarketSyncRepositoryImpl implements MarketSyncRepository {
     });
   }
 
+  async getSyncedCountryCodes(shopId: number): Promise<string[]> {
+    const rows = await this.database.marketSync.findMany({
+      where: { shopId },
+      distinct: ["countryCode"],
+      select: { countryCode: true },
+    });
+
+    return rows.map((row) => row.countryCode);
+  }
+
+  async getByCountry(
+    shopId: number,
+    countryCode: string,
+  ): Promise<MarketSyncRecord[]> {
+    return this.database.marketSync.findMany({
+      where: { shopId, countryCode },
+    });
+  }
+
+  async deleteByCountry(shopId: number, countryCode: string): Promise<void> {
+    await this.database.marketSync.deleteMany({
+      where: { shopId, countryCode },
+    });
+  }
+
   async createOrUpdate(data: MarketSyncCreate): Promise<MarketSyncRecord> {
     const shopId = data.shop?.connect?.id;
     if (!shopId) {

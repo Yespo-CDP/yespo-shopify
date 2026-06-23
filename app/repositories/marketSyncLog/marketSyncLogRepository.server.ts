@@ -13,5 +13,7 @@ export default interface MarketSyncLogRepository {
 
   hasInProgressByShop(shopUrl: string): Promise<boolean>;
 
+  deleteByCountry(shopId: number, countryCode: string): Promise<void>;
+
   createOrUpdate(data: MarketSyncLogCreate): Promise<MarketSyncLogRecord>;
 }

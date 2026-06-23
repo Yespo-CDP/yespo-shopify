@@ -68,7 +68,6 @@ model Shop {
   marketSyncs            MarketSync[]
   marketSyncLogs         MarketSyncLog[]
   tmpMarketSyncs         TmpMarketSync[]
-  translationSyncs       TranslationSync[]
 }
 
 model ShopMarket {
@@ -259,19 +258,4 @@ model TmpMarketSync {
   shopId Int
 
   @@index([shopId, batchId])
-}
-
-model TranslationSync {
-  id          Int       @id @default(autoincrement())
-  productId   String
-  locale      String
-  marketId    String    @default("")
-  contentHash String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime? @updatedAt
-
-  shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
-  shopId Int
-
-  @@unique([shopId, productId, locale, marketId])
 }

@@ -14,10 +14,6 @@ export function publishedFieldAlias(countryCode: string): string {
   return sanitizeAlias(`published_${countryCode}`);
 }
 
-export function translationFieldAlias(locale: string, scope: string): string {
-  return sanitizeAlias(`tr_${locale}_${scope}`);
-}
-
 export function splitCountriesIntoChunks(
   countries: string[],
   chunkSize = MAX_COUNTRIES_PER_CHUNK,
@@ -33,15 +29,20 @@ export function splitCountriesIntoChunks(
 
 export interface BulkQueryOptions {
   countries?: string[];
-  includeTranslations?: boolean;
 }
 
-export function buildBulkPricingTranslationsQuery(
+/**
+ * Builds a Shopify Bulk Operation query that fetches, for each product/variant,
+ * the per-country contextual pricing and the per-country publication state.
+ *
+ * Country codes are `CountryCode` enum values and are emitted unquoted in the
+ * `context` argument; they are sanitized only when used as a field alias.
+ */
+export function buildBulkPricingQuery(
   config: ShopMarketsConfig,
   options: BulkQueryOptions = {},
 ): string {
   const countries = options.countries ?? config.countries;
-  const includeTranslations = options.includeTranslations ?? true;
 
   const pricingFields = countries
     .map(
@@ -66,69 +67,21 @@ export function buildBulkPricingTranslationsQuery(
     )
     .join("\n");
 
-  const translationAliases = new Set<string>();
-  const translationFields: string[] = [];
-
-  if (includeTranslations) {
-    for (const market of config.markets) {
-      for (const locale of market.locales) {
-        const alias = translationFieldAlias(locale, market.handle);
-        if (translationAliases.has(alias)) {
-          continue;
-        }
-        translationAliases.add(alias);
-        translationFields.push(`
-        ${alias}: translations(
-          locale: "${locale}"
-          marketId: "${market.id}"
-        ) {
-          key
-          value
-          locale
-          market {
-            id
-            handle
-          }
-        }`);
-      }
-    }
-
-    for (const locale of config.locales) {
-      const alias = translationFieldAlias(locale, "global");
-      if (translationAliases.has(alias)) {
-        continue;
-      }
-      translationAliases.add(alias);
-      translationFields.push(`
-        ${alias}: translations(locale: "${locale}") {
-          key
-          value
-          locale
-          market {
-            id
-            handle
-          }
-        }`);
-    }
-  }
-
   return `
 {
   products {
     edges {
       node {
         id
-        title
-        descriptionHtml
         handle
         updatedAt
         ${publishedFields}
-        ${translationFields.join("\n")}
         variants {
           edges {
             node {
               id
               updatedAt
+              inventoryQuantity
               ${pricingFields}
             }
           }
@@ -145,11 +98,8 @@ export function buildBulkQueryChunks(
 ): Array<{ query: string; countries: string[] }> {
   const countryChunks = splitCountriesIntoChunks(config.countries);
 
-  return countryChunks.map((countries, index) => ({
+  return countryChunks.map((countries) => ({
     countries,
-    query: buildBulkPricingTranslationsQuery(config, {
-      countries,
-      includeTranslations: index === 0,
-    }),
+    query: buildBulkPricingQuery(config, { countries }),
   }));
 }

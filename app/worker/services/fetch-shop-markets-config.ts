@@ -9,6 +9,11 @@ interface MarketRegionCountry {
   code?: string;
 }
 
+interface MarketRootUrl {
+  locale?: string;
+  url?: string;
+}
+
 interface MarketNode {
   id: string;
   name: string;
@@ -17,6 +22,7 @@ interface MarketNode {
   webPresence?: {
     defaultLocale?: { locale?: string };
     alternateLocales?: Array<{ locale?: string }>;
+    rootUrls?: MarketRootUrl[];
   };
   regions?: {
     nodes?: MarketRegionCountry[];
@@ -45,6 +51,16 @@ function collectLocales(market: MarketNode): string[] {
   return [...locales];
 }
 
+function collectRootUrls(market: MarketNode): Record<string, string> {
+  const rootUrls: Record<string, string> = {};
+  for (const entry of market.webPresence?.rootUrls ?? []) {
+    if (entry.locale && entry.url) {
+      rootUrls[entry.locale] = entry.url;
+    }
+  }
+  return rootUrls;
+}
+
 function mapMarketNode(market: MarketNode): ShopMarketConfig {
   const countries = (market.regions?.nodes ?? [])
     .map((region) => region.code)
@@ -57,6 +73,7 @@ function mapMarketNode(market: MarketNode): ShopMarketConfig {
     enabled: market.enabled ?? false,
     countries,
     locales: collectLocales(market),
+    rootUrls: collectRootUrls(market),
   };
 }
 
@@ -80,6 +97,10 @@ export async function fetchShopMarketsConfig({
             alternateLocales {
               locale
             }
+            rootUrls {
+              locale
+              url
+            }
           }
           regions(first: 50) {
             nodes {
@@ -98,7 +119,7 @@ export async function fetchShopMarketsConfig({
   const markets = (marketsData?.markets?.nodes ?? [])
     .filter((market) => market.enabled)
     .map(mapMarketNode);
-
+  console.log("markets", markets);
   const countries = [...new Set(markets.flatMap((market) => market.countries))];
   const locales = [...new Set(markets.flatMap((market) => market.locales))];
 

@@ -45,6 +45,12 @@ export default class MarketSyncLogRepositoryImpl
     return log !== null;
   }
 
+  async deleteByCountry(shopId: number, countryCode: string): Promise<void> {
+    await this.database.marketSyncLog.deleteMany({
+      where: { shopId, countryCode },
+    });
+  }
+
   async createOrUpdate(
     data: MarketSyncLogCreate,
   ): Promise<MarketSyncLogRecord> {

@@ -12,7 +12,6 @@ import ProductVariantSyncLogRepositoryImpl from "~/repositories/productVariantSy
 import MarketSyncRepositoryImpl from "~/repositories/marketSync/marketSyncRepositoryImpl.server";
 import MarketSyncLogRepositoryImpl from "~/repositories/marketSyncLog/marketSyncLogRepositoryImpl.server";
 import TmpMarketSyncRepositoryImpl from "~/repositories/tmpMarketSync/tmpMarketSyncRepositoryImpl.server";
-import TranslationSyncRepositoryImpl from "~/repositories/translationSync/translationSyncRepositoryImpl.server";
 import ShopMarketRepositoryImpl from "~/repositories/shopMarket/shopMarketRepositoryImpl.server";
 
 /**
@@ -114,7 +113,6 @@ const shopMarketRepository = new ShopMarketRepositoryImpl(database);
 const marketSyncRepository = new MarketSyncRepositoryImpl(database);
 const marketSyncLogRepository = new MarketSyncLogRepositoryImpl(database);
 const tmpMarketSyncRepository = new TmpMarketSyncRepositoryImpl(database);
-const translationSyncRepository = new TranslationSyncRepositoryImpl(database);
 
 export {
   shopRepository,
@@ -131,5 +129,4 @@ export {
   marketSyncRepository,
   marketSyncLogRepository,
   tmpMarketSyncRepository,
-  translationSyncRepository,
 };

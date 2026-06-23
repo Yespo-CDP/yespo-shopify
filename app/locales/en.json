@@ -75,7 +75,7 @@
   },
   "DataSyncSection": {
     "title": "Data Sync",
-    "description": "Data sync allows syncing customers and orders from Shopify with Yespo.",
+    "description": "Data sync allows syncing customers, orders, products, and markets from Shopify with Yespo.",
     "enable": "Enable",
     "disable": "Disable",
 

@@ -323,6 +323,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         isContactSyncEnabled: true,
         isOrderSyncEnabled: true,
         isProductVariantSyncEnabled: true,
+        isMarketSyncEnabled: true,
       });
 
       await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
@@ -401,6 +402,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         isContactSyncEnabled: false,
         isOrderSyncEnabled: false,
         isProductVariantSyncEnabled: false,
+        isMarketSyncEnabled: false,
       });
 
       await sendLogEvent({

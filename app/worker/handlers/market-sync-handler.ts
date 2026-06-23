@@ -1,19 +1,16 @@
 import {
-  updateMarketProducts,
-  updateMarketTranslations,
-  type MarketProductPayload,
-  type MarketTranslationPayload,
-} from "~/api/update-market-products";
-import {
   marketSyncLogRepository,
   marketSyncRepository,
   shopMarketRepository,
   shopRepository,
   tmpMarketSyncRepository,
-  translationSyncRepository,
 } from "~/repositories/repositories.server";
 import type { ShopMarketsConfig } from "~/@types/shopMarketsConfig";
 import type { TmpMarketSyncRecord } from "~/@types/tmpMarketSync";
+import {
+  updateMarketProducts,
+  type MarketProductItem,
+} from "~/api/update-market-products";
 
 import {
   runBulkQuery,
@@ -27,25 +24,103 @@ import { buildBulkQueryChunks } from "../services/product-sync-bulk-queries";
 
 const API_CHUNK_SIZE = 500;
 
-interface CountrySyncStats {
+interface CountryStats {
   synced: number;
   skipped: number;
   failed: number;
   total: number;
 }
 
-function createEmptyCountryStats(): CountrySyncStats {
+interface PricingPayload {
+  type: "pricing";
+  variantUpdatedAt?: string;
+  inventoryQuantity?: number | null;
+  pricing?: {
+    price?: { amount?: string; currencyCode?: string } | null;
+    compareAtPrice?: { amount?: string; currencyCode?: string } | null;
+  } | null;
+  urls?: Record<string, string>;
+}
+
+function createEmptyCountryStats(): CountryStats {
   return { synced: 0, skipped: 0, failed: 0, total: 0 };
 }
 
-function initCountryStats(
-  countries: string[],
-): Record<string, CountrySyncStats> {
+function initCountryStats(countries: string[]): Record<string, CountryStats> {
   return Object.fromEntries(
     countries.map((countryCode) => [countryCode, createEmptyCountryStats()]),
   );
 }
 
+/**
+ * Maps a staged pricing row to a Yespo market product item.
+ *
+ * Products that are not published in the market never reach the staging table,
+ * so `isInStock` here reflects inventory only. Returns `null` when there is no
+ * market price to send (a market record needs price + currency + isInStock).
+ */
+function buildMarketProductItem(
+  row: TmpMarketSyncRecord,
+): MarketProductItem | null {
+  const payload = row.payload as unknown as PricingPayload;
+  const price = payload.pricing?.price;
+  if (!price?.amount || !price.currencyCode) {
+    return null;
+  }
+
+  const priceValue = parseFloat(price.amount);
+  if (Number.isNaN(priceValue)) {
+    return null;
+  }
+
+  const inventoryQuantity = payload.inventoryQuantity;
+  const isInStock: 0 | 1 =
+    inventoryQuantity == null || inventoryQuantity > 0 ? 1 : 0;
+
+  const variantId = row.variantId as string;
+  const productId = variantId.split("/").pop() ?? variantId;
+
+  const item: MarketProductItem = {
+    productId,
+    updatedDate: payload.variantUpdatedAt ?? new Date().toISOString(),
+    price: priceValue,
+    currency: price.currencyCode,
+    isInStock,
+  };
+
+  const compareAt = payload.pricing?.compareAtPrice?.amount
+    ? parseFloat(payload.pricing.compareAtPrice.amount)
+    : 0;
+  if (compareAt > priceValue) {
+    item.oldPrice = compareAt;
+  }
+
+  if (payload.urls && Object.keys(payload.urls).length > 0) {
+    item.urls = payload.urls;
+  }
+
+  return item;
+}
+
+function hashMarketItem(item: MarketProductItem): string {
+  return computeContentHash({
+    price: item.price,
+    oldPrice: item.oldPrice ?? null,
+    currency: item.currency,
+    isInStock: item.isInStock,
+    urls: item.urls ?? null,
+  });
+}
+
+/**
+ * Syncs market-specific prices, stock, and URLs from Shopify to the Yespo
+ * POST /v1/markets API.
+ *
+ * Flow: fetch markets config → run Shopify Bulk Operation(s) for per-country
+ * contextual pricing → stream the JSONL result into TmpMarketSync → map staged
+ * rows to market items, skip unchanged ones via the MarketSync content hash, and
+ * send them grouped by market (marketId = country code).
+ */
 export const marketSyncHandler = async (
   shop: string,
   accessToken: string,
@@ -68,48 +143,59 @@ export const marketSyncHandler = async (
     countries: [],
     locales: [],
   };
-  const countryStats = initCountryStats([]);
+  const stats = initCountryStats([]);
+
+  const writeLog = async (
+    countryCode: string,
+    status: "IN_PROGRESS" | "COMPLETE" | "ERROR",
+    bulkBatchId?: string,
+  ) => {
+    const countryStats = stats[countryCode] ?? createEmptyCountryStats();
+    await marketSyncLogRepository.createOrUpdate({
+      countryCode,
+      status,
+      bulkBatchId,
+      syncedCount: countryStats.synced,
+      skippedCount: countryStats.skipped,
+      failedCount: countryStats.failed,
+      totalCount: countryStats.total,
+      shop: { connect: { id: shopId } },
+    });
+  };
 
   try {
     marketsConfig = await fetchShopMarketsConfig({ client });
+
+    // Markets removed/disabled in Shopify: drop their products from Yespo
+    // recommendations (isInStock: 0) and prune local state. Runs even when no
+    // markets remain, so a fully removed market set is still cleaned up.
+    await cleanupRemovedMarkets({
+      shopId,
+      apiKey,
+      shop,
+      orgId,
+      siteId,
+      currentCountries: marketsConfig.countries,
+    });
+
+    await shopMarketRepository.replaceAll(shopId, marketsConfig.markets);
 
     if (marketsConfig.countries.length === 0) {
       console.log(`⚠️ No enabled market countries for ${shop}`);
       return;
     }
 
-    Object.assign(countryStats, initCountryStats(marketsConfig.countries));
-
+    Object.assign(stats, initCountryStats(marketsConfig.countries));
     for (const countryCode of marketsConfig.countries) {
-      await marketSyncLogRepository.createOrUpdate({
-        countryCode,
-        status: "IN_PROGRESS",
-        syncedCount: 0,
-        skippedCount: 0,
-        failedCount: 0,
-        totalCount: 0,
-        shop: { connect: { id: shopId } },
-      });
+      await writeLog(countryCode, "IN_PROGRESS");
     }
-
-    await shopMarketRepository.replaceAll(shopId, marketsConfig.markets);
 
     const queryChunks = buildBulkQueryChunks(marketsConfig);
 
     for (const chunk of queryChunks) {
       const batchId = await runBulkQuery({ client, query: chunk.query });
-
       for (const countryCode of chunk.countries) {
-        await marketSyncLogRepository.createOrUpdate({
-          countryCode,
-          status: "IN_PROGRESS",
-          bulkBatchId: batchId,
-          syncedCount: countryStats[countryCode]?.synced ?? 0,
-          skippedCount: countryStats[countryCode]?.skipped ?? 0,
-          failedCount: countryStats[countryCode]?.failed ?? 0,
-          totalCount: countryStats[countryCode]?.total ?? 0,
-          shop: { connect: { id: shopId } },
-        });
+        await writeLog(countryCode, "IN_PROGRESS", batchId);
       }
 
       const bulkResult = await waitForBulkOperation({ client });
@@ -122,10 +208,9 @@ export const marketSyncHandler = async (
         config: marketsConfig,
         countries: chunk.countries,
       });
-
       console.log(`Bulk JSONL saved to ${outputPath}`);
 
-      const batchStats = await processTmpBatch({
+      await processBatch({
         shopId,
         batchId,
         apiKey,
@@ -133,65 +218,34 @@ export const marketSyncHandler = async (
         orgId,
         siteId,
         countries: chunk.countries,
+        stats,
       });
 
       for (const countryCode of chunk.countries) {
-        const stats = batchStats.pricingByCountry[countryCode];
-        if (!stats) {
-          continue;
-        }
-
-        countryStats[countryCode].synced += stats.synced;
-        countryStats[countryCode].skipped += stats.skipped;
-        countryStats[countryCode].failed += stats.failed;
-        countryStats[countryCode].total += stats.total;
-
-        await marketSyncLogRepository.createOrUpdate({
-          countryCode,
-          status: "IN_PROGRESS",
-          bulkBatchId: batchId,
-          syncedCount: countryStats[countryCode].synced,
-          skippedCount: countryStats[countryCode].skipped,
-          failedCount: countryStats[countryCode].failed,
-          totalCount: countryStats[countryCode].total,
-          shop: { connect: { id: shopId } },
-        });
+        await writeLog(countryCode, "IN_PROGRESS", batchId);
       }
 
       await tmpMarketSyncRepository.deleteByBatch(shopId, batchId);
     }
 
     for (const countryCode of marketsConfig.countries) {
-      await marketSyncLogRepository.createOrUpdate({
-        countryCode,
-        status: "COMPLETE",
-        syncedCount: countryStats[countryCode].synced,
-        skippedCount: countryStats[countryCode].skipped,
-        failedCount: countryStats[countryCode].failed,
-        totalCount: countryStats[countryCode].total,
-        shop: { connect: { id: shopId } },
-      });
+      await writeLog(countryCode, "COMPLETE");
     }
 
     console.log(`✅ Market sync finish for ${shop}`);
   } catch (error: unknown) {
     console.error("Market sync error", error);
-
     for (const countryCode of marketsConfig.countries) {
-      await marketSyncLogRepository.createOrUpdate({
-        countryCode,
-        status: "ERROR",
-        syncedCount: countryStats[countryCode]?.synced ?? 0,
-        skippedCount: countryStats[countryCode]?.skipped ?? 0,
-        failedCount: countryStats[countryCode]?.failed ?? 0,
-        totalCount: countryStats[countryCode]?.total ?? 0,
-        shop: { connect: { id: shopId } },
-      });
+      await writeLog(countryCode, "ERROR");
     }
   }
 };
 
-async function processTmpBatch({
+/**
+ * Maps staged pricing rows for one bulk batch, skips unchanged items, and sends
+ * the rest to Yespo grouped by market (country). Mutates `stats` in place.
+ */
+async function processBatch({
   shopId,
   batchId,
   apiKey,
@@ -199,6 +253,7 @@ async function processTmpBatch({
   orgId,
   siteId,
   countries,
+  stats,
 }: {
   shopId: number;
   batchId: string;
@@ -207,250 +262,170 @@ async function processTmpBatch({
   orgId?: number | null;
   siteId?: string | null;
   countries: string[];
-}): Promise<{ pricingByCountry: Record<string, CountrySyncStats> }> {
+  stats: Record<string, CountryStats>;
+}): Promise<void> {
   const rows = await tmpMarketSyncRepository.getByBatch(shopId, batchId);
   const pricingRows = rows.filter((row) => row.countryCode && row.variantId);
-  const translationRows = rows.filter((row) => row.locale);
 
-  const pricingByCountry = initCountryStats(countries);
+  interface PendingItem {
+    productId: string;
+    variantId: string;
+    countryCode: string;
+    item: MarketProductItem;
+    hash: string;
+  }
+  const pending: PendingItem[] = [];
+
   for (const row of pricingRows) {
     const countryCode = row.countryCode as string;
-    if (pricingByCountry[countryCode]) {
-      pricingByCountry[countryCode].total += 1;
+    if (!stats[countryCode]) {
+      continue;
     }
-  }
 
-  const pricingStatsByCountry = await processPricingRows({
-    rows: pricingRows,
-    shopId,
-    apiKey,
-    shop,
-    orgId,
-    siteId,
-    countries,
-  });
+    const item = buildMarketProductItem(row);
+    if (!item) {
+      continue;
+    }
 
-  for (const countryCode of countries) {
-    pricingByCountry[countryCode] = {
-      total: pricingByCountry[countryCode].total,
-      ...pricingStatsByCountry[countryCode],
-    };
-  }
-
-  await processTranslationRows({
-    rows: translationRows,
-    shopId,
-    apiKey,
-    shop,
-    orgId,
-    siteId,
-  });
-
-  return { pricingByCountry };
-}
-
-async function processPricingRows({
-  rows,
-  shopId,
-  apiKey,
-  shop,
-  orgId,
-  siteId,
-  countries,
-}: {
-  rows: TmpMarketSyncRecord[];
-  shopId: number;
-  apiKey: string;
-  shop: string;
-  orgId?: number | null;
-  siteId?: string | null;
-  countries: string[];
-}): Promise<
-  Record<string, Pick<CountrySyncStats, "synced" | "skipped" | "failed">>
-> {
-  const statsByCountry = Object.fromEntries(
-    countries.map((countryCode) => [
+    stats[countryCode].total += 1;
+    pending.push({
+      productId: row.productId,
+      variantId: row.variantId as string,
       countryCode,
-      { synced: 0, skipped: 0, failed: 0 },
-    ]),
-  ) as Record<string, Pick<CountrySyncStats, "synced" | "skipped" | "failed">>;
+      item,
+      hash: hashMarketItem(item),
+    });
+  }
 
-  const toSync: MarketProductPayload[] = [];
-
+  // Change detection: load existing sync state for this batch in one query.
   const existing = await marketSyncRepository.getByKeys(
     shopId,
-    rows.map((row) => ({
-      productId: row.productId,
-      variantId: row.variantId as string,
-      countryCode: row.countryCode as string,
+    pending.map((entry) => ({
+      productId: entry.productId,
+      variantId: entry.variantId,
+      countryCode: entry.countryCode,
     })),
   );
+  const existingMap = new Map(
+    existing.map((existingRow) => [
+      `${existingRow.productId}|${existingRow.variantId}|${existingRow.countryCode}`,
+      existingRow,
+    ]),
+  );
 
-  for (const row of rows) {
-    const countryCode = row.countryCode as string;
-    const countryStats = statsByCountry[countryCode];
-    if (!countryStats) {
-      continue;
-    }
-
-    const payload = row.payload as Record<string, unknown>;
-    const contentHash = computeContentHash(payload.pricing);
-    const variantUpdatedAt = payload.variantUpdatedAt as string | undefined;
-    const entityUpdatedAt = variantUpdatedAt
-      ? new Date(variantUpdatedAt).getTime()
-      : 0;
-
-    const existingRow = existing.find(
-      (item) =>
-        item.productId === row.productId &&
-        item.variantId === row.variantId &&
-        item.countryCode === row.countryCode,
+  const toSyncByCountry: Record<string, PendingItem[]> = {};
+  for (const entry of pending) {
+    const previous = existingMap.get(
+      `${entry.productId}|${entry.variantId}|${entry.countryCode}`,
     );
-    const syncUpdatedAt = existingRow?.updatedAt?.getTime() ?? 0;
+    const entityUpdatedAt = new Date(entry.item.updatedDate).getTime();
+    const syncUpdatedAt = previous?.updatedAt?.getTime() ?? 0;
 
     if (
-      existingRow?.contentHash === contentHash &&
+      previous?.contentHash === entry.hash &&
       entityUpdatedAt <= syncUpdatedAt
     ) {
-      countryStats.skipped++;
+      stats[entry.countryCode].skipped += 1;
       continue;
     }
 
-    toSync.push({
-      productId: row.productId,
-      variantId: row.variantId as string,
-      countryCode,
-      pricing: payload.pricing,
-      variantUpdatedAt,
-    });
+    (toSyncByCountry[entry.countryCode] ??= []).push(entry);
   }
 
-  for (let index = 0; index < toSync.length; index += API_CHUNK_SIZE) {
-    const chunk = toSync.slice(index, index + API_CHUNK_SIZE);
-    // FIXME: Replace with a real HTTP call once the Yespo endpoint is available:
-    const response = await updateMarketProducts({
-      apiKey,
-      siteId: siteId ?? "",
-      items: chunk,
-      domain: shop,
-      orgId,
-    });
+  for (const countryCode of countries) {
+    const entries = toSyncByCountry[countryCode] ?? [];
 
-    for (const item of chunk) {
-      const countryStats = statsByCountry[item.countryCode];
-      if (!countryStats) {
-        continue;
-      }
+    for (let index = 0; index < entries.length; index += API_CHUNK_SIZE) {
+      const chunk = entries.slice(index, index + API_CHUNK_SIZE);
 
-      if (response.failedItems.includes(item.variantId)) {
-        countryStats.failed++;
-        continue;
-      }
-
-      countryStats.synced++;
-
-      await marketSyncRepository.createOrUpdate({
-        productId: item.productId,
-        variantId: item.variantId,
-        countryCode: item.countryCode,
-        contentHash: computeContentHash(item.pricing),
-        updatedAt: item.variantUpdatedAt
-          ? new Date(item.variantUpdatedAt)
-          : new Date(),
-        shop: { connect: { id: shopId } },
+      const response = await updateMarketProducts({
+        apiKey,
+        siteId: siteId ?? "",
+        markets: [
+          { marketId: countryCode, products: chunk.map((c) => c.item) },
+        ],
+        domain: shop,
+        orgId,
       });
+
+      for (const entry of chunk) {
+        if (response.failedItems.includes(entry.item.productId)) {
+          stats[countryCode].failed += 1;
+          continue;
+        }
+
+        stats[countryCode].synced += 1;
+        await marketSyncRepository.createOrUpdate({
+          productId: entry.productId,
+          variantId: entry.variantId,
+          countryCode,
+          contentHash: entry.hash,
+          updatedAt: new Date(entry.item.updatedDate),
+          shop: { connect: { id: shopId } },
+        });
+      }
     }
   }
-
-  return statsByCountry;
 }
 
-async function processTranslationRows({
-  rows,
+/**
+ * Handles markets that were removed or disabled in Shopify since the last sync.
+ *
+ * For every country we previously synced but that is no longer present, sends
+ * `isInStock: 0` to Yespo (the documented way to drop products from a market's
+ * recommendations — there is no market-level delete) and removes the local
+ * MarketSync / MarketSyncLog rows for that country.
+ */
+async function cleanupRemovedMarkets({
   shopId,
   apiKey,
   shop,
   orgId,
   siteId,
+  currentCountries,
 }: {
-  rows: TmpMarketSyncRecord[];
   shopId: number;
   apiKey: string;
   shop: string;
   orgId?: number | null;
   siteId?: string | null;
+  currentCountries: string[];
 }): Promise<void> {
-  const toSync: MarketTranslationPayload[] = [];
-
-  const existing = await translationSyncRepository.getByKeys(
-    shopId,
-    rows.map((row) => ({
-      productId: row.productId,
-      locale: row.locale as string,
-      marketId: row.marketId ?? "",
-    })),
+  const syncedCountries =
+    await marketSyncRepository.getSyncedCountryCodes(shopId);
+  const removedCountries = syncedCountries.filter(
+    (countryCode) => !currentCountries.includes(countryCode),
   );
 
-  for (const row of rows) {
-    const payload = row.payload as Record<string, unknown>;
-    const translations = payload.translations;
-    const contentHash = computeContentHash(translations);
-    const productUpdatedAt = payload.productUpdatedAt as string | undefined;
-    const entityUpdatedAt = productUpdatedAt
-      ? new Date(productUpdatedAt).getTime()
-      : 0;
-
-    const marketId = row.marketId ?? "";
-    const existingRow = existing.find(
-      (item) =>
-        item.productId === row.productId &&
-        item.locale === row.locale &&
-        item.marketId === marketId,
-    );
-    const syncUpdatedAt = existingRow?.updatedAt?.getTime() ?? 0;
-
-    if (
-      existingRow?.contentHash === contentHash &&
-      entityUpdatedAt <= syncUpdatedAt
-    ) {
-      continue;
-    }
-
-    toSync.push({
-      productId: row.productId,
-      locale: row.locale as string,
-      marketId,
-      translations,
-      productUpdatedAt,
-    });
+  if (removedCountries.length === 0) {
+    return;
   }
 
-  for (let index = 0; index < toSync.length; index += API_CHUNK_SIZE) {
-    const chunk = toSync.slice(index, index + API_CHUNK_SIZE);
-    const response = await updateMarketTranslations({
-      apiKey,
-      siteId: siteId ?? "",
-      items: chunk,
-      domain: shop,
-      orgId,
-    });
+  console.log(
+    `🗑️ Removing ${removedCountries.length} market(s) from Yespo for ${shop}: ${removedCountries.join(", ")}`,
+  );
 
-    for (const item of chunk) {
-      const itemKey = `${item.productId}:${item.locale}:${item.marketId}`;
-      if (response.failedItems.includes(itemKey)) {
-        continue;
-      }
+  for (const countryCode of removedCountries) {
+    const rows = await marketSyncRepository.getByCountry(shopId, countryCode);
 
-      await translationSyncRepository.createOrUpdate({
-        productId: item.productId,
-        locale: item.locale,
-        marketId: item.marketId,
-        contentHash: computeContentHash(item.translations),
-        updatedAt: item.productUpdatedAt
-          ? new Date(item.productUpdatedAt)
-          : new Date(),
-        shop: { connect: { id: shopId } },
+    const items: MarketProductItem[] = rows.map((row) => ({
+      productId: row.variantId.split("/").pop() ?? row.variantId,
+      updatedDate: new Date().toISOString(),
+      isInStock: 0,
+    }));
+
+    for (let index = 0; index < items.length; index += API_CHUNK_SIZE) {
+      const chunk = items.slice(index, index + API_CHUNK_SIZE);
+      await updateMarketProducts({
+        apiKey,
+        siteId: siteId ?? "",
+        markets: [{ marketId: countryCode, products: chunk }],
+        domain: shop,
+        orgId,
       });
     }
+
+    await marketSyncRepository.deleteByCountry(shopId, countryCode);
+    await marketSyncLogRepository.deleteByCountry(shopId, countryCode);
   }
 }

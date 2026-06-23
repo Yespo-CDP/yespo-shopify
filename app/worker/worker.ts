@@ -59,6 +59,16 @@ new Worker<JobData>(
         shopData.orgId,
         shopData.siteId,
       );
+      // Market sync runs after products (Yespo requires base products first).
+      // The handler is a no-op unless shop.isMarketSyncEnabled is true.
+      await marketSyncHandler(
+        shop,
+        accessToken,
+        apiKey,
+        shopData.id,
+        shopData.orgId,
+        shopData.siteId,
+      );
     } catch (error: any) {
       console.error(`Worker error:`, error);
     }

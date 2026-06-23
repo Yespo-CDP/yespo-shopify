@@ -1,120 +1,144 @@
-import { throttleApiRequest } from "~/utils/rate-limiter.server";
+import fs from "node:fs";
+import path from "node:path";
 
-export interface MarketProductPayload {
+import { sendLogEvent } from "~/api/send-log-event";
+import { EVENT_MESSAGES } from "~/config/constants";
+import { throttleApiRequest } from "~/utils/rate-limiter.server";
+// import { getAuthHeader } from "~/utils/auth";
+// import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
+
+/**
+ * A single market product item, as defined by the Yespo POST /v1/markets API.
+ *
+ * `productId` and `updatedDate` are always required; every item must also carry
+ * at least one market field to change (price, currency, isInStock, oldPrice).
+ */
+export interface MarketProductItem {
   productId: string;
-  variantId: string;
-  countryCode: string;
-  pricing: unknown;
-  variantUpdatedAt?: string;
+  updatedDate: string;
+  price?: number;
+  oldPrice?: number;
+  currency?: string;
+  isInStock?: 0 | 1;
+  urls?: Record<string, string>;
 }
 
-export interface MarketTranslationPayload {
-  productId: string;
-  locale: string;
+/**
+ * One market envelope entry: a marketId plus the products it applies to.
+ */
+export interface MarketEnvelope {
   marketId: string;
-  translations: unknown;
-  productUpdatedAt?: string;
+  products: MarketProductItem[];
 }
 
 export interface MarketProductsResponse {
   id: number;
+  /** productIds that failed synchronous validation/enqueue. */
   failedItems: string[];
 }
 
 /**
- * Temporary stub for the Yespo POST /v1/markets API (pricing + stock per market).
+ * Sends market-specific prices, stock, and (optionally) URLs to the Yespo
+ * POST /v1/markets API.
  *
- * TODO: replace with a real HTTP call once MarketProductPayload is mapped to the
- * Yespo market envelope: { siteId, markets: [{ marketId, products: [...] }] }
- * Each product item requires: productId, updatedDate, and at least one of
- * price, currency, isInStock, oldPrice, or urls.
+ * Envelope: { siteId, markets: [{ marketId, products: [...] }] }
  *
- * @param {Object} params - The input parameters.
- * @param {string} params.apiKey - The API key used for authentication.
- * @param {string} params.siteId - The Yespo site/account identifier.
- * @param {MarketProductPayload[]} params.items - Market product items to sync.
- * @param {string} params.domain - The shop domain for logging.
- * @param {number | null | undefined} params.orgId - The Yespo organization id for logging.
+ * NOTE: The HTTP call is currently stubbed (mirrors the product sync client) and
+ * returns a mock success response. The exact payload that would be sent is
+ * written to `debug/` for inspection. Uncomment the block below once the Yespo
+ * endpoint is live.
+ *
+ * @param params.apiKey - Basic-auth API key.
+ * @param params.siteId - Yespo site/account identifier (required in every request).
+ * @param params.markets - Markets to sync, already grouped by marketId.
+ * @param params.domain - Shop domain used for logging.
+ * @param params.orgId - Yespo organisation id used for logging.
  */
 export const updateMarketProducts = async ({
   apiKey,
   siteId,
-  items,
+  markets,
   domain,
   orgId,
 }: {
   apiKey: string;
   siteId: string;
-  items: MarketProductPayload[];
+  markets: MarketEnvelope[];
   domain: string;
   orgId?: number | null;
 }): Promise<MarketProductsResponse> => {
-  await throttleApiRequest(siteId);
+  const itemCount = markets.reduce(
+    (sum, market) => sum + market.products.length,
+    0,
+  );
 
-  // FIXME: Replace with a real HTTP call once MarketProductPayload is mapped to Yespo format:
-  // const url = `${process.env.API_URL}/v1/markets`;
-  // const authHeader = getAuthHeader(apiKey);
-  // const markets = groupByMarketId(items, siteId); // group by countryCode → marketId
-  // await fetchWithErrorHandling(url, {
-  //   method: "POST",
-  //   headers: { "content-type": "application/json", Authorization: authHeader },
-  //   body: JSON.stringify({ siteId, markets }),
-  // });
-  void apiKey;
-  void siteId;
-  void domain;
-  void orgId;
+  try {
+    await throttleApiRequest(siteId);
 
-  console.log(`[mock] updateMarketProducts: ${items.length} items`);
+    const requestBody = { siteId, markets };
 
-  return {
-    id: Date.now(),
-    failedItems: [],
-  };
-};
+    // Persist the exact object that would be sent to Yespo for inspection.
+    const debugDir = path.resolve(process.cwd(), "debug");
+    fs.mkdirSync(debugDir, { recursive: true });
+    const marketIds = markets.map((market) => market.marketId).join("-");
+    fs.writeFileSync(
+      path.join(debugDir, `market-sync-${marketIds}-${Date.now()}.json`),
+      JSON.stringify(requestBody, null, 2),
+    );
 
-/**
- * Temporary stub for syncing product translations to Yespo.
- *
- * NOTE: In the Yespo API, product translations (name, description per locale)
- * are sent via POST /v1/products using the `translations` field on each product,
- * NOT via /v1/markets. Market-specific locale URLs go into the `urls` field of
- * the /v1/markets product item.
- *
- * TODO: restructure — locale name/description → POST /v1/products translations[];
- *       locale URLs per market → POST /v1/markets products[].urls.
- *
- * @param {Object} params - The input parameters.
- * @param {string} params.apiKey - The API key used for authentication.
- * @param {string} params.siteId - The Yespo site/account identifier.
- * @param {MarketTranslationPayload[]} params.items - Translation items to sync.
- * @param {string} params.domain - The shop domain for logging.
- * @param {number | null | undefined} params.orgId - The Yespo organization id for logging.
- */
-export const updateMarketTranslations = async ({
-  apiKey,
-  siteId,
-  items,
-  domain,
-  orgId,
-}: {
-  apiKey: string;
-  siteId: string;
-  items: MarketTranslationPayload[];
-  domain: string;
-  orgId?: number | null;
-}): Promise<MarketProductsResponse> => {
-  await throttleApiRequest(siteId);
+    const url = `${process.env.API_URL}/markets`;
+    // const response = await fetchWithErrorHandling(url, {
+    //   method: "POST",
+    //   headers: {
+    //     "content-type": "application/json",
+    //     Authorization: getAuthHeader(apiKey),
+    //   },
+    //   body: JSON.stringify(requestBody),
+    // });
 
-  void apiKey;
-  void siteId;
-  void domain;
-  void orgId;
+    // const responseData = response.responseData as MarketProductsResponse;
 
-  console.log(`[mock] updateMarketTranslations: ${items.length} items`);
+    // await sendLogEvent({
+    //   orgId,
+    //   errorMessage: "",
+    //   data: JSON.stringify({
+    //     domain,
+    //     itemCount,
+    //     marketIds: markets.map((market) => market.marketId),
+    //   }),
+    //   message: EVENT_MESSAGES.CUSTOM_LOG_SEND_MARKET_PRODUCTS_SUCCESS,
+    //   logLevel: "INFO",
+    // });
 
-  return {
-    id: Date.now(),
-    failedItems: [],
-  };
+    // return responseData;
+
+    void apiKey;
+    void url;
+
+    console.log(
+      `[mock] updateMarketProducts: ${itemCount} items across ${markets.length} market(s)`,
+    );
+
+    return {
+      id: Date.now(),
+      failedItems: [],
+    };
+  } catch (error: any) {
+    console.error("Error updating market products:", error?.message);
+
+    await sendLogEvent({
+      orgId,
+      errorMessage: `Error updating market products: ${error?.message}`,
+      data: JSON.stringify({
+        domain,
+        itemCount,
+        responseBody: error,
+        statusCode: error?.status ?? 500,
+      }),
+      message: EVENT_MESSAGES.CUSTOM_LOG_SEND_MARKET_PRODUCTS_ERROR,
+      logLevel: "ERROR",
+    });
+
+    throw new Error(error.message);
+  }
 };

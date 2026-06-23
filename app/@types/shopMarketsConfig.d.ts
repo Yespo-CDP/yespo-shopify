@@ -5,6 +5,8 @@ export interface ShopMarketConfig {
   enabled: boolean;
   countries: string[];
   locales: string[];
+  /** locale (BCP 47) → storefront root URL for that locale in this market */
+  rootUrls: Record<string, string>;
 }
 
 export interface ShopMarketsConfig {
