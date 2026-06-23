@@ -7,6 +7,7 @@ import {
   productVariantSyncLogRepository,
 } from "~/repositories/repositories.server";
 import { updateProductVariants } from "~/api/update-product-variants";
+import { deleteProductVariants } from "~/api/delete-product-variants";
 import { createClient } from "../services/create-client";
 import { getProducts } from "../services/get-products";
 import { getProductVariantsCount } from "../services/get-product-variants-count";
@@ -76,6 +77,9 @@ export const productSyncHandler = async (
   let totalSkippedCount = 0;
   let totalFailedCount = 0;
   let totalSyncedCount = 0;
+  // Collects every Shopify variant GID seen across all pages.
+  // Used after the loop to find variants deleted from Shopify.
+  const seenVariantIds = new Set<string>();
 
   try {
     do {
@@ -125,6 +129,8 @@ export const productSyncHandler = async (
               );
 
             for (const variant of variants) {
+              seenVariantIds.add(variant.id);
+
               const productVariantSync = productVariantSyncs.find(
                 (value) => value.variantId === variant.id,
               );
@@ -227,19 +233,6 @@ export const productSyncHandler = async (
                 chunkFailedCount += 1;
               }
             }
-
-            await sendLogEvent({
-              orgId,
-              errorMessage: "",
-              data: JSON.stringify({
-                domain: shop,
-                offset: VARIANTS_API_CHUNK_SIZE,
-                responseBody: variantsUpdateResponse,
-                statusCode: 200,
-              }),
-              message: EVENT_MESSAGES.SEND_PRODUCT_VARIANTS_BULK_SUCCESS,
-              logLevel: "INFO",
-            });
           }
 
           totalFailedCount += chunkFailedCount;
@@ -284,13 +277,37 @@ export const productSyncHandler = async (
             responseBody: {},
             statusCode: error?.status ?? 400,
           }),
-          message: EVENT_MESSAGES.SEND_PRODUCT_VARIANTS_BULK_FAILED,
+          message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_ERROR,
           logLevel: "ERROR",
         });
 
         throw Error(error);
       }
     } while (cursor);
+
+    // Detect variants that exist in our DB but are no longer present in Shopify
+    // (i.e. were deleted from Shopify since the last sync run).
+    if (shopData?.isProductVariantSyncEnabled) {
+      const allTrackedIds =
+        await productVariantSyncRepository.getVariantIdsByShop(shopId);
+      const deletedIds = allTrackedIds.filter((id) => !seenVariantIds.has(id));
+
+      if (deletedIds.length > 0) {
+        console.log(`🗑️ Deleting ${deletedIds.length} orphaned variants from Yespo`);
+
+        for (let i = 0; i < deletedIds.length; i += VARIANTS_API_CHUNK_SIZE) {
+          const chunk = deletedIds.slice(i, i + VARIANTS_API_CHUNK_SIZE);
+          await deleteProductVariants({
+            apiKey,
+            siteId: siteId ?? "",
+            externalVariantIds: chunk,
+            domain: shop,
+            orgId,
+          });
+          await productVariantSyncRepository.deleteByVariantIds(shopId, chunk);
+        }
+      }
+    }
 
     await productVariantSyncLogRepository.createOrUpdateProductVariantSyncLog({
       status: "COMPLETE",

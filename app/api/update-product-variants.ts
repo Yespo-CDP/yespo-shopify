@@ -4,28 +4,24 @@ import type {
 } from "~/@types/productVariant";
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
+import { getAuthHeader } from "~/utils/auth";
+import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import { throttleApiRequest } from "~/utils/rate-limiter.server";
 
 /**
- * Temporary stub for the Yespo POST /v1/products API.
- *
- * Replace with a real HTTP call once the payload builders are updated to produce
- * the full Yespo product envelope (action, updatedDate, imageUrl, url, isInStock,
- * categories, translations, etc.).
+ * Sends a batch of product variants to the Yespo POST /v1/products API.
  *
  * languageCode = shop.defaultLanguageCode (Shopify shop.primaryLocale, stored in DB).
  * languageChanged = true only on the first batch when primaryLocale changed vs stored defaultLanguageCode.
  * After the first accepted batch the caller must update shop.defaultLanguageCode in DB.
  *
- * @param {Object} params - The input parameters.
- * @param {string} params.apiKey - The API key used for authentication.
- * @param {string} params.siteId - The Yespo site/account identifier.
- * @param {string} params.languageCode - BCP 47 language tag (e.g. "uk", "en"). Must match shop.primaryLocale.
- * @param {boolean} [params.languageChanged] - Set to true on the first batch when the language is changing.
- * @param {ProductVariant[]} params.productVariants - The product variant array to sync.
- * @param {string} params.domain - The shop domain for logging.
- * @param {number | null | undefined} params.orgId - The Yespo organization id for logging.
- * @returns {Promise<ProductVariantsResponse>} A promise that resolves with a mock success response.
+ * @param params.apiKey - Basic-auth API key.
+ * @param params.siteId - Yespo site/account identifier (required in every request).
+ * @param params.languageCode - BCP 47 language tag (e.g. "uk", "en"). Must match shop.primaryLocale.
+ * @param params.languageChanged - Set to true on the first batch when the language is changing.
+ * @param params.productVariants - Product variant array to sync (max 500 per call).
+ * @param params.domain - Shop domain used for logging.
+ * @param params.orgId - Yespo organisation id used for logging.
  */
 export const updateProductVariants = async ({
   apiKey,
@@ -44,28 +40,25 @@ export const updateProductVariants = async ({
   domain: string;
   orgId?: number | null;
 }): Promise<ProductVariantsResponse> => {
-  void apiKey;
-
-  const mockResponse: ProductVariantsResponse = {
-    id: Date.now(),
-    failedVariants: [],
-  };
-
   try {
     await throttleApiRequest(siteId);
 
-    // FIXME: Replace with a real HTTP call once product payload builders produce the full Yespo format:
-    // const url = `${process.env.API_URL}/v1/products`;
-    // const authHeader = getAuthHeader(apiKey);
-    // const response = await fetchWithErrorHandling(url, {
-    //   method: "POST",
-    //   headers: { "content-type": "application/json", Authorization: authHeader },
-    //   body: JSON.stringify({ siteId, languageCode, languageChanged, products: productVariants }),
-    // });
-    // return response.responseData as ProductVariantsResponse;
-    void siteId;
-    void languageCode;
-    void languageChanged;
+    const url = `${process.env.API_URL}/v1/products`;
+    const response = await fetchWithErrorHandling(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        Authorization: getAuthHeader(apiKey),
+      },
+      body: JSON.stringify({
+        siteId,
+        languageCode,
+        languageChanged,
+        products: productVariants,
+      }),
+    });
+
+    const responseData = response.responseData as ProductVariantsResponse;
 
     await sendLogEvent({
       orgId,
@@ -73,14 +66,14 @@ export const updateProductVariants = async ({
       data: JSON.stringify({
         domain,
         variantsCount: productVariants.length,
-        responseBody: mockResponse,
-        statusCode: 200,
+        responseBody: responseData,
+        statusCode: response.status,
       }),
       message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
       logLevel: "INFO",
     });
 
-    return mockResponse;
+    return responseData;
   } catch (error: any) {
     console.error("Error updating product variants:", error?.message);
 
@@ -89,7 +82,7 @@ export const updateProductVariants = async ({
       errorMessage: `Error updating product variants: ${error?.message}`,
       data: JSON.stringify({
         domain,
-        requestBody: productVariants.length,
+        variantsCount: productVariants.length,
         responseBody: error,
         statusCode: error?.status ?? 500,
       }),

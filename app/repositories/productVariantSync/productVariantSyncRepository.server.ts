@@ -53,4 +53,20 @@ export default interface ProductVariantSyncRepository {
     variantId: string,
     data: ProductVariantSyncUpdate,
   ): Promise<ProductVariantSync>;
+
+  /**
+   * Returns all variant IDs currently tracked for a given shop.
+   * Used to detect variants that have been deleted from Shopify.
+   *
+   * @param shopId - Internal shop ID.
+   */
+  getVariantIdsByShop(shopId: number): Promise<string[]>;
+
+  /**
+   * Removes product variant sync records for the given variant IDs.
+   *
+   * @param shopId - Internal shop ID.
+   * @param variantIds - Variant IDs to remove.
+   */
+  deleteByVariantIds(shopId: number, variantIds: string[]): Promise<void>;
 }
