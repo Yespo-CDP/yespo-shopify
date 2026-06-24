@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import type {
   ProductVariant,
   ProductVariantsResponse,
@@ -42,6 +45,14 @@ export const updateProductVariants = async ({
 }): Promise<ProductVariantsResponse> => {
   try {
     await throttleApiRequest(siteId);
+
+    const requestBody = { siteId, languageCode, languageChanged, products: productVariants };
+    const debugDir = path.resolve(process.cwd(), "debug");
+    fs.mkdirSync(debugDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(debugDir, `product-variants-${siteId}-${Date.now()}.json`),
+      JSON.stringify(requestBody, null, 2),
+    );
 
     const url = `${process.env.API_URL}/products`;
     // const response = await fetchWithErrorHandling(url, {

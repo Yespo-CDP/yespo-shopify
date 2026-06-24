@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
 import { getAuthHeader } from "~/utils/auth";
@@ -35,6 +38,21 @@ export const deleteProductVariants = async ({
     await throttleApiRequest(siteId);
 
     const deletedAt = new Date().toISOString();
+
+    const requestBody = {
+      siteId,
+      products: externalVariantIds.map((productId) => ({
+        productId,
+        updatedDate: deletedAt,
+      })),
+    };
+    const debugDir = path.resolve(process.cwd(), "debug");
+    fs.mkdirSync(debugDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(debugDir, `product-delete-${siteId}-${Date.now()}.json`),
+      JSON.stringify(requestBody, null, 2),
+    );
+
     const url = `${process.env.API_URL}/products`;
     await fetchWithErrorHandling(url, {
       method: "DELETE",
@@ -42,13 +60,7 @@ export const deleteProductVariants = async ({
         "content-type": "application/json",
         Authorization: getAuthHeader(apiKey),
       },
-      body: JSON.stringify({
-        siteId,
-        products: externalVariantIds.map((productId) => ({
-          productId,
-          updatedDate: deletedAt,
-        })),
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     await sendLogEvent({

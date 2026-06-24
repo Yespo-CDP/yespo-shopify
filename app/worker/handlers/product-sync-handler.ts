@@ -1,5 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
 import type { ProductVariant } from "~/@types/productVariant";
 import {
   shopRepository,
@@ -213,12 +211,6 @@ export const productSyncHandler = async (
             if (variantsChunk.length === 0) {
               continue;
             }
-            const debugDir = path.resolve(process.cwd(), "debug");
-            fs.mkdirSync(debugDir, { recursive: true });
-            fs.writeFileSync(
-              path.join(debugDir, `product-sync-chunk-${Date.now()}.json`),
-              JSON.stringify(variantsChunk, null, 2),
-            );
 
             const variantsUpdateResponse = await updateProductVariants({
               apiKey,
