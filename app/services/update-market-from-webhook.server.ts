@@ -1,13 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { marketSyncRepository } from "~/repositories/repositories.server";
+import { marketSyncRepository, shopMarketRepository } from "~/repositories/repositories.server";
 import type { MarketProductItem } from "~/api/update-market-products";
 import { updateMarketProducts } from "~/api/update-market-products";
 import { createClient } from "~/worker/services/create-client";
 import { fetchShopMarketsConfig } from "~/worker/services/fetch-shop-markets-config";
 import { getProductContextualPricing } from "~/worker/services/get-product-contextual-pricing";
 import { computeContentHash } from "~/worker/services/compute-content-hash";
+import { resolveMarketUrls } from "~/worker/services/resolve-market-urls";
 import type { ShopMarketConfig } from "~/@types/shopMarketsConfig";
 
 function writeDebug(name: string, data: unknown): void {
@@ -21,25 +22,6 @@ function writeDebug(name: string, data: unknown): void {
   } catch {
     // debug writes must never break the main flow
   }
-}
-
-/**
- * Builds market-specific product URLs: locale → `${rootUrl}/${handle}`.
- * Mirrors the same logic used in parse-bulk-jsonl.ts.
- */
-function buildMarketUrls(
-  market: ShopMarketConfig | undefined,
-  handle: string,
-): Record<string, string> | undefined {
-  if (!market?.rootUrls || !handle) return undefined;
-
-  const urls: Record<string, string> = {};
-  for (const [locale, rootUrl] of Object.entries(market.rootUrls)) {
-    if (rootUrl) {
-      urls[locale] = `${rootUrl.replace(/\/$/, "")}/${handle}`;
-    }
-  }
-  return Object.keys(urls).length > 0 ? urls : undefined;
 }
 
 function computeMarketHash(item: MarketProductItem): string {
@@ -91,6 +73,11 @@ export async function updateMarketFromWebhook({
 
   const marketsConfig = await fetchShopMarketsConfig({ client });
   if (!marketsConfig.countries.length) return;
+
+  const previousShopMarkets = await shopMarketRepository.getByShopId(shopId);
+  const previousLocalesByMarketId = new Map(
+    previousShopMarkets.map((market) => [market.marketId, market.locales]),
+  );
 
   const pricing = await getProductContextualPricing({
     client,
@@ -231,8 +218,11 @@ export async function updateMarketFromWebhook({
         item.oldPrice = compareAt;
       }
 
-      const urls = buildMarketUrls(countryToMarket.get(cc), handle);
-      if (urls) item.urls = urls;
+      const market = countryToMarket.get(cc);
+      const previousLocales = market
+        ? (previousLocalesByMarketId.get(market.id) ?? [])
+        : [];
+      item.urls = resolveMarketUrls(market, handle, previousLocales);
 
       const newHash = computeMarketHash(item);
       const existingHash = existingHashMap.get(`${variant.variantId}:${cc}`);

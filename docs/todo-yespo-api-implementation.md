@@ -94,14 +94,9 @@ HTTP-виклики до Yespo закоментовані. Обидва мето
 
 ---
 
-## 8. Translation categories
+## ~~8. Translation categories~~ ✅ Виконано
 
-**Файл:** `app/worker/services/get-product-translations.ts`
-
-Параметр `collections` у функції перекладів передається як `void` — колекції ніколи не потрапляють у `translations[locale].categories`.
-
-**Що потрібно:**
-- Передавати колекції в функцію перекладів і формувати `translations[locale].categories` за тією ж логікою, що й основні категорії
+`get-product-translations.ts` приймає параметр `collections`, виконує батчевий запит перекладів колекцій (Request 2) і заповнює `translations[locale].categories`. Колекції передаються з усіх точок виклику: bulk sync, create-webhook, update-webhook.
 
 ---
 
@@ -154,14 +149,9 @@ HTTP-виклики до Yespo закоментовані. Обидва мето
 
 ---
 
-## 13. Закоментований DELETE orphan variants у вебхуку
+## ~~13. Закоментований DELETE orphan variants у вебхуку~~ ✅ Виконано
 
-**Файл:** `app/services/update-product-variant.server.ts`
-
-При `PRODUCTS_UPDATE` orphan variants видаляються з БД, але виклик `deleteProductVariants` закоментований — Yespo не сповіщається про видалення.
-
-**Що потрібно:**
-- Розкоментувати виклик `deleteProductVariants` для orphan variants при оновленні продукту
+`deleteProductVariants` розкоментований в `update-product-variant.server.ts`. При `PRODUCTS_UPDATE` сирітські варіанти видаляються і з Yespo, і з БД.
 
 ---
 
@@ -189,7 +179,7 @@ HTTP-виклики до Yespo закоментовані. Обидва мето
 
 ---
 
-## Виправлено в цій сесії
+## Виправлено
 
 | Проблема | Файл |
 |----------|------|
@@ -199,3 +189,5 @@ HTTP-виклики до Yespo закоментовані. Обидва мето
 | Market sync у вебхуках (contextualPricing) | `app/services/update-market-from-webhook.server.ts` |
 | Видалені маркети у вебхуках | `update-market-from-webhook.server.ts` + `MarketSyncRepositoryImpl.deleteManyByKeys` |
 | Пагінація варіантів у contextual pricing | `get-product-contextual-pricing.ts` |
+| Translation categories (#8) | `get-product-translations.ts` |
+| DELETE orphan variants у вебхуку (#13) | `update-product-variant.server.ts` |

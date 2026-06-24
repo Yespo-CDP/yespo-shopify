@@ -1,6 +1,7 @@
 import { updateProductVariants } from "~/api/update-product-variants";
 import {
   productVariantSyncRepository,
+  shopRepository,
 } from "~/repositories/repositories.server";
 import {
   createProductVariantPayloadFromWebhook,
@@ -10,6 +11,7 @@ import { createClient } from "~/worker/services/create-client";
 import { getProductCollections } from "~/worker/services/get-product-collections";
 import { getShopSecondaryLocales } from "~/worker/services/get-shop-locales";
 import { getProductTranslations } from "~/worker/services/get-product-translations";
+import { resolveProductSyncLanguage } from "~/worker/services/resolve-product-sync-language";
 import { updateMarketFromWebhook } from "./update-market-from-webhook.server";
 
 /**
@@ -58,12 +60,21 @@ export const createProductVariantService = async (
         ? createClient({ shop: shopifyDomain, accessToken })
         : null;
 
+    const {
+      languageCode: resolvedLanguageCode,
+      languageChanged,
+      needsLanguageCodePersist,
+    } = await resolveProductSyncLanguage({
+      client,
+      storedLanguageCode: languageCode,
+    });
+
     const [categories, freshLocales] = await Promise.all([
       client && payload?.admin_graphql_api_id
         ? getProductCollections({ client, productGid: payload.admin_graphql_api_id })
         : Promise.resolve([]),
-      client && languageCode
-        ? getShopSecondaryLocales({ client, primaryLocale: languageCode })
+      client && resolvedLanguageCode
+        ? getShopSecondaryLocales({ client, primaryLocale: resolvedLanguageCode })
         : Promise.resolve([] as string[]),
     ]);
 
@@ -76,6 +87,7 @@ export const createProductVariantService = async (
             locales: freshLocales,
             shopDomain: domain,
             productHandle: payload.handle ?? "",
+            collections: categories.map((c) => ({ id: c.id, name: c.name })),
           })
         : null;
 
@@ -93,14 +105,24 @@ export const createProductVariantService = async (
       ),
     );
 
-    await updateProductVariants({
+    const response = await updateProductVariants({
       apiKey,
       siteId: siteId ?? "",
-      languageCode: languageCode ?? "",
+      languageCode: resolvedLanguageCode,
+      languageChanged,
       productVariants,
       domain,
       orgId,
     });
+
+    if (
+      shopifyDomain &&
+      (needsLanguageCodePersist || response.languageChangedConfirmed)
+    ) {
+      await shopRepository.updateShop(shopifyDomain, {
+        defaultLanguageCode: resolvedLanguageCode,
+      });
+    }
 
     for (let i = 0; i < variants.length; i++) {
       const variant = variants[i];

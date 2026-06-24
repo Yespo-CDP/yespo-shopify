@@ -2,7 +2,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { updateProductVariants } from "~/api/update-product-variants";
 import { deleteProductVariants } from "~/api/delete-product-variants";
-import { productVariantSyncRepository } from "~/repositories/repositories.server";
+import {
+  productVariantSyncRepository,
+  shopRepository,
+} from "~/repositories/repositories.server";
 import {
   createProductVariantPayloadFromWebhook,
   type ProductVariantWebhookPayload,
@@ -11,6 +14,7 @@ import { createClient } from "~/worker/services/create-client";
 import { getProductCollections } from "~/worker/services/get-product-collections";
 import { getShopSecondaryLocales } from "~/worker/services/get-shop-locales";
 import { getProductTranslations } from "~/worker/services/get-product-translations";
+import { resolveProductSyncLanguage } from "~/worker/services/resolve-product-sync-language";
 import { updateMarketFromWebhook } from "./update-market-from-webhook.server";
 
 /**
@@ -62,13 +66,22 @@ export const updateProductVariantService = async (
         ? createClient({ shop: shopifyDomain, accessToken })
         : null;
 
+    const {
+      languageCode: resolvedLanguageCode,
+      languageChanged,
+      needsLanguageCodePersist,
+    } = await resolveProductSyncLanguage({
+      client,
+      storedLanguageCode: languageCode,
+    });
+
     const [categories, freshLocales, existingSyncs, trackedVariantGids] =
       await Promise.all([
         client && productGid
           ? getProductCollections({ client, productGid })
           : Promise.resolve([]),
-        client && languageCode
-          ? getShopSecondaryLocales({ client, primaryLocale: languageCode })
+        client && resolvedLanguageCode
+          ? getShopSecondaryLocales({ client, primaryLocale: resolvedLanguageCode })
           : Promise.resolve([] as string[]),
         productVariantSyncRepository.getProductVariantSyncByVariantIds(
           variants.map((v) => v.admin_graphql_api_id),
@@ -95,6 +108,7 @@ export const updateProductVariantService = async (
             locales: freshLocales,
             shopDomain: domain,
             productHandle: payload?.handle ?? "",
+            collections: categories.map((c) => ({ id: c.id, name: c.name })),
           })
         : null;
 
@@ -124,7 +138,8 @@ export const updateProductVariantService = async (
       JSON.stringify(
         {
           siteId: siteId ?? "",
-          languageCode: languageCode ?? "",
+          languageCode: resolvedLanguageCode,
+          languageChanged,
           products: productVariants,
         },
         null,
@@ -132,14 +147,24 @@ export const updateProductVariantService = async (
       ),
     );
 
-    await updateProductVariants({
+    const response = await updateProductVariants({
       apiKey,
       siteId: siteId ?? "",
-      languageCode: languageCode ?? "",
+      languageCode: resolvedLanguageCode,
+      languageChanged,
       productVariants,
       domain,
       orgId,
     });
+
+    if (
+      shopifyDomain &&
+      (needsLanguageCodePersist || response.languageChangedConfirmed)
+    ) {
+      await shopRepository.updateShop(shopifyDomain, {
+        defaultLanguageCode: resolvedLanguageCode,
+      });
+    }
 
     for (let i = 0; i < variants.length; i++) {
       const variant = variants[i];
@@ -190,13 +215,13 @@ export const updateProductVariantService = async (
           ),
         );
 
-        // await deleteProductVariants({
-        //   apiKey,
-        //   siteId: siteId ?? "",
-        //   externalVariantIds: numericOrphanedIds,
-        //   domain,
-        //   orgId,
-        // });
+        await deleteProductVariants({
+          apiKey,
+          siteId: siteId ?? "",
+          externalVariantIds: numericOrphanedIds,
+          domain,
+          orgId,
+        });
 
         await productVariantSyncRepository.deleteByVariantIds(
           shopId,

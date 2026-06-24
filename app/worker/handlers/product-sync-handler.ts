@@ -121,7 +121,10 @@ export const productSyncHandler = async (
                   locales: secondaryLocales,
                   shopDomain: shop,
                   productHandle: product.handle,
-                  collections: product.collections?.nodes ?? [],
+                  collections: (product.collections?.nodes ?? []).map((n) => ({
+                    id: n.id,
+                    name: n.title,
+                  })),
                 })
               : ({
                   product: {},
@@ -225,10 +228,17 @@ export const productSyncHandler = async (
             // After the first successful batch: clear both flags.
             // pendingLanguageChanged → false so subsequent batches use languageChanged: false.
             // needsLanguageCodePersist → false so DB is updated only once per sync run.
-            if (pendingLanguageChanged) {
+            if (
+              pendingLanguageChanged ||
+              variantsUpdateResponse.languageChangedConfirmed
+            ) {
               pendingLanguageChanged = false;
             }
-            if (needsLanguageCodePersist || needsLocalesPersist) {
+            if (
+              needsLanguageCodePersist ||
+              needsLocalesPersist ||
+              variantsUpdateResponse.languageChangedConfirmed
+            ) {
               needsLanguageCodePersist = false;
               needsLocalesPersist = false;
               await shopRepository.updateShop(shop, {

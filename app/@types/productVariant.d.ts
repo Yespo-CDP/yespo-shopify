@@ -58,4 +58,6 @@ export interface ProductVariantsResponse {
   failedVariants?: object | object[];
   asyncSessionId?: string;
   id?: number;
+  /** True when Yespo accepted a language change (sent explicitly or after 409 retry). */
+  languageChangedConfirmed?: boolean;
 }

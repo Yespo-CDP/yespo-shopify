@@ -39,7 +39,7 @@ interface PricingPayload {
     price?: { amount?: string; currencyCode?: string } | null;
     compareAtPrice?: { amount?: string; currencyCode?: string } | null;
   } | null;
-  urls?: Record<string, string>;
+  urls?: Record<string, string | null> | null;
 }
 
 function createEmptyCountryStats(): CountryStats {
@@ -91,13 +91,13 @@ function buildMarketProductItem(
   const compareAt = payload.pricing?.compareAtPrice?.amount
     ? parseFloat(payload.pricing.compareAtPrice.amount)
     : 0;
-  if (compareAt > priceValue) {
-    item.oldPrice = compareAt;
-  }
+  // Always set oldPrice explicitly: a value when valid, null otherwise.
+  // Omitting the field would tell Yespo to preserve the previous value, so we
+  // must pass null to clear a compareAtPrice that was removed on Shopify.
+  item.oldPrice = compareAt > priceValue ? compareAt : null;
 
-  if (payload.urls && Object.keys(payload.urls).length > 0) {
-    item.urls = payload.urls;
-  }
+  // Always set urls explicitly (null clears all; per-locale null clears one locale).
+  item.urls = payload.urls ?? null;
 
   return item;
 }
@@ -178,6 +178,11 @@ export const marketSyncHandler = async (
       currentCountries: marketsConfig.countries,
     });
 
+    const previousShopMarkets = await shopMarketRepository.getByShopId(shopId);
+    const previousLocalesByMarketId = new Map(
+      previousShopMarkets.map((market) => [market.marketId, market.locales]),
+    );
+
     await shopMarketRepository.replaceAll(shopId, marketsConfig.markets);
 
     if (marketsConfig.countries.length === 0) {
@@ -207,6 +212,7 @@ export const marketSyncHandler = async (
         shopId,
         config: marketsConfig,
         countries: chunk.countries,
+        previousLocalesByMarketId,
       });
       console.log(`Bulk JSONL saved to ${outputPath}`);
 

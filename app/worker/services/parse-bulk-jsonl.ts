@@ -16,6 +16,7 @@ import {
   getBulkJsonlOutputPath,
 } from "./save-bulk-jsonl-output.server";
 import { priceFieldAlias, publishedFieldAlias } from "./product-sync-bulk-queries";
+import { resolveMarketUrls } from "./resolve-market-urls";
 
 const TMP_INSERT_CHUNK_SIZE = 500;
 
@@ -49,6 +50,7 @@ export async function streamBulkJsonlToTmpMarketSync({
   shopId,
   config,
   countries,
+  previousLocalesByMarketId,
 }: {
   url: string;
   shop: string;
@@ -56,6 +58,7 @@ export async function streamBulkJsonlToTmpMarketSync({
   shopId: number;
   config: ShopMarketsConfig;
   countries: string[];
+  previousLocalesByMarketId: Map<string, string[]>;
 }): Promise<string> {
   const response = await fetch(url);
   if (!response.ok) {
@@ -98,6 +101,7 @@ export async function streamBulkJsonlToTmpMarketSync({
             countries,
             productInfo,
             countryToMarket,
+            previousLocalesByMarketId,
           }),
         );
       }
@@ -161,28 +165,6 @@ function recordProductInfo({
   });
 }
 
-/**
- * Builds market-specific URLs for a product: locale → `${rootUrl}/${handle}`.
- */
-function buildMarketUrls(
-  market: ShopMarketConfig | undefined,
-  handle: string,
-): Record<string, string> | undefined {
-  if (!market || !handle) {
-    return undefined;
-  }
-
-  const urls: Record<string, string> = {};
-  for (const [locale, rootUrl] of Object.entries(market.rootUrls)) {
-    if (!rootUrl) {
-      continue;
-    }
-    urls[locale] = `${rootUrl.replace(/\/$/, "")}/${handle}`;
-  }
-
-  return Object.keys(urls).length > 0 ? urls : undefined;
-}
-
 function parseVariantRow({
   row,
   batchId,
@@ -190,6 +172,7 @@ function parseVariantRow({
   countries,
   productInfo,
   countryToMarket,
+  previousLocalesByMarketId,
 }: {
   row: BulkJsonlRow;
   batchId: string;
@@ -197,6 +180,7 @@ function parseVariantRow({
   countries: string[];
   productInfo: ProductInfoMap;
   countryToMarket: Map<string, ShopMarketConfig>;
+  previousLocalesByMarketId: Map<string, string[]>;
 }): TmpMarketSyncCreate[] {
   const variantId = row.id as string;
   const productId = row.__parentId as string;
@@ -215,10 +199,11 @@ function parseVariantRow({
       continue;
     }
 
-    const urls = buildMarketUrls(
-      countryToMarket.get(countryCode),
-      info?.handle ?? "",
-    );
+    const market = countryToMarket.get(countryCode);
+    const previousLocales = market
+      ? (previousLocalesByMarketId.get(market.id) ?? [])
+      : [];
+    const urls = resolveMarketUrls(market, info?.handle ?? "", previousLocales);
 
     rows.push({
       batchId,
@@ -230,7 +215,7 @@ function parseVariantRow({
         variantUpdatedAt: row.updatedAt,
         inventoryQuantity: row.inventoryQuantity ?? null,
         pricing,
-        ...(urls ? { urls } : {}),
+        urls,
       } as Prisma.InputJsonValue,
       shop: { connect: { id: shopId } },
     });

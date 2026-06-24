@@ -17,10 +17,12 @@ export interface MarketProductItem {
   productId: string;
   updatedDate: string;
   price?: number;
-  oldPrice?: number;
+  /** Pass `null` to explicitly clear a previously set oldPrice in Yespo. */
+  oldPrice?: number | null;
   currency?: string;
   isInStock?: 0 | 1;
-  urls?: Record<string, string>;
+  /** Pass `null` to clear all URLs; locale keys with `null` clear that locale only. */
+  urls?: Record<string, string | null> | null;
 }
 
 /**
