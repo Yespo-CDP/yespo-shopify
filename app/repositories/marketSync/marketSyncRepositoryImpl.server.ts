@@ -55,6 +55,23 @@ export default class MarketSyncRepositoryImpl implements MarketSyncRepository {
     });
   }
 
+  async deleteManyByKeys(
+    shopId: number,
+    keys: Array<{ productId: string; variantId: string; countryCode: string }>,
+  ): Promise<void> {
+    if (keys.length === 0) return;
+    await this.database.marketSync.deleteMany({
+      where: {
+        shopId,
+        OR: keys.map((k) => ({
+          productId: k.productId,
+          variantId: k.variantId,
+          countryCode: k.countryCode,
+        })),
+      },
+    });
+  }
+
   async createOrUpdate(data: MarketSyncCreate): Promise<MarketSyncRecord> {
     const shopId = data.shop?.connect?.id;
     if (!shopId) {

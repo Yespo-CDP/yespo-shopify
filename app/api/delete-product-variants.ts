@@ -35,7 +35,7 @@ export const deleteProductVariants = async ({
     await throttleApiRequest(siteId);
 
     const deletedAt = new Date().toISOString();
-    const url = `${process.env.API_URL}/v1/products`;
+    const url = `${process.env.API_URL}/products`;
     await fetchWithErrorHandling(url, {
       method: "DELETE",
       headers: {

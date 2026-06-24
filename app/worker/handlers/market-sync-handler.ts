@@ -414,15 +414,25 @@ async function cleanupRemovedMarkets({
       isInStock: 0,
     }));
 
+    const allFailedItems: string[] = [];
+
     for (let index = 0; index < items.length; index += API_CHUNK_SIZE) {
       const chunk = items.slice(index, index + API_CHUNK_SIZE);
-      await updateMarketProducts({
+      const response = await updateMarketProducts({
         apiKey,
         siteId: siteId ?? "",
         markets: [{ marketId: countryCode, products: chunk }],
         domain: shop,
         orgId,
       });
+      allFailedItems.push(...response.failedItems);
+    }
+
+    if (allFailedItems.length > 0) {
+      console.warn(
+        `⚠️ ${allFailedItems.length} item(s) failed cleanup for market ${countryCode}, skipping local record deletion`,
+      );
+      continue;
     }
 
     await marketSyncRepository.deleteByCountry(shopId, countryCode);

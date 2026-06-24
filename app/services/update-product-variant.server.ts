@@ -9,6 +9,9 @@ import {
 } from "./create-product-variant-payload-from-webhook";
 import { createClient } from "~/worker/services/create-client";
 import { getProductCollections } from "~/worker/services/get-product-collections";
+import { getShopSecondaryLocales } from "~/worker/services/get-shop-locales";
+import { getProductTranslations } from "~/worker/services/get-product-translations";
+import { updateMarketFromWebhook } from "./update-market-from-webhook.server";
 
 /**
  * Updates product variants in Yespo from a Shopify PRODUCTS_UPDATE webhook payload.
@@ -28,6 +31,8 @@ import { getProductCollections } from "~/worker/services/get-product-collections
  * @param shopifyDomain - Shopify myshopify domain for the GraphQL client (session.shop)
  * @param accessToken - Shopify access token for the GraphQL client (session.accessToken)
  * @param shopCurrency - ISO 4217 currency code stored in DB (shop.defaultCurrency)
+ * @param syncedLocales - Secondary locales stored in DB (shop.syncedLocales) used to detect removed locales
+ * @param isMarketSyncEnabled - Whether market sync is enabled for this shop
  */
 export const updateProductVariantService = async (
   payload: any,
@@ -40,6 +45,8 @@ export const updateProductVariantService = async (
   shopifyDomain?: string,
   accessToken?: string,
   shopCurrency?: string | null,
+  syncedLocales: string[] = [],
+  isMarketSyncEnabled = false,
 ) => {
   try {
     const variants: ProductVariantWebhookPayload[] = payload?.variants ?? [];
@@ -50,23 +57,46 @@ export const updateProductVariantService = async (
 
     const productGid: string | undefined = payload?.admin_graphql_api_id;
 
-    const [categories, existingSyncs, trackedVariantGids] = await Promise.all([
-      shopifyDomain && accessToken && productGid
-        ? getProductCollections({
-            client: createClient({ shop: shopifyDomain, accessToken }),
-            productGid,
+    const client =
+      shopifyDomain && accessToken
+        ? createClient({ shop: shopifyDomain, accessToken })
+        : null;
+
+    const [categories, freshLocales, existingSyncs, trackedVariantGids] =
+      await Promise.all([
+        client && productGid
+          ? getProductCollections({ client, productGid })
+          : Promise.resolve([]),
+        client && languageCode
+          ? getShopSecondaryLocales({ client, primaryLocale: languageCode })
+          : Promise.resolve([] as string[]),
+        productVariantSyncRepository.getProductVariantSyncByVariantIds(
+          variants.map((v) => v.admin_graphql_api_id),
+        ),
+        productGid
+          ? productVariantSyncRepository.getVariantIdsByProductId(
+              shopId,
+              productGid,
+            )
+          : Promise.resolve([] as string[]),
+      ]);
+
+    // Locales present in DB but absent in Shopify now → must be removed from Yespo
+    const removedLocales = syncedLocales.filter(
+      (l) => !freshLocales.includes(l),
+    );
+
+    const translationsResult =
+      client && freshLocales.length > 0 && productGid
+        ? await getProductTranslations({
+            client,
+            productId: productGid,
+            variantGids: variants.map((v) => v.admin_graphql_api_id),
+            locales: freshLocales,
+            shopDomain: domain,
+            productHandle: payload?.handle ?? "",
           })
-        : Promise.resolve([]),
-      productVariantSyncRepository.getProductVariantSyncByVariantIds(
-        variants.map((v) => v.admin_graphql_api_id),
-      ),
-      productGid
-        ? productVariantSyncRepository.getVariantIdsByProductId(
-            shopId,
-            productGid,
-          )
-        : Promise.resolve([] as string[]),
-    ]);
+        : null;
 
     const syncMap = new Map(existingSyncs.map((s) => [s.variantId, s]));
 
@@ -74,7 +104,6 @@ export const updateProductVariantService = async (
       const existing = syncMap.get(variant.admin_graphql_api_id);
       const action = existing ? "update" : "create";
       const previousTagKeys = existing?.syncedTagKeys ?? [];
-      // Locale removal is a shop-level event — handled in bulk sync, not per webhook.
       return createProductVariantPayloadFromWebhook(
         payload,
         variant,
@@ -83,6 +112,8 @@ export const updateProductVariantService = async (
         action,
         categories,
         previousTagKeys,
+        removedLocales,
+        translationsResult,
       );
     });
 
@@ -172,6 +203,20 @@ export const updateProductVariantService = async (
           orphanedVariantGids,
         );
       }
+    }
+
+    if (productGid && shopifyDomain && accessToken) {
+      await updateMarketFromWebhook({
+        shopId,
+        shopifyDomain,
+        accessToken,
+        productGid,
+        isMarketSyncEnabled,
+        apiKey,
+        siteId: siteId ?? "",
+        domain,
+        orgId,
+      });
     }
   } catch (error: any) {
     console.error("Error occurred in Update Product Variant Service", error);

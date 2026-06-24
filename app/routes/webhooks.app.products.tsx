@@ -47,6 +47,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         session.shop,
         session.accessToken,
         shop.defaultCurrency,
+        shop.syncedLocales ?? [],
+        shop.isMarketSyncEnabled ?? false,
       );
       break;
 
@@ -62,6 +64,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         session.shop,
         session.accessToken,
         shop.defaultCurrency,
+        shop.syncedLocales ?? [],
+        shop.isMarketSyncEnabled ?? false,
       );
       break;
 

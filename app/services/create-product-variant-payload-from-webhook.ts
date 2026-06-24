@@ -3,6 +3,7 @@ import type {
   ProductVariant,
   YespoCategory,
 } from "~/@types/productVariant";
+import type { ProductTranslationsResult } from "~/worker/services/get-product-translations";
 
 export interface ProductVariantWebhookPayload {
   id: number;
@@ -33,7 +34,10 @@ export interface ProductWebhookPayload {
 }
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, " ").replace(/\s{2,}/g, " ").trim();
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 /**
@@ -75,6 +79,7 @@ function mapWebhookOptions(
  * @param categories - Pre-fetched Yespo categories (from separate API call if needed)
  * @param previousTagKeys - Tag keys sent in the previous sync (from ProductVariantSync.syncedTagKeys)
  * @param removedLocales - Secondary locales removed from the shop since last sync
+ * @param translationsResult - Pre-fetched product and variant translations from Shopify GraphQL
  */
 export const createProductVariantPayloadFromWebhook = (
   product: ProductWebhookPayload,
@@ -85,6 +90,7 @@ export const createProductVariantPayloadFromWebhook = (
   categories: YespoCategory[] = [],
   previousTagKeys: string[] = [],
   removedLocales: string[] = [],
+  translationsResult: ProductTranslationsResult | null = null,
 ): ProductVariant => {
   const variantTitle =
     variant.title === "Default Title" ? "" : variant.title.trim();
@@ -135,6 +141,29 @@ export const createProductVariantPayloadFromWebhook = (
   const price = parseFloat(variant.price ?? "0");
   if (compareAtPrice > price) {
     payload.oldPrice = compareAtPrice;
+  }
+
+  if (
+    translationsResult &&
+    Object.keys(translationsResult.product).length > 0
+  ) {
+    const variantId = variant.id.toString();
+    payload.translations = Object.entries(translationsResult.product).map(
+      ([locale, t]) => {
+        const translatedVariantTitle =
+          translationsResult.variants[variantId]?.[locale] ?? variantTitle;
+        return {
+          [locale]: {
+            ...t,
+            name: t.name
+              ? translatedVariantTitle
+                ? `${t.name} - ${translatedVariantTitle}`
+                : t.name
+              : undefined,
+          },
+        };
+      },
+    );
   }
 
   // For update operations: explicitly remove fields/keys no longer present in Shopify.

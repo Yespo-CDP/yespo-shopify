@@ -8,6 +8,9 @@ import {
 } from "./create-product-variant-payload-from-webhook";
 import { createClient } from "~/worker/services/create-client";
 import { getProductCollections } from "~/worker/services/get-product-collections";
+import { getShopSecondaryLocales } from "~/worker/services/get-shop-locales";
+import { getProductTranslations } from "~/worker/services/get-product-translations";
+import { updateMarketFromWebhook } from "./update-market-from-webhook.server";
 
 /**
  * Creates product variants in Yespo from a Shopify PRODUCTS_CREATE webhook payload.
@@ -26,6 +29,8 @@ import { getProductCollections } from "~/worker/services/get-product-collections
  * @param shopifyDomain - Shopify myshopify domain for the GraphQL client (session.shop)
  * @param accessToken - Shopify access token for the GraphQL client (session.accessToken)
  * @param shopCurrency - ISO 4217 currency code stored in DB (shop.defaultCurrency)
+ * @param syncedLocales - Secondary locales stored in DB (shop.syncedLocales) used to detect removed locales
+ * @param isMarketSyncEnabled - Whether market sync is enabled for this shop
  */
 export const createProductVariantService = async (
   payload: any,
@@ -38,6 +43,8 @@ export const createProductVariantService = async (
   shopifyDomain?: string,
   accessToken?: string,
   shopCurrency?: string | null,
+  syncedLocales: string[] = [],
+  isMarketSyncEnabled = false,
 ) => {
   try {
     const variants: ProductVariantWebhookPayload[] = payload?.variants ?? [];
@@ -46,13 +53,31 @@ export const createProductVariantService = async (
       return;
     }
 
-    const categories =
-      shopifyDomain && accessToken && payload?.admin_graphql_api_id
-        ? await getProductCollections({
-            client: createClient({ shop: shopifyDomain, accessToken }),
-            productGid: payload.admin_graphql_api_id,
+    const client =
+      shopifyDomain && accessToken
+        ? createClient({ shop: shopifyDomain, accessToken })
+        : null;
+
+    const [categories, freshLocales] = await Promise.all([
+      client && payload?.admin_graphql_api_id
+        ? getProductCollections({ client, productGid: payload.admin_graphql_api_id })
+        : Promise.resolve([]),
+      client && languageCode
+        ? getShopSecondaryLocales({ client, primaryLocale: languageCode })
+        : Promise.resolve([] as string[]),
+    ]);
+
+    const translationsResult =
+      client && freshLocales.length > 0 && payload?.admin_graphql_api_id
+        ? await getProductTranslations({
+            client,
+            productId: payload.admin_graphql_api_id,
+            variantGids: variants.map((v) => v.admin_graphql_api_id),
+            locales: freshLocales,
+            shopDomain: domain,
+            productHandle: payload.handle ?? "",
           })
-        : [];
+        : null;
 
     const productVariants = variants.map((variant) =>
       createProductVariantPayloadFromWebhook(
@@ -62,7 +87,9 @@ export const createProductVariantService = async (
         domain,
         "create",
         categories,
-        // action: "create" → no previous keys, no removed locales
+        [],
+        [],
+        translationsResult,
       ),
     );
 
@@ -89,6 +116,19 @@ export const createProductVariantService = async (
             id: shopId,
           },
         },
+      });
+    }
+    if (shopifyDomain && accessToken && payload?.admin_graphql_api_id) {
+      await updateMarketFromWebhook({
+        shopId,
+        shopifyDomain,
+        accessToken,
+        productGid: payload.admin_graphql_api_id,
+        isMarketSyncEnabled,
+        apiKey,
+        siteId: siteId ?? "",
+        domain,
+        orgId,
       });
     }
   } catch (error: any) {

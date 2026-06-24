@@ -20,6 +20,11 @@ export default interface MarketSyncRepository {
 
   deleteByCountry(shopId: number, countryCode: string): Promise<void>;
 
+  deleteManyByKeys(
+    shopId: number,
+    keys: Array<{ productId: string; variantId: string; countryCode: string }>,
+  ): Promise<void>;
+
   createOrUpdate(data: MarketSyncCreate): Promise<MarketSyncRecord>;
 
   update(
