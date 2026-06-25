@@ -125,27 +125,15 @@ HTTP-виклики до Yespo закоментовані. Обидва мето
 
 ---
 
-## 11. Market oldPrice — явне очищення
+## ~~11. Market oldPrice — явне очищення~~ ✅ Виконано
 
-**Файл:** `app/worker/handlers/market-sync-handler.ts`
-
-Коли `compareAtPrice` зникає в ринковому запису, поле `oldPrice` просто пропускається (omit). Згідно з API, для явного очищення потрібно передати `oldPrice: null`.
-
-**Що потрібно:**
-- Відстежувати попереднє значення `oldPrice` в маркеті
-- Якщо раніше було, а зараз немає — передавати `oldPrice: null`
+`buildMarketProductItem` завжди встановлює `oldPrice` явно: значення, якщо `compareAtPrice > price`, інакше `null` (щоб очистити попереднє значення в Yespo).
 
 ---
 
-## 12. Market urls — очищення
+## ~~12. Market urls — очищення~~ ✅ Виконано
 
-**Файл:** `app/worker/handlers/market-sync-handler.ts`
-
-Немає логіки очищення `urls` коли ринок втрачає web presence або змінюється набір локалей.
-
-**Що потрібно:**
-- При зникненні всіх URL — передавати `urls: null`
-- При зникненні окремого locale — передавати `urls: { "en": null }`
+`resolveMarketUrls` + `previousLocalesByMarketId` у bulk sync: `urls: null` коли всі URL зникли; `{ "en": null }` для окремих локалей, що прибрали з ринку.
 
 ---
 

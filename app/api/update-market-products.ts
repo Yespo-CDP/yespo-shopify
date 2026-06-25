@@ -74,15 +74,25 @@ export const updateMarketProducts = async ({
     0,
   );
 
+  // Yespo expects marketId (country code) in lowercase, while Shopify supplies
+  // it as an uppercase ISO code. Normalise here, at the single outbound boundary,
+  // so every caller stays consistent without touching Shopify enums or DB keys.
+  const normalizedMarkets = markets.map((market) => ({
+    ...market,
+    marketId: market.marketId.toLowerCase(),
+  }));
+
   try {
     await throttleApiRequest(siteId);
 
-    const requestBody = { siteId, markets };
+    const requestBody = { siteId, markets: normalizedMarkets };
 
     // Persist the exact object that would be sent to Yespo for inspection.
     const debugDir = path.resolve(process.cwd(), "debug");
     fs.mkdirSync(debugDir, { recursive: true });
-    const marketIds = markets.map((market) => market.marketId).join("-");
+    const marketIds = normalizedMarkets
+      .map((market) => market.marketId)
+      .join("-");
     fs.writeFileSync(
       path.join(debugDir, `market-sync-${marketIds}-${Date.now()}.json`),
       JSON.stringify(requestBody, null, 2),
@@ -106,7 +116,7 @@ export const updateMarketProducts = async ({
     //   data: JSON.stringify({
     //     domain,
     //     itemCount,
-    //     marketIds: markets.map((market) => market.marketId),
+    //     marketIds: normalizedMarkets.map((market) => market.marketId),
     //   }),
     //   message: EVENT_MESSAGES.CUSTOM_LOG_SEND_MARKET_PRODUCTS_SUCCESS,
     //   logLevel: "INFO",

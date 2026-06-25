@@ -6,6 +6,7 @@ import { customerSyncHandler } from "./handlers/customer-sync-handler";
 import { orderSyncHandler } from "./handlers/order-sync-handler";
 import { productSyncHandler } from "./handlers/product-sync-handler";
 import { marketSyncHandler } from "./handlers/market-sync-handler";
+import { enqueueMarketSyncTaskForShopUrl } from "~/services/queue";
 
 interface JobData {
   shop?: string;
@@ -59,16 +60,7 @@ new Worker<JobData>(
         shopData.orgId,
         shopData.siteId,
       );
-      // Market sync runs after products (Yespo requires base products first).
-      // The handler is a no-op unless shop.isMarketSyncEnabled is true.
-      await marketSyncHandler(
-        shop,
-        accessToken,
-        apiKey,
-        shopData.id,
-        shopData.orgId,
-        shopData.siteId,
-      );
+      await enqueueMarketSyncTaskForShopUrl(shop);
     } catch (error: any) {
       console.error(`Worker error:`, error);
     }
@@ -109,6 +101,6 @@ new Worker<MarketSyncJobData>(
   },
   {
     connection: redisConfig,
-    concurrency: 3,
+    concurrency: 10,
   },
 );

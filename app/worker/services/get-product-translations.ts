@@ -1,5 +1,11 @@
 import type { GraphQLClient } from "@shopify/graphql-client";
-import type { ProductTranslation, ProductTranslationCategory } from "~/@types/product";
+import { stripHtml } from "string-strip-html";
+import type {
+  ProductTranslation,
+  ProductTranslationCategory,
+} from "~/@types/product";
+
+const MAX_DESCRIPTION_LENGTH = 9500;
 
 export interface ProductTranslationsResult {
   /** locale → ProductTranslation (product-level: name, description, url) */
@@ -138,7 +144,6 @@ export const getProductTranslations = async ({
   productHandle: string;
   collections?: Array<{ id: string; name: string }>;
 }): Promise<ProductTranslationsResult> => {
-
   const empty: ProductTranslationsResult = { product: {}, variants: {} };
   if (!locales.length) return empty;
 
@@ -177,11 +182,10 @@ export const getProductTranslations = async ({
       for (const { key, value } of entries) {
         if (key === "title" && value) translation.name = value;
         if (key === "body_html" && value) {
-          translation.description = value
-            .replace(/<[^>]*>/g, " ")
-            .replace(/\s{2,}/g, " ")
+          translation.description = stripHtml(value)
+            .result.replace(/\s{2,}/g, " ")
             .trim()
-            .substring(0, 10000);
+            .substring(0, MAX_DESCRIPTION_LENGTH);
         }
       }
 
@@ -291,9 +295,7 @@ export const getProductTranslations = async ({
     ) {
       const batch = variantGids.slice(offset, offset + VARIANT_BATCH_SIZE);
 
-      const varDefs = batch
-        .map((_, i) => `$v${offset + i}: ID!`)
-        .join(", ");
+      const varDefs = batch.map((_, i) => `$v${offset + i}: ID!`).join(", ");
 
       const variantAliases = batch
         .map((_, i) => {
@@ -331,9 +333,7 @@ export const getProductTranslations = async ({
           const safeLocale = locale.replace("-", "_");
           const entries: Array<{ key: string; value: string }> =
             node[`${aliasKey}_${safeLocale}`] ?? [];
-          const translatedTitle = entries.find(
-            (e) => e.key === "title",
-          )?.value;
+          const translatedTitle = entries.find((e) => e.key === "title")?.value;
 
           // Only record locales that actually have a translation.
           if (translatedTitle) {
@@ -345,7 +345,10 @@ export const getProductTranslations = async ({
 
     return { product: productResult, variants: variantResult };
   } catch (error) {
-    console.error("[translations] Failed to fetch product translations:", error);
+    console.error(
+      "[translations] Failed to fetch product translations:",
+      error,
+    );
     return empty;
   }
 };

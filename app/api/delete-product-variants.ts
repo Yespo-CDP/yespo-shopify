@@ -3,9 +3,9 @@ import path from "node:path";
 
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
-import { getAuthHeader } from "~/utils/auth";
-import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import { throttleApiRequest } from "~/utils/rate-limiter.server";
+// import { getAuthHeader } from "~/utils/auth";
+// import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 
 /**
  * Sends a DELETE request to Yespo DELETE /v1/products for the given variant IDs.
@@ -54,26 +54,38 @@ export const deleteProductVariants = async ({
     );
 
     const url = `${process.env.API_URL}/products`;
-    await fetchWithErrorHandling(url, {
-      method: "DELETE",
-      headers: {
-        "content-type": "application/json",
-        Authorization: getAuthHeader(apiKey),
-      },
-      body: JSON.stringify(requestBody),
-    });
 
-    await sendLogEvent({
-      orgId,
-      errorMessage: "",
-      data: JSON.stringify({
-        domain,
-        deletedCount: externalVariantIds.length,
-        statusCode: 200,
-      }),
-      message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
-      logLevel: "INFO",
-    });
+    // NOTE: The real HTTP call to Yespo is currently stubbed (mirrors the
+    // product/market sync clients). The payload written to debug/ above is used
+    // for inspection. Uncomment the block below once the Yespo DELETE
+    // /v1/products endpoint is live.
+    // await fetchWithErrorHandling(url, {
+    //   method: "DELETE",
+    //   headers: {
+    //     "content-type": "application/json",
+    //     Authorization: getAuthHeader(apiKey),
+    //   },
+    //   body: JSON.stringify(requestBody),
+    // });
+
+    // await sendLogEvent({
+    //   orgId,
+    //   errorMessage: "",
+    //   data: JSON.stringify({
+    //     domain,
+    //     deletedCount: externalVariantIds.length,
+    //     statusCode: 200,
+    //   }),
+    //   message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
+    //   logLevel: "INFO",
+    // });
+
+    void apiKey;
+    void url;
+
+    console.log(
+      `[mock] deleteProductVariants: ${externalVariantIds.length} variant(s)`,
+    );
   } catch (error: any) {
     console.error("Error deleting product variants:", error?.message);
 

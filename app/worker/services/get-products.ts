@@ -21,11 +21,11 @@ export const getProducts = async ({
 }> => {
   try {
     const response = await client.request(
-      `query getProducts($count: Int, $cursor: String, $variantsCount: Int) {
+      `query getProducts($count: Int, $cursor: String, $variantsCount: Int, $query: String) {
         shop {
           currencyCode
         }
-        products(first: $count, after: $cursor) {
+        products(first: $count, after: $cursor, query: $query) {
           nodes {
             id
             title
@@ -75,6 +75,7 @@ export const getProducts = async ({
           count,
           cursor,
           variantsCount: VARIANTS_PAGE_SIZE,
+          query: "status:active AND published_status:published",
         },
       },
     );

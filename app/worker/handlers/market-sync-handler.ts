@@ -438,9 +438,10 @@ async function cleanupRemovedMarkets({
       console.warn(
         `⚠️ ${allFailedItems.length} item(s) failed cleanup for market ${countryCode}, skipping local record deletion`,
       );
+      // FIX ME:  додати логер від Yespo (передати кількість варіантів), кастомний евент CUSTOM_LOG_MARKET_SYNC_CLEANUP_FAILED
       continue;
     }
-
+    // FIXME: якщо успішно також передавати логи
     await marketSyncRepository.deleteByCountry(shopId, countryCode);
     await marketSyncLogRepository.deleteByCountry(shopId, countryCode);
   }

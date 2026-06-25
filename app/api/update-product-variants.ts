@@ -7,9 +7,33 @@ import type {
 } from "~/@types/productVariant";
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
-import { getAuthHeader } from "~/utils/auth";
-import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
+// import { getAuthHeader } from "~/utils/auth";
+// import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import { throttleApiRequest } from "~/utils/rate-limiter.server";
+
+/**
+ * Returns a shallow copy of a product with the Shopify collection `id` removed
+ * from every category — both top-level and inside per-locale translations.
+ * Yespo only needs category `name`/`type`, not the Shopify id.
+ */
+const stripCategoryIdsFromProduct = (product: ProductVariant) => {
+  const stripId = <T extends { id?: string }>({ id: _id, ...rest }: T) => rest;
+
+  return {
+    ...product,
+    categories: product.categories?.map(stripId),
+    translations: product.translations?.map((translation) =>
+      Object.fromEntries(
+        Object.entries(translation).map(([locale, value]) => [
+          locale,
+          value.categories
+            ? { ...value, categories: value.categories.map(stripId) }
+            : value,
+        ]),
+      ),
+    ),
+  };
+};
 
 /**
  * Sends a batch of product variants to the Yespo POST /v1/products API.
@@ -50,67 +74,90 @@ export const updateProductVariants = async ({
     await throttleApiRequest(siteId);
 
     const url = `${process.env.API_URL}/products`;
-    let requestLanguageChanged = languageChanged;
-    let languageChangedConfirmed = languageChanged;
+    const requestLanguageChanged = languageChanged;
+    const languageChangedConfirmed = languageChanged;
+
+    // Yespo does not need the Shopify collection `id` on categories. We keep it
+    // internally (e.g. to resolve collection translations) and strip it here, at
+    // the single outbound boundary, for both top-level and per-locale categories.
+    const sanitizedProductVariants = productVariants.map(
+      stripCategoryIdsFromProduct,
+    );
 
     const buildRequestBody = () => ({
       siteId,
       languageCode,
       languageChanged: requestLanguageChanged,
-      products: productVariants,
+      products: sanitizedProductVariants,
     });
 
     const debugDir = path.resolve(process.cwd(), "debug");
     fs.mkdirSync(debugDir, { recursive: true });
 
-    const sendRequest = async () => {
-      const requestBody = buildRequestBody();
-      fs.writeFileSync(
-        path.join(debugDir, `product-variants-${siteId}-${Date.now()}.json`),
-        JSON.stringify(requestBody, null, 2),
-      );
+    // Persist the exact object that would be sent to Yespo for inspection.
+    const requestBody = buildRequestBody();
+    fs.writeFileSync(
+      path.join(debugDir, `product-variants-${siteId}-${Date.now()}.json`),
+      JSON.stringify(requestBody, null, 2),
+    );
 
-      return fetchWithErrorHandling(url, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          Authorization: getAuthHeader(apiKey),
-        },
-        body: JSON.stringify(requestBody),
-      });
-    };
+    // NOTE: The real HTTP call to Yespo is currently stubbed (mirrors the market
+    // sync client). The payload written to debug/ above is used for inspection.
+    // Uncomment the block below once the Yespo POST /v1/products endpoint is live.
+    // const sendRequest = async () => {
+    //   return fetchWithErrorHandling(url, {
+    //     method: "POST",
+    //     headers: {
+    //       "content-type": "application/json",
+    //       Authorization: getAuthHeader(apiKey),
+    //     },
+    //     body: JSON.stringify(buildRequestBody()),
+    //   });
+    // };
 
-    let response;
-    try {
-      response = await sendRequest();
-    } catch (error: any) {
-      if (error?.status === 409 && !requestLanguageChanged) {
-        await throttleApiRequest(siteId);
-        requestLanguageChanged = true;
-        languageChangedConfirmed = true;
-        response = await sendRequest();
-      } else {
-        throw error;
-      }
-    }
+    // let response;
+    // try {
+    //   response = await sendRequest();
+    // } catch (error: any) {
+    //   if (error?.status === 409 && !requestLanguageChanged) {
+    //     await throttleApiRequest(siteId);
+    //     requestLanguageChanged = true;
+    //     languageChangedConfirmed = true;
+    //     response = await sendRequest();
+    //   } else {
+    //     throw error;
+    //   }
+    // }
 
-    const responseData = response.responseData as ProductVariantsResponse;
+    // const responseData = response.responseData as ProductVariantsResponse;
 
-    await sendLogEvent({
-      orgId,
-      errorMessage: "",
-      data: JSON.stringify({
-        domain,
-        variantsCount: productVariants.length,
-        variantIds: productVariants.map((variant) => variant.productId),
-        languageChanged: requestLanguageChanged,
-      }),
-      message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
-      logLevel: "INFO",
-    });
+    // await sendLogEvent({
+    //   orgId,
+    //   errorMessage: "",
+    //   data: JSON.stringify({
+    //     domain,
+    //     variantsCount: productVariants.length,
+    //     variantIds: productVariants.map((variant) => variant.productId),
+    //     languageChanged: requestLanguageChanged,
+    //   }),
+    //   message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
+    //   logLevel: "INFO",
+    // });
+
+    // return {
+    //   ...responseData,
+    //   languageChangedConfirmed,
+    // };
+
+    void apiKey;
+    void url;
+    void requestLanguageChanged;
+
+    console.log(
+      `[mock] updateProductVariants: ${productVariants.length} product(s) for siteId ${siteId}`,
+    );
 
     return {
-      ...responseData,
       languageChangedConfirmed,
     };
   } catch (error: any) {
