@@ -6,6 +6,8 @@ Shopify app for integration Yespo with Shopify.
 The app allows merchants to:
 - Sync customer data (create, update, delete) from Shopify to Yespo.
 - Sync order data (create, update) from Shopify to Yespo.
+- Sync product data (create, update, delete) from Shopify to Yespo .
+- Sync market-specific data (create, update, delete) from Shopify to Yespo.
 - Automatically register their store domain in Yespo (to get site and web push scripts).
 - Inject site and push scripts into the storefront via Theme App Extensions.
 - Install the service worker file for web push notifications using a Shopify App Proxy.
@@ -302,6 +304,290 @@ Webhooks are triggered when orders are created or updated in Shopify:
 
 - [POST /orders](https://docs.esputnik.com/reference/ordersbulkinsert-1) – creates or updates orders.
 
+### Product Sync (Shopify → Yespo)
+
+**Purpose:** Automatically sync new, updated, and deleted products from Shopify to Yespo as catalog items.
+The process covers both historical synchronization and real-time synchronization through Shopify webhooks.
+
+The sync unit is the **product variant**, not the product. Each Shopify variant becomes one Yespo product (`productId` = numeric variant ID), and all variants of the same Shopify product are grouped together with `itemGroupId` (= numeric product ID).
+
+---
+
+#### Implementation:
+
+App requests access to the following scopes:
+  - `read_products` – read products, variants, prices, inventory and collections
+  - `read_publications` – filter products by `published_status:published`
+  - `read_translations` – read product, collection and variant translations
+  - `read_locales` – read the shop primary and secondary locales (used to resolve the Yespo `languageCode` and which translations to send)
+
+Shopify webhooks used:
+  - `products/create` → creates new product variants in Yespo
+  - `products/update` → updates existing product variants in Yespo
+  - `products/delete` → removes product variants in Yespo
+
+---
+
+#### Enabling product sync:
+
+- Open the Yespo app
+- Connect your Yespo account
+- Enable sync in the **Data Sync** section
+
+When sync is enabled:
+
+- A new job is added to **Redis**
+- A worker begins **historical products synchronization**
+- Runs once after being enabled (or re-enabled)
+- Triggered after customers and orders synchronization
+
+---
+
+#### Historical products sync:
+
+1. **Counting product variants**
+
+   * Shopify [products query](https://shopify.dev/docs/api/admin-graphql/latest/queries/products) is paginated and each product's `variantsCount.count` is summed to get the total number of variants (`totalCount`).
+
+2. **Fetching products in batches**
+
+   * Products are fetched in **chunks of 50** using the [products query](https://shopify.dev/docs/api/admin-graphql/latest/queries/products), filtered by `status:active AND published_status:published`.
+   * Each product loads its variants inline (first 100), and any remaining variants are fetched with nested pagination.
+
+3. **Validation by `updatedAt`**
+
+   * For every variant, the most recent of `variant.updatedAt` and `product.updatedAt` is compared with the local database:
+
+     * If the variant is unchanged → skipped
+     * If new or updated → added to sync batch
+     * Action is `create` when no local sync record exists, otherwise `update`
+     * We update the database to save the variants we synchronize
+
+4. **Bulk sending to Yespo**
+
+   * Variants are grouped and sent to Yespo in **chunks of 500** using [Products](https://docs.yespo.io/reference/createorupdateproducts) (`POST /v1/products`).
+   * `languageCode` is resolved from the Shopify primary locale; `languageChanged: true` is sent only on the first batch when the stored language differs.
+
+5. **Deleting orphaned variants**
+
+   * Every variant seen during the run is tracked. After processing, any locally tracked variant that no longer exists in Shopify is removed in Yespo using [Products](https://docs.yespo.io/reference/deleteproducts) (`DELETE /v1/products`) and cleaned up locally.
+
+---
+
+#### Sync failures:
+
+If a network error or unknown error occurs during sync, the synchronization process will receive status ERROR. This status is displayed in the UI. Sync can be re-enabled in the **Data Sync** section. Data that was successfully synchronized will not be re-synchronized after an error.
+
+---
+
+#### Field Mapping [Shopify Product / ProductVariant](https://shopify.dev/docs/api/admin-graphql/latest/queries/products) →  [Yespo Product](https://docs.yespo.io/reference/createorupdateproducts):
+- `variant.id` (numeric) → `productId`
+- `product.id` (numeric) → `itemGroupId`
+- `variant.updatedAt` → `updatedDate` (RFC3339 UTC)
+- `product.title` (+ ` - {variant.title}` when not `Default Title`) → `name`
+- `variant.image.url` (fallback `product.featuredImage.url`) → `imageUrl`
+- `product.onlineStoreUrl` (fallback `https://{domain}/products/{handle}`) + `?variant={id}` → `url`
+- `variant.inventoryQuantity` (`null` or `> 0` → `1`, else `0`) → `isInStock`
+- `variant.price` → `price`
+- `variant.contextualPricing.price.currencyCode` (fallback shop currency) → `currency`
+- `variant.compareAtPrice` (only when `> price`) → `oldPrice`
+- `product.vendor` → `brand`
+- `product.description` (plain text, truncated to 10,000 chars) → `description`
+- `variant.selectedOptions` → `tags` (e.g. `{ "Color": ["Black"], "Size": ["M"] }`)
+- collections + taxonomy category → `categories`
+- `product` / `variant` translations → `translations`
+
+**`discount` is never sent** — Yespo derives it from `oldPrice` and `price`.
+On `update`, the `remove` object (never `null`) is used to clear absent optional fields (`oldPrice`, `description`, `brand`), removed tag keys, and removed translation locales.
+
+---
+
+#### Categories Mapping:
+
+Each variant must have at least one category. Categories are built from two Shopify sources:
+
+* **Collections** → flat categories with `type: "collection"` (`id` = numeric collection ID, `name` = collection title).
+* **Taxonomy category** → hierarchical category with `type: "category"`, where `path` is derived by splitting the Shopify `category.fullName` on `>` (e.g. `"Apparel > Clothing > Tops"` → `["Apparel", "Clothing", "Tops"]`).
+
+If a product has no collections or taxonomy category, it falls back to a default `Uncategorized` category so that Yespo's "at least one category" requirement is satisfied.
+
+---
+
+#### Logging & Status Tracking:
+
+- `totalCount` – total number of product variants from Shopify.
+- `syncedCount` – variants successfully sent to Yespo.
+- `failedCount` – variants rejected by Yespo.
+- `skippedCount` – variants that are already synced and skipped during sync, this is not displayed in the UI but is saved in the last sync log.
+
+Final synchronization status:
+- `COMPLETE` → all variants processed successfully.
+- `ERROR` → shown when a network failure or any unknown error occurs during the synchronization.
+
+---
+
+#### Real-time products sync:
+
+Webhooks are triggered when products are created, updated, or deleted in Shopify:
+
+  - `products/create` → all variants of the product sent to Yespo as new products.
+  - `products/update` → variants created or updated in Yespo; variants removed from the product are deleted.
+  - `products/delete` → all tracked variants of the product removed from Yespo.
+
+Because webhook payloads do not include collections, secondary locales, or translations, these are fetched separately via GraphQL before sending. When market sync is enabled, market data for the affected product is updated right after the product webhook is processed.
+
+---
+
+#### Shopify API methods:
+
+- [query /products](https://shopify.dev/docs/api/admin-graphql/latest/queries/products) – returns products with their variants, collections, and category; also used (with `variantsCount`) to count variants.
+- [query /productVariants](https://shopify.dev/docs/api/admin-graphql/latest/queries/productvariants) – follows nested variant pagination beyond the inline page.
+- [query /translatableResource](https://shopify.dev/docs/api/admin-graphql/latest/queries/translatableresource) – returns product, collection, and variant translations per locale.
+
+#### Yespo API methods:
+
+- [POST /v1/products](https://docs.yespo.io/reference/createorupdateproducts) – creates or updates products.
+- [DELETE /v1/products](https://docs.yespo.io/reference/deleteproducts) – removes products.
+
+### Market Sync (Shopify → Yespo)
+
+**Purpose:** Automatically sync market-specific data (per-country prices, stock and storefront URLs) from Shopify to Yespo so recommendations work correctly across markets.
+The process covers both historical synchronization and real-time synchronization through the product webhooks.
+
+Market data is always sent **after** the base products exist in Yespo. A market record becomes active in Yespo recommendations only when the base product exists **and** the market item has `price`, `currency` and `isInStock`. The sync unit is the same as for products — a single **product variant** per country (`productId` = numeric variant ID, `marketId` = country code).
+
+---
+
+#### Implementation:
+
+App requests access to the following scopes:
+  - `read_markets` – read enabled markets, their countries/locales/root URLs and per-country contextual pricing
+  - `read_publications` – read per-country publication state (`publishedInContext`)
+
+---
+
+#### Enabling market sync:
+
+- Open the Yespo app
+- Connect your Yespo account
+- Enable sync in the **Data Sync** section (market sync is enabled together with product sync)
+
+When sync is enabled:
+
+- Market synchronization is enqueued automatically right after historical products synchronization completes (`enqueueMarketSyncTaskForShopUrl`)
+- An hourly QStash cron also paces ongoing market synchronization across shops (see scheduling below)
+- A dedicated `data-sync-market` worker (`concurrency: 10`) processes the job
+
+---
+
+#### Historical market sync:
+
+1. **Reading market configuration**
+
+   * Enabled markets are read from Shopify using the [markets query](https://shopify.dev/docs/api/admin-graphql/latest/queries/markets). Only `enabled` markets are kept.
+   * For each market the app collects its `countries` (region codes), `locales` (web presence default + alternate locales), and `rootUrls` (storefront root URL per locale). The flattened set of all `countries` defines what gets synced.
+
+2. **Cleanup of removed markets**
+
+   * Country codes that were synced before but are no longer present in Shopify are treated as removed. For each, products are marked `isInStock: 0` (Yespo has no market-level delete) and local `MarketSync` / `MarketSyncLog` rows are pruned.
+   * Cleanup is paged in batches of **250** (`CLEANUP_PAGE_SIZE`); only rows Yespo accepted are deleted locally, failed ones are kept for the next run.
+
+3. **Fetching contextual pricing**
+
+   * Countries are split into chunks of **≤ 15** (`buildBulkQueryChunks`). For each chunk a Shopify [Bulk Operation](https://shopify.dev/docs/api/usage/bulk-operations/queries) collects per-country `contextualPricing` (price, compareAtPrice, currency) and `publishedInContext`.
+   * The bulk operation result (JSONL) is streamed into the `TmpMarketSync` staging table. Variants not published in a market never reach staging.
+
+4. **Mapping & bulk sending to Yespo**
+
+   * Staged rows are mapped to market product items (`price`, `currency`, `isInStock`, `oldPrice`, `urls`), unchanged items are skipped via a content-hash comparison, and the rest are grouped by `marketId` (country code) and sent in **chunks of 500** (`API_CHUNK_SIZE`) using [Markets](https://docs.yespo.io/reference/setmarkets) (`POST /v1/markets`).
+   * After each batch the staged rows are removed from `TmpMarketSync` and the per-country log is updated.
+
+---
+
+#### Sync failures:
+
+If a network error or unknown error occurs during sync, the affected countries receive status ERROR (per-country `MarketSyncLog`). Items that were successfully synchronized are not re-sent on the next run, because change detection skips unchanged items. During cleanup, items Yespo rejected keep their local records so they are retried next time.
+
+---
+
+#### Field Mapping [Shopify Product / ProductVariant](https://shopify.dev/docs/api/admin-graphql/latest/queries/products) →  [Yespo Market Product](https://docs.yespo.io/reference/setmarkets):
+- `variant.id` (numeric) → `productId`
+- `variant.updatedAt` → `updatedDate` (RFC3339 UTC)
+- country code → `marketId` (normalized to lowercase at the API boundary)
+- `contextualPricing.price.amount` → `price`
+- `contextualPricing.price.currencyCode` → `currency`
+- `variant.inventoryQuantity` (`null` or `> 0` → `1`, else `0`) → `isInStock`
+- `contextualPricing.compareAtPrice.amount` (only when `> price`) → `oldPrice`
+- `market.rootUrls[locale]` + `/products/{handle}?variant={id}` → `urls` (a `{ locale: url }` dict)
+
+Notes:
+- A market item is only built when it has a `price` and `currency`; otherwise it is skipped (a market record needs `price` + `currency` + `isInStock`).
+- `oldPrice`: in the **historical** path it is always set explicitly — a value when valid, otherwise `null` to clear a removed `compareAtPrice`. In the **real-time** path it is set only when valid.
+- `urls`: built per market locale (locale subfolder is already baked into the market root URL). `null` clears all URLs; a per-locale `null` clears only that locale. Locales removed from a market since the last sync are explicitly nulled out.
+
+---
+
+#### Change detection (skip logic):
+
+- For every item a SHA-256 **content hash** of `{ price, oldPrice, currency, isInStock, urls }` is computed and compared against the stored `MarketSync.contentHash` for `(productId, variantId, countryCode)`.
+- **Historical path:** an item is skipped only when the hash matches **and** its `updatedDate` is not newer than the stored `MarketSync.updatedAt`.
+- **Real-time path:** an item is skipped when the hash matches.
+- Accepted items upsert their `MarketSync` record (hash + updatedAt) so subsequent runs can skip them.
+
+---
+
+#### Market sync scheduling:
+
+An hourly QStash cron (`/api/market-sync-cron` → `enqueueMarketSyncTasks`) paces `POST /v1/markets` across shops:
+
+- At most **10 shops** sync at once (`MARKET_SYNC_MAX_CONCURRENT_SHOPS`).
+- Shops whose last `COMPLETE` sync finished less than **24h** ago are skipped (`MARKET_SYNC_MIN_INTERVAL_MS`); never-synced and last-`ERROR` shops are not throttled.
+- An `IN_PROGRESS` sync older than **5h** is treated as stuck and the shop becomes selectable again (`MARKET_SYNC_STALE_AFTER_MS`).
+- Eligible shops (`active`, `isMarketSyncEnabled`, `apiKey != null`) are ordered by oldest last sync (never-synced first).
+- Manual triggers and the post-products-sync trigger bypass the 24h interval.
+
+The worker `concurrency: 10` is the real parallelism cap. The hourly schedule itself is configured in the QStash dashboard.
+
+---
+
+#### Logging & Status Tracking:
+
+A `MarketSyncLog` is written **per country** (unique per `shopId` + `countryCode`):
+
+- `totalCount` – market items considered for that country.
+- `syncedCount` – items successfully sent to Yespo.
+- `failedCount` – items rejected by Yespo.
+- `skippedCount` – unchanged items skipped via change detection.
+
+Final synchronization status (per country):
+- `IN_PROGRESS` → set while the batch is running.
+- `COMPLETE` → all items for the country processed successfully.
+- `ERROR` → shown when a network failure or any unknown error occurs during the synchronization.
+
+The real-time (webhook) path sends changed market items immediately but does not write `MarketSyncLog`.
+
+---
+
+#### Real-time market sync:
+
+After a `products/create` or `products/update` webhook is processed (when market sync is enabled), `updateMarketFromWebhook` runs for that single product:
+
+  - Fetches the active markets config and per-country contextual pricing for the product's variants.
+  - Skips variants not published in a given market.
+  - Builds market items, compares hashes against stored `MarketSync` records, and sends **only changed** items via `POST /v1/markets`.
+  - For countries removed since the last sync, sends `isInStock: 0` for that product's variants and prunes the local records.
+
+---
+
+#### Shopify API methods:
+
+- [query /markets](https://shopify.dev/docs/api/admin-graphql/latest/queries/markets) – returns enabled markets with their regions (countries), web presence locales, and root URLs.
+- [query /products](https://shopify.dev/docs/api/admin-graphql/latest/queries/products) – via Bulk Operations, returns per-country `contextualPricing` and `publishedInContext`.
+
+#### Yespo API methods:
+
+- [POST /v1/markets](https://docs.yespo.io/reference/setmarkets) – sets market-specific prices, stock and URLs.
+
 ### Web Tracking
 **Purpose:** Allows you to track events within your site.
 
@@ -452,6 +738,8 @@ used for storing tracking and scripts configurations (custom namespace: $app).
 The app uses a Yespo API key, provided by the merchant during onboarding, to authorize all API requests. The key is stored securely and used for:
 - Contacts sync
 - Orders sync
+- Products sync
+- Markets sync
 - Domain registration
 - Scripts retrieval
 
@@ -510,11 +798,15 @@ The app requires the following access scopes:
 - `read_markets`
 - `read_orders`
 - `read_all_orders`
+- `read_products`
+- `read_translations`
+- `read_locales`
+- `read_publications`
 - `read_themes`
 - `write_app_proxy`
 
 #### Webhooks:
-Shopify webhooks (API version: 2025-07) used by the app:
+Shopify webhooks (API version: 2025-10) used by the app:
 
 | Event Topic                | Description                                                                   | Endpoint                      |
 |----------------------------|-------------------------------------------------------------------------------|-------------------------------|
@@ -528,6 +820,9 @@ Shopify webhooks (API version: 2025-07) used by the app:
 | **app/uninstalled**        | Triggered when a merchant uninstalls the app.                                 | `/webhooks/app/uninstalled`   |
 | **orders/create**          | Triggered when an order is created.                                           | `/webhook/app/orders`         |
 | **orders/updated**         | Triggered when an existing order’s data is updated.                           | `/webhook/app/orders`         |
+| **products/create**        | Triggered when a new product is created.                                      | `/webhooks/app/products`      |
+| **products/update**        | Triggered when an existing product’s data is updated.                         | `/webhooks/app/products`      |
+| **products/delete**        | Triggered when a product is deleted.                                          | `/webhooks/app/products`      |
 | **carts/update**           | Triggered when a cart is updated in the online store.                         | `/webhooks/app/carts`         |
 
 
@@ -635,7 +930,7 @@ Make sure you're authenticated via Shopify CLI and connected to the correct Part
 - 🔑 [Generate an API key](https://docs.yespo.io/reference/api-keys) and add it in the `Account connection` section.
 - 📜 Connect the general and web push scripts in the `Scripts integration` section.
 - 👀 Enable or disable web tracking on your site in the `Web tracking` section.
-- 🔄 Enable or disable customers and orders synchronization in the `Data sync` section.
+- 🔄 Enable or disable customers, orders, products and markets synchronization in the `Data sync` section.
 
 ## Contributing
 
