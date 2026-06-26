@@ -16,7 +16,9 @@ import { throttleApiRequest } from "~/utils/rate-limiter.server";
  * from every category — both top-level and inside per-locale translations.
  * Yespo only needs category `name`/`type`, not the Shopify id.
  */
-const stripCategoryIdsFromProduct = (product: ProductVariant) => {
+export const stripCategoryIdsFromProduct = (
+  product: ProductVariant,
+): ProductVariant => {
   const stripId = <T extends { id?: string }>({ id: _id, ...rest }: T) => rest;
 
   return {
@@ -32,7 +34,9 @@ const stripCategoryIdsFromProduct = (product: ProductVariant) => {
         ]),
       ),
     ),
-  };
+    // Category ids are intentionally omitted at runtime; the cast keeps the
+    // public payload type intact for callers (Yespo simply receives no id).
+  } as ProductVariant;
 };
 
 /**

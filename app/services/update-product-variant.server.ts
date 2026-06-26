@@ -1,6 +1,7 @@
-import fs from "node:fs";
-import path from "node:path";
-import { updateProductVariants } from "~/api/update-product-variants";
+import {
+  updateProductVariants,
+  stripCategoryIdsFromProduct,
+} from "~/api/update-product-variants";
 import { deleteProductVariants } from "~/api/delete-product-variants";
 import {
   productVariantSyncRepository,
@@ -11,7 +12,8 @@ import {
   type ProductVariantWebhookPayload,
 } from "./create-product-variant-payload-from-webhook";
 import { createClient } from "~/worker/services/create-client";
-import { getProductCollections } from "~/worker/services/get-product-collections";
+import { getProductCollectionsAndCategories } from "~/worker/services/get-product-collections-and-categories";
+import { fetchAllProductVariantGids } from "~/worker/services/get-product-variants";
 import { getShopSecondaryLocales } from "~/worker/services/get-shop-locales";
 import { getProductTranslations } from "~/worker/services/get-product-translations";
 import { resolveProductSyncLanguage } from "~/worker/services/resolve-product-sync-language";
@@ -78,10 +80,13 @@ export const updateProductVariantService = async (
     const [categories, freshLocales, existingSyncs, trackedVariantGids] =
       await Promise.all([
         client && productGid
-          ? getProductCollections({ client, productGid })
+          ? getProductCollectionsAndCategories({ client, productGid })
           : Promise.resolve([]),
         client && resolvedLanguageCode
-          ? getShopSecondaryLocales({ client, primaryLocale: resolvedLanguageCode })
+          ? getShopSecondaryLocales({
+              client,
+              primaryLocale: resolvedLanguageCode,
+            })
           : Promise.resolve([] as string[]),
         productVariantSyncRepository.getProductVariantSyncByVariantIds(
           variants.map((v) => v.admin_graphql_api_id),
@@ -108,7 +113,9 @@ export const updateProductVariantService = async (
             locales: freshLocales,
             shopDomain: domain,
             productHandle: payload?.handle ?? "",
-            collections: categories.map((c) => ({ id: c.id, name: c.name })),
+            collections: categories
+              .filter((c) => c.type === "collection")
+              .map((c) => ({ id: c.id, name: c.name })),
           })
         : null;
 
@@ -131,28 +138,25 @@ export const updateProductVariantService = async (
       );
     });
 
-    const debugDir = path.resolve(process.cwd(), "debug");
-    fs.mkdirSync(debugDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(debugDir, `product-update-webhook-${Date.now()}.json`),
-      JSON.stringify(
-        {
-          siteId: siteId ?? "",
-          languageCode: resolvedLanguageCode,
-          languageChanged,
-          products: productVariants,
-        },
-        null,
-        2,
-      ),
+    // Final payload sent to Yespo: category ids are stripped (Yespo doesn't need
+    // them). Build it once here so the debug dump and the actual request match.
+    const sanitizedProductVariants = productVariants.map(
+      stripCategoryIdsFromProduct,
     );
+
+    if (!siteId) {
+      console.error(
+        `[product-update] Missing siteId for ${domain}; skipping Yespo product sync`,
+      );
+      return;
+    }
 
     const response = await updateProductVariants({
       apiKey,
-      siteId: siteId ?? "",
+      siteId,
       languageCode: resolvedLanguageCode,
       languageChanged,
-      productVariants,
+      productVariants: sanitizedProductVariants,
       domain,
       orgId,
     });
@@ -184,16 +188,23 @@ export const updateProductVariantService = async (
     }
 
     // Detect variants removed from the product in Shopify (e.g. an option value
-    // like Size "34" was deleted). A PRODUCTS_UPDATE webhook only carries the
-    // surviving variants, so any previously tracked variant GID absent from this
-    // payload is now orphaned in Yespo and must be deleted explicitly.
-    if (productGid) {
-      const presentVariantGids = new Set(
-        variants.map((v) => v.admin_graphql_api_id),
-      );
-      const orphanedVariantGids = trackedVariantGids.filter(
-        (gid) => !presentVariantGids.has(gid),
-      );
+    // like Size "34" was deleted). A PRODUCTS_UPDATE webhook truncates the
+    // `variants` array to 100 items, so it can NOT be trusted for orphan
+    // detection — products with >100 variants would have the rest falsely
+    // deleted. Instead, fetch the full current variant set via GraphQL
+    // (paginated) and only treat tracked variants missing from THAT set as
+    // orphaned. If the lookup fails, skip cleanup rather than risk mass-deletion.
+    if (productGid && client) {
+      const currentVariantGids = await fetchAllProductVariantGids({
+        client,
+        productId: productGid,
+      });
+
+      const presentVariantGids = new Set(currentVariantGids ?? []);
+      const orphanedVariantGids =
+        presentVariantGids.size > 0
+          ? trackedVariantGids.filter((gid) => !presentVariantGids.has(gid))
+          : [];
 
       if (orphanedVariantGids.length > 0) {
         // Yespo stores products by numeric ID extracted from the GID.
@@ -201,23 +212,9 @@ export const updateProductVariantService = async (
           (gid) => gid.split("/").pop() ?? gid,
         );
 
-        fs.writeFileSync(
-          path.join(debugDir, `product-delete-webhook-${Date.now()}.json`),
-          JSON.stringify(
-            {
-              siteId: siteId ?? "",
-              products: numericOrphanedIds.map((productId) => ({
-                productId,
-              })),
-            },
-            null,
-            2,
-          ),
-        );
-
         await deleteProductVariants({
           apiKey,
-          siteId: siteId ?? "",
+          siteId,
           externalVariantIds: numericOrphanedIds,
           domain,
           orgId,

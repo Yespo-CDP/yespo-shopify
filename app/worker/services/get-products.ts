@@ -38,6 +38,11 @@ export const getProducts = async ({
             collections(first: 10) {
               nodes { id title handle }
             }
+            category {
+              id
+              name
+              fullName
+            }
             createdAt
             updatedAt
             variants(first: $variantsCount) {

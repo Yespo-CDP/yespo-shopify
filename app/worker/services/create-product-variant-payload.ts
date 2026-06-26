@@ -2,8 +2,8 @@ import type { ProductData, ProductVariantData } from "~/@types/product";
 import type {
   ProductRemovePatch,
   ProductVariant,
-  YespoCategory,
 } from "~/@types/productVariant";
+import { mapShopifyCategories } from "~/worker/services/map-yespo-categories";
 
 /**
  * Builds Yespo tags from variant selectedOptions.
@@ -23,21 +23,6 @@ function mapSelectedOptions(
     }
   }
   return result;
-}
-
-/**
- * Maps Shopify collections to Yespo category objects.
- * Shopify collections are flat (no hierarchy), so they map to type "collection".
- */
-function mapCollections(
-  nodes?: Array<{ id: string; title: string; handle: string }>,
-): YespoCategory[] {
-  if (!nodes?.length) return [];
-  return nodes.map((node) => ({
-    id: node.id.split("/").pop() ?? node.id,
-    name: node.title,
-    type: "collection" as const,
-  }));
 }
 
 /**
@@ -81,7 +66,10 @@ export const createProductVariantPayload = (
   const isInStock: 0 | 1 =
     variant.inventoryQuantity == null || variant.inventoryQuantity > 0 ? 1 : 0;
 
-  const categories = mapCollections(product.collections?.nodes);
+  const categories = mapShopifyCategories({
+    collections: product.collections?.nodes,
+    category: product.category,
+  });
 
   const itemGroupId = product.id.split("/").pop() ?? product.id;
   const productId = variant.id.split("/").pop() ?? variant.id;

@@ -8,7 +8,7 @@ import {
   type ProductVariantWebhookPayload,
 } from "./create-product-variant-payload-from-webhook";
 import { createClient } from "~/worker/services/create-client";
-import { getProductCollections } from "~/worker/services/get-product-collections";
+import { getProductCollectionsAndCategories } from "~/worker/services/get-product-collections-and-categories";
 import { getShopSecondaryLocales } from "~/worker/services/get-shop-locales";
 import { getProductTranslations } from "~/worker/services/get-product-translations";
 import { resolveProductSyncLanguage } from "~/worker/services/resolve-product-sync-language";
@@ -71,7 +71,10 @@ export const createProductVariantService = async (
 
     const [categories, freshLocales] = await Promise.all([
       client && payload?.admin_graphql_api_id
-        ? getProductCollections({ client, productGid: payload.admin_graphql_api_id })
+        ? getProductCollectionsAndCategories({
+            client,
+            productGid: payload.admin_graphql_api_id,
+          })
         : Promise.resolve([]),
       client && resolvedLanguageCode
         ? getShopSecondaryLocales({ client, primaryLocale: resolvedLanguageCode })
@@ -87,7 +90,9 @@ export const createProductVariantService = async (
             locales: freshLocales,
             shopDomain: domain,
             productHandle: payload.handle ?? "",
-            collections: categories.map((c) => ({ id: c.id, name: c.name })),
+            collections: categories
+              .filter((c) => c.type === "collection")
+              .map((c) => ({ id: c.id, name: c.name })),
           })
         : null;
 

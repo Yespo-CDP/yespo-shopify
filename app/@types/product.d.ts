@@ -41,6 +41,8 @@ export interface ProductData {
   collections?: {
     nodes: Array<{ id: string; title: string; handle: string }>;
   };
+  /** Shopify standard taxonomy category; `fullName` is the breadcrumb path. */
+  category?: { id: string; name: string; fullName: string } | null;
   /** locale → ProductTranslation (product-level) */
   translations?: Record<string, ProductTranslation>;
   /** strippedVariantId → locale → translated variant title */
