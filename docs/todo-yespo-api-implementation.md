@@ -1,6 +1,32 @@
 # Yespo API — незавершена реалізація
 
 > Документ сформовано на основі аудиту кодової бази відносно специфікації `docs/yespo-api-products-markets.md`.
+> Останнє оновлення статусів: 2026-06-26.
+
+---
+
+## Підсумок статусів
+
+| # | Пункт | Статус |
+|---|-------|--------|
+| 1 | POST /v1/products та /v1/markets — реальний fetch | ❌ Відкрито (заглушка) |
+| 2 | Парсинг відповіді Yespo (типи + derive) | ✅ Готово (працює на mock, активується з #1) |
+| 3 | HTTP 207 — часткова помилка | ✅ Готово (rejected items derive на call-site; активується з #1) |
+| 4 | HTTP 429 — retry | ❌ Відкрито |
+| 5 | HTTP 500+ — retry з backoff | ❌ Відкрито |
+| 6 | HTTP 409 — LANGUAGE_CODE_MISMATCH | 🟡 Частково (bulk-retry написано/закоментовано; вебхуки не передають `languageChanged`) |
+| 7 | Translations у вебхуках | ✅ Готово |
+| 8 | Translation categories | ✅ Готово |
+| 9 | Category `type` та `path` | 🟡 Частково (`type:"category"`+`path` через таксономію; метафілд-override не підключено) |
+| 10 | Продукти без колекцій | ❌ Відкрито |
+| 11 | Market `oldPrice` — явне очищення | ✅ Готово |
+| 12 | Market `urls` — очищення | ✅ Готово |
+| 13 | DELETE orphan variants у вебхуку | ✅ Готово |
+| 14 | Перевірка розміру тіла (10 MB) | ❌ Відкрито |
+| 15 | Rate limiter для кількох процесів | ❌ Відкрито |
+| 16 | Прибрати/сховати debug-дампи URL | ❌ Відкрито (нове) |
+
+**Залишилось зробити:** #1, #4, #5, #10, #14, #15, #16 (повністю) + дозакрити #6 (вебхуки) та #9 (метафілд-override).
 
 ---
 
@@ -16,36 +42,26 @@ HTTP-виклики до Yespo закоментовані. Обидва мето
 
 ---
 
-## 2. Обробка відповідей Yespo
+## ~~2. Обробка відповідей Yespo~~ ✅ Готово (активується з #1)
 
-**Файли:** `app/api/update-product-variants.ts`, `app/api/update-market-products.ts`, `app/utils/fetchWithErrorHandling.ts`
+**Файли:** `app/api/update-product-variants.ts`, `app/api/update-market-products.ts`
 
-Поточний код очікує `failedVariants` / `failedItems: string[]`. Yespo повертає:
+Типи реального формату Yespo та логіка парсингу вже реалізовані:
+- `YespoProductsRawResponse` / `YespoMarketsRawResponse` (`requestId`, `summary`, `items`)
+- `deriveFailedVariants` / `deriveFailedItems` — відбирають `items` зі `status: "rejected"`
+- Зараз працюють на емульованій (mock) відповіді; реальний шлях написано і закоментовано поряд із fetch у #1.
 
-```json
-{
-  "requestId": "...",
-  "summary": { "received": 3, "accepted": 2, "rejected": 1 },
-  "items": [{ "productId": "...", "status": "rejected", "code": "MISSING_REQUIRED_FIELD", "message": "..." }]
-}
-```
-
-**Що потрібно:**
-- Привести типи відповіді до реального формату Yespo (`requestId`, `summary`, `items`)
-- Розпарсити `summary.rejected > 0` і `items` з `status: "rejected"`
-- Повернути `failedVariants` / `failedItems` з масиву `items`
+**Залишилось:** активувати разом з розкоментуванням fetch (#1).
 
 ---
 
-## 3. HTTP 207 — часткова помилка
+## ~~3. HTTP 207 — часткова помилка~~ ✅ Готово (активується з #1)
 
-**Файли:** `app/utils/fetchWithErrorHandling.ts`
+**Файли:** `app/api/update-product-variants.ts`, `app/api/update-market-products.ts`
 
-`fetchWithErrorHandling` кидає помилку тільки на `!response.ok`. HTTP 207 — це `ok: true`, тому часткові відмови проходять непоміченими.
+`fetchWithErrorHandling` пропускає `207` (бо `ok: true`), а часткові відмови виявляються на рівні виклику через `deriveFailedVariants` / `deriveFailedItems` (повертають `failedVariants` / `failedItems` з `code` + `message`). Закоментований реальний шлях логує `summary.accepted/rejected`.
 
-**Що потрібно:**
-- Після успішної відповіді перевіряти `summary.rejected > 0`
-- Логувати / повертати `items` з `status: "rejected"` та їх `code` + `message`
+**Залишилось:** активувати разом з #1.
 
 ---
 
@@ -72,14 +88,14 @@ HTTP-виклики до Yespo закоментовані. Обидва мето
 
 ---
 
-## 6. HTTP 409 — LANGUAGE_CODE_MISMATCH
+## 6. HTTP 409 — LANGUAGE_CODE_MISMATCH 🟡 Частково
 
 **Файли:** `app/api/update-product-variants.ts`, `app/worker/handlers/product-sync-handler.ts`
 
-Логіка `languageChanged: true` реалізована тільки в bulk sync, але POST поки що заглушка. У вебхуках `languageChanged` ніколи не передається.
+Retry на `409` з `languageChanged: true` уже написаний у `updateProductVariants` (закоментований поряд із fetch — активується з #1). У вебхуках `languageChanged` досі ніколи не передається.
 
-**Що потрібно:**
-- При отриманні `409` — повторити запит з `languageChanged: true`
+**Залишилось:**
+- Активувати retry разом з #1
 - Передавати `languageChanged` у вебхуках (аналогічно до bulk sync)
 
 ---
@@ -100,16 +116,18 @@ HTTP-виклики до Yespo закоментовані. Обидва мето
 
 ---
 
-## 9. Category type та path
+## 9. Category type та path 🟡 Частково
 
-**Файли:** `app/worker/services/create-product-variant-payload.ts`, `app/services/create-product-variant-payload-from-webhook.ts`
+**Файли:** `app/worker/services/map-yespo-categories.ts`, `app/lib/category-settings.server.ts`
 
-Всі категорії завжди мають `type: "collection"`. Поле `path` ніколи не заповнюється. В адмін-панелі є UI для налаштувань категорій через метафілди, але він не підключений до sync.
+`map-yespo-categories.ts` уже генерує:
+- колекції → `type: "collection"` (плоскі)
+- стандартну таксономічну категорію Shopify → `type: "category"` з `path` (з breadcrumb `fullName`)
 
-**Що потрібно:**
-- Зчитувати метафілд `yespo_category_type` з колекцій і підставляти `type: "category"` або `"collection"` відповідно
-- Якщо `type: "category"` — заповнювати `path` (ієрархія з Shopify collection breadcrumb)
-- Підключити логіку з `app/lib/category-settings.server.ts` до payload builders
+Тобто `type:"category"` + `path` уже заповнюються — через таксономію продукту.
+
+**Залишилось:**
+- Підключити метафілд-override (`yespo_category_type` із `category-settings.server.ts`), щоб мерчант міг вручну перемикати `category`/`collection` для колекцій
 
 ---
 
@@ -167,10 +185,22 @@ HTTP-виклики до Yespo закоментовані. Обидва мето
 
 ---
 
+## 16. Прибрати/сховати debug-дампи URL (тимчасова діагностика)
+
+**Файли:** `app/worker/services/debug-market-urls.server.ts`, `app/worker/services/resolve-market-urls.ts`, `app/worker/services/fetch-shop-markets-config.ts`
+
+Додано тимчасове логування для діагностики market-URL: дампи у `debug/market-rooturls-*.json` та `debug/resolved-market-urls-*.json`. На проді не потрібні.
+
+**Що потрібно:**
+- Сховати виклики `dumpMarketsRootUrlsDebug` / `appendResolvedUrlDebug` за env-флагом (напр. `DEBUG_MARKET_URLS`) або видалити після завершення діагностики
+
+---
+
 ## Виправлено
 
 | Проблема | Файл |
 |----------|------|
+| Market URL: додано `/products/` + `?variant=<id>` (узгоджено bulk/market/webhook) | `resolve-market-urls.ts`, `append-variant-param.ts`, `create-product-variant-payload.ts`, `create-product-variant-payload-from-webhook.ts` |
 | DELETE URL `/api/v1/v1/products` | `app/api/delete-product-variants.ts` |
 | Translations у вебхуках | `create/update-product-variant.server.ts`, `create-product-variant-payload-from-webhook.ts` |
 | removedLocales у вебхуках | `update-product-variant.server.ts` |

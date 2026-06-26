@@ -4,6 +4,7 @@ import type {
   ProductVariant,
 } from "~/@types/productVariant";
 import { mapShopifyCategories } from "~/worker/services/map-yespo-categories";
+import { appendVariantParam } from "~/worker/services/append-variant-param";
 
 /**
  * Builds Yespo tags from variant selectedOptions.
@@ -54,11 +55,14 @@ export const createProductVariantPayload = (
   const imageUrl =
     variant.image?.url ?? product.featuredImage?.url ?? "";
 
-  const url =
+  const productId = variant.id.split("/").pop() ?? variant.id;
+
+  const baseUrl =
     product.onlineStoreUrl ??
     (shopDomain && product.handle
       ? `https://${shopDomain}/products/${product.handle}`
       : "");
+  const url = appendVariantParam(baseUrl, productId);
 
   const currency =
     variant.contextualPricing?.price?.currencyCode ?? shopCurrency;
@@ -72,7 +76,6 @@ export const createProductVariantPayload = (
   });
 
   const itemGroupId = product.id.split("/").pop() ?? product.id;
-  const productId = variant.id.split("/").pop() ?? variant.id;
 
   const payload: ProductVariant = {
     action,
@@ -118,6 +121,7 @@ export const createProductVariantPayload = (
         return {
           [locale]: {
             ...t,
+            url: t.url ? appendVariantParam(t.url, productId) : t.url,
             name: t.name
               ? translatedVariantTitle
                 ? `${t.name} - ${translatedVariantTitle}`

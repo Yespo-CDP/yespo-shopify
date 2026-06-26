@@ -4,6 +4,7 @@ import type {
   YespoCategory,
 } from "~/@types/productVariant";
 import type { ProductTranslationsResult } from "~/worker/services/get-product-translations";
+import { appendVariantParam } from "~/worker/services/append-variant-param";
 
 export interface ProductVariantWebhookPayload {
   id: number;
@@ -99,9 +100,11 @@ export const createProductVariantPayloadFromWebhook = (
     : product.title;
 
   const imageUrl = product.images?.[0]?.src ?? "";
-  const url = shopDomain
+  const variantId = variant.id.toString();
+  const baseUrl = shopDomain
     ? `https://${shopDomain}/products/${product.handle}`
     : "";
+  const url = appendVariantParam(baseUrl, variantId);
 
   const inventoryQuantity = variant.inventory_quantity;
   const isInStock: 0 | 1 =
@@ -147,7 +150,6 @@ export const createProductVariantPayloadFromWebhook = (
     translationsResult &&
     Object.keys(translationsResult.product).length > 0
   ) {
-    const variantId = variant.id.toString();
     payload.translations = Object.entries(translationsResult.product).map(
       ([locale, t]) => {
         const translatedVariantTitle =
@@ -155,6 +157,7 @@ export const createProductVariantPayloadFromWebhook = (
         return {
           [locale]: {
             ...t,
+            url: t.url ? appendVariantParam(t.url, variantId) : t.url,
             name: t.name
               ? translatedVariantTitle
                 ? `${t.name} - ${translatedVariantTitle}`

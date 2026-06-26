@@ -5,6 +5,8 @@ import type {
   ShopMarketsConfig,
 } from "~/@types/shopMarketsConfig";
 
+import { dumpMarketsRootUrlsDebug } from "./debug-market-urls.server";
+
 interface MarketRegionCountry {
   code?: string;
 }
@@ -116,10 +118,20 @@ export async function fetchShopMarketsConfig({
   );
 
   const marketsData = response?.data as MarketsDetailedResponse;
-  const markets = (marketsData?.markets?.nodes ?? [])
-    .filter((market) => market.enabled)
-    .map(mapMarketNode);
+  const enabledNodes = (marketsData?.markets?.nodes ?? []).filter(
+    (market) => market.enabled,
+  );
+  const markets = enabledNodes.map(mapMarketNode);
   console.log("markets", markets);
+
+  dumpMarketsRootUrlsDebug(
+    enabledNodes.map((node) => ({
+      marketId: node.id,
+      name: node.name,
+      rawRootUrls: node.webPresence?.rootUrls ?? [],
+      collectedRootUrls: collectRootUrls(node),
+    })),
+  );
   const countries = [...new Set(markets.flatMap((market) => market.countries))];
   const locales = [...new Set(markets.flatMap((market) => market.locales))];
 

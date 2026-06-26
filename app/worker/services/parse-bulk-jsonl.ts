@@ -203,7 +203,13 @@ function parseVariantRow({
     const previousLocales = market
       ? (previousLocalesByMarketId.get(market.id) ?? [])
       : [];
-    const urls = resolveMarketUrls(market, info?.handle ?? "", previousLocales);
+    const variantNumericId = variantId.split("/").pop() ?? variantId;
+    const urls = resolveMarketUrls(
+      market,
+      info?.handle ?? "",
+      previousLocales,
+      variantNumericId,
+    );
 
     rows.push({
       batchId,
