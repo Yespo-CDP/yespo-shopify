@@ -333,6 +333,18 @@ export const productSyncHandler = async (
           });
           await productVariantSyncRepository.deleteByVariantIds(shopId, chunk);
         }
+
+        await sendLogEvent({
+          orgId,
+          errorMessage: "",
+          data: JSON.stringify({
+            domain: shop,
+            deletedCount: deletedIds.length,
+            statusCode: 200,
+          }),
+          message: EVENT_MESSAGES.CUSTOM_LOG_DELETE_PRODUCT_VARIANTS_SUCCESS,
+          logLevel: "INFO",
+        });
       }
     }
 

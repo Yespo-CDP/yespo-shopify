@@ -12,6 +12,38 @@ import { EVENT_MESSAGES } from "~/config/constants";
 import { throttleApiRequest } from "~/utils/rate-limiter.server";
 
 /**
+ * One entry of the Yespo `items` array, as returned by POST /v1/products.
+ * `status` is per-item: `"accepted"` or `"rejected"`.
+ */
+interface YespoProductResultItem {
+  productId: string;
+  action?: string;
+  status: "accepted" | "rejected";
+  code?: string;
+  message?: string;
+}
+
+/**
+ * Raw response body of the Yespo POST /v1/products endpoint.
+ * `failedVariants` is not a Yespo field — we derive it from `items`.
+ */
+interface YespoProductsRawResponse {
+  requestId: string;
+  summary: { received: number; accepted: number; rejected: number };
+  items: YespoProductResultItem[];
+}
+
+/**
+ * Collects every item whose per-item `status` is `"rejected"`, used to populate
+ * the `failedVariants` field consumed by the product sync handler.
+ */
+function deriveFailedVariants(
+  response: YespoProductsRawResponse,
+): YespoProductResultItem[] {
+  return (response.items ?? []).filter((item) => item.status === "rejected");
+}
+
+/**
  * Returns a shallow copy of a product with the Shopify collection `id` removed
  * from every category — both top-level and inside per-locale translations.
  * Yespo only needs category `name`/`type`, not the Shopify id.
@@ -133,7 +165,10 @@ export const updateProductVariants = async ({
     //   }
     // }
 
-    // const responseData = response.responseData as ProductVariantsResponse;
+    // // Yespo returns { requestId, summary, items }, where each item carries a
+    // // per-item status. failedVariants is derived from items with status "rejected".
+    // const responseData = response.responseData as YespoProductsRawResponse;
+    // const failedVariants = deriveFailedVariants(responseData);
 
     // await sendLogEvent({
     //   orgId,
@@ -142,6 +177,8 @@ export const updateProductVariants = async ({
     //     domain,
     //     variantsCount: productVariants.length,
     //     variantIds: productVariants.map((variant) => variant.productId),
+    //     accepted: responseData.summary?.accepted,
+    //     rejected: responseData.summary?.rejected,
     //     languageChanged: requestLanguageChanged,
     //   }),
     //   message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
@@ -149,7 +186,7 @@ export const updateProductVariants = async ({
     // });
 
     // return {
-    //   ...responseData,
+    //   failedVariants,
     //   languageChangedConfirmed,
     // };
 
@@ -157,11 +194,43 @@ export const updateProductVariants = async ({
     void url;
     void requestLanguageChanged;
 
+    // Emulate a Yespo response (all items accepted) and run it through the same
+    // derivation the live endpoint will use, so callers see the real shape.
+    const simulatedResponse: YespoProductsRawResponse = {
+      requestId: `mock-${Date.now()}`,
+      summary: {
+        received: sanitizedProductVariants.length,
+        accepted: sanitizedProductVariants.length,
+        rejected: 0,
+      },
+      items: sanitizedProductVariants.map((product) => ({
+        productId: product.productId,
+        action: product.action,
+        status: "accepted" as const,
+      })),
+    };
+    const failedVariants = deriveFailedVariants(simulatedResponse);
+
+    await sendLogEvent({
+      orgId,
+      errorMessage: "",
+      data: JSON.stringify({
+        domain,
+        variantsCount: productVariants.length,
+        accepted: simulatedResponse.summary.accepted,
+        rejected: simulatedResponse.summary.rejected,
+        languageChanged: requestLanguageChanged,
+      }),
+      message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
+      logLevel: "INFO",
+    });
+
     console.log(
-      `[mock] updateProductVariants: ${productVariants.length} product(s) for siteId ${siteId}`,
+      `[mock] updateProductVariants: ${productVariants.length} product(s) for siteId ${siteId}, ${failedVariants.length} rejected`,
     );
 
     return {
+      failedVariants,
       languageChangedConfirmed,
     };
   } catch (error: any) {

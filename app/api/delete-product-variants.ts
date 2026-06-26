@@ -68,18 +68,6 @@ export const deleteProductVariants = async ({
     //   body: JSON.stringify(requestBody),
     // });
 
-    // await sendLogEvent({
-    //   orgId,
-    //   errorMessage: "",
-    //   data: JSON.stringify({
-    //     domain,
-    //     deletedCount: externalVariantIds.length,
-    //     statusCode: 200,
-    //   }),
-    //   message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
-    //   logLevel: "INFO",
-    // });
-
     void apiKey;
     void url;
 
@@ -98,7 +86,7 @@ export const deleteProductVariants = async ({
         responseBody: error,
         statusCode: error?.status ?? 500,
       }),
-      message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_ERROR,
+      message: EVENT_MESSAGES.CUSTOM_LOG_DELETE_PRODUCT_VARIANTS_ERROR,
       logLevel: "ERROR",
     });
 

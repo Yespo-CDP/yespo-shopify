@@ -215,6 +215,21 @@ export const orderSyncHandler = async (
       },
     });
 
+    await sendLogEvent({
+      orgId,
+      errorMessage: `Orders sync failed: ${error?.message}`,
+      data: JSON.stringify({
+        domain: shop,
+        skippedCount: totalSkippedCount,
+        failedCount: totalFailedCount,
+        syncedCount: totalSyncedCount,
+        totalCount: ordersCount,
+        statusCode: error?.status ?? 500,
+      }),
+      message: EVENT_MESSAGES.SEND_ORDERS_BULK_FAILED,
+      logLevel: "ERROR",
+    });
+
     return;
   }
 };

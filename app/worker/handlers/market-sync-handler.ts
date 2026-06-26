@@ -58,6 +58,18 @@ function initCountryStats(countries: string[]): Record<string, CountryStats> {
   );
 }
 
+function sumCountryStats(stats: Record<string, CountryStats>): CountryStats {
+  return Object.values(stats).reduce<CountryStats>(
+    (acc, countryStats) => ({
+      synced: acc.synced + countryStats.synced,
+      skipped: acc.skipped + countryStats.skipped,
+      failed: acc.failed + countryStats.failed,
+      total: acc.total + countryStats.total,
+    }),
+    createEmptyCountryStats(),
+  );
+}
+
 /**
  * Maps a staged pricing row to a Yespo market product item.
  *
@@ -204,12 +216,21 @@ export const marketSyncHandler = async (
     const queryChunks = buildBulkQueryChunks(marketsConfig);
 
     for (const chunk of queryChunks) {
-      const batchId = await runBulkQuery({ client, query: chunk.query });
+      const batchId = await runBulkQuery({
+        client,
+        query: chunk.query,
+        orgId,
+        domain: shop,
+      });
       for (const countryCode of chunk.countries) {
         await writeLog(countryCode, "IN_PROGRESS", batchId);
       }
 
-      const bulkResult = await waitForBulkOperation({ client });
+      const bulkResult = await waitForBulkOperation({
+        client,
+        orgId,
+        domain: shop,
+      });
 
       const outputPath = await streamBulkJsonlToTmpMarketSync({
         url: bulkResult.url,
@@ -245,11 +266,44 @@ export const marketSyncHandler = async (
     }
 
     console.log(`✅ Market sync finish for ${shop}`);
+
+    const totals = sumCountryStats(stats);
+    await sendLogEvent({
+      orgId,
+      errorMessage: "",
+      data: JSON.stringify({
+        domain: shop,
+        countries: marketsConfig.countries,
+        synced: totals.synced,
+        skipped: totals.skipped,
+        failed: totals.failed,
+        total: totals.total,
+      }),
+      message: EVENT_MESSAGES.CUSTOM_LOG_SEND_MARKET_PRODUCTS_SUCCESS,
+      logLevel: "INFO",
+    });
   } catch (error: unknown) {
     console.error("Market sync error", error);
     for (const countryCode of marketsConfig.countries) {
       await writeLog(countryCode, "ERROR");
     }
+
+    const totals = sumCountryStats(stats);
+    await sendLogEvent({
+      orgId,
+      errorMessage: `Market sync error: ${(error as Error)?.message ?? "unknown"}`,
+      data: JSON.stringify({
+        domain: shop,
+        countries: marketsConfig.countries,
+        synced: totals.synced,
+        skipped: totals.skipped,
+        failed: totals.failed,
+        total: totals.total,
+        statusCode: (error as { status?: number })?.status ?? 500,
+      }),
+      message: EVENT_MESSAGES.CUSTOM_LOG_SEND_MARKET_PRODUCTS_ERROR,
+      logLevel: "ERROR",
+    });
   }
 };
 
@@ -346,6 +400,12 @@ async function processBatch({
 
   for (const countryCode of countries) {
     const entries = toSyncByCountry[countryCode] ?? [];
+    if (entries.length === 0) {
+      continue;
+    }
+
+    let countrySynced = 0;
+    const countryFailedItems: string[] = [];
 
     for (let index = 0; index < entries.length; index += API_CHUNK_SIZE) {
       const chunk = entries.slice(index, index + API_CHUNK_SIZE);
@@ -363,10 +423,12 @@ async function processBatch({
       for (const entry of chunk) {
         if (response.failedItems.includes(entry.item.productId)) {
           stats[countryCode].failed += 1;
+          countryFailedItems.push(entry.item.productId);
           continue;
         }
 
         stats[countryCode].synced += 1;
+        countrySynced += 1;
         await marketSyncRepository.createOrUpdate({
           productId: entry.productId,
           variantId: entry.variantId,
@@ -376,6 +438,34 @@ async function processBatch({
           shop: { connect: { id: shopId } },
         });
       }
+    }
+
+    if (countryFailedItems.length > 0) {
+      await sendLogEvent({
+        orgId,
+        errorMessage: `Market sync rejected ${countryFailedItems.length} item(s) for market ${countryCode}`,
+        data: JSON.stringify({
+          domain: shop,
+          countryCode,
+          synced: countrySynced,
+          failedCount: countryFailedItems.length,
+          failedItems: countryFailedItems,
+        }),
+        message: EVENT_MESSAGES.CUSTOM_LOG_SEND_MARKET_PRODUCTS_ERROR,
+        logLevel: "ERROR",
+      });
+    } else {
+      await sendLogEvent({
+        orgId,
+        errorMessage: "",
+        data: JSON.stringify({
+          domain: shop,
+          countryCode,
+          synced: countrySynced,
+        }),
+        message: EVENT_MESSAGES.CUSTOM_LOG_SEND_MARKET_PRODUCTS_SUCCESS,
+        logLevel: "INFO",
+      });
     }
   }
 }
