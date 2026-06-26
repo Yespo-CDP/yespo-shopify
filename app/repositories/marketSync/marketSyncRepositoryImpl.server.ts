@@ -49,6 +49,19 @@ export default class MarketSyncRepositoryImpl implements MarketSyncRepository {
     });
   }
 
+  async getByCountryPage(
+    shopId: number,
+    countryCode: string,
+    afterId: number,
+    take: number,
+  ): Promise<MarketSyncRecord[]> {
+    return this.database.marketSync.findMany({
+      where: { shopId, countryCode, id: { gt: afterId } },
+      orderBy: { id: "asc" },
+      take,
+    });
+  }
+
   async deleteByCountry(shopId: number, countryCode: string): Promise<void> {
     await this.database.marketSync.deleteMany({
       where: { shopId, countryCode },

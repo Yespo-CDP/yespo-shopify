@@ -40,6 +40,38 @@ export interface MarketProductsResponse {
 }
 
 /**
+ * One entry of the Yespo `items` array, as returned by POST /v1/markets.
+ * `status` is per-item: `"accepted"` or `"rejected"`.
+ */
+interface YespoMarketResultItem {
+  marketId?: string;
+  productId: string;
+  status: "accepted" | "rejected";
+  code?: string;
+  message?: string;
+}
+
+/**
+ * Raw response body of the Yespo POST /v1/markets endpoint.
+ * `failedItems` is not a Yespo field — we derive it from `items`.
+ */
+interface YespoMarketsRawResponse {
+  requestId: string;
+  summary: { received: number; accepted: number; rejected: number };
+  items: YespoMarketResultItem[];
+}
+
+/**
+ * Derives the list of failed `productId`s from a raw Yespo markets response by
+ * collecting every item whose per-item `status` is `"rejected"`.
+ */
+function deriveFailedItems(response: YespoMarketsRawResponse): string[] {
+  return (response.items ?? [])
+    .filter((item) => item.status === "rejected")
+    .map((item) => item.productId);
+}
+
+/**
  * Sends market-specific prices, stock, and (optionally) URLs to the Yespo
  * POST /v1/markets API.
  *
@@ -108,7 +140,10 @@ export const updateMarketProducts = async ({
     //   body: JSON.stringify(requestBody),
     // });
 
-    // const responseData = response.responseData as MarketProductsResponse;
+    // // Yespo returns { requestId, summary, items }, where each item carries a
+    // // per-item status. failedItems is derived from items with status "rejected".
+    // const responseData = response.responseData as YespoMarketsRawResponse;
+    // const failedItems = deriveFailedItems(responseData);
 
     // await sendLogEvent({
     //   orgId,
@@ -116,24 +151,48 @@ export const updateMarketProducts = async ({
     //   data: JSON.stringify({
     //     domain,
     //     itemCount,
+    //     accepted: responseData.summary?.accepted,
+    //     rejected: responseData.summary?.rejected,
+    //     failedItems,
     //     marketIds: normalizedMarkets.map((market) => market.marketId),
     //   }),
     //   message: EVENT_MESSAGES.CUSTOM_LOG_SEND_MARKET_PRODUCTS_SUCCESS,
     //   logLevel: "INFO",
     // });
 
-    // return responseData;
+    // return { id: Date.now(), failedItems };
 
     void apiKey;
     void url;
 
+    // Emulate a Yespo response (all items accepted) and run it through the same
+    // derivation the live endpoint will use, so callers see the real shape.
+    const simulatedItems: YespoMarketResultItem[] = normalizedMarkets.flatMap(
+      (market) =>
+        market.products.map((product) => ({
+          marketId: market.marketId,
+          productId: product.productId,
+          status: "accepted" as const,
+        })),
+    );
+    const simulatedResponse: YespoMarketsRawResponse = {
+      requestId: `mock-${Date.now()}`,
+      summary: {
+        received: itemCount,
+        accepted: simulatedItems.length,
+        rejected: 0,
+      },
+      items: simulatedItems,
+    };
+    const failedItems = deriveFailedItems(simulatedResponse);
+
     console.log(
-      `[mock] updateMarketProducts: ${itemCount} items across ${markets.length} market(s)`,
+      `[mock] updateMarketProducts: ${itemCount} items across ${markets.length} market(s), ${failedItems.length} rejected`,
     );
 
     return {
       id: Date.now(),
-      failedItems: [],
+      failedItems,
     };
   } catch (error: any) {
     console.error("Error updating market products:", error?.message);

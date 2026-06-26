@@ -18,6 +18,17 @@ export default interface MarketSyncRepository {
     countryCode: string,
   ): Promise<MarketSyncRecord[]>;
 
+  /**
+   * Cursor-paginated page of rows for a country, ordered by ascending `id`.
+   * Pass the last seen `id` as `afterId` (0 for the first page).
+   */
+  getByCountryPage(
+    shopId: number,
+    countryCode: string,
+    afterId: number,
+    take: number,
+  ): Promise<MarketSyncRecord[]>;
+
   deleteByCountry(shopId: number, countryCode: string): Promise<void>;
 
   deleteManyByKeys(

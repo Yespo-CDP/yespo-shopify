@@ -11,6 +11,8 @@ import {
   updateMarketProducts,
   type MarketProductItem,
 } from "~/api/update-market-products";
+import { sendLogEvent } from "~/api/send-log-event";
+import { EVENT_MESSAGES } from "~/config/constants";
 
 import {
   runBulkQuery,
@@ -23,6 +25,10 @@ import { streamBulkJsonlToTmpMarketSync } from "../services/parse-bulk-jsonl";
 import { buildBulkQueryChunks } from "../services/product-sync-bulk-queries";
 
 const API_CHUNK_SIZE = 500;
+
+// Cleanup of removed markets is paged: read this many rows, push isInStock: 0
+// for them, then delete the accepted ones before moving to the next page.
+const CLEANUP_PAGE_SIZE = 250;
 
 interface CountryStats {
   synced: number;
@@ -412,37 +418,101 @@ async function cleanupRemovedMarkets({
   );
 
   for (const countryCode of removedCountries) {
-    const rows = await marketSyncRepository.getByCountry(shopId, countryCode);
+    // Cursor on the autoincrement id: keeps the loop terminating even when some
+    // rows fail and are intentionally left in place (their ids are still passed).
+    let afterId = 0;
+    let processedCount = 0;
+    const failedItems: string[] = [];
 
-    const items: MarketProductItem[] = rows.map((row) => ({
-      productId: row.variantId.split("/").pop() ?? row.variantId,
-      updatedDate: new Date().toISOString(),
-      isInStock: 0,
-    }));
+    while (true) {
+      const rows = await marketSyncRepository.getByCountryPage(
+        shopId,
+        countryCode,
+        afterId,
+        CLEANUP_PAGE_SIZE,
+      );
+      if (rows.length === 0) {
+        break;
+      }
+      afterId = rows[rows.length - 1].id;
 
-    const allFailedItems: string[] = [];
+      const items: MarketProductItem[] = rows.map((row) => ({
+        productId: row.variantId.split("/").pop() ?? row.variantId,
+        updatedDate: new Date().toISOString(),
+        isInStock: 0,
+      }));
 
-    for (let index = 0; index < items.length; index += API_CHUNK_SIZE) {
-      const chunk = items.slice(index, index + API_CHUNK_SIZE);
       const response = await updateMarketProducts({
         apiKey,
         siteId: siteId ?? "",
-        markets: [{ marketId: countryCode, products: chunk }],
+        markets: [{ marketId: countryCode, products: items }],
         domain: shop,
         orgId,
       });
-      allFailedItems.push(...response.failedItems);
+
+      processedCount += rows.length;
+      failedItems.push(...response.failedItems);
+
+      // Only delete the rows Yespo accepted; keep failed ones for the next run.
+      const pageFailed = new Set(response.failedItems);
+      const deletableKeys = rows
+        .filter(
+          (row) =>
+            !pageFailed.has(row.variantId.split("/").pop() ?? row.variantId),
+        )
+        .map((row) => ({
+          productId: row.productId,
+          variantId: row.variantId,
+          countryCode,
+        }));
+
+      await marketSyncRepository.deleteManyByKeys(shopId, deletableKeys);
     }
 
-    if (allFailedItems.length > 0) {
-      console.warn(
-        `⚠️ ${allFailedItems.length} item(s) failed cleanup for market ${countryCode}, skipping local record deletion`,
-      );
-      // FIX ME:  додати логер від Yespo (передати кількість варіантів), кастомний евент CUSTOM_LOG_MARKET_SYNC_CLEANUP_FAILED
+    if (processedCount === 0) {
+      // Nothing left to clean up (e.g. log row without sync rows): drop the log.
+      await marketSyncLogRepository.deleteByCountry(shopId, countryCode);
       continue;
     }
-    // FIXME: якщо успішно також передавати логи
-    await marketSyncRepository.deleteByCountry(shopId, countryCode);
+
+    if (failedItems.length > 0) {
+      console.warn(
+        `⚠️ ${failedItems.length}/${processedCount} item(s) failed cleanup for market ${countryCode}, keeping their local records`,
+      );
+
+      await sendLogEvent({
+        orgId,
+        errorMessage: `Market cleanup failed for ${failedItems.length} of ${processedCount} item(s) in market ${countryCode}`,
+        data: JSON.stringify({
+          domain: shop,
+          countryCode,
+          failedCount: failedItems.length,
+          processedCount,
+        }),
+        message: EVENT_MESSAGES.CUSTOM_LOG_MARKET_SYNC_CLEANUP_ERROR,
+        logLevel: "ERROR",
+      });
+
+      // Keep the MarketSyncLog row so the failure stays visible.
+      continue;
+    }
+
     await marketSyncLogRepository.deleteByCountry(shopId, countryCode);
+
+    console.log(
+      `✅ Cleaned up ${processedCount} product(s) from removed market ${countryCode} for ${shop}`,
+    );
+
+    await sendLogEvent({
+      orgId,
+      errorMessage: "",
+      data: JSON.stringify({
+        domain: shop,
+        countryCode,
+        removedCount: processedCount,
+      }),
+      message: EVENT_MESSAGES.CUSTOM_LOG_MARKET_SYNC_CLEANUP_SUCCESS,
+      logLevel: "INFO",
+    });
   }
 }
