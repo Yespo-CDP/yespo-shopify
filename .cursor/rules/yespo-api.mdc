@@ -155,3 +155,17 @@ HTTP: `200` all ok · `207` partial · `400` bad payload · `409` language misma
 | `DUPLICATE_KEY_IN_BATCH` | 207   | Same `productId` twice in one request |
 | `BATCH_SIZE_EXCEEDED`    | 413   | > 1,000 items |
 | `RATE_LIMITED`           | 429   | Rate limit hit |
+
+---
+
+## Market sync scheduling — hourly cron (integration, not Yespo contract)
+
+Hourly QStash cron paces `POST /v1/markets` across shops. Keeps at most **10 shops** syncing at once, preferring those synced longest ago. Unit = **shop** (one run syncs all its countries).
+
+**Entry:** `app/routes/api.market-sync-cron.tsx` → `enqueueMarketSyncTasks()` in `app/services/queue.ts`.
+
+**Config** (`app/config/constants.ts`): `MARKET_SYNC_MAX_CONCURRENT_SHOPS = 10`, `MARKET_SYNC_STALE_AFTER_MS = 5h` (IN_PROGRESS older than this = stuck → ignored, shop selectable again).
+
+**Per tick:** count shops with fresh `IN_PROGRESS` → `budget = 10 - count` (skip if ≤ 0) → take `budget` eligible shops (`active`, `isMarketSyncEnabled`, `apiKey != null`) ordered by oldest last sync (never-synced first, else `max(updatedAt)` asc) → enqueue each (`enqueueMarketSyncJobIfEligible`: re-checks apiKey + fresh IN_PROGRESS + offline token).
+
+Worker `concurrency: 10` (`app/worker/worker.ts`) is the real parallelism cap. Hourly schedule is set in the QStash dashboard, not in code. Full details: `docs/yespo-api-products-markets.md`.

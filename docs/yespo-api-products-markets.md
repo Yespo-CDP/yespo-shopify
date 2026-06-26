@@ -37,6 +37,7 @@
    - [Item Object](#item-object)
 8. [Response Codes](#response-codes)
 9. [Error Codes](#error-codes)
+10. [Market Sync Scheduling — Hourly Cron](#market-sync-scheduling--hourly-cron)
 
 ---
 
@@ -846,3 +847,40 @@ Every request returns a request-level envelope plus item-level results.
 | `BATCH_SIZE_EXCEEDED`      | 413   | More than 1,000 items. |
 | `PAYLOAD_TOO_LARGE`        | 413   | Request body larger than 10 MB. |
 | `RATE_LIMITED`             | 429   | Rate limit exceeded. |
+
+---
+
+## Market Sync Scheduling — Hourly Cron
+
+> Integration-side scheduling for `POST /v1/markets`. This is **not** part of the
+> Yespo API contract — it describes how this app paces market sync across shops to
+> respect the 60 req/min per-`siteId` limit and avoid overloading the worker.
+
+A QStash-scheduled cron runs **hourly** and keeps at most **10 shops** syncing
+their markets concurrently, always preferring the shops that synced longest ago.
+The unit is a **shop** (one `marketSyncHandler` run syncs all of that shop's
+markets/countries); the limit of 10 counts shops, not countries.
+
+**Entry point:** `app/routes/api.market-sync-cron.tsx` (QStash POST) → `enqueueMarketSyncTasks()` in `app/services/queue.ts`.
+
+**Config** (`app/config/constants.ts`):
+
+| Constant | Value | Purpose |
+|---|---|---|
+| `MARKET_SYNC_MAX_CONCURRENT_SHOPS` | `10` | Max shops in progress at once. |
+| `MARKET_SYNC_STALE_AFTER_MS` | `5 * 60 * 60 * 1000` (5 h) | `IN_PROGRESS` older than this is treated as stuck (e.g. crashed worker): it no longer counts against the budget and the shop becomes selectable again. |
+
+**Algorithm (per tick):**
+
+1. `staleBefore = now - MARKET_SYNC_STALE_AFTER_MS`.
+2. Load eligible shops (`active`, `isMarketSyncEnabled`, `apiKey != null`) with their `MarketSyncLog` rows (`status`, `updatedAt`).
+3. A shop is **in progress** if any of its logs has `status = IN_PROGRESS` and `updatedAt >= staleBefore`.
+4. `budget = 10 - (in-progress shops)`. If `budget <= 0`, enqueue nothing.
+5. Candidates = shops not in progress, sorted by last sync ascending: never-synced shops (no logs) first, then by `max(updatedAt)` across their logs. Take the first `budget`.
+6. Enqueue each via `enqueueMarketSyncJobIfEligible` (re-checks `apiKey` + fresh `IN_PROGRESS` + offline token, then adds a `data-sync-market` job).
+
+**Notes:**
+
+- The BullMQ worker `concurrency: 10` (`app/worker/worker.ts`) is the real parallelism cap; `marketSyncHandler` itself is unchanged.
+- The hourly schedule lives in the QStash dashboard, not in code.
+- A job is only `IN_PROGRESS` in the DB once the handler starts writing logs; with an hourly cron and `concurrency: 10`, jobs are normally picked up well within the hour, so the next tick counts them correctly.

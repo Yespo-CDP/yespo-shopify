@@ -84,3 +84,18 @@ export const EVENT_MESSAGES = {
 export type EventMessage = (typeof EVENT_MESSAGES)[keyof typeof EVENT_MESSAGES];
 
 export const LOG_ORG_ID = 23948;
+
+/**
+ * Maximum number of shops the market-sync cron keeps in progress at once.
+ * Each cron tick only enqueues up to `MARKET_SYNC_MAX_CONCURRENT_SHOPS` minus
+ * the shops already syncing.
+ */
+export const MARKET_SYNC_MAX_CONCURRENT_SHOPS = 10;
+
+/**
+ * A shop's market sync is treated as "in progress" only while its newest
+ * IN_PROGRESS MarketSyncLog is fresher than this. Older IN_PROGRESS rows are
+ * considered stuck (e.g. a crashed/restarted worker), no longer count against
+ * the concurrency budget, and let the shop be picked up again.
+ */
+export const MARKET_SYNC_STALE_AFTER_MS = 5 * 60 * 60 * 1000;

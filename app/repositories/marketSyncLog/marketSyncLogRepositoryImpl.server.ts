@@ -45,6 +45,21 @@ export default class MarketSyncLogRepositoryImpl
     return log !== null;
   }
 
+  async hasFreshInProgressByShop(
+    shopUrl: string,
+    staleBefore: Date,
+  ): Promise<boolean> {
+    const log = await this.database.marketSyncLog.findFirst({
+      where: {
+        shop: { shopUrl },
+        status: "IN_PROGRESS",
+        updatedAt: { gte: staleBefore },
+      },
+    });
+
+    return log !== null;
+  }
+
   async deleteByCountry(shopId: number, countryCode: string): Promise<void> {
     await this.database.marketSyncLog.deleteMany({
       where: { shopId, countryCode },

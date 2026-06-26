@@ -2,13 +2,17 @@ import { Queue } from "bullmq";
 
 import { redisConfig } from "~/config/redis";
 import {
+  MARKET_SYNC_MAX_CONCURRENT_SHOPS,
+  MARKET_SYNC_STALE_AFTER_MS,
+} from "~/config/constants";
+import {
   customerSyncLogRepository,
   marketSyncLogRepository,
   orderSyncLogRepository,
   productVariantSyncLogRepository,
   shopRepository,
 } from "~/repositories/repositories.server";
-import type { Shop } from "~/@types/shop";
+import type { Shop, ShopWithMarketSyncLogs } from "~/@types/shop";
 import type { Session } from "@shopify/shopify-app-react-router/server";
 import { getOfflineAccessToken } from "~/services/get-offline-session.server";
 
@@ -98,10 +102,14 @@ async function enqueueMarketSyncJobIfEligible(shop: Shop): Promise<boolean> {
     return false;
   }
 
-  const marketSyncLog = await marketSyncLogRepository.hasInProgressByShop(
+  // Re-check right before enqueuing, ignoring stale IN_PROGRESS rows so a
+  // crashed/restarted worker doesn't block the shop forever.
+  const staleBefore = new Date(Date.now() - MARKET_SYNC_STALE_AFTER_MS);
+  const inProgress = await marketSyncLogRepository.hasFreshInProgressByShop(
     shop.shopUrl,
+    staleBefore,
   );
-  if (marketSyncLog) {
+  if (inProgress) {
     return false;
   }
 
@@ -137,11 +145,71 @@ export async function enqueueMarketSyncTaskForShopUrl(
   return (await enqueueMarketSyncJobIfEligible(shop)) ? 1 : 0;
 }
 
-export async function enqueueMarketSyncTasks(): Promise<number> {
-  const shops = await shopRepository.getShopsForMarketSync();
-  let enqueued = 0;
+/**
+ * Whether a shop currently counts as "in progress": it has at least one
+ * MarketSyncLog with status IN_PROGRESS whose updatedAt is fresh (>= staleBefore).
+ */
+function isFreshInProgress(
+  shop: ShopWithMarketSyncLogs,
+  staleBefore: Date,
+): boolean {
+  return shop.marketSyncLogs.some(
+    (log) =>
+      log.status === "IN_PROGRESS" &&
+      log.updatedAt != null &&
+      log.updatedAt >= staleBefore,
+  );
+}
 
-  for (const shop of shops) {
+/**
+ * The shop's most recent market sync time = max(updatedAt) across its logs, or
+ * null when it has never synced (highest priority to pick up).
+ */
+function lastSyncedAt(shop: ShopWithMarketSyncLogs): Date | null {
+  let latest: Date | null = null;
+  for (const log of shop.marketSyncLogs) {
+    if (log.updatedAt && (latest === null || log.updatedAt > latest)) {
+      latest = log.updatedAt;
+    }
+  }
+  return latest;
+}
+
+/**
+ * Hourly cron entrypoint: enqueues market sync jobs while keeping at most
+ * MARKET_SYNC_MAX_CONCURRENT_SHOPS shops in progress at once.
+ *
+ * Counts shops already syncing (fresh IN_PROGRESS), then enqueues up to the
+ * remaining budget, preferring shops that synced longest ago (never-synced
+ * shops first, then oldest updatedAt).
+ */
+export async function enqueueMarketSyncTasks(): Promise<number> {
+  const staleBefore = new Date(Date.now() - MARKET_SYNC_STALE_AFTER_MS);
+  const shops = await shopRepository.getShopsForMarketSync();
+
+  const inProgressCount = shops.filter((shop) =>
+    isFreshInProgress(shop, staleBefore),
+  ).length;
+
+  const budget = MARKET_SYNC_MAX_CONCURRENT_SHOPS - inProgressCount;
+  if (budget <= 0) {
+    return 0;
+  }
+
+  const candidates = shops
+    .filter((shop) => !isFreshInProgress(shop, staleBefore))
+    .map((shop) => ({ shop, lastSyncedAt: lastSyncedAt(shop) }))
+    .sort((a, b) => {
+      // Never-synced shops (null) come first, then oldest updatedAt first.
+      if (a.lastSyncedAt === null && b.lastSyncedAt === null) return 0;
+      if (a.lastSyncedAt === null) return -1;
+      if (b.lastSyncedAt === null) return 1;
+      return a.lastSyncedAt.getTime() - b.lastSyncedAt.getTime();
+    })
+    .slice(0, budget);
+
+  let enqueued = 0;
+  for (const { shop } of candidates) {
     if (await enqueueMarketSyncJobIfEligible(shop)) {
       enqueued++;
     }
