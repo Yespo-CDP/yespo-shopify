@@ -108,3 +108,16 @@ export const MARKET_SYNC_STALE_AFTER_MS = 5 * 60 * 60 * 1000;
  * data-sync triggers bypass this interval entirely.
  */
 export const MARKET_SYNC_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * How many times `fetchWithErrorHandling` retries a request after the server
+ * responds with HTTP 429 (Rate Limited) before giving up and throwing.
+ */
+export const RATE_LIMIT_MAX_RETRIES = 3;
+
+/**
+ * Fallback wait time before retrying a 429 response when the server does not
+ * send a usable `Retry-After` header. Yespo limits to 60 req/min per siteId, so
+ * a full minute is the safe default.
+ */
+export const RATE_LIMIT_DEFAULT_RETRY_AFTER_MS = 60 * 1000;

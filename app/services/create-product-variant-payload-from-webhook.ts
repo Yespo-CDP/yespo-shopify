@@ -5,6 +5,7 @@ import type {
 } from "~/@types/productVariant";
 import type { ProductTranslationsResult } from "~/worker/services/get-product-translations";
 import { appendVariantParam } from "~/worker/services/append-variant-param";
+import { withDefaultCategory } from "~/worker/services/map-yespo-categories";
 
 export interface ProductVariantWebhookPayload {
   id: number;
@@ -113,6 +114,12 @@ export const createProductVariantPayloadFromWebhook = (
   const updatedDate =
     variant.updated_at ?? product.updated_at ?? new Date().toISOString();
 
+  if (categories.length === 0) {
+    console.warn(
+      `Product ${variant.id} has no collections or taxonomy category; falling back to default "Uncategorized" category`,
+    );
+  }
+
   const payload: ProductVariant = {
     action,
     productId: variant.id.toString(),
@@ -123,7 +130,7 @@ export const createProductVariantPayloadFromWebhook = (
     isInStock,
     price: parseFloat(variant.price ?? "0"),
     currency: shopCurrency,
-    categories,
+    categories: withDefaultCategory(categories),
     itemGroupId: product.id.toString(),
   };
 

@@ -3,7 +3,10 @@ import type {
   ProductRemovePatch,
   ProductVariant,
 } from "~/@types/productVariant";
-import { mapShopifyCategories } from "~/worker/services/map-yespo-categories";
+import {
+  mapShopifyCategories,
+  withDefaultCategory,
+} from "~/worker/services/map-yespo-categories";
 import { appendVariantParam } from "~/worker/services/append-variant-param";
 
 /**
@@ -70,10 +73,16 @@ export const createProductVariantPayload = (
   const isInStock: 0 | 1 =
     variant.inventoryQuantity == null || variant.inventoryQuantity > 0 ? 1 : 0;
 
-  const categories = mapShopifyCategories({
+  const mappedCategories = mapShopifyCategories({
     collections: product.collections?.nodes,
     category: product.category,
   });
+  if (mappedCategories.length === 0) {
+    console.warn(
+      `Product ${productId} has no collections or taxonomy category; falling back to default "Uncategorized" category`,
+    );
+  }
+  const categories = withDefaultCategory(mappedCategories);
 
   const itemGroupId = product.id.split("/").pop() ?? product.id;
 

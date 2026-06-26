@@ -12,6 +12,25 @@ export interface ShopifyTaxonomyCategory {
   fullName: string;
 }
 
+/**
+ * Fallback category used when a product has no collections and no taxonomy
+ * category. Yespo requires at least one category on `action: "create"`, so an
+ * empty `categories` array would cause the request to be rejected.
+ */
+export const DEFAULT_YESPO_CATEGORY: YespoCategory = {
+  name: "Uncategorized",
+  type: "category",
+};
+
+/**
+ * Guarantees a non-empty `categories` array by falling back to
+ * {@link DEFAULT_YESPO_CATEGORY} when no real categories are present.
+ */
+export const withDefaultCategory = (
+  categories: YespoCategory[],
+): YespoCategory[] =>
+  categories.length > 0 ? categories : [DEFAULT_YESPO_CATEGORY];
+
 /** Extracts the numeric id from a Shopify GID, e.g. "gid://shopify/Collection/123" → "123". */
 const stripGid = (gid: string): string => gid.split("/").pop() ?? gid;
 

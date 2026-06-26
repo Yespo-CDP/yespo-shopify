@@ -65,14 +65,11 @@ HTTP-виклики до Yespo закоментовані. Обидва мето
 
 ---
 
-## 4. HTTP 429 — Rate Limited (retry)
+## ~~4. HTTP 429 — Rate Limited (retry)~~ ✅ Готово
 
-**Файли:** `app/utils/fetchWithErrorHandling.ts`
+**Файли:** `app/utils/fetchWithErrorHandling.ts`, `app/config/constants.ts`
 
-Є клієнтський throttle (60/хв), але якщо сервер відповів `429`, код просто кидає помилку без повтору.
-
-**Що потрібно:**
-- При отриманні `429` — чекати (наприклад, 60 с або `Retry-After` з заголовка) і повторити запит
+`fetchWithErrorHandling` тепер при отриманні `429` чекає й повторює запит до `RATE_LIMIT_MAX_RETRIES` разів. Час очікування береться із заголовка `Retry-After` (підтримуються формати delay-seconds та HTTP-date), а за його відсутності — `RATE_LIMIT_DEFAULT_RETRY_AFTER_MS` (60 с, відповідає ліміту 60 req/min). Після вичерпання спроб кидається останній `429`.
 
 ---
 
@@ -90,13 +87,14 @@ HTTP-виклики до Yespo закоментовані. Обидва мето
 
 ## 6. HTTP 409 — LANGUAGE_CODE_MISMATCH 🟡 Частково
 
-**Файли:** `app/api/update-product-variants.ts`, `app/worker/handlers/product-sync-handler.ts`
+**Файли:** `app/api/update-product-variants.ts`
 
-Retry на `409` з `languageChanged: true` уже написаний у `updateProductVariants` (закоментований поряд із fetch — активується з #1). У вебхуках `languageChanged` досі ніколи не передається.
+Retry на `409` з `languageChanged: true` уже написаний у `updateProductVariants` (закоментований поряд із fetch — активується з #1).
+
+Передача `languageChanged` у вебхуках уже реалізована: `create-product-variant.server.ts` та `update-product-variant.server.ts` рахують його через `resolveProductSyncLanguage` (та сама логіка, що й bulk sync) і передають у `updateProductVariants`, а також обробляють `languageChangedConfirmed` із відповіді.
 
 **Залишилось:**
-- Активувати retry разом з #1
-- Передавати `languageChanged` у вебхуках (аналогічно до bulk sync)
+- Активувати retry разом з #1 (розкоментувати блок fetch + обробку 409)
 
 ---
 
@@ -131,15 +129,9 @@ Retry на `409` з `languageChanged: true` уже написаний у `update
 
 ---
 
-## 10. Продукти без колекцій
+## ~~10. Продукти без колекцій~~ ✅ Виконано
 
-**Файли:** `app/worker/services/create-product-variant-payload.ts`, `app/services/create-product-variant-payload-from-webhook.ts`
-
-Якщо продукт не має жодної колекції, відправляється `categories: []`. Yespo вимагає мінімум 1 категорію при `action: "create"` — запит буде відхилено.
-
-**Що потрібно:**
-- Перед відправкою перевіряти `categories.length === 0`
-- Або пропускати такі продукти (з логуванням), або додавати fallback-категорію
+Якщо продукт не має жодної колекції та таксономічної категорії, обидва білдери payload (`create-product-variant-payload.ts` та `create-product-variant-payload-from-webhook.ts`) тепер підставляють fallback-категорію `DEFAULT_YESPO_CATEGORY` (`{ name: "Uncategorized", type: "category" }`, без `id`) через спільний хелпер `withDefaultCategory` із `map-yespo-categories.ts`. Порожній `categories` логуюється через `console.warn` перед підстановкою.
 
 ---
 
