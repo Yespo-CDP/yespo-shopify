@@ -71,7 +71,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     if (!shop.apiKey) {
       return new Response(
-        JSON.stringify({ success: false, message: "Yespo account not connected" }),
+        JSON.stringify({
+          success: false,
+          message: "Yespo account not connected",
+        }),
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }

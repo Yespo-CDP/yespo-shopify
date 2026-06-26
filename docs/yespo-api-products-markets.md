@@ -43,11 +43,11 @@
 
 ## Methods Overview
 
-| Method   | Endpoint        | Purpose                                         |
-|----------|-----------------|-------------------------------------------------|
-| `POST`   | `/v1/products`  | Create or update products (catalog ingestion)   |
-| `DELETE` | `/v1/products`  | Delete products                                 |
-| `POST`   | `/v1/markets`   | Set market-specific prices, stock, and URLs     |
+| Method   | Endpoint       | Purpose                                       |
+| -------- | -------------- | --------------------------------------------- |
+| `POST`   | `/v1/products` | Create or update products (catalog ingestion) |
+| `DELETE` | `/v1/products` | Delete products                               |
+| `POST`   | `/v1/markets`  | Set market-specific prices, stock, and URLs   |
 
 ---
 
@@ -61,13 +61,13 @@ Content-Type: application/json
 
 ### Limits
 
-| Limit                              | Value   |
-|------------------------------------|---------|
-| Max items per request              | 1,000   |
-| Max body size                      | 10 MB   |
-| Max requests per minute per siteId | 60      |
-| Validation latency target          | < 5 s   |
-| Reflection in recommendations      | < 30 s  |
+| Limit                              | Value  |
+| ---------------------------------- | ------ |
+| Max items per request              | 1,000  |
+| Max body size                      | 10 MB  |
+| Max requests per minute per siteId | 60     |
+| Validation latency target          | < 5 s  |
+| Reflection in recommendations      | < 30 s |
 
 ---
 
@@ -76,6 +76,7 @@ Content-Type: application/json
 This endpoint is the main catalog ingestion API. It handles both initial imports and incremental streaming updates.
 
 **Key behaviors:**
+
 - `action` must be explicitly set to `"create"` or `"update"` per item.
 - `create` requires all mandatory fields; if it targets an existing product, update semantics apply (but all create-required fields must still be present).
 - `update` only requires changed fields plus always-required fields (`productId`, `action`, `updatedDate`).
@@ -93,12 +94,12 @@ This endpoint is the main catalog ingestion API. It handles both initial imports
 }
 ```
 
-| Parameter        | Type    | Required | Description |
-|------------------|---------|----------|-------------|
-| `siteId`         | String  | Yes      | Client site/account identifier. Max 128 chars. Allowed characters: letters, digits, `.`, `_`, `-`. |
-| `languageCode`   | String  | Yes      | Default language for top-level product fields in this request. Must be a BCP 47 language tag (e.g. `"uk"`, `"en"`, `"de"`, `"en-GB"`). Top-level `name`, `description`, `url`, and `categories` are in this language. The server records the `languageCode` from the **first accepted** request for each `siteId` as the site default. Subsequent requests must use the same `languageCode` unless `languageChanged` is `true`. |
-| `languageChanged`| Boolean | No       | Must be `true` when intentionally changing the default language for this `siteId`. If `languageCode` differs from the stored site default and `languageChanged` is not `true`, the entire request is rejected with `409 LANGUAGE_CODE_MISMATCH`. Default: `false`. If `languageChanged: true` and the submitted `languageCode` matches the stored default, the flag is treated as a no-op. |
-| `products`       | Array   | Yes      | Array of [Product](#product-object). |
+| Parameter         | Type    | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ----------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `siteId`          | String  | Yes      | Client site/account identifier. Max 128 chars. Allowed characters: letters, digits, `.`, `_`, `-`.                                                                                                                                                                                                                                                                                                                              |
+| `languageCode`    | String  | Yes      | Default language for top-level product fields in this request. Must be a BCP 47 language tag (e.g. `"uk"`, `"en"`, `"de"`, `"en-GB"`). Top-level `name`, `description`, `url`, and `categories` are in this language. The server records the `languageCode` from the **first accepted** request for each `siteId` as the site default. Subsequent requests must use the same `languageCode` unless `languageChanged` is `true`. |
+| `languageChanged` | Boolean | No       | Must be `true` when intentionally changing the default language for this `siteId`. If `languageCode` differs from the stored site default and `languageChanged` is not `true`, the entire request is rejected with `409 LANGUAGE_CODE_MISMATCH`. Default: `false`. If `languageChanged: true` and the submitted `languageCode` matches the stored default, the flag is treated as a no-op.                                      |
+| `products`        | Array   | Yes      | Array of [Product](#product-object).                                                                                                                                                                                                                                                                                                                                                                                            |
 
 ### Product Object
 
@@ -124,26 +125,26 @@ This endpoint is the main catalog ingestion API. It handles both initial imports
 }
 ```
 
-| Parameter      | Type    | Required on create | Description |
-|----------------|---------|--------------------|-------------|
-| `action`       | String  | Yes                | `"create"` or `"update"`. |
-| `productId`    | String  | Yes                | Unique product identifier within `siteId`. Must match the identifier used in tracking events, recommendation requests, and market data. Max 128 chars. |
-| `updatedDate`  | String  | Yes                | Source ordering timestamp. RFC3339 / ISO 8601 UTC (e.g. `2026-04-01T09:07:15Z`). Used to ignore stale out-of-order events during async processing. Prefer source object update time; fall back to webhook event timestamp or detection time. |
-| `name`         | String  | Yes                | Display name in the default language. Max 500 chars. |
-| `imageUrl`     | String  | Yes                | Main product image URL. Must be a valid absolute URL. Minimum image size: 200×200 px. |
-| `isInStock`    | Integer | Yes                | `1` = in stock, `0` = out of stock. Base commercial state used when no market override is present. |
-| `url`          | String  | Yes                | Product URL for the default language. Must be a valid absolute URL. |
-| `currency`     | String  | Yes                | ISO 4217 currency code for the base commercial state (e.g. `"UAH"`, `"USD"`, `"EUR"`). |
-| `price`        | Float   | Yes                | Selling price in the base commercial state. No currency symbol. |
-| `categories`   | Array   | Yes                | Array of [Category](#category-object). Minimum 1 element. Names and paths in the default language. On update: provided value replaces all categories; omitted value preserves existing. |
-| `itemGroupId`  | String  | No                 | Shared family/group identifier for grouping product variants. Multiple variant `productId` values may share the same `itemGroupId`. Max 128 chars. |
-| `oldPrice`     | Float   | No                 | Original price in the base commercial state. If both `oldPrice` and `price` are present and numeric, `oldPrice` must be greater than `price`. |
-| `discount`     | Float   | No                 | **Backward-compatibility field only.** The server derives discount from `oldPrice` and `price`. If sent, it is **ignored**. |
-| `brand`        | String  | No                 | Brand or manufacturer. Max 256 chars. |
-| `description`  | String  | No                 | Plain text in the default language. UTF-8. Max 10,000 chars. HTML is **not** supported. |
-| `translations` | Array   | No                 | Array of [Translation](#translation-object) objects. Each element is a dictionary of `languageCode → translation object`. |
+| Parameter      | Type    | Required on create | Description                                                                                                                                                                                                                                          |
+| -------------- | ------- | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `action`       | String  | Yes                | `"create"` or `"update"`.                                                                                                                                                                                                                            |
+| `productId`    | String  | Yes                | Unique product identifier within `siteId`. Must match the identifier used in tracking events, recommendation requests, and market data. Max 128 chars.                                                                                               |
+| `updatedDate`  | String  | Yes                | Source ordering timestamp. RFC3339 / ISO 8601 UTC (e.g. `2026-04-01T09:07:15Z`). Used to ignore stale out-of-order events during async processing. Prefer source object update time; fall back to webhook event timestamp or detection time.         |
+| `name`         | String  | Yes                | Display name in the default language. Max 500 chars.                                                                                                                                                                                                 |
+| `imageUrl`     | String  | Yes                | Main product image URL. Must be a valid absolute URL. Minimum image size: 200×200 px.                                                                                                                                                                |
+| `isInStock`    | Integer | Yes                | `1` = in stock, `0` = out of stock. Base commercial state used when no market override is present.                                                                                                                                                   |
+| `url`          | String  | Yes                | Product URL for the default language. Must be a valid absolute URL.                                                                                                                                                                                  |
+| `currency`     | String  | Yes                | ISO 4217 currency code for the base commercial state (e.g. `"UAH"`, `"USD"`, `"EUR"`).                                                                                                                                                               |
+| `price`        | Float   | Yes                | Selling price in the base commercial state. No currency symbol.                                                                                                                                                                                      |
+| `categories`   | Array   | Yes                | Array of [Category](#category-object). Minimum 1 element. Names and paths in the default language. On update: provided value replaces all categories; omitted value preserves existing.                                                              |
+| `itemGroupId`  | String  | No                 | Shared family/group identifier for grouping product variants. Multiple variant `productId` values may share the same `itemGroupId`. Max 128 chars.                                                                                                   |
+| `oldPrice`     | Float   | No                 | Original price in the base commercial state. If both `oldPrice` and `price` are present and numeric, `oldPrice` must be greater than `price`.                                                                                                        |
+| `discount`     | Float   | No                 | **Backward-compatibility field only.** The server derives discount from `oldPrice` and `price`. If sent, it is **ignored**.                                                                                                                          |
+| `brand`        | String  | No                 | Brand or manufacturer. Max 256 chars.                                                                                                                                                                                                                |
+| `description`  | String  | No                 | Plain text in the default language. UTF-8. Max 10,000 chars. HTML is **not** supported.                                                                                                                                                              |
+| `translations` | Array   | No                 | Array of [Translation](#translation-object) objects. Each element is a dictionary of `languageCode → translation object`.                                                                                                                            |
 | `tags`         | Object  | No                 | Product tags as a key→value map. Keys are tag names (e.g. `"Color"`, `"Size"`), values are arrays of strings. On update: provided key overwrites that tag's value; omitted key preserves existing value. To remove a specific tag use `remove.tags`. |
-| `remove`       | Object  | No                 | [ProductRemovePatch](#productremovepatch-object). Explicit remove instructions for update operations. |
+| `remove`       | Object  | No                 | [ProductRemovePatch](#productremovepatch-object). Explicit remove instructions for update operations.                                                                                                                                                |
 
 ### Category Object
 
@@ -156,11 +157,11 @@ This endpoint is the main catalog ingestion API. It handles both initial imports
 }
 ```
 
-| Parameter | Type   | Required    | Description |
-|-----------|--------|-------------|-------------|
-| `id`      | String | Conditional | Required if `name` is not provided. |
-| `name`    | String | Conditional | Required if `id` is not provided. In the default language. |
-| `path`    | Array  | No          | Hierarchy from root to leaf. Max 10 levels. In the default language. |
+| Parameter | Type   | Required    | Description                                                                                                                                                                                                                         |
+| --------- | ------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`      | String | Conditional | Required if `name` is not provided.                                                                                                                                                                                                 |
+| `name`    | String | Conditional | Required if `id` is not provided. In the default language.                                                                                                                                                                          |
+| `path`    | Array  | No          | Hierarchy from root to leaf. Max 10 levels. In the default language.                                                                                                                                                                |
 | `type`    | String | No          | `"category"` — taxonomy/product type, hierarchical, used for category-based recommendations and content filtering. `"collection"` — merchandising group, flat, used for cross-sell and filtering. Default: `"category"` if omitted. |
 
 ### Translation Object
@@ -178,11 +179,11 @@ Each element of the `translations` array is a dictionary mapping a BCP 47 langua
 }
 ```
 
-| Parameter     | Type   | Required | Description |
-|---------------|--------|----------|-------------|
-| `name`        | String | No       | Localized name. |
-| `description` | String | No       | Localized plain-text description. UTF-8. Max 10,000 chars. HTML not supported. |
-| `url`         | String | No       | Localized URL. Must be a valid absolute URL. |
+| Parameter     | Type   | Required | Description                                                                                         |
+| ------------- | ------ | -------- | --------------------------------------------------------------------------------------------------- |
+| `name`        | String | No       | Localized name.                                                                                     |
+| `description` | String | No       | Localized plain-text description. UTF-8. Max 10,000 chars. HTML not supported.                      |
+| `url`         | String | No       | Localized URL. Must be a valid absolute URL.                                                        |
 | `categories`  | Array  | No       | Array of [Category](#category-object) with localized names and paths. Category `id` stays the same. |
 
 > **Important:** Locale objects inside `translations` use **replacement semantics**, not field-level patch. Submitting `{ "en": { "name": "..." } }` replaces the entire English translation with only the submitted fields. Fields previously stored (e.g. English description) are removed if omitted.
@@ -199,11 +200,11 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
 }
 ```
 
-| Parameter      | Type           | Required | Description |
-|----------------|----------------|----------|-------------|
-| `fields`       | Array\<String\> | No      | Product fields to remove. Allowed values: `"oldPrice"`, `"description"`, `"brand"`, `"itemGroupId"`, `"translations"` (removes all translations). |
-| `tags`         | Array\<String\> | No      | Tag names to remove (keys from the `tags` object). Example: `["Season", "Material"]`. |
-| `translations` | Array\<String\> | No      | Language codes of individual translation locales to remove. Example: `["en", "de"]`. |
+| Parameter      | Type            | Required | Description                                                                                                                                       |
+| -------------- | --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fields`       | Array\<String\> | No       | Product fields to remove. Allowed values: `"oldPrice"`, `"description"`, `"brand"`, `"itemGroupId"`, `"translations"` (removes all translations). |
+| `tags`         | Array\<String\> | No       | Tag names to remove (keys from the `tags` object). Example: `["Season", "Material"]`.                                                             |
+| `translations` | Array\<String\> | No       | Language codes of individual translation locales to remove. Example: `["en", "de"]`.                                                              |
 
 ### Product Identity and Tracking Correspondence
 
@@ -222,50 +223,51 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
 
 #### Scalar Fields
 
-| Submitted value              | Behavior |
-|------------------------------|----------|
-| Omitted                      | Preserved unchanged |
-| New value                    | Overwritten |
-| `remove.fields: ["field"]`   | Removes the specified clearable field |
+| Submitted value            | Behavior                              |
+| -------------------------- | ------------------------------------- |
+| Omitted                    | Preserved unchanged                   |
+| New value                  | Overwritten                           |
+| `remove.fields: ["field"]` | Removes the specified clearable field |
 
 > `null` is **not** used for clearing scalar fields — use `remove.fields` instead.
 
 #### Array Fields
 
-| Field / Value                    | Behavior |
-|----------------------------------|----------|
-| `categories` omitted             | Preserved unchanged |
-| `categories` new array           | Full replacement |
-| `categories: null`               | **Invalid** — cannot be set to null |
-| `tags.{key}` omitted             | Preserved unchanged for that tag |
-| `tags.{key}` new array           | Full replacement of that tag only |
-| `remove.tags: ["{key}"]`         | Removes that specific tag |
+| Field / Value            | Behavior                            |
+| ------------------------ | ----------------------------------- |
+| `categories` omitted     | Preserved unchanged                 |
+| `categories` new array   | Full replacement                    |
+| `categories: null`       | **Invalid** — cannot be set to null |
+| `tags.{key}` omitted     | Preserved unchanged for that tag    |
+| `tags.{key}` new array   | Full replacement of that tag only   |
+| `remove.tags: ["{key}"]` | Removes that specific tag           |
 
 #### Translations
 
-| Submitted value                              | Behavior |
-|----------------------------------------------|----------|
-| `translations` omitted                       | All translations preserved |
-| `remove.fields: ["translations"]`            | All translations removed |
-| `translations: [{ "en": { ... } }]`          | English translation fully replaced; other languages preserved |
-| `remove.translations: ["en"]`                | English translation removed; other languages preserved |
+| Submitted value                     | Behavior                                                      |
+| ----------------------------------- | ------------------------------------------------------------- |
+| `translations` omitted              | All translations preserved                                    |
+| `remove.fields: ["translations"]`   | All translations removed                                      |
+| `translations: [{ "en": { ... } }]` | English translation fully replaced; other languages preserved |
+| `remove.translations: ["en"]`       | English translation removed; other languages preserved        |
 
 > **Important:** Locale objects inside `translations` use **replacement semantics**, not field-level patch. Submitting `{ "en": { "name": "..." } }` replaces the entire English translation with only the submitted fields. Fields previously stored (e.g. English description) are removed if omitted.
 
 ### Clearable Fields
 
-| Field                                         | How to remove |
-|-----------------------------------------------|---------------|
-| `oldPrice`                                    | `remove.fields: ["oldPrice"]` |
-| `description`, `brand`, `itemGroupId`         | `remove.fields: ["description", "brand", "itemGroupId"]` |
-| `tags.{name}`                                 | `remove.tags: ["{name}"]` |
-| All translations                              | `remove.fields: ["translations"]` |
-| One translation locale                        | `remove.translations: ["en"]` |
-| `name`, `url`, `imageUrl`, `price`, `currency`, `isInStock`, `categories`, `updatedDate` | Not removable |
+| Field                                                                                    | How to remove                                            |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `oldPrice`                                                                               | `remove.fields: ["oldPrice"]`                            |
+| `description`, `brand`, `itemGroupId`                                                    | `remove.fields: ["description", "brand", "itemGroupId"]` |
+| `tags.{name}`                                                                            | `remove.tags: ["{name}"]`                                |
+| All translations                                                                         | `remove.fields: ["translations"]`                        |
+| One translation locale                                                                   | `remove.translations: ["en"]`                            |
+| `name`, `url`, `imageUrl`, `price`, `currency`, `isInStock`, `categories`, `updatedDate` | Not removable                                            |
 
 ### Update Examples
 
 **Update price for one product:**
+
 ```json
 {
   "siteId": "my_store",
@@ -275,14 +277,15 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
       "action": "update",
       "productId": "430738",
       "updatedDate": "2026-04-01T10:07:00Z",
-      "price": 47999.00,
-      "oldPrice": 54999.00
+      "price": 47999.0,
+      "oldPrice": 54999.0
     }
   ]
 }
 ```
 
 **Update only one tag (preserve all others):**
+
 ```json
 {
   "siteId": "my_store",
@@ -299,6 +302,7 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
 ```
 
 **Remove one tag:**
+
 ```json
 {
   "siteId": "my_store",
@@ -315,6 +319,7 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
 ```
 
 **Remove old price (discount is derived by server, do not send):**
+
 ```json
 {
   "siteId": "my_store",
@@ -324,7 +329,7 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
       "action": "update",
       "productId": "430738",
       "updatedDate": "2026-04-01T10:07:45Z",
-      "price": 599.00,
+      "price": 599.0,
       "remove": { "fields": ["oldPrice"] }
     }
   ]
@@ -332,6 +337,7 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
 ```
 
 **Update stock only:**
+
 ```json
 {
   "siteId": "my_store",
@@ -348,6 +354,7 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
 ```
 
 **Add German translation, preserve other locales:**
+
 ```json
 {
   "siteId": "my_store",
@@ -357,18 +364,21 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
       "action": "update",
       "productId": "430738",
       "updatedDate": "2026-04-01T10:08:45Z",
-      "translations": [{
-        "de": {
-          "name": "Herren T-Shirt",
-          "url": "https://mystore.ua/de/tshirt"
+      "translations": [
+        {
+          "de": {
+            "name": "Herren T-Shirt",
+            "url": "https://mystore.ua/de/tshirt"
+          }
         }
-      }]
+      ]
     }
   ]
 }
 ```
 
 **Replace English translation completely (omitted fields are removed from that locale):**
+
 ```json
 {
   "siteId": "my_store",
@@ -378,18 +388,21 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
       "action": "update",
       "productId": "430738",
       "updatedDate": "2026-04-01T10:08:50Z",
-      "translations": [{
-        "en": {
-          "name": "Men's T-Shirt",
-          "url": "https://mystore.ua/en/tshirt"
+      "translations": [
+        {
+          "en": {
+            "name": "Men's T-Shirt",
+            "url": "https://mystore.ua/en/tshirt"
+          }
         }
-      }]
+      ]
     }
   ]
 }
 ```
 
 **Remove one translation locale:**
+
 ```json
 {
   "action": "update",
@@ -402,6 +415,7 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
 ```
 
 **Remove all translations:**
+
 ```json
 {
   "action": "update",
@@ -425,6 +439,7 @@ If the default language intentionally changes (e.g. from `uk` to `en`):
 > Until the re-sync completes, the catalog may contain products with mixed stored default languages. Recommendation rendering serves stored content as-is.
 
 **Language change request example:**
+
 ```json
 {
   "siteId": "my_store",
@@ -439,10 +454,14 @@ If the default language intentionally changes (e.g. from `uk` to `en`):
       "url": "https://mystore.ua/en/products/tshirt-black-m",
       "imageUrl": "https://cdn.mystore.ua/images/tshirt-black-m.jpg",
       "isInStock": 1,
-      "price": 599.00,
+      "price": 599.0,
       "currency": "UAH",
       "categories": [
-        { "id": "8", "name": "T-Shirts", "path": ["Clothing", "Tops", "T-Shirts"] }
+        {
+          "id": "8",
+          "name": "T-Shirts",
+          "path": ["Clothing", "Tops", "T-Shirts"]
+        }
       ],
       "translations": [
         {
@@ -458,6 +477,7 @@ If the default language intentionally changes (e.g. from `uk` to `en`):
 ```
 
 **Language mismatch error response:**
+
 ```json
 {
   "errorCode": "LANGUAGE_CODE_MISMATCH",
@@ -472,6 +492,7 @@ If the default language intentionally changes (e.g. from `uk` to `en`):
 ## DELETE /v1/products — Delete Products
 
 **Key behaviors:**
+
 - Each submitted product item is processed independently.
 - Up to 1,000 items per request.
 - Idempotent no-op if the product is already absent — `updatedDate` is still required to protect against stale deletes.
@@ -487,9 +508,9 @@ If the default language intentionally changes (e.g. from `uk` to `en`):
 }
 ```
 
-| Parameter  | Type   | Required | Description |
-|------------|--------|----------|-------------|
-| `siteId`   | String | Yes      | Client site/account identifier. Max 128 chars. |
+| Parameter  | Type   | Required | Description                                               |
+| ---------- | ------ | -------- | --------------------------------------------------------- |
+| `siteId`   | String | Yes      | Client site/account identifier. Max 128 chars.            |
 | `products` | Array  | Yes      | Array of [Delete Product Object](#delete-product-object). |
 
 ### Delete Product Object
@@ -501,14 +522,15 @@ If the default language intentionally changes (e.g. from `uk` to `en`):
 }
 ```
 
-| Parameter     | Type   | Required | Description |
-|---------------|--------|----------|-------------|
-| `productId`   | String | Yes      | Unique product identifier within `siteId`. |
+| Parameter     | Type   | Required | Description                                                                                         |
+| ------------- | ------ | -------- | --------------------------------------------------------------------------------------------------- |
+| `productId`   | String | Yes      | Unique product identifier within `siteId`.                                                          |
 | `updatedDate` | String | Yes      | Source ordering timestamp. RFC3339 / ISO 8601 UTC. Used to ignore stale out-of-order delete events. |
 
 ### Delete Examples
 
 **Delete one product:**
+
 ```json
 {
   "siteId": "my_store",
@@ -528,6 +550,7 @@ If the default language intentionally changes (e.g. from `uk` to `en`):
 Used for stores operating in multiple markets or regions with different prices and availability.
 
 **Key behaviors:**
+
 - Update model: product-level patch stream.
 - `productId` and `updatedDate` are required per item.
 - All market fields are patch-based (omit = preserve, `null` behavior varies per field — see table).
@@ -547,10 +570,10 @@ Used for stores operating in multiple markets or regions with different prices a
 }
 ```
 
-| Parameter  | Type   | Required | Description |
-|------------|--------|----------|-------------|
-| `siteId`   | String | Yes      | Client site/account identifier. Max 128 chars. |
-| `markets`  | Array  | Yes      | Array of [Market](#market-object). |
+| Parameter | Type   | Required | Description                                    |
+| --------- | ------ | -------- | ---------------------------------------------- |
+| `siteId`  | String | Yes      | Client site/account identifier. Max 128 chars. |
+| `markets` | Array  | Yes      | Array of [Market](#market-object).             |
 
 ### Market Object
 
@@ -561,10 +584,10 @@ Used for stores operating in multiple markets or regions with different prices a
 }
 ```
 
-| Parameter  | Type   | Required | Description |
-|------------|--------|----------|-------------|
+| Parameter  | Type   | Required | Description                                                                                                                                                                                                                     |
+| ---------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `marketId` | String | Yes      | Market identifier — can be country code, city code, Shopify Market handle, or any client-defined key. Must match `marketId` used in recommendation requests. Max 128 chars. Allowed characters: letters, digits, `.`, `_`, `-`. |
-| `products` | Array  | Yes      | Array of [Market Product Object](#market-product-object) with market-specific properties. |
+| `products` | Array  | Yes      | Array of [Market Product Object](#market-product-object) with market-specific properties.                                                                                                                                       |
 
 ### Market Product Object
 
@@ -583,28 +606,28 @@ Used for stores operating in multiple markets or regions with different prices a
 }
 ```
 
-| Parameter     | Type    | Required | Description |
-|---------------|---------|----------|-------------|
-| `productId`   | String  | Yes      | Must use the same identity strategy as Add products and tracking. No base-product existence check is performed during request validation. |
-| `updatedDate` | String  | Yes      | Source ordering timestamp for this market item. RFC3339 / ISO 8601 UTC. |
-| `price`       | Float   | No       | Market-specific selling price. Omit to preserve. Sending `null` is **invalid**. |
-| `currency`    | String  | No       | ISO 4217 currency code. Omit to preserve. Sending `null` is **invalid**. |
-| `isInStock`   | Integer | No       | `1` or `0`. Market-specific availability. Omit to preserve. Sending `null` is **invalid**. Use `0` to remove from recommendations in this market. |
+| Parameter     | Type    | Required | Description                                                                                                                                                                                                                                                                    |
+| ------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `productId`   | String  | Yes      | Must use the same identity strategy as Add products and tracking. No base-product existence check is performed during request validation.                                                                                                                                      |
+| `updatedDate` | String  | Yes      | Source ordering timestamp for this market item. RFC3339 / ISO 8601 UTC.                                                                                                                                                                                                        |
+| `price`       | Float   | No       | Market-specific selling price. Omit to preserve. Sending `null` is **invalid**.                                                                                                                                                                                                |
+| `currency`    | String  | No       | ISO 4217 currency code. Omit to preserve. Sending `null` is **invalid**.                                                                                                                                                                                                       |
+| `isInStock`   | Integer | No       | `1` or `0`. Market-specific availability. Omit to preserve. Sending `null` is **invalid**. Use `0` to remove from recommendations in this market.                                                                                                                              |
 | `oldPrice`    | Float   | No       | Market-specific original price. Omit to preserve. Send `null` to explicitly mark no `oldPrice` in this market (base `oldPrice` must not be used for this market when explicitly cleared). If both `oldPrice` and `price` are numeric, `oldPrice` must be greater than `price`. |
-| `urls`        | Object  | No       | Dictionary of `languageCode → market-specific URL`. Omit to preserve existing URLs. Send `null` to clear all. Submit locale key to upsert only that locale. Submit `{ "en": null }` to clear only locale `en`. All submitted URL values must be valid absolute URLs. |
+| `urls`        | Object  | No       | Dictionary of `languageCode → market-specific URL`. Omit to preserve existing URLs. Send `null` to clear all. Submit locale key to upsert only that locale. Submit `{ "en": null }` to clear only locale `en`. All submitted URL values must be valid absolute URLs.           |
 
 > Each submitted market item must include at least one market field to change (`price`, `currency`, `isInStock`, `oldPrice`, or `urls`) in addition to the always-required `productId` and `updatedDate`. Otherwise the item is rejected with `EMPTY_MARKET_PATCH`.
 
 ### Add Markets Update Semantics
 
-| Field          | Omit          | `null`                        | New value       |
-|----------------|---------------|-------------------------------|-----------------|
-| `price`        | Preserve      | **Invalid**                   | Overwrite       |
-| `currency`     | Preserve      | **Invalid**                   | Overwrite       |
-| `isInStock`    | Preserve      | **Invalid**                   | Overwrite       |
-| `oldPrice`     | Preserve      | Clear (no oldPrice for market)| Overwrite       |
-| `urls`         | Preserve all  | Clear all                     | —               |
-| `urls.{lang}`  | Preserve      | Clear that locale             | Upsert          |
+| Field         | Omit         | `null`                         | New value |
+| ------------- | ------------ | ------------------------------ | --------- |
+| `price`       | Preserve     | **Invalid**                    | Overwrite |
+| `currency`    | Preserve     | **Invalid**                    | Overwrite |
+| `isInStock`   | Preserve     | **Invalid**                    | Overwrite |
+| `oldPrice`    | Preserve     | Clear (no oldPrice for market) | Overwrite |
+| `urls`        | Preserve all | Clear all                      | —         |
+| `urls.{lang}` | Preserve     | Clear that locale              | Upsert    |
 
 When market-specific URLs are cleared or absent, recommendation rendering falls back to translation URL or base product URL.
 
@@ -615,6 +638,7 @@ Keys in `urls` must use BCP 47 language tags and should correspond to a language
 ### Market Examples
 
 **Update stock only for one product (preserve market price and currency):**
+
 ```json
 {
   "siteId": "my_store",
@@ -634,6 +658,7 @@ Keys in `urls` must use BCP 47 language tags and should correspond to a language
 ```
 
 **Update price only for one product (preserve stock):**
+
 ```json
 {
   "siteId": "my_store",
@@ -644,7 +669,7 @@ Keys in `urls` must use BCP 47 language tags and should correspond to a language
         {
           "productId": "SKU123",
           "updatedDate": "2026-04-01T10:20:00Z",
-          "price": 120.00,
+          "price": 120.0,
           "currency": "UAH"
         }
       ]
@@ -654,6 +679,7 @@ Keys in `urls` must use BCP 47 language tags and should correspond to a language
 ```
 
 **Remove market old price and market discount:**
+
 ```json
 {
   "siteId": "my_store",
@@ -673,6 +699,7 @@ Keys in `urls` must use BCP 47 language tags and should correspond to a language
 ```
 
 **Update multiple products in one market:**
+
 ```json
 {
   "siteId": "my_store",
@@ -690,7 +717,7 @@ Keys in `urls` must use BCP 47 language tags and should correspond to a language
         {
           "productId": "SKU456",
           "updatedDate": "2026-04-01T10:31:00Z",
-          "price": 49.00,
+          "price": 49.0,
           "currency": "CAD",
           "isInStock": 0
         }
@@ -701,6 +728,7 @@ Keys in `urls` must use BCP 47 language tags and should correspond to a language
 ```
 
 **Clear market-specific URLs and fall back to base product URLs:**
+
 ```json
 {
   "siteId": "my_store",
@@ -725,14 +753,14 @@ Keys in `urls` must use BCP 47 language tags and should correspond to a language
 
 ## CSV Feed Mapping
 
-| CSV Field      | API Field    |
-|----------------|--------------|
-| `id`           | `productId`  |
-| `marketId`     | `marketId`   |
-| `availability` | `isInStock`  |
-| `price`        | `oldPrice`   |
-| `salePrice`    | `price`      |
-| `currency`     | `currency`   |
+| CSV Field      | API Field   |
+| -------------- | ----------- |
+| `id`           | `productId` |
+| `marketId`     | `marketId`  |
+| `availability` | `isInStock` |
+| `price`        | `oldPrice`  |
+| `salePrice`    | `price`     |
+| `currency`     | `currency`  |
 
 ---
 
@@ -741,6 +769,7 @@ Keys in `urls` must use BCP 47 language tags and should correspond to a language
 Every request returns a request-level envelope plus item-level results.
 
 **Important:**
+
 - Item results describe **synchronous validation and queue-publishing outcomes only**.
 - `accepted` means the item passed synchronous validation and was durably published to the internal queue with broker acknowledgment. It does **not** guarantee downstream persistence.
 - State-dependent processing outcomes (stale-event ignore, idempotent duplicate ignore, same-timestamp conflicts) happen asynchronously and are not returned in the immediate HTTP response.
@@ -761,23 +790,24 @@ Every request returns a request-level envelope plus item-level results.
 }
 ```
 
-| Field       | Type    | Required | Description |
-|-------------|---------|----------|-------------|
-| `requestId` | String  | Yes      | Server-generated request identifier. Also returned in `X-Request-Id` header. |
-| `summary`   | Object  | Yes      | Batch-level counts. |
-| `items`     | Array   | Yes      | Array of [Item](#item-object). Item-level processing results, in no guaranteed order. |
+| Field       | Type   | Required | Description                                                                           |
+| ----------- | ------ | -------- | ------------------------------------------------------------------------------------- |
+| `requestId` | String | Yes      | Server-generated request identifier. Also returned in `X-Request-Id` header.          |
+| `summary`   | Object | Yes      | Batch-level counts.                                                                   |
+| `items`     | Array  | Yes      | Array of [Item](#item-object). Item-level processing results, in no guaranteed order. |
 
 **Summary object fields:**
 
-| Field      | Type    | Required | Description |
-|------------|---------|----------|-------------|
-| `received` | Integer | Yes      | Number of items received in the batch. |
+| Field      | Type    | Required | Description                                                               |
+| ---------- | ------- | -------- | ------------------------------------------------------------------------- |
+| `received` | Integer | Yes      | Number of items received in the batch.                                    |
 | `accepted` | Integer | Yes      | Number of items accepted and durably enqueued with broker acknowledgment. |
-| `rejected` | Integer | Yes      | Number of items rejected during synchronous validation. |
+| `rejected` | Integer | Yes      | Number of items rejected during synchronous validation.                   |
 
 ### Item Object
 
 **For POST/DELETE /v1/products:**
+
 ```json
 {
   "productId": "SKU125",
@@ -789,6 +819,7 @@ Every request returns a request-level envelope plus item-level results.
 ```
 
 **For POST /v1/markets:**
+
 ```json
 {
   "marketId": "ca",
@@ -799,54 +830,54 @@ Every request returns a request-level envelope plus item-level results.
 }
 ```
 
-| Field         | Type   | Required    | Description |
-|---------------|--------|-------------|-------------|
-| `status`      | String | Yes         | `"accepted"` or `"rejected"`. |
-| `code`        | String | Conditional | Present for rejected items. |
-| `message`     | String | Conditional | Human-readable explanation for the item result. |
+| Field         | Type   | Required    | Description                                                                                                                  |
+| ------------- | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `status`      | String | Yes         | `"accepted"` or `"rejected"`.                                                                                                |
+| `code`        | String | Conditional | Present for rejected items.                                                                                                  |
+| `message`     | String | Conditional | Human-readable explanation for the item result.                                                                              |
 | `productId`   | String | Conditional | Present for products items and markets items when available. If item fails before `productId` can be parsed, may be omitted. |
-| `marketId`    | String | Conditional | Present for markets items. |
-| `action`      | String | Conditional | Present for products items when available. |
-| `updatedDate` | String | Conditional | Echoed when useful for troubleshooting. |
+| `marketId`    | String | Conditional | Present for markets items.                                                                                                   |
+| `action`      | String | Conditional | Present for products items when available.                                                                                   |
+| `updatedDate` | String | Conditional | Echoed when useful for troubleshooting.                                                                                      |
 
 ---
 
 ## Response Codes
 
-| HTTP Status | Meaning       | When |
-|-------------|---------------|------|
-| `200`       | All accepted  | Every item passed validation and was durably enqueued. |
-| `207`       | Partial       | Some items were rejected or failed queue publishing with known per-item outcome. |
-| `400`       | Payload error | Malformed JSON, wrong `eventName`, missing required top-level fields. |
+| HTTP Status | Meaning       | When                                                                                                            |
+| ----------- | ------------- | --------------------------------------------------------------------------------------------------------------- |
+| `200`       | All accepted  | Every item passed validation and was durably enqueued.                                                          |
+| `207`       | Partial       | Some items were rejected or failed queue publishing with known per-item outcome.                                |
+| `400`       | Payload error | Malformed JSON, wrong `eventName`, missing required top-level fields.                                           |
 | `409`       | Conflict      | Add products request `languageCode` does not match the stored site default and `languageChanged` is not `true`. |
-| `413`       | Too large     | Body larger than 10 MB or more than 1,000 items. |
-| `429`       | Rate limited  | Rate limit exceeded. |
-| `500+`      | Server error  | Retry with backoff. |
+| `413`       | Too large     | Body larger than 10 MB or more than 1,000 items.                                                                |
+| `429`       | Rate limited  | Rate limit exceeded.                                                                                            |
+| `500+`      | Server error  | Retry with backoff.                                                                                             |
 
 ---
 
 ## Error Codes
 
-| Code                       | HTTP  | Description |
-|----------------------------|-------|-------------|
-| `INVALID_PAYLOAD`          | 400   | Malformed JSON, wrong `eventName`, missing `languageCode` for Add products. |
-| `LANGUAGE_CODE_MISMATCH`   | 409   | Request `languageCode` does not match the stored site default. Set `languageChanged: true` to confirm the change. |
-| `MISSING_productId`        | 207   | `productId` is missing. |
-| `MISSING_ACTION`           | 207   | Add products `action` missing or invalid. |
-| `MISSING_REQUIRED_FIELD`   | 207   | Required field missing. |
-| `INVALID_TYPE`             | 207   | Wrong type. |
-| `INVALID_URL`              | 207   | Invalid absolute URL. |
-| `INVALID_CURRENCY`         | 207   | Invalid ISO 4217 code. |
-| `INVALID_CATEGORIES`       | 207   | Empty categories or missing category `id` and `name`. |
-| `INVALID_PRICE`            | 207   | `oldPrice <= price` when both numeric fields are present in the same submitted item. |
-| `INVALID_updatedDate`      | 207   | `updatedDate` is present but not a valid RFC3339 / ISO 8601 UTC timestamp. |
-| `INVALID_NULL_FIELD`       | 207   | Field cannot be set to `null` in this context (e.g. `price`, `currency`, `isInStock` in markets). |
-| `EMPTY_MARKET_PATCH`       | 207   | Add markets item contains no market fields to change. |
-| `DUPLICATE_KEY_IN_BATCH`   | 207   | Duplicate logical key appears more than once in the same request. |
-| `QUEUE_PUBLISH_FAILED`     | 207   | Item passed validation but failed durable queue publishing with known per-item outcome. |
-| `BATCH_SIZE_EXCEEDED`      | 413   | More than 1,000 items. |
-| `PAYLOAD_TOO_LARGE`        | 413   | Request body larger than 10 MB. |
-| `RATE_LIMITED`             | 429   | Rate limit exceeded. |
+| Code                     | HTTP | Description                                                                                                       |
+| ------------------------ | ---- | ----------------------------------------------------------------------------------------------------------------- |
+| `INVALID_PAYLOAD`        | 400  | Malformed JSON, wrong `eventName`, missing `languageCode` for Add products.                                       |
+| `LANGUAGE_CODE_MISMATCH` | 409  | Request `languageCode` does not match the stored site default. Set `languageChanged: true` to confirm the change. |
+| `MISSING_productId`      | 207  | `productId` is missing.                                                                                           |
+| `MISSING_ACTION`         | 207  | Add products `action` missing or invalid.                                                                         |
+| `MISSING_REQUIRED_FIELD` | 207  | Required field missing.                                                                                           |
+| `INVALID_TYPE`           | 207  | Wrong type.                                                                                                       |
+| `INVALID_URL`            | 207  | Invalid absolute URL.                                                                                             |
+| `INVALID_CURRENCY`       | 207  | Invalid ISO 4217 code.                                                                                            |
+| `INVALID_CATEGORIES`     | 207  | Empty categories or missing category `id` and `name`.                                                             |
+| `INVALID_PRICE`          | 207  | `oldPrice <= price` when both numeric fields are present in the same submitted item.                              |
+| `INVALID_updatedDate`    | 207  | `updatedDate` is present but not a valid RFC3339 / ISO 8601 UTC timestamp.                                        |
+| `INVALID_NULL_FIELD`     | 207  | Field cannot be set to `null` in this context (e.g. `price`, `currency`, `isInStock` in markets).                 |
+| `EMPTY_MARKET_PATCH`     | 207  | Add markets item contains no market fields to change.                                                             |
+| `DUPLICATE_KEY_IN_BATCH` | 207  | Duplicate logical key appears more than once in the same request.                                                 |
+| `QUEUE_PUBLISH_FAILED`   | 207  | Item passed validation but failed durable queue publishing with known per-item outcome.                           |
+| `BATCH_SIZE_EXCEEDED`    | 413  | More than 1,000 items.                                                                                            |
+| `PAYLOAD_TOO_LARGE`      | 413  | Request body larger than 10 MB.                                                                                   |
+| `RATE_LIMITED`           | 429  | Rate limit exceeded.                                                                                              |
 
 ---
 
@@ -861,23 +892,32 @@ their markets concurrently, always preferring the shops that synced longest ago.
 The unit is a **shop** (one `marketSyncHandler` run syncs all of that shop's
 markets/countries); the limit of 10 counts shops, not countries.
 
+To avoid re-syncing the same shop every hour, the cron also skips any shop whose
+**last successful (`COMPLETE`) sync** finished less than
+`MARKET_SYNC_MIN_INTERVAL_MS` (24 h) ago. Never-synced shops and shops whose last
+sync ended in `ERROR` are **not** throttled. This interval applies only to the
+cron path — manual/dashboard triggers and the post data-sync chain
+(`enqueueMarketSyncTaskForShopUrl`) bypass it and run immediately.
+
 **Entry point:** `app/routes/api.market-sync-cron.tsx` (QStash POST) → `enqueueMarketSyncTasks()` in `app/services/queue.ts`.
 
 **Config** (`app/config/constants.ts`):
 
-| Constant | Value | Purpose |
-|---|---|---|
-| `MARKET_SYNC_MAX_CONCURRENT_SHOPS` | `10` | Max shops in progress at once. |
-| `MARKET_SYNC_STALE_AFTER_MS` | `5 * 60 * 60 * 1000` (5 h) | `IN_PROGRESS` older than this is treated as stuck (e.g. crashed worker): it no longer counts against the budget and the shop becomes selectable again. |
+| Constant                           | Value                      | Purpose                                                                                                                                                |
+| ---------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `MARKET_SYNC_MAX_CONCURRENT_SHOPS` | `10`                        | Max shops in progress at once.                                                                                                                         |
+| `MARKET_SYNC_STALE_AFTER_MS`       | `5 * 60 * 60 * 1000` (5 h)  | `IN_PROGRESS` older than this is treated as stuck (e.g. crashed worker): it no longer counts against the budget and the shop becomes selectable again. |
+| `MARKET_SYNC_MIN_INTERVAL_MS`      | `24 * 60 * 60 * 1000` (24 h) | Cron skips a shop whose last `COMPLETE` sync finished less than this ago. Never-synced and last-`ERROR` shops are not throttled; manual triggers bypass it. |
 
 **Algorithm (per tick):**
 
-1. `staleBefore = now - MARKET_SYNC_STALE_AFTER_MS`.
+1. `staleBefore = now - MARKET_SYNC_STALE_AFTER_MS`; `minIntervalBefore = now - MARKET_SYNC_MIN_INTERVAL_MS`.
 2. Load eligible shops (`active`, `isMarketSyncEnabled`, `apiKey != null`) with their `MarketSyncLog` rows (`status`, `updatedAt`).
 3. A shop is **in progress** if any of its logs has `status = IN_PROGRESS` and `updatedAt >= staleBefore`.
 4. `budget = 10 - (in-progress shops)`. If `budget <= 0`, enqueue nothing.
-5. Candidates = shops not in progress, sorted by last sync ascending: never-synced shops (no logs) first, then by `max(updatedAt)` across their logs. Take the first `budget`.
-6. Enqueue each via `enqueueMarketSyncJobIfEligible` (re-checks `apiKey` + fresh `IN_PROGRESS` + offline token, then adds a `data-sync-market` job).
+5. Drop shops synced too recently: keep a shop only if it has no `COMPLETE` log, or its newest `COMPLETE` log's `updatedAt < minIntervalBefore` (shops whose last sync ended in `ERROR` keep no fresh `COMPLETE`, so they stay eligible).
+6. Candidates = remaining shops not in progress, sorted by last sync ascending: never-synced shops (no logs) first, then by `max(updatedAt)` across their logs. Take the first `budget`.
+7. Enqueue each via `enqueueMarketSyncJobIfEligible` (re-checks `apiKey` + fresh `IN_PROGRESS` + offline token, then adds a `data-sync-market` job).
 
 **Notes:**
 

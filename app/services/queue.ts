@@ -3,6 +3,7 @@ import { Queue } from "bullmq";
 import { redisConfig } from "~/config/redis";
 import {
   MARKET_SYNC_MAX_CONCURRENT_SHOPS,
+  MARKET_SYNC_MIN_INTERVAL_MS,
   MARKET_SYNC_STALE_AFTER_MS,
 } from "~/config/constants";
 import {
@@ -176,15 +177,42 @@ function lastSyncedAt(shop: ShopWithMarketSyncLogs): Date | null {
 }
 
 /**
+ * The shop's most recent successful market sync time = max(updatedAt) across its
+ * COMPLETE logs, or null when it has never completed one. Used to throttle the
+ * cron so a shop is not re-synced more than once per MARKET_SYNC_MIN_INTERVAL_MS.
+ * Logs ending in ERROR are intentionally ignored so failures can retry sooner.
+ */
+function lastCompletedAt(shop: ShopWithMarketSyncLogs): Date | null {
+  let latest: Date | null = null;
+  for (const log of shop.marketSyncLogs) {
+    if (
+      log.status === "COMPLETE" &&
+      log.updatedAt &&
+      (latest === null || log.updatedAt > latest)
+    ) {
+      latest = log.updatedAt;
+    }
+  }
+  return latest;
+}
+
+/**
  * Hourly cron entrypoint: enqueues market sync jobs while keeping at most
  * MARKET_SYNC_MAX_CONCURRENT_SHOPS shops in progress at once.
  *
  * Counts shops already syncing (fresh IN_PROGRESS), then enqueues up to the
  * remaining budget, preferring shops that synced longest ago (never-synced
  * shops first, then oldest updatedAt).
+ *
+ * Shops whose last successful (COMPLETE) sync finished less than
+ * MARKET_SYNC_MIN_INTERVAL_MS ago are skipped so a shop is not re-synced every
+ * hour. Never-synced shops and shops whose last sync ended in ERROR are not
+ * throttled. This interval applies only to this cron path; manual/dashboard and
+ * post data-sync triggers (enqueueMarketSyncTaskForShopUrl) bypass it.
  */
 export async function enqueueMarketSyncTasks(): Promise<number> {
   const staleBefore = new Date(Date.now() - MARKET_SYNC_STALE_AFTER_MS);
+  const minIntervalBefore = new Date(Date.now() - MARKET_SYNC_MIN_INTERVAL_MS);
   const shops = await shopRepository.getShopsForMarketSync();
 
   const inProgressCount = shops.filter((shop) =>
@@ -198,6 +226,10 @@ export async function enqueueMarketSyncTasks(): Promise<number> {
 
   const candidates = shops
     .filter((shop) => !isFreshInProgress(shop, staleBefore))
+    .filter((shop) => {
+      const completedAt = lastCompletedAt(shop);
+      return completedAt === null || completedAt < minIntervalBefore;
+    })
     .map((shop) => ({ shop, lastSyncedAt: lastSyncedAt(shop) }))
     .sort((a, b) => {
       // Never-synced shops (null) come first, then oldest updatedAt first.

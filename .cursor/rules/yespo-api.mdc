@@ -164,8 +164,8 @@ Hourly QStash cron paces `POST /v1/markets` across shops. Keeps at most **10 sho
 
 **Entry:** `app/routes/api.market-sync-cron.tsx` → `enqueueMarketSyncTasks()` in `app/services/queue.ts`.
 
-**Config** (`app/config/constants.ts`): `MARKET_SYNC_MAX_CONCURRENT_SHOPS = 10`, `MARKET_SYNC_STALE_AFTER_MS = 5h` (IN_PROGRESS older than this = stuck → ignored, shop selectable again).
+**Config** (`app/config/constants.ts`): `MARKET_SYNC_MAX_CONCURRENT_SHOPS = 10`, `MARKET_SYNC_STALE_AFTER_MS = 5h` (IN_PROGRESS older than this = stuck → ignored, shop selectable again), `MARKET_SYNC_MIN_INTERVAL_MS = 24h` (cron skips a shop whose last `COMPLETE` sync finished < this ago; never-synced + last-`ERROR` shops not throttled; manual/post-data-sync triggers bypass it).
 
-**Per tick:** count shops with fresh `IN_PROGRESS` → `budget = 10 - count` (skip if ≤ 0) → take `budget` eligible shops (`active`, `isMarketSyncEnabled`, `apiKey != null`) ordered by oldest last sync (never-synced first, else `max(updatedAt)` asc) → enqueue each (`enqueueMarketSyncJobIfEligible`: re-checks apiKey + fresh IN_PROGRESS + offline token).
+**Per tick:** count shops with fresh `IN_PROGRESS` → `budget = 10 - count` (skip if ≤ 0) → drop shops whose newest `COMPLETE` log is within `MARKET_SYNC_MIN_INTERVAL_MS` → take `budget` eligible shops (`active`, `isMarketSyncEnabled`, `apiKey != null`) ordered by oldest last sync (never-synced first, else `max(updatedAt)` asc) → enqueue each (`enqueueMarketSyncJobIfEligible`: re-checks apiKey + fresh IN_PROGRESS + offline token).
 
 Worker `concurrency: 10` (`app/worker/worker.ts`) is the real parallelism cap. Hourly schedule is set in the QStash dashboard, not in code. Full details: `docs/yespo-api-products-markets.md`.

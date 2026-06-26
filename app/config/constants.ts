@@ -99,3 +99,12 @@ export const MARKET_SYNC_MAX_CONCURRENT_SHOPS = 10;
  * the concurrency budget, and let the shop be picked up again.
  */
 export const MARKET_SYNC_STALE_AFTER_MS = 5 * 60 * 60 * 1000;
+
+/**
+ * Minimum time between automatic (cron) market syncs for a shop. The cron skips
+ * a shop whose last successful (COMPLETE) sync finished less than this ago, so a
+ * single shop is not re-synced every hour. Never-synced shops and shops whose
+ * last sync ended in ERROR are not throttled. Manual/dashboard and post
+ * data-sync triggers bypass this interval entirely.
+ */
+export const MARKET_SYNC_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000;
