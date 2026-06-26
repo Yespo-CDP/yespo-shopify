@@ -1,17 +1,73 @@
+import Redis from "ioredis";
+
+import { redisConfig } from "~/config/redis";
+
 /**
- * In-memory sliding-window rate limiter for Yespo API requests.
+ * Redis-backed sliding-window rate limiter for Yespo API requests.
  *
  * Yespo limit: 60 requests per minute per siteId.
  *
- * Call `throttleApiRequest(siteId)` before every HTTP request to the
- * Yespo API. If the window is full the function awaits until a slot
- * becomes available, then records the new timestamp and returns.
+ * Call `throttleApiRequest(siteId)` before every HTTP request to the Yespo API.
+ * State lives in Redis (a sorted set of request timestamps per siteId), so the
+ * limit is shared across all worker processes — unlike the previous in-memory
+ * implementation, which counted requests per-process only.
  *
- * NOTE: This implementation is per-process. For multi-worker deployments
- * replace the in-memory Map with a Redis-backed counter.
+ * If Redis is unreachable the limiter fails open (logs a warning and allows the
+ * request) so a Redis blip never hard-blocks the sync pipeline.
  */
 
-const requestLog = new Map<string, number[]>();
+const WINDOW_MS = 60_000;
+const KEY_PREFIX = "yespo:ratelimit:";
+
+/**
+ * Atomic sliding-window check.
+ *
+ * KEYS[1] = sorted-set key. ARGV: now (ms), window (ms), max, unique member.
+ * Drops timestamps older than the window, then either records the new request
+ * and returns 0 (allowed) or returns the ms to wait until the oldest in-window
+ * request ages out (throttled).
+ */
+const SLIDING_WINDOW_SCRIPT = `
+local key = KEYS[1]
+local now = tonumber(ARGV[1])
+local window = tonumber(ARGV[2])
+local max = tonumber(ARGV[3])
+local member = ARGV[4]
+
+redis.call('ZREMRANGEBYSCORE', key, 0, now - window)
+local count = redis.call('ZCARD', key)
+
+if count < max then
+  redis.call('ZADD', key, now, member)
+  redis.call('PEXPIRE', key, window)
+  return 0
+end
+
+local oldest = redis.call('ZRANGE', key, 0, 0, 'WITHSCORES')
+local oldestScore = tonumber(oldest[2])
+local wait = oldestScore + window - now
+if wait < 0 then
+  return 0
+end
+return wait
+`;
+
+let client: Redis | null = null;
+
+function getRedis(): Redis {
+  if (!client) {
+    const url = redisConfig.url ?? "";
+    const isSecure = url.startsWith("rediss://");
+    client = new Redis(url, {
+      maxRetriesPerRequest: null,
+      ...(isSecure ? { tls: { rejectUnauthorized: false } } : {}),
+    });
+    client.on("error", (error) => {
+      console.error("Rate limiter Redis error:", error?.message);
+    });
+  }
+  return client;
+}
 
 /**
  * Blocks until a request slot is available for the given siteId.
@@ -23,22 +79,38 @@ export async function throttleApiRequest(
   siteId: string,
   maxPerMinute = 60,
 ): Promise<void> {
-  const now = Date.now();
-  const windowMs = 60_000;
+  const redis = getRedis();
+  const key = `${KEY_PREFIX}${siteId}`;
 
-  const timestamps = requestLog.get(siteId) ?? [];
-  // Prune entries that have fallen outside the rolling window.
-  const recent = timestamps.filter((ts) => ts > now - windowMs);
+  for (;;) {
+    const now = Date.now();
+    const member = `${now}-${Math.random().toString(36).slice(2)}`;
 
-  if (recent.length >= maxPerMinute) {
+    let waitMs: number;
+    try {
+      waitMs = (await redis.eval(
+        SLIDING_WINDOW_SCRIPT,
+        1,
+        key,
+        now,
+        WINDOW_MS,
+        maxPerMinute,
+        member,
+      )) as number;
+    } catch (error) {
+      // Fail open: never let a Redis issue hard-block the sync pipeline.
+      console.warn(
+        `Rate limiter unavailable, allowing request for ${siteId}:`,
+        (error as Error)?.message,
+      );
+      return;
+    }
+
+    if (waitMs <= 0) {
+      return;
+    }
+
     // Wait until the oldest in-window request ages out, plus a small buffer.
-    const waitMs = recent[0] + windowMs - now + 50;
-    await new Promise<void>((resolve) => setTimeout(resolve, waitMs));
-    // Re-enter to pick up any concurrent requests that may have been added
-    // while we were waiting.
-    return throttleApiRequest(siteId, maxPerMinute);
+    await new Promise<void>((resolve) => setTimeout(resolve, waitMs + 50));
   }
-
-  recent.push(now);
-  requestLog.set(siteId, recent);
 }
