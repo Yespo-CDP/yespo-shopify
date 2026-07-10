@@ -475,7 +475,7 @@ App requests access to the following scopes:
 When sync is enabled:
 
 - Market synchronization is enqueued automatically right after historical products synchronization completes (`enqueueMarketSyncTaskForShopUrl`)
-- An hourly QStash cron also paces ongoing market synchronization across shops (see scheduling below)
+- A daily BullMQ repeatable job also paces ongoing market synchronization across shops (see scheduling below)
 - A dedicated `data-sync-market` worker (`concurrency: 10`) processes the job
 
 ---
@@ -538,15 +538,15 @@ Notes:
 
 #### Market sync scheduling:
 
-An hourly QStash cron (`/api/market-sync-cron` → `enqueueMarketSyncTasks`) paces `POST /v1/markets` across shops:
+A daily BullMQ repeatable job (`cron-jobs` queue → `enqueueMarketSyncTasks`) paces `POST /v1/markets` across shops. The schedule is registered on worker startup via `registerMarketSyncCron()` (`MARKET_SYNC_CRON_PATTERN = "0 0 * * *"` — once per day at 00:00 UTC). Requires the `worker` process and Redis.
 
 - At most **10 shops** sync at once (`MARKET_SYNC_MAX_CONCURRENT_SHOPS`).
 - Shops whose last `COMPLETE` sync finished less than **24h** ago are skipped (`MARKET_SYNC_MIN_INTERVAL_MS`); never-synced and last-`ERROR` shops are not throttled.
 - An `IN_PROGRESS` sync older than **5h** is treated as stuck and the shop becomes selectable again (`MARKET_SYNC_STALE_AFTER_MS`).
 - Eligible shops (`active`, `isMarketSyncEnabled`, `apiKey != null`) are ordered by oldest last sync (never-synced first).
-- Manual triggers and the post-products-sync trigger bypass the 24h interval.
+- The post-products-sync trigger bypasses the 24h interval.
 
-The worker `concurrency: 10` is the real parallelism cap. The hourly schedule itself is configured in the QStash dashboard.
+The `data-sync-market` worker `concurrency: 10` is the real parallelism cap.
 
 ---
 

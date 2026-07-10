@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState, type FC } from "react";
-import { useAppBridge } from "@shopify/app-bridge-react";
 import { useTranslation } from "react-i18next";
 import { useFetcher } from "react-router";
 
@@ -19,7 +18,6 @@ export interface DataSyncSectionProps {
   contactSyncEnabled?: boolean;
   orderSyncEnabled?: boolean;
   productVariantSyncEnabled?: boolean;
-  onMarketSyncTriggered?: () => void;
 }
 
 const DataSyncSection: FC<DataSyncSectionProps> = ({
@@ -31,13 +29,10 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
   orderSyncEnabled = false,
   contactSyncEnabled = false,
   productVariantSyncEnabled = false,
-  onMarketSyncTriggered,
 }) => {
   const { t } = useTranslation();
-  const shopify = useAppBridge();
   const fetcher = useFetcher();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isMarketSyncSubmitting, setIsMarketSyncSubmitting] = useState(false);
 
   const handleSyncToggle = useCallback(
     (intent: "data-sync-enable" | "data-sync-disable") => {
@@ -60,46 +55,6 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
       setIsSubmitting(false);
     }
   }, [fetcher.state]);
-
-  const handleMarketSync = useCallback(async () => {
-    setIsMarketSyncSubmitting(true);
-
-    try {
-      const response = await fetch("/api/market-sync-cron", { method: "POST" });
-      const data = (await response.json()) as {
-        success?: boolean;
-        enqueued?: number;
-        message?: string;
-      };
-
-      if (response.ok && data.success) {
-        shopify.toast.show(
-          t("DataSyncSection.marketSync.success", {
-            count: data.enqueued ?? 0,
-          }),
-          { duration: 3000 },
-        );
-        onMarketSyncTriggered?.();
-        return;
-      }
-
-      shopify.toast.show(
-        data.message ?? t("DataSyncSection.marketSync.error"),
-        {
-          duration: 3000,
-          isError: true,
-        },
-      );
-    } catch (error) {
-      console.error("Market sync cron trigger failed:", error);
-      shopify.toast.show(t("DataSyncSection.marketSync.error"), {
-        duration: 3000,
-        isError: true,
-      });
-    } finally {
-      setIsMarketSyncSubmitting(false);
-    }
-  }, [onMarketSyncTriggered, shopify, t]);
 
   return (
     <s-section>
@@ -324,17 +279,6 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
             ))}
           </s-stack>
         )}
-
-        <s-stack direction="inline" justifyContent="end">
-          <s-button
-            variant="secondary"
-            onClick={handleMarketSync}
-            loading={isMarketSyncSubmitting}
-            disabled={isMarketSyncSubmitting || isSubmitting}
-          >
-            {t("DataSyncSection.marketSync.trigger")}
-          </s-button>
-        </s-stack>
       </s-stack>
     </s-section>
   );

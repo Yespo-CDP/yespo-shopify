@@ -62,8 +62,7 @@ export const EVENT_MESSAGES = {
     "CUSTOM_LOG_SEND_MARKET_PRODUCTS_ERROR",
   CUSTOM_LOG_MARKET_SYNC_CLEANUP_SUCCESS:
     "CUSTOM_LOG_MARKET_SYNC_CLEANUP_SUCCESS",
-  CUSTOM_LOG_MARKET_SYNC_CLEANUP_ERROR:
-    "CUSTOM_LOG_MARKET_SYNC_CLEANUP_ERROR",
+  CUSTOM_LOG_MARKET_SYNC_CLEANUP_ERROR: "CUSTOM_LOG_MARKET_SYNC_CLEANUP_ERROR",
   CUSTOM_LOG_DELETE_PRODUCT_VARIANTS_SUCCESS:
     "CUSTOM_LOG_DELETE_PRODUCT_VARIANTS_SUCCESS",
   CUSTOM_LOG_DELETE_PRODUCT_VARIANTS_ERROR:
@@ -103,11 +102,14 @@ export const MARKET_SYNC_STALE_AFTER_MS = 5 * 60 * 60 * 1000;
 /**
  * Minimum time between automatic (cron) market syncs for a shop. The cron skips
  * a shop whose last successful (COMPLETE) sync finished less than this ago, so a
- * single shop is not re-synced every hour. Never-synced shops and shops whose
- * last sync ended in ERROR are not throttled. Manual/dashboard and post
- * data-sync triggers bypass this interval entirely.
+ * single shop is not re-synced more than once per day. Never-synced shops and shops whose
+ * last sync ended in ERROR are not throttled. Post data-sync triggers bypass
+ * this interval entirely.
  */
 export const MARKET_SYNC_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+/** BullMQ repeatable job pattern — runs once per day at 00:00 UTC. */
+export const MARKET_SYNC_CRON_PATTERN = "0 0 * * *";
 
 /**
  * How many times `fetchWithErrorHandling` retries a request after the server

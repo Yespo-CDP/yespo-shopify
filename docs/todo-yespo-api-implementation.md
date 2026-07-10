@@ -180,18 +180,18 @@ Rate limiter перенесено з in-memory на **Redis** (sliding window ч
 
 ---
 
-## Погодинний крон синхронізації маркетів (ліміт 10 магазинів) ✅ Реалізовано
+## Щоденний крон синхронізації маркетів (ліміт 10 магазинів) ✅ Реалізовано
 
-Крон запускається **раз на годину** (розклад у дашборді QStash; у коді — ні) і тримає
-**максимум 10 магазинів** у синхронізації одночасно, віддаючи перевагу магазинам, які
-синхронізувались найдавніше.
+Крон запускається **раз на добу** (`MARKET_SYNC_CRON_PATTERN = "0 0 * * *"`, 00:00 UTC) через
+**BullMQ repeatable job** (не QStash) і тримає **максимум 10 магазинів** у синхронізації
+одночасно, віддаючи перевагу магазинам, які синхронізувались найдавніше.
 
 **Файли:**
-- `app/config/constants.ts` — константи
-- `app/services/queue.ts` — логіка вибірки/постановки в чергу
+- `app/config/constants.ts` — константи (включно з `MARKET_SYNC_CRON_PATTERN`)
+- `app/services/queue.ts` — `CronQueue`, `registerMarketSyncCron()`, логіка вибірки/постановки в чергу
+- `app/worker/worker.ts` — реєстрація scheduler при старті + `cron-jobs` worker
 - `app/repositories/marketSyncLog/*` — `hasFreshInProgressByShop`
 - `app/repositories/shop/*` + `app/@types/shop.d.ts` — `getShopsForMarketSync` + тип `ShopWithMarketSyncLogs`
-- `app/routes/api.market-sync-cron.tsx` — QStash-ендпоінт (без змін, викликає `enqueueMarketSyncTasks`)
 
 **Константи** (`app/config/constants.ts`):
 - `MARKET_SYNC_MAX_CONCURRENT_SHOPS = 10` — максимум магазинів в обробці одночасно.
@@ -220,12 +220,12 @@ Rate limiter перенесено з in-memory на **Redis** (sliding window ч
 **`enqueueMarketSyncJobIfEligible(shop)`** (guard перед постановкою в чергу): пропускає, якщо
 нема `apiKey`; повторно перевіряє свіжий `IN_PROGRESS` через `hasFreshInProgressByShop`
 (захист від гонок); пропускає, якщо нема offline-токена; інакше ставить job у
-`DataSyncMarketQueue`. Цей же guard використовується адмін-тригером
+`DataSyncMarketQueue`. Цей же guard використовується після historical product sync
 (`enqueueMarketSyncTaskForShopUrl`).
 
-**Не змінювалось:** сам `marketSyncHandler` і воркер (`concurrency: 10` у `app/worker/worker.ts`
-лишається реальним обмежувачем паралелізму). Розклад QStash на «раз на годину» перемикається
-в дашборді QStash.
+**Не змінювалось:** сам `marketSyncHandler` і воркер `data-sync-market` (`concurrency: 10` у
+`app/worker/worker.ts` лишається реальним обмежувачем паралелізму). Розклад задається в коді
+(`MARKET_SYNC_CRON_PATTERN`) і зберігається в Redis через BullMQ `upsertJobScheduler`.
 
 **Граничні випадки:** бюджет ≤ 0 → нічого не ставимо; застряглий `IN_PROGRESS` (>5 год) → не
 рахується, магазин знову кандидат; магазин без логів → найвищий пріоритет; магазин без

@@ -225,7 +225,6 @@ export default function Index() {
             orderSyncLog={orderSyncLogData as any}
             productVariantSyncLog={productVariantSyncLogData as any}
             marketSyncLogs={marketSyncLogsData as any}
-            onMarketSyncTriggered={() => revalidator.revalidate()}
           />
 
           <UsefulLinksSection />

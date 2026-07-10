@@ -37,7 +37,7 @@
    - [Item Object](#item-object)
 8. [Response Codes](#response-codes)
 9. [Error Codes](#error-codes)
-10. [Market Sync Scheduling — Hourly Cron](#market-sync-scheduling--hourly-cron)
+10. [Market Sync Scheduling — Daily Cron](#market-sync-scheduling--daily-cron)
 
 ---
 
@@ -881,33 +881,44 @@ Every request returns a request-level envelope plus item-level results.
 
 ---
 
-## Market Sync Scheduling — Hourly Cron
+## Market Sync Scheduling — Daily Cron
 
 > Integration-side scheduling for `POST /v1/markets`. This is **not** part of the
 > Yespo API contract — it describes how this app paces market sync across shops to
 > respect the 60 req/min per-`siteId` limit and avoid overloading the worker.
 
-A QStash-scheduled cron runs **hourly** and keeps at most **10 shops** syncing
-their markets concurrently, always preferring the shops that synced longest ago.
-The unit is a **shop** (one `marketSyncHandler` run syncs all of that shop's
-markets/countries); the limit of 10 counts shops, not countries.
+Market sync cron jobs are driven by **BullMQ repeatable jobs** (not QStash). On worker
+startup, `registerMarketSyncCron()` upserts a scheduler in Redis; BullMQ then enqueues a
+`cron-jobs` tick once per day. Requires the `worker` process (`npm run worker` in
+`Procfile`) and `REDIS_URL`.
 
-To avoid re-syncing the same shop every hour, the cron also skips any shop whose
-**last successful (`COMPLETE`) sync** finished less than
-`MARKET_SYNC_MIN_INTERVAL_MS` (24 h) ago. Never-synced shops and shops whose last
-sync ended in `ERROR` are **not** throttled. This interval applies only to the
-cron path — manual/dashboard triggers and the post data-sync chain
-(`enqueueMarketSyncTaskForShopUrl`) bypass it and run immediately.
+A daily cron tick keeps at most **10 shops** syncing their markets concurrently, always
+preferring the shops that synced longest ago. The unit is a **shop** (one
+`marketSyncHandler` run syncs all of that shop's markets/countries); the limit of 10
+counts shops, not countries.
 
-**Entry point:** `app/routes/api.market-sync-cron.tsx` (QStash POST) → `enqueueMarketSyncTasks()` in `app/services/queue.ts`.
+To avoid re-syncing the same shop more than once per day, the cron also skips any shop
+whose **last successful (`COMPLETE`) sync** finished less than
+`MARKET_SYNC_MIN_INTERVAL_MS` (24 h) ago. Never-synced shops and shops whose last sync
+ended in `ERROR` are **not** throttled. This interval applies only to the cron path —
+the post data-sync chain (`enqueueMarketSyncTaskForShopUrl`) bypasses it and runs
+immediately.
+
+**Scheduler:** `app/worker/worker.ts` calls `registerMarketSyncCron()` on startup →
+`CronQueue.upsertJobScheduler()` in `app/services/queue.ts`.
+
+**Tick handler:** `cron-jobs` BullMQ worker → `enqueueMarketSyncTasks()` in
+`app/services/queue.ts` → `DataSyncMarketQueue` jobs processed by the `data-sync-market`
+worker.
 
 **Config** (`app/config/constants.ts`):
 
 | Constant                           | Value                      | Purpose                                                                                                                                                |
 | ---------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `MARKET_SYNC_CRON_PATTERN`         | `"0 0 * * *"`              | BullMQ cron pattern — once per day at 00:00 UTC.                                                                                                       |
 | `MARKET_SYNC_MAX_CONCURRENT_SHOPS` | `10`                        | Max shops in progress at once.                                                                                                                         |
 | `MARKET_SYNC_STALE_AFTER_MS`       | `5 * 60 * 60 * 1000` (5 h)  | `IN_PROGRESS` older than this is treated as stuck (e.g. crashed worker): it no longer counts against the budget and the shop becomes selectable again. |
-| `MARKET_SYNC_MIN_INTERVAL_MS`      | `24 * 60 * 60 * 1000` (24 h) | Cron skips a shop whose last `COMPLETE` sync finished less than this ago. Never-synced and last-`ERROR` shops are not throttled; manual triggers bypass it. |
+| `MARKET_SYNC_MIN_INTERVAL_MS`      | `24 * 60 * 60 * 1000` (24 h) | Cron skips a shop whose last `COMPLETE` sync finished less than this ago. Never-synced and last-`ERROR` shops are not throttled; post-data-sync triggers bypass it. |
 
 **Algorithm (per tick):**
 
@@ -921,6 +932,6 @@ cron path — manual/dashboard triggers and the post data-sync chain
 
 **Notes:**
 
-- The BullMQ worker `concurrency: 10` (`app/worker/worker.ts`) is the real parallelism cap; `marketSyncHandler` itself is unchanged.
-- The hourly schedule lives in the QStash dashboard, not in code.
-- A job is only `IN_PROGRESS` in the DB once the handler starts writing logs; with an hourly cron and `concurrency: 10`, jobs are normally picked up well within the hour, so the next tick counts them correctly.
+- The `data-sync-market` BullMQ worker `concurrency: 10` (`app/worker/worker.ts`) is the real parallelism cap; `marketSyncHandler` itself is unchanged.
+- The daily schedule is defined in code (`MARKET_SYNC_CRON_PATTERN`) and stored in Redis by BullMQ.
+- A job is only `IN_PROGRESS` in the DB once the handler starts writing logs; with a daily cron and `concurrency: 10`, long-running syncs are counted via fresh `IN_PROGRESS` logs on the next day's tick.

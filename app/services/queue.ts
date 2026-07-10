@@ -2,6 +2,7 @@ import { Queue } from "bullmq";
 
 import { redisConfig } from "~/config/redis";
 import {
+  MARKET_SYNC_CRON_PATTERN,
   MARKET_SYNC_MAX_CONCURRENT_SHOPS,
   MARKET_SYNC_MIN_INTERVAL_MS,
   MARKET_SYNC_STALE_AFTER_MS,
@@ -24,6 +25,31 @@ export const DataSyncQueue = new Queue("data-sync", {
 export const DataSyncMarketQueue = new Queue("data-sync-market", {
   connection: redisConfig,
 });
+
+export const CronQueue = new Queue("cron-jobs", {
+  connection: redisConfig,
+});
+
+export const MARKET_SYNC_CRON_JOB_NAME = "market-sync-tick";
+
+/**
+ * Registers the daily market-sync scheduler in Redis. Safe to call on every
+ * worker startup — BullMQ upserts the scheduler by id.
+ */
+export async function registerMarketSyncCron(): Promise<void> {
+  await CronQueue.upsertJobScheduler(
+    MARKET_SYNC_CRON_JOB_NAME,
+    { pattern: MARKET_SYNC_CRON_PATTERN },
+    {
+      name: MARKET_SYNC_CRON_JOB_NAME,
+      data: {},
+      opts: {
+        removeOnComplete: 100,
+        removeOnFail: 500,
+      },
+    },
+  );
+}
 
 export async function enqueueDataSyncTasks({
   session,
@@ -197,7 +223,7 @@ function lastCompletedAt(shop: ShopWithMarketSyncLogs): Date | null {
 }
 
 /**
- * Hourly cron entrypoint: enqueues market sync jobs while keeping at most
+ * Daily cron entrypoint: enqueues market sync jobs while keeping at most
  * MARKET_SYNC_MAX_CONCURRENT_SHOPS shops in progress at once.
  *
  * Counts shops already syncing (fresh IN_PROGRESS), then enqueues up to the
@@ -207,8 +233,8 @@ function lastCompletedAt(shop: ShopWithMarketSyncLogs): Date | null {
  * Shops whose last successful (COMPLETE) sync finished less than
  * MARKET_SYNC_MIN_INTERVAL_MS ago are skipped so a shop is not re-synced every
  * hour. Never-synced shops and shops whose last sync ended in ERROR are not
- * throttled. This interval applies only to this cron path; manual/dashboard and
- * post data-sync triggers (enqueueMarketSyncTaskForShopUrl) bypass it.
+ * throttled. This interval applies only to the daily cron path; post data-sync
+ * triggers (enqueueMarketSyncTaskForShopUrl) bypass it.
  */
 export async function enqueueMarketSyncTasks(): Promise<number> {
   const staleBefore = new Date(Date.now() - MARKET_SYNC_STALE_AFTER_MS);
