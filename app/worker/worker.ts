@@ -2,6 +2,7 @@ import { Worker } from "bullmq";
 
 import { redisConfig } from "~/config/redis";
 import { shopRepository } from "~/repositories/repositories.server";
+import { getOfflineAccessToken } from "~/services/get-offline-session.server";
 import { customerSyncHandler } from "./handlers/customer-sync-handler";
 import { orderSyncHandler } from "./handlers/order-sync-handler";
 import { productSyncHandler } from "./handlers/product-sync-handler";
@@ -15,13 +16,11 @@ import {
 
 interface JobData {
   shop?: string;
-  accessToken?: string;
   type: "order" | "customer" | "product";
 }
 
 interface MarketSyncJobData {
   shop?: string;
-  accessToken?: string;
 }
 
 console.log("===RUN WORKER===");
@@ -48,9 +47,15 @@ new Worker<JobData>(
   "data-sync",
   async (job) => {
     try {
-      const { shop, accessToken } = job?.data;
+      const { shop } = job?.data;
 
-      if (!shop || !accessToken) return;
+      if (!shop) return;
+
+      const accessToken = await getOfflineAccessToken(shop);
+      if (!accessToken) {
+        console.error(`Data sync: no valid offline session for ${shop}`);
+        return;
+      }
 
       const shopData = await shopRepository.getShop(shop);
       const apiKey = shopData?.apiKey;
@@ -98,9 +103,15 @@ new Worker<MarketSyncJobData>(
   "data-sync-market",
   async (job) => {
     try {
-      const { shop, accessToken } = job?.data;
+      const { shop } = job?.data;
 
-      if (!shop || !accessToken) return;
+      if (!shop) return;
+
+      const accessToken = await getOfflineAccessToken(shop);
+      if (!accessToken) {
+        console.error(`Market sync: no valid offline session for ${shop}`);
+        return;
+      }
 
       const shopData = await shopRepository.getShop(shop);
       const apiKey = shopData?.apiKey;

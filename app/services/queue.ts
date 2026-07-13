@@ -16,7 +16,6 @@ import {
 } from "~/repositories/repositories.server";
 import type { Shop, ShopWithMarketSyncLogs } from "~/@types/shop";
 import type { Session } from "@shopify/shopify-app-react-router/server";
-import { getOfflineAccessToken } from "~/services/get-offline-session.server";
 
 export const DataSyncQueue = new Queue("data-sync", {
   connection: redisConfig,
@@ -114,7 +113,7 @@ export async function enqueueDataSyncTasks({
 
     await DataSyncQueue.add(
       "data-sync",
-      { ...session },
+      { shop: session.shop },
       {
         removeOnComplete: 1000,
         removeOnFail: 5000,
@@ -140,18 +139,12 @@ async function enqueueMarketSyncJobIfEligible(shop: Shop): Promise<boolean> {
     return false;
   }
 
-  const accessToken = await getOfflineAccessToken(shop.shopUrl);
-  if (!accessToken) {
-    console.error(`Market sync: no offline session for ${shop.shopUrl}`);
-    return false;
-  }
-
+  // The access token is fetched fresh inside the worker right before the job
+  // runs (see worker.ts), so a token captured here can't go stale while the
+  // job waits in the queue.
   await DataSyncMarketQueue.add(
     "data-sync-market",
-    {
-      shop: shop.shopUrl,
-      accessToken,
-    },
+    { shop: shop.shopUrl },
     {
       removeOnComplete: 1000,
       removeOnFail: 5000,
