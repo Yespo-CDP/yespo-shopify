@@ -48,12 +48,12 @@ export const deleteAccessToken = async ({
     await sendLogEvent({
       orgId,
       errorMessage: `Access token is not deleted`,
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody: {},
         responseBody: error,
         statusCode: error?.status ?? 500
-      }),
+      },
       message: EVENT_MESSAGES.CUSTOM_LOG_DELETE_ACCESS_TOKEN_ERROR,
       logLevel: 'ERROR'
     })

@@ -126,24 +126,24 @@ export const orderSyncHandler = async (
                 chunkFailedCount = 1;
               }
             }
-
-            await sendLogEvent({
-              orgId,
-              errorMessage: '',
-              data: JSON.stringify({
-                domain: shop,
-                offset: ORDERS_CHUNK_SIZE,
-                responseBody: contactsUpdateResponse,
-                statusCode: 200
-              }),
-              message: EVENT_MESSAGES.SEND_ORDERS_BULK_SUCCESS,
-              logLevel: 'INFO'
-            })
           }
 
           totalFailedCount += chunkFailedCount;
           totalSkippedCount += chunkSkippedCount;
           totalSyncedCount += ordersData?.length - chunkFailedCount;
+
+          await sendLogEvent({
+            orgId,
+            errorMessage: '',
+            data: {
+              domain: shop,
+              offset: ORDERS_CHUNK_SIZE,
+              responseBody: ordersData,
+              statusCode: 200
+            },
+            message: EVENT_MESSAGES.SEND_ORDERS_BULK_SUCCESS,
+            logLevel: 'INFO'
+          })
 
           console.log("Total orders in chunk:", orders?.length);
           console.log("Total skipped orders in chunk:", chunkSkippedCount);
@@ -172,12 +172,12 @@ export const orderSyncHandler = async (
         await sendLogEvent({
           orgId,
           errorMessage:  `Error bulk orders sync ${error?.message}`,
-          data: JSON.stringify({
+          data: {
             domain: shop,
             offset: ORDERS_CHUNK_SIZE,
             responseBody: {},
             statusCode: error?.status ?? 400
-          }),
+          },
           message: EVENT_MESSAGES.SEND_ORDERS_BULK_FAILED,
           logLevel: 'ERROR'
         })

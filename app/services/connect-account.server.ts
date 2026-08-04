@@ -52,17 +52,17 @@ export const connectAccountService = async ({
 
   if (!shop || !shop.apiKey) {
     await sendLogEvent({
-      orgId,
+      orgId: accountInfo.orgId,
       errorMessage: 'API key is empty',
-      data: JSON.stringify({domain: session.shop}),
+      data: {domain: session.shop},
       message: EVENT_MESSAGES.ADD_API_KEY_FAILED,
       logLevel: 'ERROR'
     })
   } else {
     await sendLogEvent({
-      orgId,
+      orgId: accountInfo.orgId,
       errorMessage: '',
-      data: JSON.stringify({domain: session.shop}),
+      data: {domain: session.shop},
       message: EVENT_MESSAGES.ADD_API_KEY_SUCCESS,
       logLevel: 'INFO'
     })

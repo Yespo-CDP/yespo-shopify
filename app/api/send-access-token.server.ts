@@ -56,12 +56,12 @@ export const sendAccessToken = async ({
     await sendLogEvent({
       orgId,
       errorMessage: `Access token not sent: ${error.message}`,
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody,
         responseBody: error,
         statusCode: error?.status ?? 500
-      }),
+      },
       message: EVENT_MESSAGES.CUSTOM_LOG_SEND_ACCESS_TOKEN_ERROR,
       logLevel: 'ERROR'
     })

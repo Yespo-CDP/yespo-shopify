@@ -47,12 +47,12 @@ export const createGeneralDomain = async ({
     await sendLogEvent({
       orgId,
       errorMessage: '',
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody,
         responseBody: response.responseData,
         statusCode: response.status
-      }),
+      },
       message: EVENT_MESSAGES.ADD_DOMAIN_SUCCESS,
       logLevel: 'INFO'
     })
@@ -64,12 +64,12 @@ export const createGeneralDomain = async ({
     await sendLogEvent({
       orgId,
       errorMessage: error?.message,
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody,
         responseBody: error,
         statusCode: error?.status ?? 500
-      }),
+      },
       message: EVENT_MESSAGES.ADD_DOMAIN_FAILED,
       logLevel: 'ERROR'
     })

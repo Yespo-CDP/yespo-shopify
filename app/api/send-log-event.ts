@@ -4,7 +4,7 @@ import { EventMessage, LOG_ORG_ID } from "~/config/constants";
 interface LogEvent {
   orgId?: number | null;
   errorMessage: string;
-  data: string;
+  data: any;
   message: EventMessage;
   logLevel: "INFO" | "ERROR";
 }
@@ -66,7 +66,7 @@ export const sendLogEvent = async ({
     orgId: orgId,
     typeCMS: "Shopify",
     errorMessage,
-    data,
+    data: JSON.stringify(data),
     message,
     log_level: logLevel,
   };

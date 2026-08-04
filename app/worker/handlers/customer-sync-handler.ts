@@ -130,19 +130,6 @@ export const customerSyncHandler = async (
                 chunkFailedCount = 1;
               }
             }
-
-            await sendLogEvent({
-              orgId,
-              errorMessage: '',
-              data: JSON.stringify({
-                domain: shop,
-                offset: CUSTOMERS_CHUNK_SIZE,
-                responseBody: contactsUpdateResponse,
-                statusCode: 200
-              }),
-              message: EVENT_MESSAGES.SEND_CONTACTS_BULK_SUCCESS,
-              logLevel: 'INFO'
-            })
           }
 
           totalFailedCount += chunkFailedCount;
@@ -153,6 +140,19 @@ export const customerSyncHandler = async (
           console.log("Total skipped customers in chunk:", chunkSkippedCount);
           console.log("Total sent customers to sync:", contactsData?.length);
           console.log("Total failed customers sync:", chunkFailedCount);
+
+          await sendLogEvent({
+            orgId,
+            errorMessage: '',
+            data: {
+              domain: shop,
+              offset: CUSTOMERS_CHUNK_SIZE,
+              responseBody: contactsData,
+              statusCode: 200
+            },
+            message: EVENT_MESSAGES.SEND_CONTACTS_BULK_SUCCESS,
+            logLevel: 'INFO'
+          })
 
           await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
             status: "IN_PROGRESS",
@@ -176,12 +176,12 @@ export const customerSyncHandler = async (
         await sendLogEvent({
           orgId,
           errorMessage: `Error bulk customers sync ${error?.message}`,
-          data: JSON.stringify({
+          data: {
             domain: shop,
             offset: CUSTOMERS_CHUNK_SIZE,
             responseBody: {},
             statusCode: error?.status ?? 400
-          }),
+          },
           message: EVENT_MESSAGES.SEND_CONTACTS_BULK_FAILED,
           logLevel: 'ERROR'
         })

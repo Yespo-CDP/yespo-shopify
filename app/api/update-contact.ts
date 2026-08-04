@@ -45,12 +45,12 @@ export const updateContact = async ({
     await sendLogEvent({
       orgId,
       errorMessage: '',
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody: contactData,
         responseBody: response.responseData,
         statusCode: response.status
-      }),
+      },
       message: EVENT_MESSAGES.UPDATE_CONTACT_SUCCESS,
       logLevel: 'INFO'
     })
@@ -62,12 +62,12 @@ export const updateContact = async ({
     await sendLogEvent({
       orgId,
       errorMessage: `Error updating contact: ${error?.message}`,
-      data: JSON.stringify({
+      data: {
         domain,
         requestBody: contactData,
         responseBody: error,
         statusCode: error?.status ?? 400
-      }),
+      },
       message: EVENT_MESSAGES.UPDATE_CONTACT_FAILED,
       logLevel: 'ERROR'
     })
