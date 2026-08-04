@@ -75,7 +75,7 @@
     },
     "DataSyncSection": {
       "title": "Synchronisation des données",
-      "description": "La synchronisation des données permet de synchroniser les clients et les commandes de Shopify avec Yespo.",
+      "description": "La synchronisation des données permet de synchroniser les clients, les commandes, les produits et les marchés de Shopify avec Yespo.",
       "enable": "Activer",
       "disable": "Désactiver",
       "status": {
@@ -86,6 +86,8 @@
         "title": "Synchronisation des données historiques",
         "orders": "Commandes",
         "customers": "Clients",
+        "productVariants": "Produits",
+        "productsByCountry": "Produits ({{countryCode}})",
         "syncedCount": "Synchronisé",
         "skippedCount": "Ignoré",
         "failedCount": "Échoué",

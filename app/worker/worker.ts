@@ -2,24 +2,65 @@ import { Worker } from "bullmq";
 
 import { redisConfig } from "~/config/redis";
 import { shopRepository } from "~/repositories/repositories.server";
+import { getOfflineAccessToken } from "~/services/get-offline-session.server";
+import { migrateOfflineTokenToExpiring } from "~/services/migrate-offline-token.server";
 import { customerSyncHandler } from "./handlers/customer-sync-handler";
 import { orderSyncHandler } from "./handlers/order-sync-handler";
+import { productSyncHandler } from "./handlers/product-sync-handler";
+import { marketSyncHandler } from "./handlers/market-sync-handler";
+import {
+  enqueueMarketSyncTaskForShopUrl,
+  enqueueMarketSyncTasks,
+  MARKET_SYNC_CRON_JOB_NAME,
+  registerMarketSyncCron,
+} from "~/services/queue";
 
 interface JobData {
   shop?: string;
-  accessToken?: string;
-  type: "order" | "customer";
+  type: "order" | "customer" | "product";
+}
+
+interface MarketSyncJobData {
+  shop?: string;
+}
+
+interface TokenMigrationJobData {
+  shop?: string;
 }
 
 console.log("===RUN WORKER===");
+
+await registerMarketSyncCron();
+
+new Worker(
+  "cron-jobs",
+  async (job) => {
+    if (job.name === MARKET_SYNC_CRON_JOB_NAME) {
+      console.log(`Market sync started`);
+
+      const enqueued = await enqueueMarketSyncTasks();
+      console.log(`Market sync cron tick: enqueued ${enqueued} shop(s)`);
+    }
+  },
+  {
+    connection: redisConfig,
+    concurrency: 1,
+  },
+);
 
 new Worker<JobData>(
   "data-sync",
   async (job) => {
     try {
-      const { shop, accessToken } = job?.data;
+      const { shop } = job?.data;
 
-      if (!shop || !accessToken) return;
+      if (!shop) return;
+
+      const accessToken = await getOfflineAccessToken(shop);
+      if (!accessToken) {
+        console.error(`Data sync: no valid offline session for ${shop}`);
+        return;
+      }
 
       const shopData = await shopRepository.getShop(shop);
       const apiKey = shopData?.apiKey;
@@ -30,8 +71,29 @@ new Worker<JobData>(
         );
         return;
       }
-      await customerSyncHandler(shop, accessToken, apiKey, shopData.id, shopData.orgId);
-      await orderSyncHandler(shop, accessToken, apiKey, shopData.id, shopData.orgId);
+      await customerSyncHandler(
+        shop,
+        accessToken,
+        apiKey,
+        shopData.id,
+        shopData.orgId,
+      );
+      await orderSyncHandler(
+        shop,
+        accessToken,
+        apiKey,
+        shopData.id,
+        shopData.orgId,
+      );
+      await productSyncHandler(
+        shop,
+        accessToken,
+        apiKey,
+        shopData.id,
+        shopData.orgId,
+        shopData.siteId,
+      );
+      await enqueueMarketSyncTaskForShopUrl(shop);
     } catch (error: any) {
       console.error(`Worker error:`, error);
     }
@@ -39,5 +101,60 @@ new Worker<JobData>(
   {
     connection: redisConfig,
     concurrency: 10,
+  },
+);
+
+new Worker<MarketSyncJobData>(
+  "data-sync-market",
+  async (job) => {
+    try {
+      const { shop } = job?.data;
+
+      if (!shop) return;
+
+      const accessToken = await getOfflineAccessToken(shop);
+      if (!accessToken) {
+        console.error(`Market sync: no valid offline session for ${shop}`);
+        return;
+      }
+
+      const shopData = await shopRepository.getShop(shop);
+      const apiKey = shopData?.apiKey;
+
+      if (!apiKey) {
+        console.error(`Error market sync: Api key not found for ${shop}`);
+        return;
+      }
+
+      await marketSyncHandler(
+        shop,
+        accessToken,
+        apiKey,
+        shopData.id,
+        shopData.orgId,
+        shopData.siteId,
+      );
+    } catch (error: unknown) {
+      console.error(`Market sync worker error:`, error);
+    }
+  },
+  {
+    connection: redisConfig,
+    concurrency: 10,
+  },
+);
+
+new Worker<TokenMigrationJobData>(
+  "token-migration",
+  async (job) => {
+    const { shop } = job?.data ?? {};
+    if (!shop) return;
+
+    const result = await migrateOfflineTokenToExpiring(shop);
+    console.log(`Token migration ${shop}: ${result}`);
+  },
+  {
+    connection: redisConfig,
+    concurrency: 5,
   },
 );

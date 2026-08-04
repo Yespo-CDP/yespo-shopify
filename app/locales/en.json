@@ -75,7 +75,7 @@
   },
   "DataSyncSection": {
     "title": "Data Sync",
-    "description": "Data sync allows syncing customers and orders from Shopify with Yespo.",
+    "description": "Data sync allows syncing customers, orders, products, and markets from Shopify with Yespo.",
     "enable": "Enable",
     "disable": "Disable",
 
@@ -87,6 +87,8 @@
       "title": "Historical data sync",
       "orders": "Orders",
       "customers": "Customers",
+      "productVariants": "Products",
+      "productsByCountry": "Products ({{countryCode}})",
       "syncedCount": "Synchronized",
       "skippedCount": "Skipped",
       "failedCount": "Failed",
@@ -101,6 +103,11 @@
     "errors": {
       "notEnabled": "Data sync not enabled",
       "notDisabled": "Data sync not disabled"
+    },
+    "marketSync": {
+      "trigger": "Run market sync",
+      "success": "Market sync enqueued for {{count}} shop(s).",
+      "error": "Failed to trigger market sync"
     },
     "statusBadge": {
       "error": "Error",

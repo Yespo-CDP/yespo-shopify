@@ -34,3 +34,7 @@ shopify.app.yespo-staging.toml
 
 /docs/typedoc-md
 
+/output
+/debug
+
+/.vscode/

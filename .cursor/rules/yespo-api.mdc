@@ -1,0 +1,173 @@
+---
+description: Yespo REST API reference for Products and Markets endpoints used in this Shopify integration
+alwaysApply: true
+---
+
+# Yespo REST API — Products & Markets
+
+Full documentation: `docs/yespo-api-products-markets.md`
+
+## Endpoints
+
+| Method   | Endpoint       | Purpose                                    |
+|----------|----------------|--------------------------------------------|
+| POST     | /v1/products   | Create or update products (catalog sync)   |
+| DELETE   | /v1/products   | Delete products                            |
+| POST     | /v1/markets    | Set market-specific prices, stock, URLs    |
+
+**Limits:** 1,000 items/request · 10 MB max body · 60 req/min per siteId
+
+---
+
+## POST /v1/products
+
+### Top-level envelope
+
+```json
+{
+  "siteId": "my_store",
+  "languageCode": "uk",
+  "languageChanged": false,
+  "products": [...]
+}
+```
+
+- `languageCode` is fixed per `siteId` after first accepted request.
+- Changing it without `languageChanged: true` → `409 LANGUAGE_CODE_MISMATCH`.
+
+### Product fields
+
+| Field         | Type    | Required on create | Notes |
+|---------------|---------|--------------------|-------|
+| `action`      | String  | Yes                | `"create"` or `"update"` |
+| `productId`   | String  | Yes                | Max 128 chars. Must match tracking identity. |
+| `updatedDate` | String  | Yes                | RFC3339 UTC (e.g. `2026-04-01T09:07:15Z`) |
+| `name`        | String  | Yes                | Max 500 chars, default language |
+| `imageUrl`    | String  | Yes                | Absolute URL, min 200×200 px |
+| `url`         | String  | Yes                | Absolute URL, default language |
+| `isInStock`   | Integer | Yes                | `1` or `0` |
+| `price`       | Float   | Yes                | Base price, no currency symbol |
+| `currency`    | String  | Yes                | ISO 4217 (e.g. `"UAH"`, `"USD"`) |
+| `categories`  | Array   | Yes                | Min 1. On update: omit=preserve, new array=full replace |
+| `oldPrice`    | Float   | No                 | Must be > `price` when both present |
+| `brand`       | String  | No                 | Max 256 chars |
+| `description` | String  | No                 | Plain text, no HTML, max 10,000 chars |
+| `itemGroupId` | String  | No                 | Variant group identifier, max 128 chars |
+| `translations`| Array   | No                 | `[{ "en": { name, url, description, categories } }]` |
+| `tags`        | Object  | No                 | `{ "Color": ["Black"], "Size": ["M"] }`. On update: omit key=preserve, new value=replace that key. |
+| `remove`      | Object  | No                 | ProductRemovePatch — explicit removal of optional fields, tags, or translations. |
+
+**`discount` is ignored — server derives it from `oldPrice` and `price`. Never send it.**
+
+### Update semantics
+
+- Scalar: omit=preserve · new value=overwrite · `null` is **not** used for clearing
+- `categories`: omit=preserve · new array=full replace · `null`=invalid
+- `tags.{key}`: omit=preserve · new array=replace that key · `remove.tags: ["{key}"]`=remove
+- `translations`: omit=preserve all · `[{"en":{...}}]`=replace en, preserve others
+
+### Removing fields — use `remove` object (never use `null`)
+
+```json
+{ "remove": { "fields": ["oldPrice"], "tags": ["Season"], "translations": ["en"] } }
+```
+
+| What to remove               | How |
+|------------------------------|-----|
+| `oldPrice`                   | `remove.fields: ["oldPrice"]` |
+| `description`/`brand`/`itemGroupId` | `remove.fields: ["description"]` etc. |
+| One tag                      | `remove.tags: ["Season"]` |
+| All translations             | `remove.fields: ["translations"]` |
+| One translation locale       | `remove.translations: ["en"]` |
+
+### Category object
+
+```json
+{ "id": "8", "name": "T-Shirts", "path": ["Clothing", "Tops", "T-Shirts"], "type": "category" }
+```
+
+`type`: `"category"` (hierarchical, default) or `"collection"` (flat, cross-sell).
+
+---
+
+## DELETE /v1/products
+
+```json
+{ "siteId": "my_store", "products": [{ "productId": "430738", "updatedDate": "2026-04-01T10:10:00Z" }] }
+```
+
+Idempotent. Deleting a product removes all its market data automatically.
+
+---
+
+## POST /v1/markets
+
+Send Add products **first**, then Add markets.
+
+```json
+{
+  "siteId": "my_store",
+  "markets": [{ "marketId": "ca", "products": [...] }]
+}
+```
+
+### Market product fields
+
+| Field         | Required | `null` behavior          |
+|---------------|----------|--------------------------|
+| `productId`   | Yes      | —                        |
+| `updatedDate` | Yes      | —                        |
+| `price`       | No       | **Invalid**              |
+| `currency`    | No       | **Invalid**              |
+| `isInStock`   | No       | **Invalid**              |
+| `oldPrice`    | No       | Clears market oldPrice   |
+| `urls`        | No       | Clears all market URLs   |
+
+`urls` is a dict: `{ "en": "https://...", "fr": "https://..." }`. Set locale to `null` to clear only that locale.
+
+Market record is active in recommendations only when base product exists **and** market has `price` + `currency` + `isInStock`.
+
+---
+
+## Response format
+
+```json
+{
+  "requestId": "...",
+  "summary": { "received": 3, "accepted": 2, "rejected": 1 },
+  "items": [{ "productId": "...", "status": "rejected", "code": "MISSING_REQUIRED_FIELD", "message": "..." }]
+}
+```
+
+HTTP: `200` all ok · `207` partial · `400` bad payload · `409` language mismatch · `413` too large · `429` rate limit · `500+` server error (retry with backoff)
+
+## Key error codes
+
+| Code                     | Level | Cause |
+|--------------------------|-------|-------|
+| `LANGUAGE_CODE_MISMATCH` | 409   | Wrong `languageCode` without `languageChanged: true` |
+| `MISSING_REQUIRED_FIELD` | 207   | Required field absent |
+| `INVALID_URL`            | 207   | Non-absolute or malformed URL |
+| `INVALID_CURRENCY`       | 207   | Not valid ISO 4217 |
+| `INVALID_PRICE`          | 207   | `oldPrice <= price` |
+| `INVALID_NULL_FIELD`     | 207   | `null` sent for non-nullable market field |
+| `EMPTY_MARKET_PATCH`     | 207   | Market item has no fields to change |
+| `DUPLICATE_KEY_IN_BATCH` | 207   | Same `productId` twice in one request |
+| `BATCH_SIZE_EXCEEDED`    | 413   | > 1,000 items |
+| `RATE_LIMITED`           | 429   | Rate limit hit |
+
+---
+
+## Market sync scheduling — daily cron (integration, not Yespo contract)
+
+A BullMQ repeatable job (registered on worker startup) paces `POST /v1/markets` across shops once per day. Keeps at most **10 shops** syncing at once, preferring those synced longest ago. Unit = **shop** (one run syncs all its countries).
+
+**Scheduler:** BullMQ `CronQueue` (`cron-jobs`) — `registerMarketSyncCron()` in `app/services/queue.ts`, called from `app/worker/worker.ts` on startup via `upsertJobScheduler`. Requires the `worker` process (`Procfile`: `npm run worker`) and Redis (`REDIS_URL`).
+
+**Tick handler:** `cron-jobs` worker → `enqueueMarketSyncTasks()` in `app/services/queue.ts`.
+
+**Config** (`app/config/constants.ts`): `MARKET_SYNC_CRON_PATTERN = "0 0 * * *"` (daily at 00:00 UTC), `MARKET_SYNC_MAX_CONCURRENT_SHOPS = 10`, `MARKET_SYNC_STALE_AFTER_MS = 5h` (IN_PROGRESS older than this = stuck → ignored, shop selectable again), `MARKET_SYNC_MIN_INTERVAL_MS = 24h` (cron skips a shop whose last `COMPLETE` sync finished < this ago; never-synced + last-`ERROR` shops not throttled; post-data-sync triggers bypass it).
+
+**Per tick:** count shops with fresh `IN_PROGRESS` → `budget = 10 - count` (skip if ≤ 0) → drop shops whose newest `COMPLETE` log is within `MARKET_SYNC_MIN_INTERVAL_MS` → take `budget` eligible shops (`active`, `isMarketSyncEnabled`, `apiKey != null`) ordered by oldest last sync (never-synced first, else `max(updatedAt)` asc) → enqueue each (`enqueueMarketSyncJobIfEligible`: re-checks apiKey + fresh IN_PROGRESS + offline token).
+
+Worker `concurrency: 10` (`app/worker/worker.ts`) is the real parallelism cap. Full details: `docs/yespo-api-products-markets.md`.

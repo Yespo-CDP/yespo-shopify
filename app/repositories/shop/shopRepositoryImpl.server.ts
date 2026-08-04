@@ -1,6 +1,11 @@
 import type { PrismaClient } from "@prisma/client";
 
-import type { Shop, ShopCreate, ShopUpdate } from "~/@types/shop";
+import type {
+  Shop,
+  ShopCreate,
+  ShopUpdate,
+  ShopWithMarketSyncLogs,
+} from "~/@types/shop";
 import type IShopRepository from "./shopRepository.server";
 
 /**
@@ -90,5 +95,24 @@ export default class ShopRepositoryImpl implements IShopRepository {
     return this.database.shop.delete({
       where: { shopUrl },
     });
+  }
+
+  async getShopsForMarketSync(): Promise<ShopWithMarketSyncLogs[]> {
+    return this.database.shop.findMany({
+      where: {
+        active: true,
+        isMarketSyncEnabled: true,
+        apiKey: { not: null },
+      },
+      include: {
+        marketSyncLogs: {
+          select: { status: true, updatedAt: true },
+        },
+      },
+    });
+  }
+
+  async getAllShops(): Promise<Shop[]> {
+    return this.database.shop.findMany();
   }
 }

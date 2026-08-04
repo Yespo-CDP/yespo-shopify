@@ -7,6 +7,12 @@ import CustomerSyncRepositoryImpl from "~/repositories/customerSync/customerSync
 import CustomerSyncLogRepositoryImpl from "~/repositories/customerSyncLog/customerSyncLogRepositoryImpl.server";
 import OrderSyncRepositoryImpl from "~/repositories/orderSync/orderSyncRepositoryImpl.server";
 import OrderSyncLogRepositoryImpl from "~/repositories/orderSyncLog/orderSyncLogRepositoryImpl.server";
+import ProductVariantSyncRepositoryImpl from "~/repositories/productVariantSync/productVariantSyncRepositoryImpl.server";
+import ProductVariantSyncLogRepositoryImpl from "~/repositories/productVariantSyncLog/productVariantSyncLogRepositoryImpl.server";
+import MarketSyncRepositoryImpl from "~/repositories/marketSync/marketSyncRepositoryImpl.server";
+import MarketSyncLogRepositoryImpl from "~/repositories/marketSyncLog/marketSyncLogRepositoryImpl.server";
+import TmpMarketSyncRepositoryImpl from "~/repositories/tmpMarketSync/tmpMarketSyncRepositoryImpl.server";
+import ShopMarketRepositoryImpl from "~/repositories/shopMarket/shopMarketRepositoryImpl.server";
 
 /**
  * An instance of the ShopRepository implementation, initialized with the Prisma database client.
@@ -81,6 +87,33 @@ const orderSyncRepository = new OrderSyncRepositoryImpl(database);
  */
 const orderSyncLogRepository = new OrderSyncLogRepositoryImpl(database);
 
+/**
+ * An instance of the ProductVariantSyncRepository implementation, initialized with the Prisma database client.
+ *
+ * Provides methods to retrieve, create, update, and upsert product variant sync records in the data store.
+ *
+ * @type {ProductVariantSyncRepositoryImpl}
+ */
+const productVariantSyncRepository = new ProductVariantSyncRepositoryImpl(
+  database,
+);
+
+/**
+ * An instance of the ProductVariantSyncLogRepository implementation, initialized with the Prisma database client.
+ *
+ * Provides methods to retrieve, create and update product variant sync log record in the data store.
+ *
+ * @type {ProductVariantSyncLogRepositoryImpl}
+ */
+const productVariantSyncLogRepository = new ProductVariantSyncLogRepositoryImpl(
+  database,
+);
+
+const shopMarketRepository = new ShopMarketRepositoryImpl(database);
+const marketSyncRepository = new MarketSyncRepositoryImpl(database);
+const marketSyncLogRepository = new MarketSyncLogRepositoryImpl(database);
+const tmpMarketSyncRepository = new TmpMarketSyncRepositoryImpl(database);
+
 export {
   shopRepository,
   gdprCustomerDataRepository,
@@ -90,4 +123,10 @@ export {
   customerSyncLogRepository,
   orderSyncRepository,
   orderSyncLogRepository,
+  productVariantSyncRepository,
+  productVariantSyncLogRepository,
+  shopMarketRepository,
+  marketSyncRepository,
+  marketSyncLogRepository,
+  tmpMarketSyncRepository,
 };

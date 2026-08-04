@@ -1,4 +1,4 @@
-import type { Prisma, Shop } from "@prisma/client";
+import type { Prisma, Shop, SyncLogStatus } from "@prisma/client";
 
 export interface ShopData {
   id: string;
@@ -24,3 +24,14 @@ export interface ShopResponse {
 export type Shop = Shop;
 export type ShopCreate = Prisma.ShopCreateInput;
 export type ShopUpdate = Prisma.ShopUpdateInput;
+
+/**
+ * A shop together with the minimal MarketSyncLog fields the market-sync cron
+ * needs to compute concurrency and ordering (status + updatedAt per country).
+ */
+export type ShopWithMarketSyncLogs = Shop & {
+  marketSyncLogs: Array<{
+    status: SyncLogStatus;
+    updatedAt: Date | null;
+  }>;
+};

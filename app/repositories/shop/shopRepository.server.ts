@@ -1,4 +1,9 @@
-import type { Shop, ShopUpdate, ShopCreate } from "~/@types/shop";
+import type {
+  Shop,
+  ShopUpdate,
+  ShopCreate,
+  ShopWithMarketSyncLogs,
+} from "~/@types/shop";
 
 /**
  * Interface defining methods for managing shops in the db.
@@ -36,4 +41,17 @@ export default interface ShopRepository {
    * @returns {Promise<Shop>} A promise that resolves to the updated Shop object.
    */
   updateShop(shopUrl: string, data: ShopUpdate): Promise<Shop>;
+
+  /**
+   * Returns active shops eligible for market sync cron, each with the minimal
+   * MarketSyncLog fields (status + updatedAt) needed to compute the concurrency
+   * budget and pick the shops that synced longest ago.
+   */
+  getShopsForMarketSync(): Promise<ShopWithMarketSyncLogs[]>;
+
+  /**
+   * Returns every shop in the database. Used by the one-time offline token
+   * migration to enqueue a job per shop.
+   */
+  getAllShops(): Promise<Shop[]>;
 }
