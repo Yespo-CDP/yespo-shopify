@@ -29,7 +29,38 @@ export const CronQueue = new Queue("cron-jobs", {
   connection: redisConfig,
 });
 
+export const TokenMigrationQueue = new Queue("token-migration", {
+  connection: redisConfig,
+});
+
 export const MARKET_SYNC_CRON_JOB_NAME = "market-sync-tick";
+export const TOKEN_MIGRATION_JOB_NAME = "migrate-token";
+
+/**
+ * One-time migration entrypoint: enqueues a token-migration job per shop so the
+ * worker can exchange each shop's non-expiring offline token for an expiring one
+ * (see migrate-offline-token.server.ts). Safe to run multiple times — jobs are
+ * deduplicated by jobId and the migration itself is idempotent.
+ */
+export async function enqueueTokenMigration(): Promise<number> {
+  const shops = await shopRepository.getAllShops();
+
+  for (const shop of shops) {
+    await TokenMigrationQueue.add(
+      TOKEN_MIGRATION_JOB_NAME,
+      { shop: shop.shopUrl },
+      {
+        jobId: `migrate-token-${shop.shopUrl}`,
+        attempts: 5,
+        backoff: { type: "exponential", delay: 5000 },
+        removeOnComplete: 1000,
+        removeOnFail: 5000,
+      },
+    );
+  }
+
+  return shops.length;
+}
 
 /**
  * Registers the daily market-sync scheduler in Redis. Safe to call on every

@@ -21,7 +21,8 @@
     "docs:html": "typedoc --options typedoc.html.json",
     "docs:md": "typedoc --options typedoc.md.json",
     "docs": "npm run docs:html && npm run docs:md",
-    "worker": "npx tsx ./app/worker/worker.ts"
+    "worker": "npx tsx ./app/worker/worker.ts",
+    "migrate:tokens": "npx tsx ./app/scripts/migrate-tokens.ts"
   },
   "type": "module",
   "engines": {

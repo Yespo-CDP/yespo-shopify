@@ -3,6 +3,7 @@ import { Worker } from "bullmq";
 import { redisConfig } from "~/config/redis";
 import { shopRepository } from "~/repositories/repositories.server";
 import { getOfflineAccessToken } from "~/services/get-offline-session.server";
+import { migrateOfflineTokenToExpiring } from "~/services/migrate-offline-token.server";
 import { customerSyncHandler } from "./handlers/customer-sync-handler";
 import { orderSyncHandler } from "./handlers/order-sync-handler";
 import { productSyncHandler } from "./handlers/product-sync-handler";
@@ -20,6 +21,10 @@ interface JobData {
 }
 
 interface MarketSyncJobData {
+  shop?: string;
+}
+
+interface TokenMigrationJobData {
   shop?: string;
 }
 
@@ -136,5 +141,20 @@ new Worker<MarketSyncJobData>(
   {
     connection: redisConfig,
     concurrency: 10,
+  },
+);
+
+new Worker<TokenMigrationJobData>(
+  "token-migration",
+  async (job) => {
+    const { shop } = job?.data ?? {};
+    if (!shop) return;
+
+    const result = await migrateOfflineTokenToExpiring(shop);
+    console.log(`Token migration ${shop}: ${result}`);
+  },
+  {
+    connection: redisConfig,
+    concurrency: 5,
   },
 );

@@ -111,4 +111,8 @@ export default class ShopRepositoryImpl implements IShopRepository {
       },
     });
   }
+
+  async getAllShops(): Promise<Shop[]> {
+    return this.database.shop.findMany();
+  }
 }

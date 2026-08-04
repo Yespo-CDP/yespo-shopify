@@ -48,4 +48,10 @@ export default interface ShopRepository {
    * budget and pick the shops that synced longest ago.
    */
   getShopsForMarketSync(): Promise<ShopWithMarketSyncLogs[]>;
+
+  /**
+   * Returns every shop in the database. Used by the one-time offline token
+   * migration to enqueue a job per shop.
+   */
+  getAllShops(): Promise<Shop[]>;
 }
