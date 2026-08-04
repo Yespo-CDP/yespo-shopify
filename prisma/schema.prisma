@@ -29,6 +29,9 @@ model Session {
   locale        String?
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
+
+  refreshToken        String?
+  refreshTokenExpires DateTime?
 }
 
 model Shop {
@@ -41,9 +44,14 @@ model Shop {
   apiKey                      String?
   orgId                       Int?
   siteId                      String?
+  defaultCurrency             String?
+  defaultLanguageCode         String?
+  syncedLocales               String[]
   isWebTrackingEnabled        Boolean?  @default(false)
   isContactSyncEnabled        Boolean?  @default(false)
   isOrderSyncEnabled          Boolean?  @default(false)
+  isProductVariantSyncEnabled Boolean?  @default(false)
+  isMarketSyncEnabled         Boolean?  @default(false)
   isAppInboxEnabled           Boolean?  @default(false)
   active                      Boolean?  @default(true)
   isGeneralScriptInstalled    Boolean?  @default(false)
@@ -57,6 +65,30 @@ model Shop {
   customerSyncLogs     CustomerSyncLog?
   orderSyncs           OrderSync[]
   orderSyncLogs        OrderSyncLog?
+  productVariantSyncs    ProductVariantSync[]
+  productVariantSyncLogs ProductVariantSyncLog?
+  shopMarkets            ShopMarket[]
+  marketSyncs            MarketSync[]
+  marketSyncLogs         MarketSyncLog[]
+  tmpMarketSyncs         TmpMarketSync[]
+}
+
+model ShopMarket {
+  id        Int      @id @default(autoincrement())
+  marketId  String
+  name      String
+  handle    String
+  enabled   Boolean  @default(true)
+  countries String[]
+  locales   String[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+
+  shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopId Int
+
+  @@unique([shopId, marketId])
+  @@index([shopId])
 }
 
 model GdprCustomerDataRequest {
@@ -151,4 +183,82 @@ model OrderSync {
 
   shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   shopId Int
+}
+
+model ProductVariantSyncLog {
+  id           Int           @id @default(autoincrement())
+  syncedCount  Int           @default(0)
+  skippedCount Int           @default(0)
+  failedCount  Int           @default(0)
+  totalCount   Int           @default(0)
+  status       SyncLogStatus @default(NOT_STARTED)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime?     @updatedAt
+
+  shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopId Int  @unique
+}
+
+model ProductVariantSync {
+  id             Int       @id @default(autoincrement())
+  variantId      String
+  productId      String
+  syncedTagKeys  String[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime? @updatedAt
+
+  shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopId Int
+}
+
+model MarketSyncLog {
+  id           Int           @id @default(autoincrement())
+  countryCode  String
+  syncedCount  Int           @default(0)
+  skippedCount Int           @default(0)
+  failedCount  Int           @default(0)
+  totalCount   Int           @default(0)
+  status       SyncLogStatus @default(NOT_STARTED)
+  bulkBatchId  String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime?     @updatedAt
+
+  shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopId Int
+
+  @@unique([shopId, countryCode])
+  @@index([shopId])
+}
+
+model MarketSync {
+  id          Int       @id @default(autoincrement())
+  productId   String
+  variantId   String
+  countryCode String
+  contentHash String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime? @updatedAt
+
+  shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopId Int
+
+  @@unique([shopId, productId, variantId, countryCode])
+  @@index([shopId, variantId])
+}
+
+model TmpMarketSync {
+  id          Int      @id @default(autoincrement())
+  batchId     String
+  productId   String
+  variantId   String?
+  countryCode String?
+  locale      String?
+  marketId    String?
+  payload     Json
+  createdAt   DateTime @default(now())
+
+  shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shopId Int
+
+  @@index([shopId, batchId])
 }

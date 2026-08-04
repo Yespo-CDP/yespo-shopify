@@ -6,12 +6,13 @@ import {
   shopRepository,
   customerSyncLogRepository,
   orderSyncLogRepository,
+  productVariantSyncLogRepository,
+  marketSyncLogRepository,
 } from "~/repositories/repositories.server";
 import { connectAccountService } from "~/services/connect-account.server";
 import { disconnectAccountService } from "~/services/disconnect-account.server";
 import { connectGeneralScriptService } from "~/services/connect-general-script.server";
 import { connectWebPushScriptService } from "~/services/connect-webpush-script.server";
-import checkMarketsService from "~/services/check-markets.server";
 import checkScriptConnectionService from "~/services/check-script-connection.server";
 import checkThemeExtensionService from "~/services/check-theme-extension.server";
 import { authenticate } from "~/shopify.server";
@@ -19,10 +20,10 @@ import i18n from "~/i18n.server";
 import { toggleWebTrackingServer } from "~/services/toggle-web-tracking.server";
 import { createGeneralDomain } from "~/api/create-general-domain.server";
 import { enqueueDataSyncTasks } from "~/services/queue";
-import {sendAccessTokenService} from "~/services/send-access-token.server";
-import {deleteAccessTokenService} from "~/services/delete-access-token.server";
-import {sendLogEvent} from "~/api/send-log-event";
-import {EVENT_MESSAGES} from "~/config/constants";
+import { sendAccessTokenService } from "~/services/send-access-token.server";
+import { deleteAccessTokenService } from "~/services/delete-access-token.server";
+import { sendLogEvent } from "~/api/send-log-event";
+import { EVENT_MESSAGES } from "~/config/constants";
 import switchAppInboxScriptServer from "~/services/switch-app-inbox-script-mode.server";
 
 /**
@@ -37,9 +38,9 @@ import switchAppInboxScriptServer from "~/services/switch-app-inbox-script-mode.
  *   shop: Shop | null,
  *   account: Account | null,
  *   scriptConnectionStatus: any,
- *   isMarketsOverflowing: boolean,
  *   customersSyncLog: CustomerSyncLog[],
  *   orderSyncLog: OrderSyncLog[],
+ *   productVariantSyncLog: ProductVariantSyncLog[],
  *   ENV: {
  *     DOCK_URL: string,
  *     PLATFORM_URL: string
@@ -55,30 +56,47 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const orderSyncLog = await orderSyncLogRepository.getOrderSyncLogByShop(
     session.shop,
   );
-  const isMarketsOverflowing = await checkMarketsService({ admin, domain: session.shop, orgId: shop?.orgId });
-  const scriptConnectionStatus = await checkScriptConnectionService({ admin, domain: session.shop, orgId: shop?.orgId });
+  const productVariantSyncLog =
+    await productVariantSyncLogRepository.getProductVariantSyncLogByShop(
+      session.shop,
+    );
+  const marketSyncLogs = await marketSyncLogRepository.getByShop(session.shop);
+  const scriptConnectionStatus = await checkScriptConnectionService({
+    admin,
+    domain: session.shop,
+    orgId: shop?.orgId,
+  });
 
   let account: Account | null = null;
   if (shop?.apiKey) {
     try {
-      account = await getAccountInfo({ apiKey: shop.apiKey, domain: session.shop, orgId: shop.orgId});
+      account = await getAccountInfo({
+        apiKey: shop.apiKey,
+        domain: session.shop,
+        orgId: shop.orgId,
+      });
     } catch (error) {
       console.error(error);
       account = null;
     }
   }
-
+  console.log(shop);
   return {
     shop,
     account,
     scriptConnectionStatus: {
       isThemeExtensionActive: scriptConnectionStatus.isThemeExtensionActive,
-      isGeneralScriptExist: shop?.isGeneralScriptInstalled || scriptConnectionStatus.isGeneralScriptExist,
-      isWebPushScriptExist: shop?.isWebPushScriptInstalled || scriptConnectionStatus.isWebPushScriptExist,
+      isGeneralScriptExist:
+        shop?.isGeneralScriptInstalled ||
+        scriptConnectionStatus.isGeneralScriptExist,
+      isWebPushScriptExist:
+        shop?.isWebPushScriptInstalled ||
+        scriptConnectionStatus.isWebPushScriptExist,
     },
-    isMarketsOverflowing,
     customersSyncLog,
     orderSyncLog,
+    productVariantSyncLog,
+    marketSyncLogs,
     ENV: {
       DOCK_URL: process.env.DOCK_URL ?? "https://docs.yespo.io",
       PLATFORM_URL: process.env.PLATFORM_URL ?? "https://my.yespo.io",
@@ -140,7 +158,11 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await disconnectAccountService({ session, admin });
 
       if (shop?.apiKey) {
-        await deleteAccessTokenService({apiKey: shop.apiKey, domain: shop.shopUrl, orgId: shop.orgId})
+        await deleteAccessTokenService({
+          apiKey: shop.apiKey,
+          domain: shop.shopUrl,
+          orgId: shop.orgId,
+        });
       }
     } catch (error: any) {
       errors.apiKey = t(`AccountConnectionSection.errors.${error.message}`);
@@ -152,11 +174,11 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
           domain: session.shop,
           requestBody: {},
           responseBody: error,
-          statusCode: error?.status ?? 500
+          statusCode: error?.status ?? 500,
         },
         message: EVENT_MESSAGES.CUSTOM_LOG_DISCONNECT_ACCOUNT_ERROR,
-        logLevel: 'ERROR'
-      })
+        logLevel: "ERROR",
+      });
 
       return { success, errors };
     }
@@ -200,18 +222,17 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
       await shopRepository.updateShop(session.shop, {
         isGeneralScriptInstalled,
-        isWebPushScriptInstalled
-      })
+        isWebPushScriptInstalled,
+      });
 
       if (session.accessToken) {
         //Send access token to Yespo
         await sendAccessTokenService({
           apiKey: shop.apiKey,
           domain: session.shop,
-          accessToken:session.accessToken
-        })
+          accessToken: session.accessToken,
+        });
       }
-
     } catch (error: any) {
       errors.apiKey = t(`AccountConnectionSection.errors.${error.message}`);
       return { success, errors };
@@ -224,7 +245,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       const isThemeExtensionActive = await checkThemeExtensionService({
         admin,
         domain: session.shop,
-        orgId: shop?.orgId
+        orgId: shop?.orgId,
       });
 
       success.connection = {
@@ -250,7 +271,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         const connectedData = await createGeneralDomain({
           apiKey: shop.apiKey,
           domain: shop.domain,
-          orgId: shop.orgId
+          orgId: shop.orgId,
         });
 
         await shopRepository.updateShop(shop.domain, {
@@ -301,6 +322,8 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await shopRepository.updateShop(shop.domain, {
         isContactSyncEnabled: true,
         isOrderSyncEnabled: true,
+        isProductVariantSyncEnabled: true,
+        isMarketSyncEnabled: true,
       });
 
       await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
@@ -328,26 +351,40 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
           },
         },
       });
+      await productVariantSyncLogRepository.createOrUpdateProductVariantSyncLog(
+        {
+          status: "NOT_STARTED",
+          skippedCount: 0,
+          syncedCount: 0,
+          failedCount: 0,
+          totalCount: 0,
+          shop: {
+            connect: {
+              id: shop.id,
+            },
+          },
+        },
+      );
 
       await enqueueDataSyncTasks({ session, shop });
 
       await sendLogEvent({
         orgId: shop.orgId,
-        errorMessage: '',
-        data: {domain: session.shop},
+        errorMessage: "",
+        data: JSON.stringify({ domain: session.shop }),
         message: EVENT_MESSAGES.DATA_SYNC_ENABLED,
-        logLevel: 'INFO'
-      })
+        logLevel: "INFO",
+      });
     } catch (error: any) {
       errors.dataSync = t("DataSyncSection.errors.notEnabled");
 
       await sendLogEvent({
         orgId: shop?.orgId,
         errorMessage: error?.message,
-        data: {domain: session.shop},
+        data: JSON.stringify({ domain: session.shop }),
         message: EVENT_MESSAGES.DATA_SYNC_FAILED,
-        logLevel: 'ERROR'
-      })
+        logLevel: "ERROR",
+      });
 
       return { success, errors };
     }
@@ -364,26 +401,27 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await shopRepository.updateShop(shop.domain, {
         isContactSyncEnabled: false,
         isOrderSyncEnabled: false,
+        isProductVariantSyncEnabled: false,
+        isMarketSyncEnabled: false,
       });
 
       await sendLogEvent({
         orgId: shop?.orgId,
-        errorMessage: '',
-        data: {domain: session.shop},
+        errorMessage: "",
+        data: JSON.stringify({ domain: session.shop }),
         message: EVENT_MESSAGES.DATA_SYNC_DISABLED,
-        logLevel: 'INFO'
-      })
-
+        logLevel: "INFO",
+      });
     } catch (error: any) {
       errors.dataSync = t("DataSyncSection.errors.notDisabled");
 
       await sendLogEvent({
         orgId: shop?.orgId,
         errorMessage: error?.message,
-        data: {domain: session.shop},
+        data: JSON.stringify({ domain: session.shop }),
         message: EVENT_MESSAGES.DATA_SYNC_FAILED,
-        logLevel: 'ERROR'
-      })
+        logLevel: "ERROR",
+      });
       return { success, errors };
     }
   }
@@ -405,8 +443,8 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     });
 
     await shopRepository.updateShop(session.shop, {
-      isGeneralScriptInstalled
-    })
+      isGeneralScriptInstalled,
+    });
   }
 
   if (intent === "retry-install-webpush-script") {
@@ -425,8 +463,8 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     });
 
     await shopRepository.updateShop(session.shop, {
-      isWebPushScriptInstalled
-    })
+      isWebPushScriptInstalled,
+    });
   }
 
   if (intent === "app-inbox-enable") {
@@ -445,8 +483,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         enabled: true,
         admin,
         shopId: shop.shopId,
-      })
-
+      });
     } catch (error: any) {
       errors.dataSync = t("DataSyncSection.errors.notEnabled");
 
@@ -457,8 +494,8 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
           domain: shop?.domain,
         }),
         message: EVENT_MESSAGES.CUSTOM_LOG_APP_INBOX_MODE_ENABLED_ERROR,
-        logLevel: 'ERROR'
-      })
+        logLevel: "ERROR",
+      });
 
       return { success, errors };
     }
@@ -479,7 +516,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         enabled: false,
         admin,
         shopId: shop.shopId,
-      })
+      });
     } catch (error: any) {
       errors.dataSync = t("DataSyncSection.errors.notDisabled");
 
@@ -490,13 +527,12 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
           domain: shop?.domain,
         }),
         message: EVENT_MESSAGES.CUSTOM_LOG_APP_INBOX_MODE_DISABLED_ERROR,
-        logLevel: 'ERROR'
-      })
+        logLevel: "ERROR",
+      });
 
       return { success, errors };
     }
   }
-
 
   return { success, errors };
 };
