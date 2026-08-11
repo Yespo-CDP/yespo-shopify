@@ -68,6 +68,7 @@
 
 {% if yespo_script != blank %}
   {{ yespo_script }}
+  {% render 'yespo-storefront-sync' %}
 {% endif %}
 
 {% if yespo_web_push_script != blank %}
