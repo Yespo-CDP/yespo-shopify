@@ -1,0 +1,352 @@
+<script>
+  (function () {
+    var originalFetch = window.fetch;
+    var originalXHROpen = window.XMLHttpRequest && window.XMLHttpRequest.prototype.open;
+    var originalXHRSend = window.XMLHttpRequest && window.XMLHttpRequest.prototype.send;
+    var CART_CHANGED_EVENT = 'eS:cart-changed';
+    var scheduledRefreshTimer = null;
+    var isRefreshingCart = false;
+    var CART_THEME_EVENTS = [
+      'cart:updated',
+      'cart:change',
+      'cart:refresh',
+      'ajaxCart:updated',
+      'ajaxCart:refresh',
+      'product:added',
+      'theme:cart:change'
+    ];
+
+    function emitCartChanged(data) {
+      document.dispatchEvent(new CustomEvent(CART_CHANGED_EVENT, {
+        detail: data
+      }));
+    }
+
+    function getCartMutationType(url) {
+      if (!url) {
+        return '';
+      }
+
+      if (url.indexOf('/cart/add') !== -1) {
+        return 'add';
+      }
+
+      if (url.indexOf('/cart/change') !== -1) {
+        return 'change';
+      }
+
+      if (url.indexOf('/cart/update') !== -1) {
+        return 'update';
+      }
+
+      if (url.indexOf('/cart/clear') !== -1) {
+        return 'clear';
+      }
+
+      return '';
+    }
+
+    function refreshCart(source) {
+      if (isRefreshingCart) {
+        scheduleCartRefresh(source || 'refresh-while-busy');
+        return;
+      }
+
+      isRefreshingCart = true;
+      var root = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root) || '/';
+
+      fetch(root + 'cart.js', { credentials: 'include' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (raw) {
+          if (!raw) return;
+          emitCartChanged({raw, source: source || 'fetch-cart'});
+        })
+        .finally(function () {
+          isRefreshingCart = false;
+        })
+        .catch(function () { /* swallow — widget should still render */ });
+    }
+
+    function scheduleCartRefresh(source) {
+      if (scheduledRefreshTimer) {
+        clearTimeout(scheduledRefreshTimer);
+      }
+
+      scheduledRefreshTimer = setTimeout(function () {
+        scheduledRefreshTimer = null;
+        refreshCart(source || 'scheduled');
+      }, 50);
+    }
+
+    function getRequestUrl(input, fallbackUrl) {
+      if (typeof input === 'string') {
+        return input;
+      }
+
+      if (input && typeof input.url === 'string') {
+        return input.url;
+      }
+
+      if (typeof fallbackUrl === 'string') {
+        return fallbackUrl;
+      }
+
+      return '';
+    }
+
+    if (typeof originalFetch === 'function') {
+      window.fetch = function () {
+        var args = Array.prototype.slice.call(arguments);
+
+        return originalFetch.apply(this, args).then(function (response) {
+          var url = getRequestUrl(args[0]);
+          var mutationType = getCartMutationType(url);
+
+          if (response && response.ok && mutationType) {
+            scheduleCartRefresh('fetch:' + mutationType);
+          }
+
+          return response;
+        });
+      };
+    }
+
+    if (typeof originalXHROpen === 'function' && typeof originalXHRSend === 'function') {
+      window.XMLHttpRequest.prototype.open = function (method, url) {
+        this.__eSCartUrl = url;
+        return originalXHROpen.apply(this, arguments);
+      };
+
+      window.XMLHttpRequest.prototype.send = function () {
+        var request = this;
+
+        request.addEventListener('load', function () {
+          var mutationType = getCartMutationType(request.__eSCartUrl);
+
+          if (request.status >= 200 && request.status < 300 && mutationType) {
+            scheduleCartRefresh('xhr:' + mutationType);
+          }
+        });
+
+        return originalXHRSend.apply(this, arguments);
+      };
+    }
+
+    CART_THEME_EVENTS.forEach(function (eventName) {
+      document.addEventListener(eventName, function () {
+        scheduleCartRefresh(eventName === 'product:added' ? 'theme:add' : 'theme-event:' + eventName);
+      });
+    });
+
+    document.addEventListener('submit', function (event) {
+      var form = event.target;
+
+      if (form && typeof form.matches === 'function' && form.matches('form[action*="/cart/add"]')) {
+        scheduleCartRefresh('form:add');
+      }
+    }, true);
+
+    document.addEventListener('click', function (event) {
+      var target = event.target;
+      var button = target && typeof target.closest === 'function'
+        ? target.closest('[type="submit"], button[name="add"], [name="add"], [data-add-to-cart]')
+        : null;
+
+      if (button) {
+        var form = button.form || (typeof button.closest === 'function' ? button.closest('form') : null);
+
+        if (form && typeof form.matches === 'function' && form.matches('form[action*="/cart/add"]')) {
+          scheduleCartRefresh('click:add');
+        }
+      }
+    }, true);
+
+    refreshCart('init');
+  })();
+</script>
+
+<script>
+  (function () {
+    // ---- Sync context: customer + product (rendered from Liquid) ----
+    var sync = {};
+    var CART_CHANGED_EVENT = 'eS:cart-changed';
+
+    function hasMarketingConsent() {
+      var privacy = window.Shopify && window.Shopify.customerPrivacy;
+
+      if (!privacy || typeof privacy.marketingAllowed !== 'function') {
+        return false;
+      }
+
+      try {
+        return !!privacy.marketingAllowed();
+      } catch (error) {
+        return false;
+      }
+    }
+
+    function emitDocumentEvent(name, payload) {
+      document.dispatchEvent(new CustomEvent(name, {
+        detail: payload || {}
+      }));
+    }
+
+    function emitShopifyEvent(name, payload) {
+      var suffix = name.replace(/^shopify:/, '');
+
+      emitDocumentEvent('eS:shopify:' + suffix, payload || {});
+    }
+
+    function isAddToCartSource(source) {
+      return typeof source === 'string' && source.indexOf('add') !== -1;
+    }
+
+    function sendSync() {
+      window.__eSShopifyContext = sync;
+      eS('addVariables', sync);
+    }
+
+    sync.shop = {
+      domain: {{ shop.permanent_domain | json }},
+      name: {{ shop.name | json }},
+      currency: {{ shop.currency | json }}
+    };
+
+    sync.page = {
+      type: {{ request.page_type | json }},
+      path: {{ request.path | json }},
+      url: {{ canonical_url | json }},
+      template: {{ template.name | json }},
+      resource_id: {% if product %}{{ product.id | json }}{% elsif collection %}{{ collection.id | json }}{% else %}null{% endif %},
+      resource_handle: {% if product %}{{ product.handle | json }}{% elsif collection %}{{ collection.handle | json }}{% else %}null{% endif %}
+    };
+
+    sync.market = {
+      handle: {% if localization.market %}{{ localization.market.handle | json }}{% else %}null{% endif %},
+      country_code: {{ localization.country.iso_code | json }},
+      country_name: {{ localization.country.name | json }},
+      language_code: {{ localization.language.iso_code | json }},
+      currency: {{ localization.country.currency.iso_code | json }}
+    };
+
+    {% if customer %}
+      var _customer = {
+        is_logged_in: true,
+        accepts_marketing: {{ customer.accepts_marketing | json }},
+        {% comment %} id: {{ customer.id | json }}, {% endcomment %}
+        {% comment %} email: {{ customer.email | json }}, {% endcomment %}
+        {% comment %} first_name: {{ customer.first_name | json }}, {% endcomment %}
+        {% comment %} last_name: {{ customer.last_name | json }}, {% endcomment %}
+        orders_count: {{ customer.orders_count | json }},
+        total_spent: {{ customer.total_spent | divided_by: 100.0 | json }},
+        tags: {{ customer.tags | json }},
+        last_order_created_at: {% if customer.last_order %}{{ customer.last_order.created_at | json }}{% else %}null{% endif %},
+        orders: [
+          {%- for order in customer.orders limit: 50 -%}
+            {%- unless forloop.first -%},{%- endunless -%}
+            { line_items: [
+              {%- for li in order.line_items -%}
+                {%- unless forloop.first -%},{%- endunless -%}
+                { sku: {{ li.sku | json }} }
+              {%- endfor -%}
+            ] }
+          {%- endfor -%}
+        ]
+      };
+
+      sync.customer = _customer;
+    {% else %}
+      sync.customer = { is_logged_in: false };
+    {% endif %}
+
+    {% if product %}
+    var _selectedVariant = {
+      id: {{ product.selected_or_first_available_variant.id | json }},
+      title: {{ product.selected_or_first_available_variant.title | json }},
+      sku: {{ product.selected_or_first_available_variant.sku | json }},
+      available: {{ product.selected_or_first_available_variant.available | json }},
+      price: {{ product.selected_or_first_available_variant.price | divided_by: 100.0 | json }},
+      compare_at_price: {{ product.selected_or_first_available_variant.compare_at_price | divided_by: 100.0 | json }},
+      inventory_quantity: {{ product.selected_or_first_available_variant.inventory_quantity | json }}
+    };
+
+    var _product = {
+      id: {{ product.id | json }},
+      handle: {{ product.handle | json }},
+      title: {{ product.title | json }},
+      type: {{ product.type | json }},
+      vendor: {{ product.vendor | json }},
+      tags: {{ product.tags | json }},
+      available: {{ product.available | json }},
+      price: {{ product.price | divided_by: 100.0 | json }},
+      currency: {{ shop.currency | json }},
+      total_inventory_quantity: {{ product.selected_or_first_available_variant.inventory_quantity | json }},
+      selected_variant: _selectedVariant
+    };
+    sync.product = _product;
+    {% else %}
+    sync.product = null;
+    {% endif %}
+
+    {% if collection %}
+    sync.collection = {
+      id: {{ collection.id | json }},
+      handle: {{ collection.handle | json }},
+      title: {{ collection.title | json }}
+    };
+    {% else %}
+    sync.collection = null;
+    {% endif %}
+
+    sendSync();
+
+    document.addEventListener(CART_CHANGED_EVENT, function (event) {
+      var detail = event.detail || {};
+      var raw = detail.raw;
+      if (!raw) return;
+      var source = detail.source || 'unknown';
+      var items = (Array.isArray(raw.items) ? raw.items : []).map(function (item) {
+        return {
+          product_id: item.product_id,
+          variant_id: item.variant_id,
+          product_title: item.product_title,
+          product_type: item.product_type,
+          product_tags: item.product_tags,
+          product_vendor: item.vendor,
+          sku: item.sku,
+          handle: item.handle,
+          quantity: item.quantity,
+          price: typeof item.price === 'number' ? item.price / 100 : null,
+          total_price: typeof item.final_line_price === 'number' ? item.final_line_price / 100 : null
+        };
+      });
+
+      var cart = {
+        total_price: typeof raw.total_price === 'number' ? raw.total_price / 100 : null,
+        total_discount: typeof raw.total_discount === 'number' ? raw.total_discount / 100 : null,
+        item_count: typeof raw.item_count === 'number' ? raw.item_count : null,
+        line_count: Array.isArray(raw.items) ? raw.items.length : null,
+        currency: raw.currency || null,
+        token: raw.token || null,
+        discount_applications: Array.isArray(raw.cart_level_discount_applications)
+          ? raw.cart_level_discount_applications
+          : [],
+        items: items
+      };
+      sync.cart = cart;
+      sendSync();
+
+      emitShopifyEvent('shopify:cart_updated', {
+        source: source,
+        cart: cart
+      });
+
+      if (isAddToCartSource(source)) {
+        emitShopifyEvent('shopify:product_added_to_cart', {
+          source: source,
+          cart: cart
+        });
+      }
+    });
+  })();
+</script>
