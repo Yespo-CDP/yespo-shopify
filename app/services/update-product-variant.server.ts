@@ -114,7 +114,10 @@ export const updateProductVariantService = async (
             shopDomain: domain,
             productHandle: payload?.handle ?? "",
             collections: categories
-              .filter((c) => c.type === "collection")
+              .filter(
+                (c): c is typeof c & { id: string } =>
+                  c.type === "collection" && Boolean(c.id),
+              )
               .map((c) => ({ id: c.id, name: c.name })),
           })
         : null;
