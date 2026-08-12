@@ -87,7 +87,6 @@ export async function fetchWithErrorHandling(
   for (let attempt = 0; ; attempt++) {
     try {
       console.log("***************");
-
       console.log("url", url);
       console.log("options", options);
 
