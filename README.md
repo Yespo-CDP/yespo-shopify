@@ -13,7 +13,6 @@ The app allows merchants to:
 - Install the service worker file for web push notifications using a Shopify App Proxy.
 - Send tracking events like MainPage, 404 Page, ProductPage, CustomerData, StatusCart, CategoryPage and PurchasedItems from your store to Yespo.
 
-
 ## Features and Implementation Details
 
 ### Widgets
