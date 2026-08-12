@@ -86,10 +86,18 @@ export async function fetchWithErrorHandling(
 ) {
   for (let attempt = 0; ; attempt++) {
     try {
+      console.log("***************");
+
+      console.log("url", url);
+      console.log("options", options);
+
       const response = await fetch(url, options);
 
       const rawResponse = await response.text();
       let responseData: any = rawResponse;
+      console.log("***************");
+      console.log("rawResponse", rawResponse);
+      console.log("response.status", response.status);
 
       try {
         responseData = JSON.parse(rawResponse);
