@@ -1,7 +1,7 @@
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
-import {sendLogEvent} from "~/api/send-log-event";
-import {EVENT_MESSAGES} from "~/config/constants";
+import { sendLogEvent } from "~/api/send-log-event";
+import { EVENT_MESSAGES } from "~/config/constants";
 
 /**
  * Fetches the web push script for a specific domain from the Yespo API.
@@ -20,7 +20,7 @@ import {EVENT_MESSAGES} from "~/config/constants";
 export const getWebpushScript = async ({
   apiKey,
   domain,
-  orgId
+  orgId,
 }: {
   apiKey: string;
   domain: string;
@@ -37,7 +37,7 @@ export const getWebpushScript = async ({
   };
 
   try {
-    const res = (await fetchWithErrorHandling(url, options))
+    const res = await fetchWithErrorHandling(url, options);
     const response = res.responseData as {
       script?: string;
     };
@@ -46,30 +46,30 @@ export const getWebpushScript = async ({
     if (!script) {
       await sendLogEvent({
         orgId,
-        errorMessage: 'Web push script not retrieved',
+        errorMessage: "Web push script not retrieved",
         data: JSON.stringify({
           domain,
           responseBody: response,
-          statusCode: res.status
+          statusCode: res.status,
         }),
-        message: EVENT_MESSAGES.GET_WEB_PUSH_DOMAIN_FAILED,
-        logLevel: 'ERROR'
-      })
+        message: EVENT_MESSAGES.GET_WEB_PUSH_SCRIPT_FAILED,
+        logLevel: "ERROR",
+      });
 
       throw new Error("requestScriptError");
     }
 
     await sendLogEvent({
       orgId,
-      errorMessage: '',
+      errorMessage: "",
       data: {
         domain,
         responseBody: response,
-        statusCode: res.status
+        statusCode: res.status,
       },
-      message: EVENT_MESSAGES.GET_WEB_PUSH_DOMAIN_SUCCESS,
-      logLevel: 'INFO'
-    })
+      message: EVENT_MESSAGES.GET_WEB_PUSH_SCRIPT_SUCCESS,
+      logLevel: "INFO",
+    });
 
     return script;
   } catch (error: any) {
@@ -81,11 +81,11 @@ export const getWebpushScript = async ({
       data: {
         domain,
         responseBody: error,
-        statusCode: error?.status ?? 500
+        statusCode: error?.status ?? 500,
       },
-      message: EVENT_MESSAGES.GET_WEB_PUSH_DOMAIN_FAILED,
-      logLevel: 'ERROR'
-    })
+      message: EVENT_MESSAGES.GET_WEB_PUSH_SCRIPT_FAILED,
+      logLevel: "ERROR",
+    });
 
     throw new Error("requestScriptError");
   }
