@@ -17,7 +17,7 @@ import {
 
 interface JobData {
   shop?: string;
-  type: "order" | "customer" | "product";
+  kinds?: Array<"customer" | "order" | "product">;
 }
 
 interface MarketSyncJobData {
@@ -71,29 +71,37 @@ new Worker<JobData>(
         );
         return;
       }
-      await customerSyncHandler(
-        shop,
-        accessToken,
-        apiKey,
-        shopData.id,
-        shopData.orgId,
-      );
-      await orderSyncHandler(
-        shop,
-        accessToken,
-        apiKey,
-        shopData.id,
-        shopData.orgId,
-      );
-      await productSyncHandler(
-        shop,
-        accessToken,
-        apiKey,
-        shopData.id,
-        shopData.orgId,
-        shopData.siteId,
-      );
-      await enqueueMarketSyncTaskForShopUrl(shop);
+      const kinds = job.data.kinds ?? ["customer", "order"];
+
+      if (kinds.includes("customer")) {
+        await customerSyncHandler(
+          shop,
+          accessToken,
+          apiKey,
+          shopData.id,
+          shopData.orgId,
+        );
+      }
+      if (kinds.includes("order")) {
+        await orderSyncHandler(
+          shop,
+          accessToken,
+          apiKey,
+          shopData.id,
+          shopData.orgId,
+        );
+      }
+      if (kinds.includes("product")) {
+        await productSyncHandler(
+          shop,
+          accessToken,
+          apiKey,
+          shopData.id,
+          shopData.orgId,
+          shopData.siteId,
+        );
+        await enqueueMarketSyncTaskForShopUrl(shop);
+      }
     } catch (error: any) {
       console.error(`Worker error:`, error);
     }

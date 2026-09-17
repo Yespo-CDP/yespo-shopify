@@ -31,7 +31,6 @@ import { updateMarketFromWebhook } from "./update-market-from-webhook.server";
  * @param shopifyDomain - Shopify myshopify domain for the GraphQL client (session.shop)
  * @param accessToken - Shopify access token for the GraphQL client (session.accessToken)
  * @param shopCurrency - ISO 4217 currency code stored in DB (shop.defaultCurrency)
- * @param syncedLocales - Secondary locales stored in DB (shop.syncedLocales) used to detect removed locales
  * @param isMarketSyncEnabled - Whether market sync is enabled for this shop
  */
 export const createProductVariantService = async (
@@ -45,7 +44,6 @@ export const createProductVariantService = async (
   shopifyDomain?: string,
   accessToken?: string,
   shopCurrency?: string | null,
-  syncedLocales: string[] = [],
   isMarketSyncEnabled = false,
 ) => {
   try {
@@ -62,7 +60,6 @@ export const createProductVariantService = async (
 
     const {
       languageCode: resolvedLanguageCode,
-      languageChanged,
       needsLanguageCodePersist,
     } = await resolveProductSyncLanguage({
       client,
@@ -108,25 +105,20 @@ export const createProductVariantService = async (
         "create",
         categories,
         [],
-        [],
         translationsResult,
       ),
     );
 
-    const response = await updateProductVariants({
+    await updateProductVariants({
       apiKey,
       siteId: siteId ?? "",
       languageCode: resolvedLanguageCode,
-      languageChanged,
       productVariants,
       domain,
       orgId,
     });
 
-    if (
-      shopifyDomain &&
-      (needsLanguageCodePersist || response.languageChangedConfirmed)
-    ) {
+    if (shopifyDomain && needsLanguageCodePersist) {
       await shopRepository.updateShop(shopifyDomain, {
         defaultLanguageCode: resolvedLanguageCode,
       });

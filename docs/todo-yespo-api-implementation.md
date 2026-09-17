@@ -14,7 +14,7 @@
 | 3 | HTTP 207 — часткова помилка | ✅ Готово (rejected items derive на call-site; активується з #1) |
 | 4 | HTTP 429 — retry | ❌ Відкрито |
 | 5 | HTTP 500+ — retry з backoff | ❌ Відкрито |
-| 6 | HTTP 409 — LANGUAGE_CODE_MISMATCH | 🟡 Частково (bulk-retry написано/закоментовано; вебхуки не передають `languageChanged`) |
+| 6 | HTTP 409 — LANGUAGE_CODE_MISMATCH | ✅ Не актуально (`languageChanged` / `409` прибрані з контракту `final_new`) |
 | 7 | Translations у вебхуках | ✅ Готово |
 | 8 | Translation categories | ✅ Готово |
 | 9 | Category `type` та `path` | 🟡 Частково (`type:"category"`+`path` через таксономію; метафілд-override не підключено) |
@@ -26,7 +26,7 @@
 | 15 | Rate limiter для кількох процесів | ✅ Готово (Redis) |
 | 16 | Прибрати/сховати debug-дампи URL | ❌ Відкрито (нове) |
 
-**Залишилось зробити:** #1, #4, #5, #10, #16 (повністю) + дозакрити #6 (вебхуки) та #9 (метафілд-override). Пункт #14 свідомо пропущено.
+**Залишилось зробити:** #1, #4, #5, #10, #16 (повністю) + дозакрити #9 (метафілд-override). Пункт #14 свідомо пропущено. #6 знято: `languageChanged` більше не шлемо.
 
 ---
 
@@ -85,26 +85,21 @@ HTTP-виклики до Yespo закоментовані. Обидва мето
 
 ---
 
-## 6. HTTP 409 — LANGUAGE_CODE_MISMATCH 🟡 Частково
+## ~~6. HTTP 409 — LANGUAGE_CODE_MISMATCH~~ ✅ Не актуально
 
-**Файли:** `app/api/update-product-variants.ts`
+За `final_new.pdf` поля `languageChanged` немає в envelope, HTTP `409` / `LANGUAGE_CODE_MISMATCH` немає в кодах помилок.
 
-Retry на `409` з `languageChanged: true` уже написаний у `updateProductVariants` (закоментований поряд із fetch — активується з #1).
-
-Передача `languageChanged` у вебхуках уже реалізована: `create-product-variant.server.ts` та `update-product-variant.server.ts` рахують його через `resolveProductSyncLanguage` (та сама логіка, що й bulk sync) і передають у `updateProductVariants`, а також обробляють `languageChangedConfirmed` із відповіді.
-
-**Залишилось:**
-- Активувати retry разом з #1 (розкоментувати блок fetch + обробку 409)
+Код більше не шле `languageChanged`, не ретраїть 409 і не виставляє `languageChangedConfirmed`. `languageCode` лишається в body (`Shopify shop.primaryLocale`); `shop.defaultLanguageCode` — лише наш кеш.
 
 ---
 
 ## ~~7. Translations у вебхуках~~ ✅ Виконано
 
 Реалізовано в `create-product-variant.server.ts` та `update-product-variant.server.ts`:
-- `getShopSecondaryLocales` — свіжі локалі з Shopify (виявляє видалені)
+- `getShopSecondaryLocales` — поточні published secondary locales
 - `getProductTranslations` — переклади продукту і варіантів
-- `removedLocales` → `remove.translations` у payload
 - `createProductVariantPayloadFromWebhook` приймає `translationsResult`
+- Зняті в Shopify локалі **не** чистимо в Yespo (`remove.translations` не шлемо)
 
 ---
 
@@ -240,7 +235,7 @@ offline-токена/`apiKey` → тихо пропускається (слот 
 | Market URL: додано `/products/` + `?variant=<id>` (узгоджено bulk/market/webhook) | `resolve-market-urls.ts`, `append-variant-param.ts`, `create-product-variant-payload.ts`, `create-product-variant-payload-from-webhook.ts` |
 | DELETE URL `/api/v1/v1/products` | `app/api/delete-product-variants.ts` |
 | Translations у вебхуках | `create/update-product-variant.server.ts`, `create-product-variant-payload-from-webhook.ts` |
-| removedLocales у вебхуках | `update-product-variant.server.ts` |
+| Видалення перекладів свідомо скіпнуто | payload-білдери більше не шлють `remove.translations` |
 | Market sync у вебхуках (contextualPricing) | `app/services/update-market-from-webhook.server.ts` |
 | Видалені маркети у вебхуках | `update-market-from-webhook.server.ts` + `MarketSyncRepositoryImpl.deleteManyByKeys` |
 | Пагінація варіантів у contextual pricing | `get-product-contextual-pricing.ts` |

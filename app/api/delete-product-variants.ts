@@ -13,8 +13,8 @@ import { throttleApiRequest } from "~/utils/rate-limiter.server";
  * Each item requires productId (Shopify variant GID) and updatedDate (current UTC timestamp).
  * Respects the 60 req/min per siteId rate limit.
  *
- * @param params.apiKey - Basic-auth API key.
- * @param params.siteId - Yespo site/account identifier.
+ * @param params.apiKey - Basic-auth API key. The Yespo site is resolved from the key, not the body.
+ * @param params.siteId - Yespo site/account identifier; used for rate limiting, not sent in the body.
  * @param params.externalVariantIds - Shopify variant IDs to delete (max 500 per call).
  * @param params.domain - Shop domain used for logging.
  * @param params.orgId - Yespo organisation id used for logging.
@@ -40,7 +40,6 @@ export const deleteProductVariants = async ({
     const deletedAt = new Date().toISOString();
 
     const requestBody = {
-      siteId,
       products: externalVariantIds.map((productId) => ({
         productId,
         updatedDate: deletedAt,

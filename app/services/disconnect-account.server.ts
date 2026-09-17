@@ -37,6 +37,8 @@ export const disconnectAccountService = async ({
     isWebTrackingEnabled: false,
     isContactSyncEnabled: false,
     isOrderSyncEnabled: false,
+    isProductVariantSyncEnabled: false,
+    isMarketSyncEnabled: false,
     siteId: "",
     isGeneralScriptInstalled: false,
     isWebPushScriptInstalled: false,

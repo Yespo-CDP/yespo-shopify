@@ -25,15 +25,13 @@ Full documentation: `docs/yespo-api-products-markets.md`
 
 ```json
 {
-  "siteId": "my_store",
   "languageCode": "uk",
-  "languageChanged": false,
   "products": [...]
 }
 ```
 
-- `languageCode` is fixed per `siteId` after first accepted request.
-- Changing it without `languageChanged: true` → `409 LANGUAGE_CODE_MISMATCH`.
+- Site is resolved from the API key, not from the body. Do not send `siteId`.
+- `languageCode` is recorded from the first accepted request as the site default.
 
 ### Product fields
 
@@ -93,7 +91,7 @@ Full documentation: `docs/yespo-api-products-markets.md`
 ## DELETE /v1/products
 
 ```json
-{ "siteId": "my_store", "products": [{ "productId": "430738", "updatedDate": "2026-04-01T10:10:00Z" }] }
+{ "products": [{ "productId": "430738", "updatedDate": "2026-04-01T10:10:00Z" }] }
 ```
 
 Idempotent. Deleting a product removes all its market data automatically.
@@ -106,7 +104,6 @@ Send Add products **first**, then Add markets.
 
 ```json
 {
-  "siteId": "my_store",
   "markets": [{ "marketId": "ca", "products": [...] }]
 }
 ```
@@ -139,13 +136,12 @@ Market record is active in recommendations only when base product exists **and**
 }
 ```
 
-HTTP: `200` all ok · `207` partial · `400` bad payload · `409` language mismatch · `413` too large · `429` rate limit · `500+` server error (retry with backoff)
+HTTP: `200` all ok · `207` partial · `400` bad payload · `413` too large · `429` rate limit · `500+` server error (retry with backoff)
 
 ## Key error codes
 
 | Code                     | Level | Cause |
 |--------------------------|-------|-------|
-| `LANGUAGE_CODE_MISMATCH` | 409   | Wrong `languageCode` without `languageChanged: true` |
 | `MISSING_REQUIRED_FIELD` | 207   | Required field absent |
 | `INVALID_URL`            | 207   | Non-absolute or malformed URL |
 | `INVALID_CURRENCY`       | 207   | Not valid ISO 4217 |

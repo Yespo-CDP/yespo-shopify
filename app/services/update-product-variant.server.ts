@@ -37,7 +37,6 @@ import { updateMarketFromWebhook } from "./update-market-from-webhook.server";
  * @param shopifyDomain - Shopify myshopify domain for the GraphQL client (session.shop)
  * @param accessToken - Shopify access token for the GraphQL client (session.accessToken)
  * @param shopCurrency - ISO 4217 currency code stored in DB (shop.defaultCurrency)
- * @param syncedLocales - Secondary locales stored in DB (shop.syncedLocales) used to detect removed locales
  * @param isMarketSyncEnabled - Whether market sync is enabled for this shop
  */
 export const updateProductVariantService = async (
@@ -51,7 +50,6 @@ export const updateProductVariantService = async (
   shopifyDomain?: string,
   accessToken?: string,
   shopCurrency?: string | null,
-  syncedLocales: string[] = [],
   isMarketSyncEnabled = false,
 ) => {
   try {
@@ -70,7 +68,6 @@ export const updateProductVariantService = async (
 
     const {
       languageCode: resolvedLanguageCode,
-      languageChanged,
       needsLanguageCodePersist,
     } = await resolveProductSyncLanguage({
       client,
@@ -98,11 +95,6 @@ export const updateProductVariantService = async (
             )
           : Promise.resolve([] as string[]),
       ]);
-
-    // Locales present in DB but absent in Shopify now → must be removed from Yespo
-    const removedLocales = syncedLocales.filter(
-      (l) => !freshLocales.includes(l),
-    );
 
     const translationsResult =
       client && freshLocales.length > 0 && productGid
@@ -136,7 +128,6 @@ export const updateProductVariantService = async (
         action,
         categories,
         previousTagKeys,
-        removedLocales,
         translationsResult,
       );
     });
@@ -154,20 +145,16 @@ export const updateProductVariantService = async (
       return;
     }
 
-    const response = await updateProductVariants({
+    await updateProductVariants({
       apiKey,
       siteId,
       languageCode: resolvedLanguageCode,
-      languageChanged,
       productVariants: sanitizedProductVariants,
       domain,
       orgId,
     });
 
-    if (
-      shopifyDomain &&
-      (needsLanguageCodePersist || response.languageChangedConfirmed)
-    ) {
+    if (shopifyDomain && needsLanguageCodePersist) {
       await shopRepository.updateShop(shopifyDomain, {
         defaultLanguageCode: resolvedLanguageCode,
       });

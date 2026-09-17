@@ -80,7 +80,6 @@ function mapWebhookOptions(
  * @param action - "create" for new variants, "update" for previously synced ones
  * @param categories - Pre-fetched Yespo categories (from separate API call if needed)
  * @param previousTagKeys - Tag keys sent in the previous sync (from ProductVariantSync.syncedTagKeys)
- * @param removedLocales - Secondary locales removed from the shop since last sync
  * @param translationsResult - Pre-fetched product and variant translations from Shopify GraphQL
  */
 export const createProductVariantPayloadFromWebhook = (
@@ -91,7 +90,6 @@ export const createProductVariantPayloadFromWebhook = (
   action: "create" | "update" = "create",
   categories: YespoCategory[] = [],
   previousTagKeys: string[] = [],
-  removedLocales: string[] = [],
   translationsResult: ProductTranslationsResult | null = null,
 ): ProductVariant => {
   const variantTitle =
@@ -193,13 +191,7 @@ export const createProductVariantPayloadFromWebhook = (
     );
     if (removedTagKeys.length > 0) remove.tags = removedTagKeys;
 
-    if (removedLocales.length > 0) remove.translations = removedLocales;
-
-    if (
-      remove.fields?.length ||
-      remove.tags?.length ||
-      remove.translations?.length
-    ) {
+    if (remove.fields?.length || remove.tags?.length) {
       payload.remove = remove;
     }
   }

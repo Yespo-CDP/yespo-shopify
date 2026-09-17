@@ -38,7 +38,6 @@ function mapSelectedOptions(
  * @param shopDomain - Shop domain used to construct product URL when onlineStoreUrl is null
  * @param action - "create" for new variants, "update" for previously synced ones
  * @param previousTagKeys - Tag keys that were sent in the previous sync (from ProductVariantSync.syncedTagKeys)
- * @param removedLocales - Secondary locales removed from the shop since last sync (from Shop.syncedLocales diff)
  */
 export const createProductVariantPayload = (
   product: ProductData,
@@ -47,7 +46,6 @@ export const createProductVariantPayload = (
   shopDomain = "",
   action: "create" | "update" = "create",
   previousTagKeys: string[] = [],
-  removedLocales: string[] = [],
 ): ProductVariant => {
   const variantTitle =
     variant.title === "Default Title" ? "" : variant.title.trim();
@@ -161,14 +159,7 @@ export const createProductVariantPayload = (
     );
     if (removedTagKeys.length > 0) remove.tags = removedTagKeys;
 
-    // Translations: locales removed from the shop since last sync.
-    if (removedLocales.length > 0) remove.translations = removedLocales;
-
-    if (
-      remove.fields?.length ||
-      remove.tags?.length ||
-      remove.translations?.length
-    ) {
+    if (remove.fields?.length || remove.tags?.length) {
       payload.remove = remove;
     }
   }

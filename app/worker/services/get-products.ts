@@ -3,6 +3,10 @@ import type { ProductData, ProductsResponse } from "~/@types/product";
 
 const VARIANTS_PAGE_SIZE = 100;
 
+/** Active products published to the Online Store — shared by fetch and Total. */
+export const PRODUCT_SYNC_SEARCH_QUERY =
+  "status:active AND published_status:published";
+
 /**
  * Fetches a paginated list of products with the first page of variants from Shopify.
  */
@@ -80,7 +84,7 @@ export const getProducts = async ({
           count,
           cursor,
           variantsCount: VARIANTS_PAGE_SIZE,
-          query: "status:active AND published_status:published",
+          query: PRODUCT_SYNC_SEARCH_QUERY,
         },
       },
     );

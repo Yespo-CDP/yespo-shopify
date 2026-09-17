@@ -75,15 +75,15 @@ function deriveFailedItems(response: YespoMarketsRawResponse): string[] {
  * Sends market-specific prices, stock, and (optionally) URLs to the Yespo
  * POST /v1/markets API.
  *
- * Envelope: { siteId, markets: [{ marketId, products: [...] }] }
+ * Envelope: { markets: [{ marketId, products: [...] }] }
  *
  * NOTE: The HTTP call is currently stubbed (mirrors the product sync client) and
  * returns a mock success response. The exact payload that would be sent is
  * written to `debug/` for inspection. Uncomment the block below once the Yespo
  * endpoint is live.
  *
- * @param params.apiKey - Basic-auth API key.
- * @param params.siteId - Yespo site/account identifier (required in every request).
+ * @param params.apiKey - Basic-auth API key. The Yespo site is resolved from the key, not the body.
+ * @param params.siteId - Yespo site/account identifier; used for rate limiting, not sent in the body.
  * @param params.markets - Markets to sync, already grouped by marketId.
  * @param params.domain - Shop domain used for logging.
  * @param params.orgId - Yespo organisation id used for logging.
@@ -117,7 +117,7 @@ export const updateMarketProducts = async ({
   try {
     await throttleApiRequest(siteId);
 
-    const requestBody = { siteId, markets: normalizedMarkets };
+    const requestBody = { markets: normalizedMarkets };
 
     // Persist the exact object that would be sent to Yespo for inspection.
     const debugDir = path.resolve(process.cwd(), "debug");
