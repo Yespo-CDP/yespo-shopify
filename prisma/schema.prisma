@@ -46,7 +46,7 @@ model Shop {
   siteId                      String?
   defaultCurrency             String?
   defaultLanguageCode         String?
-  syncedLocales               String[]
+  syncedLocales               String[] @default([])
   isWebTrackingEnabled        Boolean?  @default(false)
   isContactSyncEnabled        Boolean?  @default(false)
   isOrderSyncEnabled          Boolean?  @default(false)

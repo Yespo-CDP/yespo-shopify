@@ -3,6 +3,7 @@ import { shopRepository } from "~/repositories/repositories.server";
 import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
 import {sendLogEvent} from "~/api/send-log-event";
 import {EVENT_MESSAGES} from "~/config/constants";
+import afterAuth from "~/services/afterAuth.server";
 
 /**
  * Connects an account by verifying the API key, updating the shop record,
@@ -40,6 +41,10 @@ export const connectAccountService = async ({
   orgId?: number | null;
 }) => {
   const accountInfo = await getAccountInfo({ apiKey, domain: session.shop });
+  const existingShop = await shopRepository.getShop(session.shop);
+  if (!existingShop) {
+    await afterAuth({ session, admin });
+  }
   await shopRepository.updateShop(session.shop, { apiKey, orgId: accountInfo.orgId });
   const shop = await shopRepository.getShop(session.shop);
   if (shop?.shopId) {

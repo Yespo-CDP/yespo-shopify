@@ -16,6 +16,7 @@ import { connectWebPushScriptService } from "~/services/connect-webpush-script.s
 import checkScriptConnectionService from "~/services/check-script-connection.server";
 import checkThemeExtensionService from "~/services/check-theme-extension.server";
 import { authenticate } from "~/shopify.server";
+import afterAuth from "~/services/afterAuth.server";
 import i18n from "~/i18n.server";
 import { toggleWebTrackingServer } from "~/services/toggle-web-tracking.server";
 import { createGeneralDomain } from "~/api/create-general-domain.server";
@@ -50,7 +51,11 @@ import switchAppInboxScriptServer from "~/services/switch-app-inbox-script-mode.
 
 export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
-  const shop = await shopRepository.getShop(session.shop);
+  let shop = await shopRepository.getShop(session.shop);
+  if (!shop) {
+    await afterAuth({ session, admin });
+    shop = await shopRepository.getShop(session.shop);
+  }
   const customersSyncLog =
     await customerSyncLogRepository.getCustomerSyncLogByShop(session.shop);
   const orderSyncLog = await orderSyncLogRepository.getOrderSyncLogByShop(
