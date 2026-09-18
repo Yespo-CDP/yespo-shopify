@@ -61,6 +61,7 @@ admin,
       name: shop.name,
       email: shop.email,
       domain: shop?.primaryDomain?.host,
+      syncedLocales: [],
     });
   }
 

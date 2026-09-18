@@ -143,4 +143,26 @@ export default class ProductVariantSyncRepositoryImpl
       where: { shopId, productId },
     });
   }
+
+  async countByShop(shopId: number): Promise<number> {
+    return this.database.productVariantSync.count({ where: { shopId } });
+  }
+
+  async countFailedByShop(shopId: number): Promise<number> {
+    return this.database.productVariantSync.count({
+      where: { shopId, syncFailed: true },
+    });
+  }
+
+  async setSyncFailed(
+    shopId: number,
+    variantIds: string[],
+    syncFailed: boolean,
+  ): Promise<void> {
+    if (variantIds.length === 0) return;
+    await this.database.productVariantSync.updateMany({
+      where: { shopId, variantId: { in: variantIds } },
+      data: { syncFailed },
+    });
+  }
 }

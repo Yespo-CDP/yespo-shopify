@@ -16,16 +16,13 @@ export async function resolveProductSyncLanguage({
   storedLanguageCode?: string | null;
 }): Promise<{
   languageCode: string;
-  languageChanged: boolean;
   needsLanguageCodePersist: boolean;
 }> {
   const currentLocale = client
     ? await getShopPrimaryLocale({ client })
     : null;
   const languageCode = currentLocale ?? storedLanguageCode ?? "en";
-  const languageChanged =
-    storedLanguageCode != null && storedLanguageCode !== languageCode;
   const needsLanguageCodePersist = languageCode !== storedLanguageCode;
 
-  return { languageCode, languageChanged, needsLanguageCodePersist };
+  return { languageCode, needsLanguageCodePersist };
 }

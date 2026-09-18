@@ -12,7 +12,12 @@ import { getProductCollectionsAndCategories } from "~/worker/services/get-produc
 import { getShopSecondaryLocales } from "~/worker/services/get-shop-locales";
 import { getProductTranslations } from "~/worker/services/get-product-translations";
 import { resolveProductSyncLanguage } from "~/worker/services/resolve-product-sync-language";
+import { laterDate } from "~/utils/convert-date-to-utc";
 import { updateMarketFromWebhook } from "./update-market-from-webhook.server";
+import {
+  collectRejectedProductIds,
+  refreshProductVariantSyncLog,
+} from "./refresh-product-variant-sync-log.server";
 
 /**
  * Creates product variants in Yespo from a Shopify PRODUCTS_CREATE webhook payload.
@@ -31,7 +36,6 @@ import { updateMarketFromWebhook } from "./update-market-from-webhook.server";
  * @param shopifyDomain - Shopify myshopify domain for the GraphQL client (session.shop)
  * @param accessToken - Shopify access token for the GraphQL client (session.accessToken)
  * @param shopCurrency - ISO 4217 currency code stored in DB (shop.defaultCurrency)
- * @param syncedLocales - Secondary locales stored in DB (shop.syncedLocales) used to detect removed locales
  * @param isMarketSyncEnabled - Whether market sync is enabled for this shop
  */
 export const createProductVariantService = async (
@@ -45,7 +49,6 @@ export const createProductVariantService = async (
   shopifyDomain?: string,
   accessToken?: string,
   shopCurrency?: string | null,
-  syncedLocales: string[] = [],
   isMarketSyncEnabled = false,
 ) => {
   try {
@@ -62,7 +65,6 @@ export const createProductVariantService = async (
 
     const {
       languageCode: resolvedLanguageCode,
-      languageChanged,
       needsLanguageCodePersist,
     } = await resolveProductSyncLanguage({
       client,
@@ -108,29 +110,28 @@ export const createProductVariantService = async (
         "create",
         categories,
         [],
-        [],
         translationsResult,
       ),
     );
 
-    const response = await updateProductVariants({
+    const variantsUpdateResponse = await updateProductVariants({
       apiKey,
       siteId: siteId ?? "",
       languageCode: resolvedLanguageCode,
-      languageChanged,
       productVariants,
       domain,
       orgId,
     });
 
-    if (
-      shopifyDomain &&
-      (needsLanguageCodePersist || response.languageChangedConfirmed)
-    ) {
+    if (shopifyDomain && needsLanguageCodePersist) {
       await shopRepository.updateShop(shopifyDomain, {
         defaultLanguageCode: resolvedLanguageCode,
       });
     }
+
+    const rejectedIds = collectRejectedProductIds(
+      variantsUpdateResponse?.failedVariants,
+    );
 
     for (let i = 0; i < variants.length; i++) {
       const variant = variants[i];
@@ -139,8 +140,9 @@ export const createProductVariantService = async (
         variantId: variant.admin_graphql_api_id,
         productId: payload.admin_graphql_api_id,
         syncedTagKeys: currentTagKeys,
+        syncFailed: rejectedIds.has(String(variant.id)),
         createdAt: variant.created_at ?? payload.created_at,
-        updatedAt: variant.updated_at ?? payload.updated_at,
+        updatedAt: laterDate(variant.updated_at, payload.updated_at),
         shop: {
           connect: {
             id: shopId,
@@ -161,6 +163,8 @@ export const createProductVariantService = async (
         orgId,
       });
     }
+
+    await refreshProductVariantSyncLog(shopId);
   } catch (error: any) {
     console.error("Error occurred in Create Product Variant Service", error);
   }

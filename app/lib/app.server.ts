@@ -16,6 +16,7 @@ import { connectWebPushScriptService } from "~/services/connect-webpush-script.s
 import checkScriptConnectionService from "~/services/check-script-connection.server";
 import checkThemeExtensionService from "~/services/check-theme-extension.server";
 import { authenticate } from "~/shopify.server";
+import afterAuth from "~/services/afterAuth.server";
 import i18n from "~/i18n.server";
 import { toggleWebTrackingServer } from "~/services/toggle-web-tracking.server";
 import { createGeneralDomain } from "~/api/create-general-domain.server";
@@ -50,7 +51,11 @@ import switchAppInboxScriptServer from "~/services/switch-app-inbox-script-mode.
 
 export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
-  const shop = await shopRepository.getShop(session.shop);
+  let shop = await shopRepository.getShop(session.shop);
+  if (!shop) {
+    await afterAuth({ session, admin });
+    shop = await shopRepository.getShop(session.shop);
+  }
   const customersSyncLog =
     await customerSyncLogRepository.getCustomerSyncLogByShop(session.shop);
   const orderSyncLog = await orderSyncLogRepository.getOrderSyncLogByShop(
@@ -140,6 +145,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     script?: string;
     webTracking?: string;
     dataSync?: string;
+    productSync?: string;
     appInbox?: string;
   } = {};
   const success: {
@@ -311,7 +317,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
-  if (intent === "data-sync-enable") {
+  if (intent === "customers-orders-sync-enable") {
     const shop = await shopRepository.getShop(session.shop);
     try {
       if (!shop) {
@@ -322,8 +328,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await shopRepository.updateShop(shop.domain, {
         isContactSyncEnabled: true,
         isOrderSyncEnabled: true,
-        isProductVariantSyncEnabled: true,
-        isMarketSyncEnabled: true,
+        isMarketSyncEnabled: false,
       });
 
       await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
@@ -351,22 +356,12 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
           },
         },
       });
-      await productVariantSyncLogRepository.createOrUpdateProductVariantSyncLog(
-        {
-          status: "NOT_STARTED",
-          skippedCount: 0,
-          syncedCount: 0,
-          failedCount: 0,
-          totalCount: 0,
-          shop: {
-            connect: {
-              id: shop.id,
-            },
-          },
-        },
-      );
 
-      await enqueueDataSyncTasks({ session, shop });
+      await enqueueDataSyncTasks({
+        session,
+        shop,
+        kinds: ["customer", "order"],
+      });
 
       await sendLogEvent({
         orgId: shop.orgId,
@@ -390,7 +385,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     }
   }
 
-  if (intent === "data-sync-disable") {
+  if (intent === "customers-orders-sync-disable") {
     const shop = await shopRepository.getShop(session.shop);
     try {
       if (!shop) {
@@ -401,8 +396,6 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await shopRepository.updateShop(shop.domain, {
         isContactSyncEnabled: false,
         isOrderSyncEnabled: false,
-        isProductVariantSyncEnabled: false,
-        isMarketSyncEnabled: false,
       });
 
       await sendLogEvent({
@@ -420,6 +413,96 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         errorMessage: error?.message,
         data: JSON.stringify({ domain: session.shop }),
         message: EVENT_MESSAGES.DATA_SYNC_FAILED,
+        logLevel: "ERROR",
+      });
+      return { success, errors };
+    }
+  }
+
+  if (intent === "products-sync-enable") {
+    const shop = await shopRepository.getShop(session.shop);
+    try {
+      if (!shop) {
+        errors.productSync = t("General.errors.shopNotFound");
+        return { success, errors };
+      }
+
+      await shopRepository.updateShop(shop.domain, {
+        isProductVariantSyncEnabled: true,
+        isMarketSyncEnabled: false,
+      });
+
+      await productVariantSyncLogRepository.createOrUpdateProductVariantSyncLog(
+        {
+          status: "NOT_STARTED",
+          skippedCount: 0,
+          syncedCount: 0,
+          failedCount: 0,
+          totalCount: 0,
+          shop: {
+            connect: {
+              id: shop.id,
+            },
+          },
+        },
+      );
+
+      await enqueueDataSyncTasks({
+        session,
+        shop,
+        kinds: ["product"],
+      });
+
+      await sendLogEvent({
+        orgId: shop.orgId,
+        errorMessage: "",
+        data: JSON.stringify({ domain: session.shop }),
+        message: EVENT_MESSAGES.PRODUCT_SYNC_ENABLED,
+        logLevel: "INFO",
+      });
+    } catch (error: any) {
+      errors.productSync = t("DataSyncSection.errors.productSyncNotEnabled");
+
+      await sendLogEvent({
+        orgId: shop?.orgId,
+        errorMessage: error?.message,
+        data: JSON.stringify({ domain: session.shop }),
+        message: EVENT_MESSAGES.PRODUCT_SYNC_FAILED,
+        logLevel: "ERROR",
+      });
+
+      return { success, errors };
+    }
+  }
+
+  if (intent === "products-sync-disable") {
+    const shop = await shopRepository.getShop(session.shop);
+    try {
+      if (!shop) {
+        errors.productSync = t("General.errors.shopNotFound");
+        return { success, errors };
+      }
+
+      await shopRepository.updateShop(shop.domain, {
+        isProductVariantSyncEnabled: false,
+        isMarketSyncEnabled: false,
+      });
+
+      await sendLogEvent({
+        orgId: shop?.orgId,
+        errorMessage: "",
+        data: JSON.stringify({ domain: session.shop }),
+        message: EVENT_MESSAGES.PRODUCT_SYNC_DISABLED,
+        logLevel: "INFO",
+      });
+    } catch (error: any) {
+      errors.productSync = t("DataSyncSection.errors.productSyncNotDisabled");
+
+      await sendLogEvent({
+        orgId: shop?.orgId,
+        errorMessage: error?.message,
+        data: JSON.stringify({ domain: session.shop }),
+        message: EVENT_MESSAGES.PRODUCT_SYNC_FAILED,
         logLevel: "ERROR",
       });
       return { success, errors };

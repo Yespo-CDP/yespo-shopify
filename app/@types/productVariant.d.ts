@@ -9,15 +9,12 @@ export interface YespoCategory {
  * Explicit remove instructions for update operations.
  * Null is NOT used for clearing in Yespo — use this object instead.
  *
- * Basic (implemented): `fields` — clears scalar optional fields.
- * Full (TODO): `tags` — removes specific tag keys; `translations` — removes specific locales.
+ * Basic (implemented): `fields` — clears scalar optional fields; `tags` — removes specific tag keys.
+ * Translation locales are not removed after they have been synced.
  */
 export interface ProductRemovePatch {
-  fields?: Array<
-    "oldPrice" | "description" | "brand" | "itemGroupId" | "translations"
-  >;
+  fields?: Array<"oldPrice" | "description" | "brand" | "itemGroupId">;
   tags?: string[];
-  translations?: string[];
 }
 
 export interface ProductVariant {
@@ -58,6 +55,4 @@ export interface ProductVariantsResponse {
   failedVariants?: object | object[];
   asyncSessionId?: string;
   id?: number;
-  /** True when Yespo accepted a language change (sent explicitly or after 409 retry). */
-  languageChangedConfirmed?: boolean;
 }

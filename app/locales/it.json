@@ -75,7 +75,9 @@
     },
     "DataSyncSection": {
       "title": "Sincronizzazione dati",
-      "description": "La sincronizzazione dei dati consente di sincronizzare clienti, ordini, prodotti e mercati da Shopify a Yespo.",
+      "customersAndOrdersTitle": "Sincronizzazione clienti e ordini",
+      "productSyncTitle": "Sincronizzazione prodotti",
+      "description": "La sincronizzazione dei dati consente di sincronizzare clienti, ordini e prodotti da Shopify a Yespo. Attiva ciascuna sincronizzazione in modo indipendente.",
       "enable": "Abilita",
       "disable": "Disabilita",
       "status": {
@@ -101,7 +103,9 @@
       },
       "errors": {
         "notEnabled": "La sincronizzazione dei dati non è abilitata",
-        "notDisabled": "La sincronizzazione dei dati non è disabilitata"
+        "notDisabled": "La sincronizzazione dei dati non è disabilitata",
+        "productSyncNotEnabled": "La sincronizzazione dei prodotti non è abilitata",
+        "productSyncNotDisabled": "La sincronizzazione dei prodotti non è disabilitata"
       },
       "statusBadge": {
         "error": "Errore",

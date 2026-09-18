@@ -40,6 +40,14 @@ export default class ProductVariantSyncLogRepositoryImpl
     });
   }
 
+  async getProductVariantSyncLogByShopId(
+    shopId: number,
+  ): Promise<ProductVariantSyncLog | null> {
+    return this.database.productVariantSyncLog.findUnique({
+      where: { shopId },
+    });
+  }
+
   /**
    * Creates or updates a product variant sync log record using the provided input.
    *

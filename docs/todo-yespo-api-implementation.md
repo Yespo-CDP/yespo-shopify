@@ -1,7 +1,7 @@
 # Yespo API — незавершена реалізація
 
 > Документ сформовано на основі аудиту кодової бази відносно специфікації `docs/yespo-api-products-markets.md`.
-> Останнє оновлення статусів: 2026-06-26.
+> Останнє оновлення статусів: 2026-09-18.
 
 ---
 
@@ -9,16 +9,16 @@
 
 | # | Пункт | Статус |
 |---|-------|--------|
-| 1 | POST /v1/products та /v1/markets — реальний fetch | ❌ Відкрито (заглушка) |
-| 2 | Парсинг відповіді Yespo (типи + derive) | ✅ Готово (працює на mock, активується з #1) |
-| 3 | HTTP 207 — часткова помилка | ✅ Готово (rejected items derive на call-site; активується з #1) |
+| 1 | POST /v1/products та /v1/markets — реальний fetch | 🟡 Частково (`POST`/`DELETE /v1/products` live; `POST /v1/markets` ще заглушка) |
+| 2 | Парсинг відповіді Yespo (типи + derive) | ✅ Готово (products live; markets на mock) |
+| 3 | HTTP 207 — часткова помилка | ✅ Готово (products live; rejected items логуються) |
 | 4 | HTTP 429 — retry | ❌ Відкрито |
 | 5 | HTTP 500+ — retry з backoff | ❌ Відкрито |
-| 6 | HTTP 409 — LANGUAGE_CODE_MISMATCH | 🟡 Частково (bulk-retry написано/закоментовано; вебхуки не передають `languageChanged`) |
+| 6 | HTTP 409 — LANGUAGE_CODE_MISMATCH | ✅ Не актуально (`languageChanged` / `409` прибрані з контракту `final_new`) |
 | 7 | Translations у вебхуках | ✅ Готово |
 | 8 | Translation categories | ✅ Готово |
 | 9 | Category `type` та `path` | 🟡 Частково (`type:"category"`+`path` через таксономію; метафілд-override не підключено) |
-| 10 | Продукти без колекцій | ❌ Відкрито |
+| 10 | Продукти без колекцій | ✅ Готово (`Uncategorized` fallback) |
 | 11 | Market `oldPrice` — явне очищення | ✅ Готово |
 | 12 | Market `urls` — очищення | ✅ Готово |
 | 13 | DELETE orphan variants у вебхуку | ✅ Готово |
@@ -26,42 +26,39 @@
 | 15 | Rate limiter для кількох процесів | ✅ Готово (Redis) |
 | 16 | Прибрати/сховати debug-дампи URL | ❌ Відкрито (нове) |
 
-**Залишилось зробити:** #1, #4, #5, #10, #16 (повністю) + дозакрити #6 (вебхуки) та #9 (метафілд-override). Пункт #14 свідомо пропущено.
+**Залишилось зробити:** #1 (лише markets), #4, #5, #16 (повністю) + дозакрити #9 (метафілд-override). Пункт #14 свідомо пропущено. #6 знято: `languageChanged` більше не шлемо. #10 виконано (`Uncategorized` fallback).
 
 ---
 
-## 1. POST /v1/products та POST /v1/markets — заглушки
+## 1. POST /v1/products live; POST /v1/markets — заглушка
 
-**Файли:** `app/api/update-product-variants.ts`, `app/api/update-market-products.ts`
+**Файли:** `app/api/update-product-variants.ts`, `app/api/delete-product-variants.ts`, `app/api/update-market-products.ts`
 
-HTTP-виклики до Yespo закоментовані. Обидва методи повертають mock-успіх і пишуть payload у `debug/`. Дані до Yespo **не відправляються**.
+`POST /v1/products` і `DELETE /v1/products` викликають Yespo (Basic auth, rate limit, `207` → `failedVariants`). Дампи в `debug/` для продуктів прибрані. Відхилені items логуються в консоль (`productId`, `code`, `message`).
+
+`POST /v1/markets` досі mock: payload пишеться в `debug/`, до Yespo не йде.
 
 **Що потрібно:**
-- Розкоментувати / реалізувати реальний `fetch` до `POST /v1/products`
 - Розкоментувати / реалізувати реальний `fetch` до `POST /v1/markets`
 
 ---
 
-## ~~2. Обробка відповідей Yespo~~ ✅ Готово (активується з #1)
+## ~~2. Обробка відповідей Yespo~~ ✅ Готово (products live)
 
 **Файли:** `app/api/update-product-variants.ts`, `app/api/update-market-products.ts`
 
 Типи реального формату Yespo та логіка парсингу вже реалізовані:
 - `YespoProductsRawResponse` / `YespoMarketsRawResponse` (`requestId`, `summary`, `items`)
 - `deriveFailedVariants` / `deriveFailedItems` — відбирають `items` зі `status: "rejected"`
-- Зараз працюють на емульованій (mock) відповіді; реальний шлях написано і закоментовано поряд із fetch у #1.
-
-**Залишилось:** активувати разом з розкоментуванням fetch (#1).
+- Products: працює на реальній відповіді Yespo. Markets: досі на mock.
 
 ---
 
-## ~~3. HTTP 207 — часткова помилка~~ ✅ Готово (активується з #1)
+## ~~3. HTTP 207 — часткова помилка~~ ✅ Готово (products live)
 
 **Файли:** `app/api/update-product-variants.ts`, `app/api/update-market-products.ts`
 
-`fetchWithErrorHandling` пропускає `207` (бо `ok: true`), а часткові відмови виявляються на рівні виклику через `deriveFailedVariants` / `deriveFailedItems` (повертають `failedVariants` / `failedItems` з `code` + `message`). Закоментований реальний шлях логує `summary.accepted/rejected`.
-
-**Залишилось:** активувати разом з #1.
+`fetchWithErrorHandling` пропускає `207` (бо `ok: true`), а часткові відмови виявляються на рівні виклику через `deriveFailedVariants` / `deriveFailedItems` (повертають `failedVariants` / `failedItems` з `code` + `message`). Products логують rejected items і `summary.accepted/rejected`.
 
 ---
 
@@ -85,26 +82,21 @@ HTTP-виклики до Yespo закоментовані. Обидва мето
 
 ---
 
-## 6. HTTP 409 — LANGUAGE_CODE_MISMATCH 🟡 Частково
+## ~~6. HTTP 409 — LANGUAGE_CODE_MISMATCH~~ ✅ Не актуально
 
-**Файли:** `app/api/update-product-variants.ts`
+За `final_new.pdf` поля `languageChanged` немає в envelope, HTTP `409` / `LANGUAGE_CODE_MISMATCH` немає в кодах помилок.
 
-Retry на `409` з `languageChanged: true` уже написаний у `updateProductVariants` (закоментований поряд із fetch — активується з #1).
-
-Передача `languageChanged` у вебхуках уже реалізована: `create-product-variant.server.ts` та `update-product-variant.server.ts` рахують його через `resolveProductSyncLanguage` (та сама логіка, що й bulk sync) і передають у `updateProductVariants`, а також обробляють `languageChangedConfirmed` із відповіді.
-
-**Залишилось:**
-- Активувати retry разом з #1 (розкоментувати блок fetch + обробку 409)
+Код більше не шле `languageChanged`, не ретраїть 409 і не виставляє `languageChangedConfirmed`. `languageCode` лишається в body (`Shopify shop.primaryLocale`); `shop.defaultLanguageCode` — лише наш кеш.
 
 ---
 
 ## ~~7. Translations у вебхуках~~ ✅ Виконано
 
 Реалізовано в `create-product-variant.server.ts` та `update-product-variant.server.ts`:
-- `getShopSecondaryLocales` — свіжі локалі з Shopify (виявляє видалені)
+- `getShopSecondaryLocales` — поточні published secondary locales
 - `getProductTranslations` — переклади продукту і варіантів
-- `removedLocales` → `remove.translations` у payload
 - `createProductVariantPayloadFromWebhook` приймає `translationsResult`
+- Зняті в Shopify локалі **не** чистимо в Yespo (`remove.translations` не шлемо)
 
 ---
 
@@ -238,9 +230,13 @@ offline-токена/`apiKey` → тихо пропускається (слот 
 | Проблема | Файл |
 |----------|------|
 | Market URL: додано `/products/` + `?variant=<id>` (узгоджено bulk/market/webhook) | `resolve-market-urls.ts`, `append-variant-param.ts`, `create-product-variant-payload.ts`, `create-product-variant-payload-from-webhook.ts` |
-| DELETE URL `/api/v1/v1/products` | `app/api/delete-product-variants.ts` |
+| POST/DELETE /v1/products live | `update-product-variants.ts`, `delete-product-variants.ts` |
+| Webhook imageUrl як у bulk (`image_id` → featured) | `create-product-variant-payload-from-webhook.ts` |
+| `updatedDate` → RFC3339 UTC (`…Z`) | `convert-date-to-utc.ts`, payload-білдери |
+| Persist `max(variant, product).updatedAt` для skip | `product-sync-handler.ts`, create/update webhook services |
+| Лічильники Data Sync після вебхука (`syncFailed`) | `refresh-product-variant-sync-log.server.ts` |
 | Translations у вебхуках | `create/update-product-variant.server.ts`, `create-product-variant-payload-from-webhook.ts` |
-| removedLocales у вебхуках | `update-product-variant.server.ts` |
+| Видалення перекладів свідомо скіпнуто | payload-білдери більше не шлють `remove.translations` |
 | Market sync у вебхуках (contextualPricing) | `app/services/update-market-from-webhook.server.ts` |
 | Видалені маркети у вебхуках | `update-market-from-webhook.server.ts` + `MarketSyncRepositoryImpl.deleteManyByKeys` |
 | Пагінація варіантів у contextual pricing | `get-product-contextual-pricing.ts` |

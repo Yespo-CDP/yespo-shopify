@@ -19,6 +19,7 @@ import {
 } from "../services/get-product-translations";
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
+import { markProductVariantSyncResults } from "~/services/refresh-product-variant-sync-log.server";
 
 const PRODUCTS_CHUNK_SIZE = 50;
 const VARIANTS_API_CHUNK_SIZE = 500;
@@ -44,7 +45,7 @@ export const productSyncHandler = async (
 
   console.log("Total product variants count", variantsCount, "\n");
 
-  // Determine languageCode and whether a language change needs to be signalled to Yespo.
+  // Determine languageCode from the live Shopify primary locale.
   // Fetch the current Shopify primary locale and all secondary locales once at the start.
   const [currentLocale, shopData] = await Promise.all([
     getShopPrimaryLocale({ client }),
@@ -59,27 +60,7 @@ export const productSyncHandler = async (
   });
   const hasTranslations = secondaryLocales.length > 0;
 
-  // Detect locales removed from the shop since the last sync.
-  // removedLocales → included in remove.translations for every update payload.
-  const storedLocales: string[] = shopData?.syncedLocales ?? [];
-  const removedLocales = storedLocales.filter(
-    (l) => !secondaryLocales.includes(l),
-  );
-  // Flag: persist updated syncedLocales after first successful batch.
-  let needsLocalesPersist =
-    storedLocales.length !== secondaryLocales.length ||
-    storedLocales.some((l) => !secondaryLocales.includes(l)) ||
-    secondaryLocales.some((l) => !storedLocales.includes(l));
-
-  // pendingLanguageChanged: sent as true on the FIRST API batch only, then flipped to false.
-  // Covers two cases:
-  //   - language intentionally changed: storedLanguageCode !== null && !== languageCode
-  //   - first ever sync: storedLanguageCode === null (Yespo has no record yet, languageChanged: false is fine)
-  let pendingLanguageChanged =
-    storedLanguageCode !== null && storedLanguageCode !== languageCode;
-
-  // needsLanguageCodePersist: true whenever the stored value differs from the current one
-  // (first sync or language change). Flipped to false after the first batch so DB is updated only once.
+  // Persist defaultLanguageCode after the first batch when it differs from DB.
   let needsLanguageCodePersist = languageCode !== storedLanguageCode;
 
   let cursor: string | null | undefined = null;
@@ -176,7 +157,6 @@ export const productSyncHandler = async (
                   shopDomain,
                   action,
                   previousTagKeys,
-                  removedLocales,
                 );
                 productVariantsData.push(payload);
 
@@ -187,7 +167,10 @@ export const productSyncHandler = async (
                     productId: product.id,
                     syncedTagKeys: currentTagKeys,
                     createdAt: variant.createdAt ?? product.createdAt,
-                    updatedAt: variant.updatedAt ?? product.updatedAt,
+                    // Persist the same timestamp we compare on the next run
+                    // (max of variant + product), otherwise Enable resends
+                    // every variant whose product is newer than the variant.
+                    updatedAt: new Date(entityUpdatedDate),
                     shop: {
                       connect: {
                         id: shopId,
@@ -219,31 +202,16 @@ export const productSyncHandler = async (
               apiKey,
               siteId: siteId ?? "",
               languageCode,
-              languageChanged: pendingLanguageChanged,
               productVariants: variantsChunk,
               domain: shop,
               orgId,
             });
 
-            // After the first successful batch: clear both flags.
-            // pendingLanguageChanged → false so subsequent batches use languageChanged: false.
-            // needsLanguageCodePersist → false so DB is updated only once per sync run.
-            if (
-              pendingLanguageChanged ||
-              variantsUpdateResponse.languageChangedConfirmed
-            ) {
-              pendingLanguageChanged = false;
-            }
-            if (
-              needsLanguageCodePersist ||
-              needsLocalesPersist ||
-              variantsUpdateResponse.languageChangedConfirmed
-            ) {
+            // Persist locale cache once after the first successful batch.
+            if (needsLanguageCodePersist) {
               needsLanguageCodePersist = false;
-              needsLocalesPersist = false;
               await shopRepository.updateShop(shop, {
                 defaultLanguageCode: languageCode,
-                syncedLocales: secondaryLocales,
                 ...(shopCurrency ? { defaultCurrency: shopCurrency } : {}),
               });
             }
@@ -256,6 +224,12 @@ export const productSyncHandler = async (
                 chunkFailedCount += 1;
               }
             }
+
+            await markProductVariantSyncResults(
+              shopId,
+              variantsChunk.map((variant) => variant.productId),
+              variantsUpdateResponse?.failedVariants,
+            );
           }
 
           totalFailedCount += chunkFailedCount;

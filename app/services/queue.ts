@@ -81,79 +81,87 @@ export async function registerMarketSyncCron(): Promise<void> {
   );
 }
 
+export type DataSyncKind = "customer" | "order" | "product";
+
 export async function enqueueDataSyncTasks({
   session,
   shop,
+  kinds,
 }: {
   session: Session;
   shop: Shop;
+  kinds: DataSyncKind[];
 }) {
-  console.log("Enqueueing data sync tasks...", session);
-  const customerSyncLog =
-    await customerSyncLogRepository.getCustomerSyncLogByShop(session.shop);
-  const orderSyncLog = await orderSyncLogRepository.getOrderSyncLogByShop(
-    session.shop,
-  );
-  const productVariantSyncLog =
-    await productVariantSyncLogRepository.getProductVariantSyncLogByShop(
-      session.shop,
-    );
+  console.log("Enqueueing data sync tasks...", session, kinds);
+
+  const syncCustomers = kinds.includes("customer");
+  const syncOrders = kinds.includes("order");
+  const syncProducts = kinds.includes("product");
+
+  if (!syncCustomers && !syncOrders && !syncProducts) {
+    return;
+  }
+
+  const [customerSyncLog, orderSyncLog, productVariantSyncLog] =
+    await Promise.all([
+      syncCustomers
+        ? customerSyncLogRepository.getCustomerSyncLogByShop(session.shop)
+        : Promise.resolve(null),
+      syncOrders
+        ? orderSyncLogRepository.getOrderSyncLogByShop(session.shop)
+        : Promise.resolve(null),
+      syncProducts
+        ? productVariantSyncLogRepository.getProductVariantSyncLogByShop(
+            session.shop,
+          )
+        : Promise.resolve(null),
+    ]);
 
   if (
-    customerSyncLog?.status !== "IN_PROGRESS" &&
-    orderSyncLog?.status !== "IN_PROGRESS" &&
-    productVariantSyncLog?.status !== "IN_PROGRESS"
+    (syncCustomers && customerSyncLog?.status === "IN_PROGRESS") ||
+    (syncOrders && orderSyncLog?.status === "IN_PROGRESS") ||
+    (syncProducts && productVariantSyncLog?.status === "IN_PROGRESS")
   ) {
-    await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
-      status: "IN_PROGRESS",
-      skippedCount: 0,
-      syncedCount: 0,
-      failedCount: 0,
-      totalCount: 0,
-      shop: {
-        connect: {
-          id: shop.id,
-        },
-      },
-    });
+    return;
+  }
 
-    await orderSyncLogRepository.createOrUpdateOrderSyncLog({
-      status: "IN_PROGRESS",
-      skippedCount: 0,
-      syncedCount: 0,
-      failedCount: 0,
-      totalCount: 0,
-      shop: {
-        connect: {
-          id: shop.id,
-        },
-      },
-    });
-    await productVariantSyncLogRepository.createOrUpdateProductVariantSyncLog({
-      status: "IN_PROGRESS",
-      skippedCount: 0,
-      syncedCount: 0,
-      failedCount: 0,
-      totalCount: 0,
-      shop: {
-        connect: {
-          id: shop.id,
-        },
-      },
-    });
+  const shopConnect = { connect: { id: shop.id } };
+  const resetLog = {
+    status: "IN_PROGRESS" as const,
+    skippedCount: 0,
+    syncedCount: 0,
+    failedCount: 0,
+    totalCount: 0,
+    shop: shopConnect,
+  };
 
-    await DataSyncQueue.add(
-      "data-sync",
-      { shop: session.shop },
-      {
-        removeOnComplete: 1000,
-        removeOnFail: 5000,
-      },
+  if (syncCustomers) {
+    await customerSyncLogRepository.createOrUpdateCustomerSyncLog(resetLog);
+  }
+  if (syncOrders) {
+    await orderSyncLogRepository.createOrUpdateOrderSyncLog(resetLog);
+  }
+  if (syncProducts) {
+    await productVariantSyncLogRepository.createOrUpdateProductVariantSyncLog(
+      resetLog,
     );
   }
+
+  await DataSyncQueue.add(
+    "data-sync",
+    { shop: session.shop, kinds },
+    {
+      removeOnComplete: 1000,
+      removeOnFail: 5000,
+    },
+  );
 }
 
 async function enqueueMarketSyncJobIfEligible(shop: Shop): Promise<boolean> {
+  if (!shop.isMarketSyncEnabled) {
+    return false;
+  }
+
   if (!shop.apiKey) {
     console.error(`Market sync: Api key not found for ${shop.shopUrl}`);
     return false;
@@ -185,6 +193,12 @@ async function enqueueMarketSyncJobIfEligible(shop: Shop): Promise<boolean> {
   return true;
 }
 
+/**
+ * Enqueues a market sync job after a shop's data-sync (products) finishes.
+ * No-ops when the shop is missing, market sync is disabled, or a fresh
+ * IN_PROGRESS run already exists. Unlike the daily cron, this path does not
+ * apply MARKET_SYNC_MIN_INTERVAL_MS.
+ */
 export async function enqueueMarketSyncTaskForShopUrl(
   shopUrl: string,
 ): Promise<number> {
@@ -258,7 +272,8 @@ function lastCompletedAt(shop: ShopWithMarketSyncLogs): Date | null {
  * MARKET_SYNC_MIN_INTERVAL_MS ago are skipped so a shop is not re-synced every
  * hour. Never-synced shops and shops whose last sync ended in ERROR are not
  * throttled. This interval applies only to the daily cron path; post data-sync
- * triggers (enqueueMarketSyncTaskForShopUrl) bypass it.
+ * triggers (enqueueMarketSyncTaskForShopUrl) bypass it, but still require
+ * isMarketSyncEnabled.
  */
 export async function enqueueMarketSyncTasks(): Promise<number> {
   const staleBefore = new Date(Date.now() - MARKET_SYNC_STALE_AFTER_MS);

@@ -1,9 +1,12 @@
 import type { GraphQLClient } from "@shopify/graphql-client";
 
+import { PRODUCT_SYNC_SEARCH_QUERY } from "./get-products";
+
 const PRODUCTS_PAGE_SIZE = 250;
 
 /**
- * Fetches the total number of product variants in the Shopify store.
+ * Fetches the number of variants that product sync will process:
+ * active products published to the Online Store.
  */
 export const getProductVariantsCount = async ({
   client,
@@ -16,8 +19,8 @@ export const getProductVariantsCount = async ({
 
     do {
       const response = await client.request(
-        `query getProductVariantsCount($count: Int, $cursor: String) {
-          products(first: $count, after: $cursor) {
+        `query getProductVariantsCount($count: Int, $cursor: String, $query: String) {
+          products(first: $count, after: $cursor, query: $query) {
             nodes {
               variantsCount {
                 count
@@ -33,6 +36,7 @@ export const getProductVariantsCount = async ({
           variables: {
             count: PRODUCTS_PAGE_SIZE,
             cursor,
+            query: PRODUCT_SYNC_SEARCH_QUERY,
           },
         },
       );

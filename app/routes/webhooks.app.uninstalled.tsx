@@ -39,6 +39,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       isWebTrackingEnabled: false,
       isContactSyncEnabled: false,
       isOrderSyncEnabled: false,
+      isProductVariantSyncEnabled: false,
+      isMarketSyncEnabled: false,
       siteId: null,
       orgId: null
     });

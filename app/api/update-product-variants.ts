@@ -1,14 +1,11 @@
-import fs from "node:fs";
-import path from "node:path";
-
 import type {
   ProductVariant,
   ProductVariantsResponse,
 } from "~/@types/productVariant";
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
-// import { getAuthHeader } from "~/utils/auth";
-// import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
+import { getAuthHeader } from "~/utils/auth";
+import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import { throttleApiRequest } from "~/utils/rate-limiter.server";
 
 /**
@@ -74,17 +71,11 @@ export const stripCategoryIdsFromProduct = (
 /**
  * Sends a batch of product variants to the Yespo POST /v1/products API.
  *
- * languageCode = shop.defaultLanguageCode (Shopify shop.primaryLocale, stored in DB).
- * languageChanged = true only on the first batch when primaryLocale changed vs stored defaultLanguageCode.
- * After the first accepted batch the caller must update shop.defaultLanguageCode in DB.
+ * languageCode = Shopify shop.primaryLocale (also cached as shop.defaultLanguageCode).
  *
- * On HTTP 409 LANGUAGE_CODE_MISMATCH the request is retried once with
- * `languageChanged: true`.
- *
- * @param params.apiKey - Basic-auth API key.
- * @param params.siteId - Yespo site/account identifier (required in every request).
+ * @param params.apiKey - Basic-auth API key. The Yespo site is resolved from the key, not the body.
+ * @param params.siteId - Yespo site/account identifier; used for rate limiting, not sent in the body.
  * @param params.languageCode - BCP 47 language tag (e.g. "uk", "en"). Must match shop.primaryLocale.
- * @param params.languageChanged - Set to true on the first batch when the language is changing.
  * @param params.productVariants - Product variant array to sync (max 500 per call).
  * @param params.domain - Shop domain used for logging.
  * @param params.orgId - Yespo organisation id used for logging.
@@ -93,7 +84,6 @@ export const updateProductVariants = async ({
   apiKey,
   siteId,
   languageCode,
-  languageChanged = false,
   productVariants,
   domain,
   orgId,
@@ -101,7 +91,6 @@ export const updateProductVariants = async ({
   apiKey: string;
   siteId: string;
   languageCode: string;
-  languageChanged?: boolean;
   productVariants: ProductVariant[];
   domain: string;
   orgId?: number | null;
@@ -110,8 +99,6 @@ export const updateProductVariants = async ({
     await throttleApiRequest(siteId);
 
     const url = `${process.env.API_URL}/products`;
-    const requestLanguageChanged = languageChanged;
-    const languageChangedConfirmed = languageChanged;
 
     // Yespo does not need the Shopify collection `id` on categories. We keep it
     // internally (e.g. to resolve collection translations) and strip it here, at
@@ -120,96 +107,29 @@ export const updateProductVariants = async ({
       stripCategoryIdsFromProduct,
     );
 
-    const buildRequestBody = () => ({
-      siteId,
-      languageCode,
-      languageChanged: requestLanguageChanged,
-      products: sanitizedProductVariants,
+    const response = await fetchWithErrorHandling(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        Authorization: getAuthHeader(apiKey),
+      },
+      body: JSON.stringify({
+        languageCode,
+        products: sanitizedProductVariants,
+      }),
     });
 
-    const debugDir = path.resolve(process.cwd(), "debug");
-    fs.mkdirSync(debugDir, { recursive: true });
+    // Yespo returns { requestId, summary, items }, where each item carries a
+    // per-item status. failedVariants is derived from items with status "rejected".
+    const responseData = response.responseData as YespoProductsRawResponse;
+    const failedVariants = deriveFailedVariants(responseData);
 
-    // Persist the exact object that would be sent to Yespo for inspection.
-    const requestBody = buildRequestBody();
-    fs.writeFileSync(
-      path.join(debugDir, `product-variants-${siteId}-${Date.now()}.json`),
-      JSON.stringify(requestBody, null, 2),
-    );
-
-    // NOTE: The real HTTP call to Yespo is currently stubbed (mirrors the market
-    // sync client). The payload written to debug/ above is used for inspection.
-    // Uncomment the block below once the Yespo POST /v1/products endpoint is live.
-    // const sendRequest = async () => {
-    //   return fetchWithErrorHandling(url, {
-    //     method: "POST",
-    //     headers: {
-    //       "content-type": "application/json",
-    //       Authorization: getAuthHeader(apiKey),
-    //     },
-    //     body: JSON.stringify(buildRequestBody()),
-    //   });
-    // };
-
-    // let response;
-    // try {
-    //   response = await sendRequest();
-    // } catch (error: any) {
-    //   if (error?.status === 409 && !requestLanguageChanged) {
-    //     await throttleApiRequest(siteId);
-    //     requestLanguageChanged = true;
-    //     languageChangedConfirmed = true;
-    //     response = await sendRequest();
-    //   } else {
-    //     throw error;
-    //   }
-    // }
-
-    // // Yespo returns { requestId, summary, items }, where each item carries a
-    // // per-item status. failedVariants is derived from items with status "rejected".
-    // const responseData = response.responseData as YespoProductsRawResponse;
-    // const failedVariants = deriveFailedVariants(responseData);
-
-    // await sendLogEvent({
-    //   orgId,
-    //   errorMessage: "",
-    //   data: JSON.stringify({
-    //     domain,
-    //     variantsCount: productVariants.length,
-    //     variantIds: productVariants.map((variant) => variant.productId),
-    //     accepted: responseData.summary?.accepted,
-    //     rejected: responseData.summary?.rejected,
-    //     languageChanged: requestLanguageChanged,
-    //   }),
-    //   message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
-    //   logLevel: "INFO",
-    // });
-
-    // return {
-    //   failedVariants,
-    //   languageChangedConfirmed,
-    // };
-
-    void apiKey;
-    void url;
-    void requestLanguageChanged;
-
-    // Emulate a Yespo response (all items accepted) and run it through the same
-    // derivation the live endpoint will use, so callers see the real shape.
-    const simulatedResponse: YespoProductsRawResponse = {
-      requestId: `mock-${Date.now()}`,
-      summary: {
-        received: sanitizedProductVariants.length,
-        accepted: sanitizedProductVariants.length,
-        rejected: 0,
-      },
-      items: sanitizedProductVariants.map((product) => ({
-        productId: product.productId,
-        action: product.action,
-        status: "accepted" as const,
-      })),
-    };
-    const failedVariants = deriveFailedVariants(simulatedResponse);
+    if (failedVariants.length > 0) {
+      console.warn(
+        `Yespo rejected ${failedVariants.length} product(s):`,
+        JSON.stringify(failedVariants, null, 2),
+      );
+    }
 
     await sendLogEvent({
       orgId,
@@ -217,22 +137,15 @@ export const updateProductVariants = async ({
       data: JSON.stringify({
         domain,
         variantsCount: productVariants.length,
-        accepted: simulatedResponse.summary.accepted,
-        rejected: simulatedResponse.summary.rejected,
-        languageChanged: requestLanguageChanged,
+        variantIds: productVariants.map((variant) => variant.productId),
+        accepted: responseData.summary?.accepted,
+        rejected: responseData.summary?.rejected,
       }),
       message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
       logLevel: "INFO",
     });
 
-    console.log(
-      `[mock] updateProductVariants: ${productVariants.length} product(s) for siteId ${siteId}, ${failedVariants.length} rejected`,
-    );
-
-    return {
-      failedVariants,
-      languageChangedConfirmed,
-    };
+    return { failedVariants };
   } catch (error: any) {
     console.error("Error updating product variants:", error?.message);
 

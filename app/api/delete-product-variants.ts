@@ -1,20 +1,17 @@
-import fs from "node:fs";
-import path from "node:path";
-
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
+import { getAuthHeader } from "~/utils/auth";
+import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import { throttleApiRequest } from "~/utils/rate-limiter.server";
-// import { getAuthHeader } from "~/utils/auth";
-// import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 
 /**
  * Sends a DELETE request to Yespo DELETE /v1/products for the given variant IDs.
  *
- * Each item requires productId (Shopify variant GID) and updatedDate (current UTC timestamp).
- * Respects the 60 req/min per siteId rate limit.
+ * Each item requires productId (numeric Shopify variant ID) and updatedDate
+ * (current UTC timestamp). Respects the 60 req/min per siteId rate limit.
  *
- * @param params.apiKey - Basic-auth API key.
- * @param params.siteId - Yespo site/account identifier.
+ * @param params.apiKey - Basic-auth API key. The Yespo site is resolved from the key, not the body.
+ * @param params.siteId - Yespo site/account identifier; used for rate limiting, not sent in the body.
  * @param params.externalVariantIds - Shopify variant IDs to delete (max 500 per call).
  * @param params.domain - Shop domain used for logging.
  * @param params.orgId - Yespo organisation id used for logging.
@@ -39,41 +36,19 @@ export const deleteProductVariants = async ({
 
     const deletedAt = new Date().toISOString();
 
-    const requestBody = {
-      siteId,
-      products: externalVariantIds.map((productId) => ({
-        productId,
-        updatedDate: deletedAt,
-      })),
-    };
-    const debugDir = path.resolve(process.cwd(), "debug");
-    fs.mkdirSync(debugDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(debugDir, `product-delete-${siteId}-${Date.now()}.json`),
-      JSON.stringify(requestBody, null, 2),
-    );
-
-    const url = `${process.env.API_URL}/products`;
-
-    // NOTE: The real HTTP call to Yespo is currently stubbed (mirrors the
-    // product/market sync clients). The payload written to debug/ above is used
-    // for inspection. Uncomment the block below once the Yespo DELETE
-    // /v1/products endpoint is live.
-    // await fetchWithErrorHandling(url, {
-    //   method: "DELETE",
-    //   headers: {
-    //     "content-type": "application/json",
-    //     Authorization: getAuthHeader(apiKey),
-    //   },
-    //   body: JSON.stringify(requestBody),
-    // });
-
-    void apiKey;
-    void url;
-
-    console.log(
-      `[mock] deleteProductVariants: ${externalVariantIds.length} variant(s)`,
-    );
+    await fetchWithErrorHandling(`${process.env.API_URL}/products`, {
+      method: "DELETE",
+      headers: {
+        "content-type": "application/json",
+        Authorization: getAuthHeader(apiKey),
+      },
+      body: JSON.stringify({
+        products: externalVariantIds.map((productId) => ({
+          productId,
+          updatedDate: deletedAt,
+        })),
+      }),
+    });
   } catch (error: any) {
     console.error("Error deleting product variants:", error?.message);
 

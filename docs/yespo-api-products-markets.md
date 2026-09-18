@@ -87,19 +87,15 @@ This endpoint is the main catalog ingestion API. It handles both initial imports
 
 ```json
 {
-  "siteId": "my_store",
   "languageCode": "uk",
-  "languageChanged": false,
   "products": [ Product ]
 }
 ```
 
-| Parameter         | Type    | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| ----------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `siteId`          | String  | Yes      | Client site/account identifier. Max 128 chars. Allowed characters: letters, digits, `.`, `_`, `-`.                                                                                                                                                                                                                                                                                                                              |
-| `languageCode`    | String  | Yes      | Default language for top-level product fields in this request. Must be a BCP 47 language tag (e.g. `"uk"`, `"en"`, `"de"`, `"en-GB"`). Top-level `name`, `description`, `url`, and `categories` are in this language. The server records the `languageCode` from the **first accepted** request for each `siteId` as the site default. Subsequent requests must use the same `languageCode` unless `languageChanged` is `true`. |
-| `languageChanged` | Boolean | No       | Must be `true` when intentionally changing the default language for this `siteId`. If `languageCode` differs from the stored site default and `languageChanged` is not `true`, the entire request is rejected with `409 LANGUAGE_CODE_MISMATCH`. Default: `false`. If `languageChanged: true` and the submitted `languageCode` matches the stored default, the flag is treated as a no-op.                                      |
-| `products`        | Array   | Yes      | Array of [Product](#product-object).                                                                                                                                                                                                                                                                                                                                                                                            |
+| Parameter      | Type   | Required | Description                                                                                                                                                                                                                                                                                                                                 |
+| -------------- | ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `languageCode` | String | Yes      | Default language for top-level product fields in this request. Must be a BCP 47 language tag (e.g. `"uk"`, `"en"`, `"de"`, `"en-GB"`). Top-level `name`, `description`, `url`, and `categories` are in this language. The server records the `languageCode` from the **first accepted** request as the site default. Do not send `siteId` (resolved from the API key) or `languageChanged`. |
+| `products`     | Array  | Yes      | Array of [Product](#product-object).                                                                                                                                                                                                                                                                                                        |
 
 ### Product Object
 
@@ -270,7 +266,6 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
 
 ```json
 {
-  "siteId": "my_store",
   "languageCode": "uk",
   "products": [
     {
@@ -288,7 +283,6 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
 
 ```json
 {
-  "siteId": "my_store",
   "languageCode": "uk",
   "products": [
     {
@@ -305,7 +299,6 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
 
 ```json
 {
-  "siteId": "my_store",
   "languageCode": "uk",
   "products": [
     {
@@ -322,7 +315,6 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
 
 ```json
 {
-  "siteId": "my_store",
   "languageCode": "uk",
   "products": [
     {
@@ -340,7 +332,6 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
 
 ```json
 {
-  "siteId": "my_store",
   "languageCode": "uk",
   "products": [
     {
@@ -357,7 +348,6 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
 
 ```json
 {
-  "siteId": "my_store",
   "languageCode": "uk",
   "products": [
     {
@@ -381,7 +371,6 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
 
 ```json
 {
-  "siteId": "my_store",
   "languageCode": "uk",
   "products": [
     {
@@ -429,12 +418,11 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
 
 ### Language Change Procedure
 
-If the default language intentionally changes (e.g. from `uk` to `en`):
+If the Shopify primary locale changes (e.g. from `uk` to `en`):
 
-1. Set `languageChanged: true` in the first request with the new `languageCode`. After this request is accepted, the stored site default updates immediately.
-2. Subsequent re-sync batches use the new `languageCode` **without** `languageChanged`.
-3. Re-sync the full catalog with complete product payloads in the new default language. Restructure `translations` so the old default language moves into translations if needed.
-4. Re-sync Add markets if URL locale keys were added, removed, or changed.
+1. Send subsequent Add products batches with the new `languageCode`. Do **not** send `languageChanged` — the field is not in the request schema.
+2. Re-sync the full catalog with complete product payloads in the new default language. Restructure `translations` so the old default language moves into translations if needed.
+3. Re-sync Add markets if URL locale keys were added, removed, or changed.
 
 > Until the re-sync completes, the catalog may contain products with mixed stored default languages. Recommendation rendering serves stored content as-is.
 
@@ -442,9 +430,7 @@ If the default language intentionally changes (e.g. from `uk` to `en`):
 
 ```json
 {
-  "siteId": "my_store",
   "languageCode": "en",
-  "languageChanged": true,
   "products": [
     {
       "action": "create",
@@ -476,17 +462,6 @@ If the default language intentionally changes (e.g. from `uk` to `en`):
 }
 ```
 
-**Language mismatch error response:**
-
-```json
-{
-  "errorCode": "LANGUAGE_CODE_MISMATCH",
-  "message": "Request languageCode 'en' does not match site default 'uk'. Set languageChanged: true to confirm the change.",
-  "storedLanguage": "uk",
-  "receivedLanguage": "en"
-}
-```
-
 ---
 
 ## DELETE /v1/products — Delete Products
@@ -503,14 +478,12 @@ If the default language intentionally changes (e.g. from `uk` to `en`):
 
 ```json
 {
-  "siteId": "my_store",
   "products": [ Product ]
 }
 ```
 
 | Parameter  | Type   | Required | Description                                               |
 | ---------- | ------ | -------- | --------------------------------------------------------- |
-| `siteId`   | String | Yes      | Client site/account identifier. Max 128 chars.            |
 | `products` | Array  | Yes      | Array of [Delete Product Object](#delete-product-object). |
 
 ### Delete Product Object
@@ -533,7 +506,6 @@ If the default language intentionally changes (e.g. from `uk` to `en`):
 
 ```json
 {
-  "siteId": "my_store",
   "products": [
     {
       "productId": "430738",
@@ -565,14 +537,12 @@ Used for stores operating in multiple markets or regions with different prices a
 
 ```json
 {
-  "siteId": "my_store",
   "markets": [ Market ]
 }
 ```
 
 | Parameter | Type   | Required | Description                                    |
 | --------- | ------ | -------- | ---------------------------------------------- |
-| `siteId`  | String | Yes      | Client site/account identifier. Max 128 chars. |
 | `markets` | Array  | Yes      | Array of [Market](#market-object).             |
 
 ### Market Object
@@ -641,7 +611,6 @@ Keys in `urls` must use BCP 47 language tags and should correspond to a language
 
 ```json
 {
-  "siteId": "my_store",
   "markets": [
     {
       "marketId": "ca",
@@ -661,7 +630,6 @@ Keys in `urls` must use BCP 47 language tags and should correspond to a language
 
 ```json
 {
-  "siteId": "my_store",
   "markets": [
     {
       "marketId": "ua",
@@ -682,7 +650,6 @@ Keys in `urls` must use BCP 47 language tags and should correspond to a language
 
 ```json
 {
-  "siteId": "my_store",
   "markets": [
     {
       "marketId": "ua",
@@ -702,7 +669,6 @@ Keys in `urls` must use BCP 47 language tags and should correspond to a language
 
 ```json
 {
-  "siteId": "my_store",
   "markets": [
     {
       "marketId": "ca",
@@ -731,7 +697,6 @@ Keys in `urls` must use BCP 47 language tags and should correspond to a language
 
 ```json
 {
-  "siteId": "my_store",
   "markets": [
     {
       "marketId": "ca",
@@ -849,7 +814,6 @@ Every request returns a request-level envelope plus item-level results.
 | `200`       | All accepted  | Every item passed validation and was durably enqueued.                                                          |
 | `207`       | Partial       | Some items were rejected or failed queue publishing with known per-item outcome.                                |
 | `400`       | Payload error | Malformed JSON, wrong `eventName`, missing required top-level fields.                                           |
-| `409`       | Conflict      | Add products request `languageCode` does not match the stored site default and `languageChanged` is not `true`. |
 | `413`       | Too large     | Body larger than 10 MB or more than 1,000 items.                                                                |
 | `429`       | Rate limited  | Rate limit exceeded.                                                                                            |
 | `500+`      | Server error  | Retry with backoff.                                                                                             |
@@ -861,7 +825,6 @@ Every request returns a request-level envelope plus item-level results.
 | Code                     | HTTP | Description                                                                                                       |
 | ------------------------ | ---- | ----------------------------------------------------------------------------------------------------------------- |
 | `INVALID_PAYLOAD`        | 400  | Malformed JSON, wrong `eventName`, missing `languageCode` for Add products.                                       |
-| `LANGUAGE_CODE_MISMATCH` | 409  | Request `languageCode` does not match the stored site default. Set `languageChanged: true` to confirm the change. |
 | `MISSING_productId`      | 207  | `productId` is missing.                                                                                           |
 | `MISSING_ACTION`         | 207  | Add products `action` missing or invalid.                                                                         |
 | `MISSING_REQUIRED_FIELD` | 207  | Required field missing.                                                                                           |
