@@ -6,6 +6,12 @@ import type {
 import type { ProductTranslationsResult } from "~/worker/services/get-product-translations";
 import { appendVariantParam } from "~/worker/services/append-variant-param";
 import { withDefaultCategory } from "~/worker/services/map-yespo-categories";
+import { toRfc3339Utc } from "~/utils/convert-date-to-utc";
+
+export interface ProductWebhookImage {
+  id?: number;
+  src: string;
+}
 
 export interface ProductVariantWebhookPayload {
   id: number;
@@ -16,6 +22,7 @@ export interface ProductVariantWebhookPayload {
   option1?: string | null;
   option2?: string | null;
   option3?: string | null;
+  image_id?: number | null;
   admin_graphql_api_id: string;
   created_at?: string;
   updated_at?: string;
@@ -28,11 +35,33 @@ export interface ProductWebhookPayload {
   body_html?: string;
   vendor?: string;
   admin_graphql_api_id: string;
-  images?: Array<{ src: string }>;
+  image?: ProductWebhookImage | null;
+  images?: ProductWebhookImage[];
   options?: Array<{ name: string; position: number }>;
   created_at: string;
   updated_at: string;
   variants?: ProductVariantWebhookPayload[];
+}
+
+/**
+ * Same fallback as bulk sync (`variant.image` → `product.featuredImage` → "").
+ * REST webhooks expose variant images via `image_id` + `images[]`, and the
+ * featured image as `product.image`.
+ */
+function resolveWebhookImageUrl(
+  product: ProductWebhookPayload,
+  variant: ProductVariantWebhookPayload,
+): string {
+  if (variant.image_id != null && product.images?.length) {
+    const variantImage = product.images.find(
+      (image) => image.id === variant.image_id,
+    );
+    if (variantImage?.src) {
+      return variantImage.src;
+    }
+  }
+
+  return product.image?.src ?? product.images?.[0]?.src ?? "";
 }
 
 function stripHtml(html: string): string {
@@ -98,7 +127,7 @@ export const createProductVariantPayloadFromWebhook = (
     ? `${product.title} - ${variantTitle}`
     : product.title;
 
-  const imageUrl = product.images?.[0]?.src ?? "";
+  const imageUrl = resolveWebhookImageUrl(product, variant);
   const variantId = variant.id.toString();
   const baseUrl = shopDomain
     ? `https://${shopDomain}/products/${product.handle}`
@@ -109,8 +138,9 @@ export const createProductVariantPayloadFromWebhook = (
   const isInStock: 0 | 1 =
     inventoryQuantity == null || inventoryQuantity > 0 ? 1 : 0;
 
-  const updatedDate =
-    variant.updated_at ?? product.updated_at ?? new Date().toISOString();
+  const updatedDate = toRfc3339Utc(
+    variant.updated_at ?? product.updated_at,
+  );
 
   if (categories.length === 0) {
     console.warn(

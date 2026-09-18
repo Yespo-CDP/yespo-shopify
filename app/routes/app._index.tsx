@@ -109,7 +109,8 @@ export default function Index() {
       orderSyncLogData?.status === "NOT_STARTED" ||
       orderSyncLogData?.status === "IN_PROGRESS" ||
       productVariantSyncLogData?.status === "NOT_STARTED" ||
-      productVariantSyncLogData?.status === "IN_PROGRESS";
+      productVariantSyncLogData?.status === "IN_PROGRESS" ||
+      shop?.isProductVariantSyncEnabled;
       // || marketSyncLogsData?.some(
       //      (log) => log.status === "NOT_STARTED" || log.status === "IN_PROGRESS",
       //    );
@@ -130,6 +131,7 @@ export default function Index() {
     customersSyncLogData,
     orderSyncLogData,
     productVariantSyncLogData,
+    shop?.isProductVariantSyncEnabled,
     // marketSyncLogsData,
   ]);
 

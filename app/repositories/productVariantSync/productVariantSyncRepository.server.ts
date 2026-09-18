@@ -75,4 +75,14 @@ export default interface ProductVariantSyncRepository {
    * Removes all product variant sync records for a given Shopify product GID.
    */
   deleteByProductId(shopId: number, productId: string): Promise<void>;
+
+  countByShop(shopId: number): Promise<number>;
+
+  countFailedByShop(shopId: number): Promise<number>;
+
+  setSyncFailed(
+    shopId: number,
+    variantIds: string[],
+    syncFailed: boolean,
+  ): Promise<void>;
 }

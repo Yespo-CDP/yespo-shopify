@@ -8,6 +8,7 @@ import {
   withDefaultCategory,
 } from "~/worker/services/map-yespo-categories";
 import { appendVariantParam } from "~/worker/services/append-variant-param";
+import { toRfc3339Utc } from "~/utils/convert-date-to-utc";
 
 /**
  * Builds Yespo tags from variant selectedOptions.
@@ -87,7 +88,7 @@ export const createProductVariantPayload = (
   const payload: ProductVariant = {
     action,
     productId,
-    updatedDate: variant.updatedAt,
+    updatedDate: toRfc3339Utc(variant.updatedAt),
     name,
     imageUrl,
     url,

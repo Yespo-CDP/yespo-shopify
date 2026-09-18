@@ -1,14 +1,11 @@
-import fs from "node:fs";
-import path from "node:path";
-
 import type {
   ProductVariant,
   ProductVariantsResponse,
 } from "~/@types/productVariant";
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
-// import { getAuthHeader } from "~/utils/auth";
-// import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
+import { getAuthHeader } from "~/utils/auth";
+import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import { throttleApiRequest } from "~/utils/rate-limiter.server";
 
 /**
@@ -110,77 +107,29 @@ export const updateProductVariants = async ({
       stripCategoryIdsFromProduct,
     );
 
-    const buildRequestBody = () => ({
-      languageCode,
-      products: sanitizedProductVariants,
+    const response = await fetchWithErrorHandling(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        Authorization: getAuthHeader(apiKey),
+      },
+      body: JSON.stringify({
+        languageCode,
+        products: sanitizedProductVariants,
+      }),
     });
 
-    const debugDir = path.resolve(process.cwd(), "debug");
-    fs.mkdirSync(debugDir, { recursive: true });
+    // Yespo returns { requestId, summary, items }, where each item carries a
+    // per-item status. failedVariants is derived from items with status "rejected".
+    const responseData = response.responseData as YespoProductsRawResponse;
+    const failedVariants = deriveFailedVariants(responseData);
 
-    // Persist the exact object that would be sent to Yespo for inspection.
-    const requestBody = buildRequestBody();
-    fs.writeFileSync(
-      path.join(debugDir, `product-variants-${siteId}-${Date.now()}.json`),
-      JSON.stringify(requestBody, null, 2),
-    );
-
-    // NOTE: The real HTTP call to Yespo is currently stubbed (mirrors the market
-    // sync client). The payload written to debug/ above is used for inspection.
-    // Uncomment the block below once the Yespo POST /v1/products endpoint is live.
-    // const sendRequest = async () => {
-    //   return fetchWithErrorHandling(url, {
-    //     method: "POST",
-    //     headers: {
-    //       "content-type": "application/json",
-    //       Authorization: getAuthHeader(apiKey),
-    //     },
-    //     body: JSON.stringify(buildRequestBody()),
-    //   });
-    // };
-
-    // const response = await sendRequest();
-
-    // // Yespo returns { requestId, summary, items }, where each item carries a
-    // // per-item status. failedVariants is derived from items with status "rejected".
-    // const responseData = response.responseData as YespoProductsRawResponse;
-    // const failedVariants = deriveFailedVariants(responseData);
-
-    // await sendLogEvent({
-    //   orgId,
-    //   errorMessage: "",
-    //   data: JSON.stringify({
-    //     domain,
-    //     variantsCount: productVariants.length,
-    //     variantIds: productVariants.map((variant) => variant.productId),
-    //     accepted: responseData.summary?.accepted,
-    //     rejected: responseData.summary?.rejected,
-    //   }),
-    //   message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
-    //   logLevel: "INFO",
-    // });
-
-    // return { failedVariants };
-
-    void apiKey;
-    void url;
-
-    // Emulate a Yespo response (all items accepted) and run it through the same
-    // derivation the live endpoint will use, so callers see the real shape.
-    const simulatedResponse: YespoProductsRawResponse = {
-      requestId: `mock-${Date.now()}`,
-      summary: {
-        received: sanitizedProductVariants.length,
-        accepted: sanitizedProductVariants.length,
-        rejected: 0,
-      },
-      items: sanitizedProductVariants.map((product) => ({
-        productId: product.productId,
-        action: product.action,
-        status: "accepted" as const,
-      })),
-    };
-    const failedVariants = deriveFailedVariants(simulatedResponse);
+    if (failedVariants.length > 0) {
+      console.warn(
+        `Yespo rejected ${failedVariants.length} product(s):`,
+        JSON.stringify(failedVariants, null, 2),
+      );
+    }
 
     await sendLogEvent({
       orgId,
@@ -188,16 +137,13 @@ export const updateProductVariants = async ({
       data: JSON.stringify({
         domain,
         variantsCount: productVariants.length,
-        accepted: simulatedResponse.summary.accepted,
-        rejected: simulatedResponse.summary.rejected,
+        variantIds: productVariants.map((variant) => variant.productId),
+        accepted: responseData.summary?.accepted,
+        rejected: responseData.summary?.rejected,
       }),
       message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
       logLevel: "INFO",
     });
-
-    console.log(
-      `[mock] updateProductVariants: ${productVariants.length} product(s) for siteId ${siteId}, ${failedVariants.length} rejected`,
-    );
 
     return { failedVariants };
   } catch (error: any) {

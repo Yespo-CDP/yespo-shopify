@@ -12,7 +12,12 @@ import { getProductCollectionsAndCategories } from "~/worker/services/get-produc
 import { getShopSecondaryLocales } from "~/worker/services/get-shop-locales";
 import { getProductTranslations } from "~/worker/services/get-product-translations";
 import { resolveProductSyncLanguage } from "~/worker/services/resolve-product-sync-language";
+import { laterDate } from "~/utils/convert-date-to-utc";
 import { updateMarketFromWebhook } from "./update-market-from-webhook.server";
+import {
+  collectRejectedProductIds,
+  refreshProductVariantSyncLog,
+} from "./refresh-product-variant-sync-log.server";
 
 /**
  * Creates product variants in Yespo from a Shopify PRODUCTS_CREATE webhook payload.
@@ -109,7 +114,7 @@ export const createProductVariantService = async (
       ),
     );
 
-    await updateProductVariants({
+    const variantsUpdateResponse = await updateProductVariants({
       apiKey,
       siteId: siteId ?? "",
       languageCode: resolvedLanguageCode,
@@ -124,6 +129,10 @@ export const createProductVariantService = async (
       });
     }
 
+    const rejectedIds = collectRejectedProductIds(
+      variantsUpdateResponse?.failedVariants,
+    );
+
     for (let i = 0; i < variants.length; i++) {
       const variant = variants[i];
       const currentTagKeys = Object.keys(productVariants[i].tags ?? {});
@@ -131,8 +140,9 @@ export const createProductVariantService = async (
         variantId: variant.admin_graphql_api_id,
         productId: payload.admin_graphql_api_id,
         syncedTagKeys: currentTagKeys,
+        syncFailed: rejectedIds.has(String(variant.id)),
         createdAt: variant.created_at ?? payload.created_at,
-        updatedAt: variant.updated_at ?? payload.updated_at,
+        updatedAt: laterDate(variant.updated_at, payload.updated_at),
         shop: {
           connect: {
             id: shopId,
@@ -153,6 +163,8 @@ export const createProductVariantService = async (
         orgId,
       });
     }
+
+    await refreshProductVariantSyncLog(shopId);
   } catch (error: any) {
     console.error("Error occurred in Create Product Variant Service", error);
   }

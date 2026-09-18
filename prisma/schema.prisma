@@ -204,6 +204,7 @@ model ProductVariantSync {
   variantId      String
   productId      String
   syncedTagKeys  String[]
+  syncFailed     Boolean   @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime? @updatedAt
 

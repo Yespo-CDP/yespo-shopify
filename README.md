@@ -306,6 +306,8 @@ Webhooks are triggered when orders are created or updated in Shopify:
 
 ### Product Sync (Shopify → Yespo)
 
+> **Current status:** product catalog sync is **live**. `POST /v1/products` and `DELETE /v1/products` call Yespo (`app/api/update-product-variants.ts`, `app/api/delete-product-variants.ts`). Market HTTP calls remain stubbed (see Market Sync below).
+
 **Purpose:** Automatically sync new, updated, and deleted products from Shopify to Yespo as catalog items.
 The process covers both historical synchronization and real-time synchronization through Shopify webhooks.
 
@@ -356,17 +358,19 @@ When sync is enabled:
 
 3. **Validation by `updatedAt`**
 
-   * For every variant, the most recent of `variant.updatedAt` and `product.updatedAt` is compared with the local database:
+   * For every variant, the most recent of `variant.updatedAt` and `product.updatedAt` is compared with `ProductVariantSync.updatedAt`:
 
      * If the variant is unchanged → skipped
      * If new or updated → added to sync batch
      * Action is `create` when no local sync record exists, otherwise `update`
-     * We update the database to save the variants we synchronize
+     * The same `max(variant.updatedAt, product.updatedAt)` is stored on `ProductVariantSync` so a later Enable without Shopify changes skips the variant (Disable/Enable does **not** clear tracking rows)
+     * Variants Yespo rejects are still tracked, with `syncFailed = true`
 
 4. **Bulk sending to Yespo**
 
    * Variants are grouped and sent to Yespo in **chunks of 500** using [Products](https://docs.yespo.io/reference/createorupdateproducts) (`POST /v1/products`).
    * Envelope is `{ languageCode, products }`. `languageCode` is the Shopify primary locale. Do **not** send `siteId` or `languageChanged` (the site is resolved from the API key).
+   * HTTP `207` partial success is treated as OK; items with `status: "rejected"` increment `failedCount` (e.g. `INVALID_URL` when `imageUrl` is empty).
 
 5. **Deleting orphaned variants**
 
@@ -383,9 +387,9 @@ If a network error or unknown error occurs during sync, the synchronization proc
 #### Field Mapping [Shopify Product / ProductVariant](https://shopify.dev/docs/api/admin-graphql/latest/queries/products) →  [Yespo Product](https://docs.yespo.io/reference/createorupdateproducts):
 - `variant.id` (numeric) → `productId`
 - `product.id` (numeric) → `itemGroupId`
-- `variant.updatedAt` → `updatedDate` (RFC3339 UTC)
+- `variant.updatedAt` (webhook: `variant.updated_at`) is converted to RFC3339 UTC (`…Z`) before sending as `updatedDate`. Shopify REST offsets like `-04:00` are rejected by Yespo (`INVALID_SOURCE_UPDATED_AT`).
 - `product.title` (+ ` - {variant.title}` when not `Default Title`) → `name`
-- `variant.image.url` (fallback `product.featuredImage.url`) → `imageUrl`
+- `variant.image.url` (fallback `product.featuredImage.url`) → `imageUrl`. Webhooks use the same order: variant `image_id` in `images[]`, then `product.image.src`, then `images[0].src`. Empty `imageUrl` is rejected by Yespo (`INVALID_URL`).
 - `product.onlineStoreUrl` (fallback `https://{domain}/products/{handle}`) + `?variant={id}` → `url`
 - `variant.inventoryQuantity` (`null` or `> 0` → `1`, else `0`) → `isInStock`
 - `variant.price` → `price`
@@ -415,13 +419,29 @@ If a product has no collections or taxonomy category, it falls back to a default
 
 #### Logging & Status Tracking:
 
-- `totalCount` – total number of product variants from Shopify.
-- `syncedCount` – variants successfully sent to Yespo.
-- `failedCount` – variants rejected by Yespo.
-- `skippedCount` – variants that are already synced and skipped during sync, this is not displayed in the UI but is saved in the last sync log.
+The Data Sync card shows:
+
+- **Synchronized** = `syncedCount + skippedCount`
+- **Failed** = `failedCount`
+- **Total** = `totalCount`
+
+**Historical Enable** writes job stats for that run:
+
+- `totalCount` – product variants counted in Shopify (`status:active AND published_status:published`).
+- `syncedCount` – variants sent in this run and accepted by Yespo.
+- `failedCount` – variants sent in this run and rejected by Yespo.
+- `skippedCount` – variants skipped because Shopify `updatedAt` was not newer than `ProductVariantSync.updatedAt` (not shown as its own label; folded into Synchronized).
+
+**Webhooks** (create / update / delete) rebuild the same counters from `ProductVariantSync` after Yespo responds, unless a bulk run is `IN_PROGRESS`:
+
+- `totalCount` – tracked rows for the shop
+- `failedCount` – rows with `syncFailed = true`
+- `syncedCount` – the rest (`skippedCount` is set to `0`)
+
+The app home page polls `/api/sync-logs` every 3s while product sync is enabled (and while any log is `NOT_STARTED` / `IN_PROGRESS`).
 
 Final synchronization status:
-- `COMPLETE` → all variants processed successfully.
+- `COMPLETE` → the run finished without a thrown error (rejected items still count as `failedCount`, not `ERROR`).
 - `ERROR` → shown when a network failure or any unknown error occurs during the synchronization.
 
 ---
@@ -434,7 +454,7 @@ Webhooks are triggered when products are created, updated, or deleted in Shopify
   - `products/update` → variants created or updated in Yespo; variants removed from the product are deleted.
   - `products/delete` → all tracked variants of the product removed from Yespo.
 
-Because webhook payloads do not include collections, secondary locales, or translations, these are fetched separately via GraphQL before sending. Market data for the affected product is **not** sent from webhooks yet — market HTTP calls are stubbed (see Market Sync below).
+Because webhook payloads do not include collections, secondary locales, or translations, these are fetched separately via GraphQL before sending. Image URLs follow the same fallback as historical sync (variant image → featured image). `updatedDate` is normalized to UTC. After Yespo responds, Data Sync counters are refreshed from `ProductVariantSync` (see Logging above). Market data for the affected product is **not** sent to Yespo yet — market HTTP calls are stubbed (see Market Sync below).
 
 ---
 

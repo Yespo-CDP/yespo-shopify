@@ -21,6 +21,10 @@ export default interface ProductVariantSyncLogRepository {
     shopUrl: string,
   ): Promise<ProductVariantSyncLog | null>;
 
+  getProductVariantSyncLogByShopId(
+    shopId: number,
+  ): Promise<ProductVariantSyncLog | null>;
+
   /**
    * Creates or updates a product variant sync log record.
    *

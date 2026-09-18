@@ -77,10 +77,9 @@ function deriveFailedItems(response: YespoMarketsRawResponse): string[] {
  *
  * Envelope: { markets: [{ marketId, products: [...] }] }
  *
- * NOTE: The HTTP call is currently stubbed (mirrors the product sync client) and
- * returns a mock success response. The exact payload that would be sent is
- * written to `debug/` for inspection. Uncomment the block below once the Yespo
- * endpoint is live.
+ * NOTE: The HTTP call is currently stubbed. Product POST/DELETE are live; this
+ * markets client still returns a mock success and writes the payload to
+ * `debug/` for inspection. Uncomment the block below once POST /v1/markets is live.
  *
  * @param params.apiKey - Basic-auth API key. The Yespo site is resolved from the key, not the body.
  * @param params.siteId - Yespo site/account identifier; used for rate limiting, not sent in the body.

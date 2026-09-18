@@ -19,6 +19,7 @@ import {
 } from "../services/get-product-translations";
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
+import { markProductVariantSyncResults } from "~/services/refresh-product-variant-sync-log.server";
 
 const PRODUCTS_CHUNK_SIZE = 50;
 const VARIANTS_API_CHUNK_SIZE = 500;
@@ -166,7 +167,10 @@ export const productSyncHandler = async (
                     productId: product.id,
                     syncedTagKeys: currentTagKeys,
                     createdAt: variant.createdAt ?? product.createdAt,
-                    updatedAt: variant.updatedAt ?? product.updatedAt,
+                    // Persist the same timestamp we compare on the next run
+                    // (max of variant + product), otherwise Enable resends
+                    // every variant whose product is newer than the variant.
+                    updatedAt: new Date(entityUpdatedDate),
                     shop: {
                       connect: {
                         id: shopId,
@@ -220,6 +224,12 @@ export const productSyncHandler = async (
                 chunkFailedCount += 1;
               }
             }
+
+            await markProductVariantSyncResults(
+              shopId,
+              variantsChunk.map((variant) => variant.productId),
+              variantsUpdateResponse?.failedVariants,
+            );
           }
 
           totalFailedCount += chunkFailedCount;
