@@ -2,6 +2,7 @@ import { Queue } from "bullmq";
 
 import { redisConfig } from "~/config/redis";
 import {
+  DB_CLEANER_CRON_PATTERN,
   MARKET_SYNC_CRON_PATTERN,
   MARKET_SYNC_MAX_CONCURRENT_SHOPS,
   MARKET_SYNC_MIN_INTERVAL_MS,
@@ -34,6 +35,7 @@ export const TokenMigrationQueue = new Queue("token-migration", {
 });
 
 export const MARKET_SYNC_CRON_JOB_NAME = "market-sync-tick";
+export const DB_CLEANER_CRON_JOB_NAME = "db-cleaner-tick";
 export const TOKEN_MIGRATION_JOB_NAME = "migrate-token";
 
 /**
@@ -72,6 +74,25 @@ export async function registerMarketSyncCron(): Promise<void> {
     { pattern: MARKET_SYNC_CRON_PATTERN },
     {
       name: MARKET_SYNC_CRON_JOB_NAME,
+      data: {},
+      opts: {
+        removeOnComplete: 100,
+        removeOnFail: 500,
+      },
+    },
+  );
+}
+
+/**
+ * Registers the daily EventData TTL cleanup scheduler in Redis. Safe to call
+ * on every worker startup — BullMQ upserts the scheduler by id.
+ */
+export async function registerDbCleanerCron(): Promise<void> {
+  await CronQueue.upsertJobScheduler(
+    DB_CLEANER_CRON_JOB_NAME,
+    { pattern: DB_CLEANER_CRON_PATTERN },
+    {
+      name: DB_CLEANER_CRON_JOB_NAME,
       data: {},
       opts: {
         removeOnComplete: 100,

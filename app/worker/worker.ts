@@ -1,7 +1,10 @@
 import { Worker } from "bullmq";
 
 import { redisConfig } from "~/config/redis";
-import { shopRepository } from "~/repositories/repositories.server";
+import {
+  eventDataRepository,
+  shopRepository,
+} from "~/repositories/repositories.server";
 import { getOfflineAccessToken } from "~/services/get-offline-session.server";
 import { migrateOfflineTokenToExpiring } from "~/services/migrate-offline-token.server";
 import { customerSyncHandler } from "./handlers/customer-sync-handler";
@@ -9,9 +12,11 @@ import { orderSyncHandler } from "./handlers/order-sync-handler";
 import { productSyncHandler } from "./handlers/product-sync-handler";
 import { marketSyncHandler } from "./handlers/market-sync-handler";
 import {
+  DB_CLEANER_CRON_JOB_NAME,
   enqueueMarketSyncTaskForShopUrl,
   enqueueMarketSyncTasks,
   MARKET_SYNC_CRON_JOB_NAME,
+  registerDbCleanerCron,
   registerMarketSyncCron,
 } from "~/services/queue";
 
@@ -31,6 +36,7 @@ interface TokenMigrationJobData {
 console.log("===RUN WORKER===");
 
 await registerMarketSyncCron();
+await registerDbCleanerCron();
 
 new Worker(
   "cron-jobs",
@@ -40,6 +46,11 @@ new Worker(
 
       const enqueued = await enqueueMarketSyncTasks();
       console.log(`Market sync cron tick: enqueued ${enqueued} shop(s)`);
+    }
+
+    if (job.name === DB_CLEANER_CRON_JOB_NAME) {
+      await eventDataRepository.bulkDeleteEventsData();
+      console.log("Expired EventData cleaned");
     }
   },
   {

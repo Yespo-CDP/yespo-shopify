@@ -40,7 +40,6 @@
     "@shopify/polaris": "^12.27.0",
     "@shopify/shopify-app-react-router": "^2.0.0",
     "@shopify/shopify-app-session-storage-prisma": "^10.0.0",
-    "@upstash/qstash": "^2.8.4",
     "bullmq": "^5.63.1",
     "comment-json": "^4.4.1",
     "date-fns": "^4.1.0",

@@ -114,6 +114,9 @@ export const MARKET_SYNC_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000;
 /** BullMQ repeatable job pattern — runs once per day at 00:00 UTC. */
 export const MARKET_SYNC_CRON_PATTERN = "0 0 * * *";
 
+/** BullMQ repeatable job pattern for expired EventData cleanup — once per day at 00:00 UTC. */
+export const DB_CLEANER_CRON_PATTERN = "0 0 * * *";
+
 /**
  * How many times `fetchWithErrorHandling` retries a request after the server
  * responds with HTTP 429 (Rate Limited) before giving up and throwing.
