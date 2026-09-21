@@ -37,7 +37,6 @@ console.log("===RUN WORKER===");
 
 await registerMarketSyncCron();
 await registerDbCleanerCron();
-
 new Worker(
   "cron-jobs",
   async (job) => {
