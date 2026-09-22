@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
+import { normalizeYespoItems } from "~/utils/normalize-yespo-items";
 import { throttleApiRequest } from "~/utils/rate-limiter.server";
 // import { getAuthHeader } from "~/utils/auth";
 // import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
@@ -58,7 +59,8 @@ interface YespoMarketResultItem {
 interface YespoMarketsRawResponse {
   requestId: string;
   summary: { received: number; accepted: number; rejected: number };
-  items: YespoMarketResultItem[];
+  /** Jackson emits a single object when the list has one element. */
+  items: YespoMarketResultItem | YespoMarketResultItem[];
 }
 
 /**
@@ -66,7 +68,7 @@ interface YespoMarketsRawResponse {
  * collecting every item whose per-item `status` is `"rejected"`.
  */
 function deriveFailedItems(response: YespoMarketsRawResponse): string[] {
-  return (response.items ?? [])
+  return normalizeYespoItems(response.items)
     .filter((item) => item.status === "rejected")
     .map((item) => item.productId);
 }

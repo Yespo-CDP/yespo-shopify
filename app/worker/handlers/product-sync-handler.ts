@@ -184,6 +184,12 @@ export const productSyncHandler = async (
             }
           }
 
+          if (productVariantsData.length === 0) {
+            console.log(
+              `[product-sync] No variants to POST for ${shop} in this chunk (skipped ${chunkSkippedCount}; already in ProductVariantSync)`,
+            );
+          }
+
           for (
             let index = 0;
             index < productVariantsData.length;
