@@ -6,6 +6,7 @@ import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
+import { normalizeYespoItems } from "~/utils/normalize-yespo-items";
 import { throttleApiRequest } from "~/utils/rate-limiter.server";
 
 /**
@@ -27,7 +28,8 @@ interface YespoProductResultItem {
 interface YespoProductsRawResponse {
   requestId: string;
   summary: { received: number; accepted: number; rejected: number };
-  items: YespoProductResultItem[];
+  /** Jackson emits a single object when the list has one element. */
+  items: YespoProductResultItem | YespoProductResultItem[];
 }
 
 /**
@@ -37,7 +39,9 @@ interface YespoProductsRawResponse {
 function deriveFailedVariants(
   response: YespoProductsRawResponse,
 ): YespoProductResultItem[] {
-  return (response.items ?? []).filter((item) => item.status === "rejected");
+  return normalizeYespoItems(response.items).filter(
+    (item) => item.status === "rejected",
+  );
 }
 
 /**
@@ -95,25 +99,20 @@ export const updateProductVariants = async ({
   domain: string;
   orgId?: number | null;
 }): Promise<ProductVariantsResponse> => {
+  // Yespo does not need the Shopify collection `id` on categories. Built
+  // before the try so the error log can still include the outbound body.
+  const requestBody = {
+    languageCode,
+    products: productVariants.map(stripCategoryIdsFromProduct),
+  };
+
   try {
     await throttleApiRequest(siteId);
 
     const url = `${process.env.API_URL}/products`;
 
-    // Yespo does not need the Shopify collection `id` on categories. We keep it
-    // internally (e.g. to resolve collection translations) and strip it here, at
-    // the single outbound boundary, for both top-level and per-locale categories.
-    const sanitizedProductVariants = productVariants.map(
-      stripCategoryIdsFromProduct,
-    );
-
-    const requestBody = {
-      languageCode,
-      products: sanitizedProductVariants,
-    };
-
     console.log(
-      `[yespo] POST /products (${sanitizedProductVariants.length} product(s)) for ${domain}:`,
+      `[yespo] POST /products (${requestBody.products.length} product(s)) for ${domain}:`,
       JSON.stringify(requestBody, null, 2),
     );
 
@@ -126,8 +125,13 @@ export const updateProductVariants = async ({
       body: JSON.stringify(requestBody),
     });
 
-    // Yespo returns { requestId, summary, items }, where each item carries a
-    // per-item status. failedVariants is derived from items with status "rejected".
+    console.log(
+      `[yespo] POST /products response ${response.status} for ${domain}:`,
+      JSON.stringify(response.responseData, null, 2),
+    );
+
+    // Yespo returns { requestId, summary, items }. A single accepted/rejected
+    // item is serialized as an object, not a one-element array.
     const responseData = response.responseData as YespoProductsRawResponse;
     const failedVariants = deriveFailedVariants(responseData);
 
@@ -138,16 +142,27 @@ export const updateProductVariants = async ({
       );
     }
 
+    const logData = {
+      domain,
+      variantsCount: productVariants.length,
+      variantIds: productVariants.map((variant) => variant.productId),
+      requestBody,
+      responseBody: responseData,
+      statusCode: response.status,
+    };
+
     await sendLogEvent({
       orgId,
       errorMessage: "",
-      data: JSON.stringify({
-        domain,
-        variantsCount: productVariants.length,
-        variantIds: productVariants.map((variant) => variant.productId),
-        accepted: responseData.summary?.accepted,
-        rejected: responseData.summary?.rejected,
-      }),
+      data: logData,
+      message: EVENT_MESSAGES.SEND_PRODUCT_VARIANTS_BULK_SUCCESS,
+      logLevel: "INFO",
+    });
+
+    await sendLogEvent({
+      orgId,
+      errorMessage: "",
+      data: logData,
       message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
       logLevel: "INFO",
     });
@@ -169,16 +184,17 @@ export const updateProductVariants = async ({
     await sendLogEvent({
       orgId,
       errorMessage: `Error updating product variants: ${error?.message}`,
-      data: JSON.stringify({
+      data: {
         domain,
         variantsCount: productVariants.length,
+        requestBody,
         responseBody,
         statusCode,
-      }),
+      },
       message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_ERROR,
       logLevel: "ERROR",
     });
 
-    throw new Error(error.message);
+    throw error;
   }
 };
