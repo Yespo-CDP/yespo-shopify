@@ -107,16 +107,23 @@ export const updateProductVariants = async ({
       stripCategoryIdsFromProduct,
     );
 
+    const requestBody = {
+      languageCode,
+      products: sanitizedProductVariants,
+    };
+
+    console.log(
+      `[yespo] POST /products (${sanitizedProductVariants.length} product(s)) for ${domain}:`,
+      JSON.stringify(requestBody, null, 2),
+    );
+
     const response = await fetchWithErrorHandling(url, {
       method: "POST",
       headers: {
         "content-type": "application/json",
         Authorization: getAuthHeader(apiKey),
       },
-      body: JSON.stringify({
-        languageCode,
-        products: sanitizedProductVariants,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     // Yespo returns { requestId, summary, items }, where each item carries a
@@ -147,7 +154,17 @@ export const updateProductVariants = async ({
 
     return { failedVariants };
   } catch (error: any) {
-    console.error("Error updating product variants:", error?.message);
+    const statusCode = error?.status ?? 500;
+    const responseBody = error?.responseData ?? error?.message;
+
+    console.error(
+      "Error updating product variants:",
+      error?.message,
+      "status:",
+      statusCode,
+      "body:",
+      responseBody,
+    );
 
     await sendLogEvent({
       orgId,
@@ -155,8 +172,8 @@ export const updateProductVariants = async ({
       data: JSON.stringify({
         domain,
         variantsCount: productVariants.length,
-        responseBody: error,
-        statusCode: error?.status ?? 500,
+        responseBody,
+        statusCode,
       }),
       message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_ERROR,
       logLevel: "ERROR",

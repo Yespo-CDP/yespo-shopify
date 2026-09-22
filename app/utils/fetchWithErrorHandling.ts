@@ -10,18 +10,53 @@ import {
  */
 class FetchError extends Error {
   status: number;
+  responseData?: unknown;
 
   /**
    * Creates a new FetchError instance.
    *
    * @param {string} message - The error message.
    * @param {number} status - The HTTP status code associated with the error.
+   * @param {unknown} [responseData] - Parsed response body, when available.
    */
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, responseData?: unknown) {
     super(message);
     this.status = status;
+    this.responseData = responseData;
   }
 }
+
+/**
+ * Builds a readable fetch error from an HTTP status and parsed body.
+ *
+ * Yespo often returns Spring-style JSON (`{ status, error, path }`) or even `{}`
+ * with no `message` field. Falling back to "Unknown error" hides the status.
+ */
+const formatFetchErrorMessage = (
+  responseData: unknown,
+  status: number,
+): string => {
+  if (typeof responseData === "string" && responseData.trim()) {
+    return `HTTP ${status}: ${responseData}`;
+  }
+
+  if (responseData && typeof responseData === "object") {
+    const data = responseData as Record<string, unknown>;
+    const detail = [data.message, data.error, data.code].find(
+      (value): value is string => typeof value === "string" && value.length > 0,
+    );
+    if (detail) {
+      return `HTTP ${status}: ${detail}`;
+    }
+
+    const json = JSON.stringify(responseData);
+    if (json && json !== "{}") {
+      return `HTTP ${status}: ${json}`;
+    }
+  }
+
+  return `HTTP ${status}`;
+};
 
 /**
  * Pauses execution for the given number of milliseconds.
@@ -106,11 +141,11 @@ export async function fetchWithErrorHandling(
       }
 
       if (!response.ok) {
-        const message =
-          typeof responseData === "string"
-            ? responseData
-            : responseData?.message || "Unknown error";
-        throw new FetchError(message, response.status);
+        throw new FetchError(
+          formatFetchErrorMessage(responseData, response.status),
+          response.status,
+          responseData,
+        );
       }
 
       return {
