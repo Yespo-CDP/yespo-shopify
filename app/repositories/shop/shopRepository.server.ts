@@ -43,6 +43,27 @@ export default interface ShopRepository {
   updateShop(shopUrl: string, data: ShopUpdate): Promise<Shop>;
 
   /**
+   * Claims a one-time product-sync rollout for a shop.
+   * Succeeds only while `productSyncAutoEnable` is still true and an API key exists.
+   *
+   * @param {string} shopUrl - The unique URL identifier of the shop.
+   * @returns {Promise<boolean>} True when this call won the claim.
+   */
+  claimProductSyncRollout(shopUrl: string): Promise<boolean>;
+
+  /**
+   * Restores a shop to the pre-rollout state after a failed enable.
+   *
+   * @param {string} shopUrl - The unique URL identifier of the shop.
+   * @param {boolean} isMarketSyncEnabled - Market sync flag to put back.
+   * @returns {Promise<void>}
+   */
+  releaseProductSyncRollout(
+    shopUrl: string,
+    isMarketSyncEnabled: boolean,
+  ): Promise<void>;
+
+  /**
    * Returns active shops eligible for market sync cron, each with the minimal
    * MarketSyncLog fields (status + updatedAt) needed to compute the concurrency
    * budget and pick the shops that synced longest ago.

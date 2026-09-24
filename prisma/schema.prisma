@@ -51,6 +51,8 @@ model Shop {
   isContactSyncEnabled        Boolean?  @default(false)
   isOrderSyncEnabled          Boolean?  @default(false)
   isProductVariantSyncEnabled Boolean?  @default(false)
+  productSyncAutoEnable       Boolean?  @default(false)
+  productSyncNoticePending    Boolean?  @default(false)
   isMarketSyncEnabled         Boolean?  @default(false)
   isAppInboxEnabled           Boolean?  @default(false)
   active                      Boolean?  @default(true)

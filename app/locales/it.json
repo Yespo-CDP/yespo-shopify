@@ -77,6 +77,10 @@
       "title": "Sincronizzazione dati",
       "customersAndOrdersTitle": "Sincronizzazione clienti e ordini",
       "productSyncTitle": "Sincronizzazione prodotti",
+      "rolloutNotice": {
+        "heading": "Sincronizzazione prodotti attiva",
+        "description": "La sincronizzazione dei prodotti è ora attiva per il tuo negozio ed è iniziata la sincronizzazione storica."
+      },
       "description": "La sincronizzazione dei dati consente di sincronizzare clienti, ordini e prodotti da Shopify a Yespo. Attiva ciascuna sincronizzazione in modo indipendente.",
       "enable": "Abilita",
       "disable": "Disabilita",

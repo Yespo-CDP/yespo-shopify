@@ -77,6 +77,10 @@
     "title": "Data Sync",
     "customersAndOrdersTitle": "Customers and Orders sync",
     "productSyncTitle": "Product Sync",
+    "rolloutNotice": {
+      "heading": "Product sync is on",
+      "description": "Product sync is now enabled for your store, and historical synchronization has started."
+    },
     "description": "Data sync allows syncing customers, orders, and products from Shopify with Yespo. Enable each sync independently.",
     "enable": "Enable",
     "disable": "Disable",

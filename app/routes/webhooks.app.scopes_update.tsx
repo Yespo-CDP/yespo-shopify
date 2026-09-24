@@ -1,6 +1,7 @@
 import type { ActionFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
 import db from "../db.server";
+import { enableProductSyncForRollout } from "~/services/enable-product-sync-for-rollout.server";
 
 /**
  * Action handler for processing Shopify webhook requests related to session updates.
@@ -27,5 +28,11 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             },
         });
     }
+
+    await enableProductSyncForRollout({
+        shopUrl: shop,
+        scopes: current,
+    });
+
     return new Response();
 };

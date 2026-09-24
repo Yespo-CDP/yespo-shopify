@@ -343,6 +343,12 @@ When sync is enabled:
 - Runs once after being enabled (or re-enabled)
 - Triggered after customers and orders synchronization
 
+#### Rollout for existing shops:
+
+Shops that already have customers and orders sync on, and product sync off, are stamped when this migration runs (`productSyncAutoEnable`). The stamp is per database, so local, staging, and production each capture their own shops at deploy time. Shops that already have product sync on are left alone.
+
+After the merchant grants `read_products`, `read_publications`, `read_translations`, and `read_locales`, product sync is enabled once — from `app/scopes_update`, or from the app home loader if those scopes were already on the session. A banner on the home page says sync is on. Dismissing it hides the banner and does not turn sync off. New installs are not stamped and do not see the banner. Turning product sync off afterwards does not turn it back on.
+
 ---
 
 #### Historical products sync:
