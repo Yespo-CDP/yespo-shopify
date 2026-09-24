@@ -51,6 +51,8 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       await db.customerSyncLog.deleteMany({ where: { shopId: shopData?.id } });
       await db.orderSync.deleteMany({ where: { shopId: shopData?.id } });
       await db.orderSyncLog.deleteMany({ where: { shopId: shopData?.id } });
+      await db.productVariantSync.deleteMany({ where: { shopId: shopData?.id } });
+      await db.productVariantSyncLog.deleteMany({ where: { shopId: shopData?.id } });
     }
   }
 
