@@ -29,12 +29,17 @@ export const deleteProductVariantService = async (
   siteId?: string | null,
 ) => {
   try {
-    const productGid: string | undefined = payload?.admin_graphql_api_id;
+    console.log("PRODUCTS_DELETE payload", JSON.stringify(payload));
 
-    if (!productGid) {
-      console.warn("PRODUCTS_DELETE webhook missing admin_graphql_api_id — skipping");
+    const numericProductId = payload?.id;
+    if (numericProductId == null || numericProductId === "") {
+      console.warn("PRODUCTS_DELETE webhook missing id — skipping");
       return;
     }
+
+    // Shopify sends only the numeric product id. ProductVariantSync.productId
+    // is the GID stored from create/update and historical sync.
+    const productGid = `gid://shopify/Product/${numericProductId}`;
 
     // Fetch all variant GIDs for this product that we have tracked in our DB.
     const variantGids = await productVariantSyncRepository.getVariantIdsByProductId(
