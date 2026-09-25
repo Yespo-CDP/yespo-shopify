@@ -453,7 +453,7 @@ Webhooks are triggered when products are created, updated, or deleted in Shopify
   - `products/update` → variants created or updated in Yespo; variants removed from the product are deleted.
   - `products/delete` → all tracked variants of the product removed from Yespo.
 
-Because webhook payloads do not include collections, secondary locales, or translations, these are fetched separately via GraphQL before sending. Image URLs follow the same fallback as historical sync (variant image → featured image). `updatedDate` is normalized to UTC. After Yespo responds, Data Sync counters are refreshed from `ProductVariantSync` (see Logging above). Market data for the affected product is **not** sent to Yespo yet — market HTTP calls are stubbed (see Market Sync below).
+The webhook route only enqueues a BullMQ job (`product-webhooks`) and returns `200`. Jobs for the same product are coalesced and delayed by 8 seconds, so a CSV import's `products/create` followed by `products/update` becomes one run. The worker (`concurrency: 1`) then loads the product from the Admin API — including image, collections, category, and translations — and sends it to Yespo. Image URLs follow the same fallback as historical sync (variant image → featured image). `updatedDate` is normalized to UTC. After Yespo responds, Data Sync counters are refreshed from `ProductVariantSync` (see Logging above). Market data for the affected product is **not** sent to Yespo yet — market HTTP calls are stubbed (see Market Sync below).
 
 ---
 

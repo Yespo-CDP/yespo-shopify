@@ -11,11 +11,14 @@ import { customerSyncHandler } from "./handlers/customer-sync-handler";
 import { orderSyncHandler } from "./handlers/order-sync-handler";
 import { productSyncHandler } from "./handlers/product-sync-handler";
 import { marketSyncHandler } from "./handlers/market-sync-handler";
+import { productWebhookHandler } from "./handlers/product-webhook-handler";
 import {
   DB_CLEANER_CRON_JOB_NAME,
   enqueueMarketSyncTaskForShopUrl,
   enqueueMarketSyncTasks,
   MARKET_SYNC_CRON_JOB_NAME,
+  PRODUCT_WEBHOOK_QUEUE_NAME,
+  type ProductWebhookJobData,
   registerDbCleanerCron,
   registerMarketSyncCron,
 } from "~/services/queue";
@@ -160,6 +163,19 @@ new Worker<MarketSyncJobData>(
   {
     connection: redisConfig,
     concurrency: 10,
+  },
+);
+
+// One job at a time: each run rewrites the shop's sync counters from a full
+// recount, so overlapping product jobs would overwrite each other.
+new Worker<ProductWebhookJobData>(
+  PRODUCT_WEBHOOK_QUEUE_NAME,
+  async (job) => {
+    await productWebhookHandler(job.data);
+  },
+  {
+    connection: redisConfig,
+    concurrency: 1,
   },
 );
 

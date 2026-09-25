@@ -105,3 +105,93 @@ export const getProducts = async ({
     return { products: [], cursor: null };
   }
 };
+
+/**
+ * Loads one product by GID with the same fields historical sync uses.
+ * Returns null when Shopify has no such product. Throws on request errors
+ * so the caller can retry.
+ */
+export const getProductById = async ({
+  client,
+  productId,
+}: {
+  client: GraphQLClient;
+  productId: string;
+}): Promise<{ product: ProductData | null; shopCurrency?: string }> => {
+  const response = await client.request(
+    `query getProductById($id: ID!, $variantsCount: Int) {
+      shop {
+        currencyCode
+      }
+      product(id: $id) {
+        id
+        title
+        handle
+        description
+        vendor
+        tags
+        onlineStoreUrl
+        featuredImage { url }
+        collections(first: 10) {
+          nodes { id title handle }
+        }
+        category {
+          id
+          name
+          fullName
+        }
+        createdAt
+        updatedAt
+        variants(first: $variantsCount) {
+          nodes {
+            id
+            title
+            price
+            compareAtPrice
+            inventoryQuantity
+            image { url }
+            selectedOptions { name value }
+            contextualPricing(context: {}) {
+              price {
+                amount
+                currencyCode
+              }
+            }
+            createdAt
+            updatedAt
+          }
+          pageInfo {
+            endCursor
+            hasNextPage
+          }
+        }
+      }
+    }`,
+    {
+      variables: {
+        id: productId,
+        variantsCount: VARIANTS_PAGE_SIZE,
+      },
+    },
+  );
+
+  const graphQLErrors = response?.errors?.graphQLErrors;
+  if (
+    (graphQLErrors && graphQLErrors.length > 0) ||
+    response?.errors?.message
+  ) {
+    throw new Error(
+      `Failed to fetch product ${productId}: ${JSON.stringify(response.errors)}`,
+    );
+  }
+
+  const data = response?.data as {
+    shop?: { currencyCode?: string };
+    product?: ProductData | null;
+  };
+
+  return {
+    product: data?.product ?? null,
+    shopCurrency: data?.shop?.currencyCode,
+  };
+};

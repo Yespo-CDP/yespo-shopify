@@ -42,10 +42,11 @@ export const deleteProductVariantService = async (
     const productGid = `gid://shopify/Product/${numericProductId}`;
 
     // Fetch all variant GIDs for this product that we have tracked in our DB.
-    const variantGids = await productVariantSyncRepository.getVariantIdsByProductId(
-      shopId,
-      productGid,
-    );
+    const variantGids =
+      await productVariantSyncRepository.getVariantIdsByProductId(
+        shopId,
+        productGid,
+      );
 
     if (variantGids.length === 0) {
       return;
@@ -69,5 +70,6 @@ export const deleteProductVariantService = async (
     await refreshProductVariantSyncLog(shopId);
   } catch (error: any) {
     console.error("Error occurred in Delete Product Variant Service", error);
+    throw error;
   }
 };
