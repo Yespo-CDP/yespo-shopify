@@ -118,6 +118,17 @@ export const MARKET_SYNC_CRON_PATTERN = "0 0 * * *";
 export const DB_CLEANER_CRON_PATTERN = "0 0 * * *";
 
 /**
+ * How long a product webhook job waits before it runs.
+ * Shopify sends products/create and then products/update (image, inventory)
+ * a few seconds apart. Each new webhook for the same product resets this
+ * delay, so the worker fetches the product once, after those updates land.
+ */
+export const PRODUCT_WEBHOOK_DEBOUNCE_MS = 8_000;
+
+/** Retries for a product webhook job after a transient Shopify or Yespo failure. */
+export const PRODUCT_WEBHOOK_JOB_ATTEMPTS = 5;
+
+/**
  * How many times `fetchWithErrorHandling` retries a request after the server
  * responds with HTTP 429 (Rate Limited) before giving up and throwing.
  */
