@@ -168,6 +168,12 @@ async function syncProductFromAdmin(
         action,
         existing?.syncedTagKeys ?? [],
       );
+      if (action === "create") {
+        console.log(
+          `[yespo] create payload for ${data.shop} variant ${variant.id}:`,
+          JSON.stringify(payload, null, 2),
+        );
+      }
       productVariantsData.push(payload);
 
       await productVariantSyncRepository.createOrUpdateProductVariantSync({

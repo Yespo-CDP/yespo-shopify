@@ -17,8 +17,9 @@ export interface ProductVariantData {
 }
 
 export interface ProductTranslationCategory {
-  id: string;
+  id?: string;
   name: string;
+  path?: string[];
   type?: "category" | "collection";
 }
 

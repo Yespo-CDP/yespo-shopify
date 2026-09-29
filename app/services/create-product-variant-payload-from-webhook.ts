@@ -5,7 +5,10 @@ import type {
 } from "~/@types/productVariant";
 import type { ProductTranslationsResult } from "~/worker/services/get-product-translations";
 import { appendVariantParam } from "~/worker/services/append-variant-param";
-import { withDefaultCategory } from "~/worker/services/map-yespo-categories";
+import {
+  primaryLanguageCategoryTranslations,
+  withDefaultCategory,
+} from "~/worker/services/map-yespo-categories";
 import { toRfc3339Utc } from "~/utils/convert-date-to-utc";
 
 export interface ProductWebhookImage {
@@ -148,6 +151,8 @@ export const createProductVariantPayloadFromWebhook = (
     );
   }
 
+  const resolvedCategories = withDefaultCategory(categories);
+
   const payload: ProductVariant = {
     action,
     productId: variant.id.toString(),
@@ -158,7 +163,7 @@ export const createProductVariantPayloadFromWebhook = (
     isInStock,
     price: parseFloat(variant.price ?? "0"),
     currency: shopCurrency,
-    categories: withDefaultCategory(categories),
+    categories: resolvedCategories,
     itemGroupId: product.id.toString(),
   };
 
@@ -189,6 +194,11 @@ export const createProductVariantPayloadFromWebhook = (
       ([locale, t]) => {
         const translatedVariantTitle =
           translationsResult.variants[variantId]?.[locale] ?? variantTitle;
+        const localeCategories = [
+          ...(t.categories ?? []),
+          ...primaryLanguageCategoryTranslations(resolvedCategories),
+        ];
+
         return {
           [locale]: {
             ...t,
@@ -198,6 +208,9 @@ export const createProductVariantPayloadFromWebhook = (
                 ? `${t.name} - ${translatedVariantTitle}`
                 : t.name
               : undefined,
+            ...(localeCategories.length > 0
+              ? { categories: localeCategories }
+              : {}),
           },
         };
       },
