@@ -5,6 +5,7 @@ import type {
 } from "~/@types/productVariant";
 import {
   mapShopifyCategories,
+  primaryLanguageCategoryTranslations,
   withDefaultCategory,
 } from "~/worker/services/map-yespo-categories";
 import { appendVariantParam } from "~/worker/services/append-variant-param";
@@ -126,6 +127,11 @@ export const createProductVariantPayload = (
         const translatedVariantTitle =
           product.variantTranslations?.[productId]?.[locale] ?? variantTitle;
 
+        const localeCategories = [
+          ...(t.categories ?? []),
+          ...primaryLanguageCategoryTranslations(categories),
+        ];
+
         return {
           [locale]: {
             ...t,
@@ -135,6 +141,9 @@ export const createProductVariantPayload = (
                 ? `${t.name} - ${translatedVariantTitle}`
                 : t.name
               : undefined,
+            ...(localeCategories.length > 0
+              ? { categories: localeCategories }
+              : {}),
           },
         };
       },

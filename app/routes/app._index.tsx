@@ -8,6 +8,7 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { Trans, useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 
+import UnsupportedMarketsSection from "~/components/UnsupportedMarketsSection";
 import AccountConnectionSection from "~/components/AccountConnectionSection";
 import ConnectionStatusSection from "~/components/ConnectionStatusSection";
 import UsefulLinksSection from "~/components/UsefulLinksSection";
@@ -55,6 +56,7 @@ export default function Index() {
   const {
     shop,
     account,
+    isMarketsOverflowing,
     scriptConnectionStatus,
     customersSyncLog,
     orderSyncLog,
@@ -139,6 +141,7 @@ export default function Index() {
     <s-page>
       <s-box paddingBlockEnd="large-500">
         <s-stack gap="base">
+          {isMarketsOverflowing && <UnsupportedMarketsSection />}
           <s-stack gap="small-300">
             <s-stack direction="inline" gap="small-300" alignItems="center">
               <s-box blockSize={"48px"}>
@@ -170,7 +173,7 @@ export default function Index() {
             apiKey={shop?.apiKey ?? ""}
             account={account}
             errors={actionData?.errors}
-            disabled={isSubmitting || isLoading}
+            disabled={isMarketsOverflowing || isSubmitting || isLoading}
             platformUrl={ENV.PLATFORM_URL}
           />
           <ConnectionStatusSection
@@ -186,6 +189,7 @@ export default function Index() {
             dockUrl={ENV.DOCK_URL}
             platformUrl={ENV.PLATFORM_URL}
             disabled={
+              isMarketsOverflowing ||
               isSubmitting ||
               isLoading ||
               !shop?.apiKey ||
@@ -197,6 +201,7 @@ export default function Index() {
           <AppInboxSection
             appInboxEnabled={Boolean(shop?.isAppInboxEnabled)}
             disabled={
+              isMarketsOverflowing ||
               !scriptConnectionStatus?.isGeneralScriptExist ||
               isSubmitting ||
               isLoading ||
@@ -213,7 +218,9 @@ export default function Index() {
             }
             isAppExtensionActive={scriptConnectionStatus.isThemeExtensionActive}
             webTrackerEnabled={shop?.isWebTrackingEnabled ?? false}
-            disabled={isSubmitting || isLoading || !account}
+            disabled={
+              isMarketsOverflowing || isSubmitting || isLoading || !account
+            }
           />
 
           <DataSyncSection
@@ -222,7 +229,9 @@ export default function Index() {
             productVariantSyncEnabled={Boolean(
               shop?.isProductVariantSyncEnabled,
             )}
-            disabled={isSubmitting || isLoading || !account}
+            disabled={
+              isMarketsOverflowing || isSubmitting || isLoading || !account
+            }
             customersSyncLog={customersSyncLogData as any}
             orderSyncLog={orderSyncLogData as any}
             productVariantSyncLog={productVariantSyncLogData as any}
