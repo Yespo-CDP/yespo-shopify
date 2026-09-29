@@ -35,19 +35,38 @@ export const deleteProductVariants = async ({
     await throttleApiRequest(siteId);
 
     const deletedAt = new Date().toISOString();
+    const requestBody = {
+      products: externalVariantIds.map((productId) => ({
+        productId,
+        updatedDate: deletedAt,
+      })),
+    };
 
-    await fetchWithErrorHandling(`${process.env.API_URL}/products`, {
-      method: "DELETE",
-      headers: {
-        "content-type": "application/json",
-        Authorization: getAuthHeader(apiKey),
+    const response = await fetchWithErrorHandling(
+      `${process.env.API_URL}/products`,
+      {
+        method: "DELETE",
+        headers: {
+          "content-type": "application/json",
+          Authorization: getAuthHeader(apiKey),
+        },
+        body: JSON.stringify(requestBody),
       },
-      body: JSON.stringify({
-        products: externalVariantIds.map((productId) => ({
-          productId,
-          updatedDate: deletedAt,
-        })),
-      }),
+    );
+
+    await sendLogEvent({
+      orgId,
+      errorMessage: "",
+      data: {
+        domain,
+        variantsCount: externalVariantIds.length,
+        variantIds: externalVariantIds,
+        requestBody,
+        responseBody: response.responseData,
+        statusCode: response.status,
+      },
+      message: EVENT_MESSAGES.DELETE_PRODUCTS_BULK_SUCCESS,
+      logLevel: "INFO",
     });
   } catch (error: any) {
     console.error("Error deleting product variants:", error?.message);
