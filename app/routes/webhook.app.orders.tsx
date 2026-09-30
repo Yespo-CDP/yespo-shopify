@@ -57,7 +57,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       console.log('UPDATE_ORDER', JSON.stringify(payload, null, 2))
 
       if (shop?.isOrderSyncEnabled) {
-        await updateOrderService(payload as any, shop.apiKey, shop.id, session.shop, shop.orgId);
+        await updateOrderService(payload as any, shop.apiKey, shop.id, shop.domain || session.shop, shop.orgId);
       }
       break;
 

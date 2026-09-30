@@ -50,6 +50,9 @@ export const customerSyncHandler = async (
   console.log("shop", shop);
   console.log("accessToken", accessToken);
 
+  const shopRecord = await shopRepository.getShop(shop);
+  const logDomain = shopRecord?.domain || shop;
+
   const client = createClient({ shop, accessToken });
   const customersCount = await getCustomersCount({ client });
   console.log("Total customers count", customersCount, "\n");
@@ -118,7 +121,7 @@ export const customerSyncHandler = async (
             const contactsUpdateResponse = await updateContacts({
               apiKey,
               contactsData,
-              domain: shop,
+              domain: logDomain,
               orgId
             });
 
@@ -145,7 +148,7 @@ export const customerSyncHandler = async (
             orgId,
             errorMessage: '',
             data: {
-              domain: shop,
+              domain: logDomain,
               offset: CUSTOMERS_CHUNK_SIZE,
               responseBody: contactsData,
               statusCode: 200
@@ -177,7 +180,7 @@ export const customerSyncHandler = async (
           orgId,
           errorMessage: `Error bulk customers sync ${error?.message}`,
           data: {
-            domain: shop,
+            domain: logDomain,
             offset: CUSTOMERS_CHUNK_SIZE,
             responseBody: {},
             statusCode: error?.status ?? 400

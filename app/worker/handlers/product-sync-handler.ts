@@ -51,6 +51,7 @@ export const productSyncHandler = async (
     getShopPrimaryLocale({ client }),
     shopRepository.getShop(shop),
   ]);
+  const logDomain = shopData?.domain || shop;
   const storedLanguageCode = shopData?.defaultLanguageCode ?? null;
   const languageCode = currentLocale ?? storedLanguageCode ?? "en";
 
@@ -209,7 +210,7 @@ export const productSyncHandler = async (
               siteId: siteId ?? "",
               languageCode,
               productVariants: variantsChunk,
-              domain: shop,
+              domain: logDomain,
               orgId,
             });
 
@@ -275,7 +276,7 @@ export const productSyncHandler = async (
           orgId,
           errorMessage: `Error bulk products sync ${error?.message}`,
           data: JSON.stringify({
-            domain: shop,
+            domain: logDomain,
             offset: VARIANTS_API_CHUNK_SIZE,
             responseBody: {},
             statusCode: error?.status ?? 400,
@@ -308,7 +309,7 @@ export const productSyncHandler = async (
             apiKey,
             siteId: siteId ?? "",
             externalVariantIds: numericChunk,
-            domain: shop,
+            domain: logDomain,
             orgId,
           });
           await productVariantSyncRepository.deleteByVariantIds(shopId, chunk);
@@ -318,7 +319,7 @@ export const productSyncHandler = async (
           orgId,
           errorMessage: "",
           data: JSON.stringify({
-            domain: shop,
+            domain: logDomain,
             deletedCount: deletedIds.length,
             statusCode: 200,
           }),

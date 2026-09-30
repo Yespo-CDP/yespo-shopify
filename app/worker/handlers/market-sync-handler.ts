@@ -150,6 +150,7 @@ export const marketSyncHandler = async (
   console.log(`⏳ Market sync start for ${shop}`);
 
   const shopData = await shopRepository.getShop(shop);
+  const logDomain = shopData?.domain || shop;
   if (!shopData?.isMarketSyncEnabled) {
     console.log(`⚠️ Market sync disabled for ${shop}`);
     return;
@@ -191,6 +192,7 @@ export const marketSyncHandler = async (
       shopId,
       apiKey,
       shop,
+      logDomain,
       orgId,
       siteId,
       currentCountries: marketsConfig.countries,
@@ -220,7 +222,7 @@ export const marketSyncHandler = async (
         client,
         query: chunk.query,
         orgId,
-        domain: shop,
+        domain: logDomain,
       });
       for (const countryCode of chunk.countries) {
         await writeLog(countryCode, "IN_PROGRESS", batchId);
@@ -229,7 +231,7 @@ export const marketSyncHandler = async (
       const bulkResult = await waitForBulkOperation({
         client,
         orgId,
-        domain: shop,
+        domain: logDomain,
       });
 
       const outputPath = await streamBulkJsonlToTmpMarketSync({
@@ -247,7 +249,7 @@ export const marketSyncHandler = async (
         shopId,
         batchId,
         apiKey,
-        shop,
+        logDomain,
         orgId,
         siteId,
         countries: chunk.countries,
@@ -272,7 +274,7 @@ export const marketSyncHandler = async (
       orgId,
       errorMessage: "",
       data: JSON.stringify({
-        domain: shop,
+        domain: logDomain,
         countries: marketsConfig.countries,
         synced: totals.synced,
         skipped: totals.skipped,
@@ -293,7 +295,7 @@ export const marketSyncHandler = async (
       orgId,
       errorMessage: `Market sync error: ${(error as Error)?.message ?? "unknown"}`,
       data: JSON.stringify({
-        domain: shop,
+        domain: logDomain,
         countries: marketsConfig.countries,
         synced: totals.synced,
         skipped: totals.skipped,
@@ -315,7 +317,7 @@ async function processBatch({
   shopId,
   batchId,
   apiKey,
-  shop,
+  logDomain,
   orgId,
   siteId,
   countries,
@@ -324,7 +326,7 @@ async function processBatch({
   shopId: number;
   batchId: string;
   apiKey: string;
-  shop: string;
+  logDomain: string;
   orgId?: number | null;
   siteId?: string | null;
   countries: string[];
@@ -416,7 +418,7 @@ async function processBatch({
         markets: [
           { marketId: countryCode, products: chunk.map((c) => c.item) },
         ],
-        domain: shop,
+        domain: logDomain,
         orgId,
       });
 
@@ -445,7 +447,7 @@ async function processBatch({
         orgId,
         errorMessage: `Market sync rejected ${countryFailedItems.length} item(s) for market ${countryCode}`,
         data: JSON.stringify({
-          domain: shop,
+          domain: logDomain,
           countryCode,
           synced: countrySynced,
           failedCount: countryFailedItems.length,
@@ -459,7 +461,7 @@ async function processBatch({
         orgId,
         errorMessage: "",
         data: JSON.stringify({
-          domain: shop,
+          domain: logDomain,
           countryCode,
           synced: countrySynced,
         }),
@@ -482,6 +484,7 @@ async function cleanupRemovedMarkets({
   shopId,
   apiKey,
   shop,
+  logDomain,
   orgId,
   siteId,
   currentCountries,
@@ -489,6 +492,7 @@ async function cleanupRemovedMarkets({
   shopId: number;
   apiKey: string;
   shop: string;
+  logDomain: string;
   orgId?: number | null;
   siteId?: string | null;
   currentCountries: string[];
@@ -536,7 +540,7 @@ async function cleanupRemovedMarkets({
         apiKey,
         siteId: siteId ?? "",
         markets: [{ marketId: countryCode, products: items }],
-        domain: shop,
+        domain: logDomain,
         orgId,
       });
 
@@ -574,7 +578,7 @@ async function cleanupRemovedMarkets({
         orgId,
         errorMessage: `Market cleanup failed for ${failedItems.length} of ${processedCount} item(s) in market ${countryCode}`,
         data: JSON.stringify({
-          domain: shop,
+          domain: logDomain,
           countryCode,
           failedCount: failedItems.length,
           processedCount,
@@ -597,7 +601,7 @@ async function cleanupRemovedMarkets({
       orgId,
       errorMessage: "",
       data: JSON.stringify({
-        domain: shop,
+        domain: logDomain,
         countryCode,
         removedCount: processedCount,
       }),

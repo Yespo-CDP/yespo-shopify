@@ -195,7 +195,7 @@ async function syncProductFromAdmin(
         siteId: shopData.siteId ?? "",
         languageCode,
         productVariants: productVariantsData,
-        domain: data.shop,
+        domain: shopData.domain || data.shop,
         orgId: shopData.orgId,
       });
 
@@ -223,7 +223,7 @@ async function syncProductFromAdmin(
         externalVariantIds: orphanedVariantGids.map(
           (gid) => gid.split("/").pop() ?? gid,
         ),
-        domain: data.shop,
+        domain: shopData.domain || data.shop,
         orgId: shopData.orgId,
       });
       await productVariantSyncRepository.deleteByVariantIds(
