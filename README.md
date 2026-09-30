@@ -435,11 +435,15 @@ If a product has no collections or taxonomy category, it falls back to a default
 
 #### Logging & Status Tracking:
 
-The Data Sync card shows:
+The Data Sync card shows two rows. Each Shopify variant is sent as its own Yespo product, so the variant total is often higher than the number of products in the shop.
 
-- **Synchronized** = `syncedCount + skippedCount`
-- **Failed** = `failedCount`
-- **Total** = `totalCount`
+- **Products → Synchronized** — unique Shopify products that have at least one successfully synced variant (`ProductVariantSync.syncFailed = false`). A product is omitted when every one of its variants failed. The number is not stored on `ProductVariantSyncLog`. The page loader and `/api/sync-logs` compute `COUNT(DISTINCT productId)` for the shop when the card is rendered.
+- **Variants**
+  - **Synchronized** = `syncedCount + skippedCount`
+  - **Failed** = `failedCount`
+  - **Total** = `totalCount`
+
+A hint under the rows says that each variant is sent separately, so the variant count can be higher than the product count. Failed and Total stay on the Variants row: those counters are variant counts.
 
 **Historical Enable** writes job stats for that run:
 

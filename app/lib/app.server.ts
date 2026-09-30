@@ -21,6 +21,7 @@ import afterAuth from "~/services/afterAuth.server";
 import i18n from "~/i18n.server";
 import { toggleWebTrackingServer } from "~/services/toggle-web-tracking.server";
 import { createGeneralDomain } from "~/api/create-general-domain.server";
+import { getProductVariantSyncLogView } from "~/services/get-product-variant-sync-log.server";
 import { enqueueDataSyncTasks } from "~/services/queue";
 import { sendAccessTokenService } from "~/services/send-access-token.server";
 import { deleteAccessTokenService } from "~/services/delete-access-token.server";
@@ -63,10 +64,9 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const orderSyncLog = await orderSyncLogRepository.getOrderSyncLogByShop(
     session.shop,
   );
-  const productVariantSyncLog =
-    await productVariantSyncLogRepository.getProductVariantSyncLogByShop(
-      session.shop,
-    );
+  const productVariantSyncLog = await getProductVariantSyncLogView(
+    session.shop,
+  );
   const marketSyncLogs = await marketSyncLogRepository.getByShop(session.shop);
   const logDomain = shop?.domain || session.shop;
   const isMarketsOverflowing = await checkMarketsService({
