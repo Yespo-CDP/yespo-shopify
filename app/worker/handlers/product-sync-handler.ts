@@ -107,6 +107,8 @@ export const productSyncHandler = async (
                     id: n.id,
                     name: n.title,
                   })),
+                  shop,
+                  categoryId: product.category?.id,
                 })
               : ({
                   product: {},

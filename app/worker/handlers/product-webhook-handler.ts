@@ -137,6 +137,8 @@ async function syncProductFromAdmin(
         id: node.id,
         name: node.title,
       })),
+      shop: data.shop,
+      categoryId: product.category?.id,
     });
     if (Object.keys(translations.product).length > 0) {
       product.translations = translations.product;
@@ -172,6 +174,19 @@ async function syncProductFromAdmin(
         console.log(
           `[yespo] create payload for ${data.shop} variant ${variant.id}:`,
           JSON.stringify(payload, null, 2),
+        );
+      }
+      if (action === "update") {
+        console.log(
+          `[yespo] update translations for ${data.shop} variant ${variant.id}:`,
+          JSON.stringify(
+            {
+              categories: payload.categories,
+              translations: payload.translations ?? null,
+            },
+            null,
+            2,
+          ),
         );
       }
       productVariantsData.push(payload);
