@@ -30,13 +30,14 @@ export const createOrders = async ({
 }): Promise<OrdersCreateResponse> => {
   const url = `${process.env.API_URL}/orders`;
   const authHeader = getAuthHeader(apiKey);
+  const requestBody = { orders };
   const options = {
     method: "POST",
     headers: {
       "content-type": "application/json",
       Authorization: authHeader,
     },
-    body: JSON.stringify({ orders }),
+    body: JSON.stringify(requestBody),
   };
 
   try {

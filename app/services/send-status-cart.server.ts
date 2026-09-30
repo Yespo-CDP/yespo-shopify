@@ -69,7 +69,7 @@ export const sendStatusCartService = async (payload: any, shop: Shop) => {
     await sendStatusCartEvent({
       apiKey: shop.apiKey,
       cartEventData,
-      domain: shop.shopUrl,
+      domain: shop.domain || shop.shopUrl,
       orgId: shop.orgId,
     })
   } catch (error: any) {

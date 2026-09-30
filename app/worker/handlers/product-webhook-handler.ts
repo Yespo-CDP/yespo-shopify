@@ -137,6 +137,8 @@ async function syncProductFromAdmin(
         id: node.id,
         name: node.title,
       })),
+      shop: data.shop,
+      categoryId: product.category?.id,
     });
     if (Object.keys(translations.product).length > 0) {
       product.translations = translations.product;
@@ -174,6 +176,19 @@ async function syncProductFromAdmin(
           JSON.stringify(payload, null, 2),
         );
       }
+      if (action === "update") {
+        console.log(
+          `[yespo] update translations for ${data.shop} variant ${variant.id}:`,
+          JSON.stringify(
+            {
+              categories: payload.categories,
+              translations: payload.translations ?? null,
+            },
+            null,
+            2,
+          ),
+        );
+      }
       productVariantsData.push(payload);
 
       await productVariantSyncRepository.createOrUpdateProductVariantSync({
@@ -195,7 +210,7 @@ async function syncProductFromAdmin(
         siteId: shopData.siteId ?? "",
         languageCode,
         productVariants: productVariantsData,
-        domain: data.shop,
+        domain: shopData.domain || data.shop,
         orgId: shopData.orgId,
       });
 
@@ -223,7 +238,7 @@ async function syncProductFromAdmin(
         externalVariantIds: orphanedVariantGids.map(
           (gid) => gid.split("/").pop() ?? gid,
         ),
-        domain: data.shop,
+        domain: shopData.domain || data.shop,
         orgId: shopData.orgId,
       });
       await productVariantSyncRepository.deleteByVariantIds(

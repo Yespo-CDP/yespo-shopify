@@ -89,9 +89,13 @@ class EventTracker {
     try {
       const productVariant = this.data.currentVariant;
       if (this.data.pageTemplate === 'product' && productVariant) {
+        const productKey = productVariant.id.toString();
+        if (this.lastProductPageKey === productKey) return;
+
+        this.lastProductPageKey = productKey;
         window.eS('sendEvent', 'ProductPage', {
           ProductPage: {
-            productKey: productVariant.id.toString(),
+            productKey,
             price: (productVariant.price / 100).toFixed(2),
             isInStock: productVariant.available ? 1 : 0
           }
@@ -151,13 +155,53 @@ class EventTracker {
   }
 
   updateCurrentVariant(variantId) {
-    if (!this.data || !this.data.product?.variants) return;
+    if (!this.data || !this.data.product?.variants || variantId == null || variantId === '') return false;
 
-    const variant = this.data.product.variants.find(v => v.id === variantId);
-    if (variant) {
-      this.data.currentVariant = variant;
-      //console.log('[EventTracker] currentVariant updated:', variant);
-    }
+    const id = String(variantId);
+    const variant = this.data.product.variants.find(v => String(v.id) === id);
+    if (!variant) return false;
+
+    this.data.currentVariant = variant;
+    return true;
+  }
+
+  getVariantIdFromQuery() {
+    return new URLSearchParams(window.location.search).get('variant');
+  }
+
+  watchVariantQueryChanges() {
+    if (this.data.pageTemplate !== 'product') return;
+
+    this.lastQueryVariantId = this.getVariantIdFromQuery();
+
+    const onVariantQueryChange = () => {
+      try {
+        const variantId = this.getVariantIdFromQuery();
+        if (!variantId || variantId === this.lastQueryVariantId) return;
+
+        this.lastQueryVariantId = variantId;
+        if (!this.updateCurrentVariant(variantId)) return;
+
+        this.sendProductPageEvent();
+      } catch (e) {
+        console.error('Failed send product page event on variant query change')
+      }
+    };
+
+    window.addEventListener('popstate', onVariantQueryChange);
+
+    ['pushState', 'replaceState'].forEach((method) => {
+      const original = history[method];
+      if (!original || original.__yespoWrapped) return;
+
+      const wrapped = function (...args) {
+        const result = original.apply(this, args);
+        onVariantQueryChange();
+        return result;
+      };
+      wrapped.__yespoWrapped = true;
+      history[method] = wrapped;
+    });
   }
 
   watchVariantChanges() {
@@ -313,6 +357,7 @@ class EventTracker {
     // this.sendProductPageEvent();
     this.sendCustomerEvent();
     this.watchVariantChanges();
+    this.watchVariantQueryChanges();
     await this.sendCartData();
 
   }

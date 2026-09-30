@@ -80,6 +80,11 @@ export default interface ProductVariantSyncRepository {
 
   countFailedByShop(shopId: number): Promise<number>;
 
+  /**
+   * Unique Shopify products that have at least one successfully synced variant.
+   */
+  countSyncedProductsByShop(shopId: number): Promise<number>;
+
   setSyncFailed(
     shopId: number,
     variantIds: string[],

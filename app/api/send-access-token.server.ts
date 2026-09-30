@@ -30,12 +30,14 @@ export const sendAccessToken = async ({
   apiKey,
   domain,
   accessToken,
-  orgId
+  orgId,
+  logDomain,
 }: {
   apiKey: string;
   domain: string;
   accessToken: string;
   orgId?: number | null;
+  logDomain?: string;
 }): Promise<void> => {
   const url = `${process.env.API_URL}/shopify/token`;
   const authHeader = getAuthHeader(apiKey);
@@ -57,7 +59,7 @@ export const sendAccessToken = async ({
       orgId,
       errorMessage: `Access token not sent: ${error.message}`,
       data: {
-        domain,
+        domain: logDomain || domain,
         requestBody,
         responseBody: error,
         statusCode: error?.status ?? 500

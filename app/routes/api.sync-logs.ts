@@ -3,9 +3,9 @@ import { authenticate } from "~/shopify.server";
 import {
   customerSyncLogRepository,
   orderSyncLogRepository,
-  productVariantSyncLogRepository,
   marketSyncLogRepository,
 } from "~/repositories/repositories.server";
+import { getProductVariantSyncLogView } from "~/services/get-product-variant-sync-log.server";
 
 /**
  * Handles GET requests to receive synchronization data.
@@ -35,10 +35,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const orderSyncLog = await orderSyncLogRepository.getOrderSyncLogByShop(
     session.shop,
   );
-  const productVariantSyncLog =
-    await productVariantSyncLogRepository.getProductVariantSyncLogByShop(
-      session.shop,
-    );
+  const productVariantSyncLog = await getProductVariantSyncLogView(session.shop);
   const marketSyncLogs = await marketSyncLogRepository.getByShop(session.shop);
 
   return {

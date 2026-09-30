@@ -15,13 +15,29 @@ The app allows merchants to:
 
 ## Features and Implementation Details
 
+### Store domains
+
+Each shop stores two domains:
+
+- `shopUrl` — the permanent `*.myshopify.com` host (`myshopifyDomain`). Shopify sessions, webhooks, the Admin API, and background jobs use this host to identify the shop.
+- `domain` — the public storefront host (`primaryDomain.host`), the address a customer sees in the browser. For a shop with a custom domain this is that domain (for example `micronutrition.com.ua`). When no custom domain is set, it is the same `*.myshopify.com` host.
+
+`domain` is written when the app is installed or the merchant signs in again (`afterAuth`). A custom domain changed later in Shopify admin stays at the previous value until the next sign-in.
+
+Where each host is sent:
+
+- **Site and web push registration** (`POST /site/domains`, `POST /site/webpush/domain`, and the script fetches) use `domain`. Web push is bound to the host the browser is actually on.
+- **Yespo logs** put `domain` in the log envelope next to `requestBody`. That includes tracking (`StatusCart`, `PurchasedItems`), contact, order, product, and market sync, and account connection. If `domain` is empty, the log falls back to `shopUrl`.
+- **Tracking event bodies** do not contain a domain. `StatusCart` and `PurchasedItems` identify the site with `siteId`. The host appears only in the log envelope.
+- **Shopify access token** (`POST /shopify/token`) sends `shopUrl` in the request body. Yespo stores that host with the token. The log label for this call is still the public `domain`; the `*.myshopify.com` host is visible inside `requestBody`.
+
 ### Widgets
 
 **Purpose:** Register the store domain and inject the Yespo site script into the storefront automatically.
 
 #### Implementation:
 
-- [Register](https://docs.esputnik.com/reference/createdomain) the current store domain in Yespo.
+- [Register](https://docs.esputnik.com/reference/createdomain) the public storefront domain (`primaryDomain.host`) in Yespo.
 - [Retrieve](https://docs.esputnik.com/reference/getscript) the Yespo site script.
 - Store the script content in a Shopify metafield: yespo-script.
 - Inject the script into the storefront using a Theme App Extension (./extensions/yespo-extension).
@@ -32,7 +48,7 @@ The app allows merchants to:
 
 #### Implementation:
 
-- [Register](https://docs.esputnik.com/reference/addwebpushdomain) the current store domain in Yespo.
+- [Register](https://docs.esputnik.com/reference/addwebpushdomain) the public storefront domain (`primaryDomain.host`) in Yespo.
 - [Retrieve](https://docs.esputnik.com/reference/getscript) the push script and service worker content.
 - Store the push script in the yespo-web-push-script metafield.
 - Inject the push script into the storefront using the same Theme App Extension.
@@ -418,11 +434,15 @@ If a product has no collections or taxonomy category, it falls back to a default
 
 #### Logging & Status Tracking:
 
-The Data Sync card shows:
+The Data Sync card shows two rows. Each Shopify variant is sent as its own Yespo product, so the variant total is often higher than the number of products in the shop.
 
-- **Synchronized** = `syncedCount + skippedCount`
-- **Failed** = `failedCount`
-- **Total** = `totalCount`
+- **Products → Synchronized** — unique Shopify products that have at least one successfully synced variant (`ProductVariantSync.syncFailed = false`). A product is omitted when every one of its variants failed. The number is not stored on `ProductVariantSyncLog`. The page loader and `/api/sync-logs` compute `COUNT(DISTINCT productId)` for the shop when the card is rendered.
+- **Variants**
+  - **Synchronized** = `syncedCount + skippedCount`
+  - **Failed** = `failedCount`
+  - **Total** = `totalCount`
+
+A hint under the rows says that each variant is sent separately, so the variant count can be higher than the product count. Failed and Total stay on the Variants row: those counters are variant counts.
 
 **Historical Enable** writes job stats for that run:
 

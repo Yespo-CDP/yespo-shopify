@@ -21,6 +21,7 @@ import afterAuth from "~/services/afterAuth.server";
 import i18n from "~/i18n.server";
 import { toggleWebTrackingServer } from "~/services/toggle-web-tracking.server";
 import { createGeneralDomain } from "~/api/create-general-domain.server";
+import { getProductVariantSyncLogView } from "~/services/get-product-variant-sync-log.server";
 import { enqueueDataSyncTasks } from "~/services/queue";
 import { sendAccessTokenService } from "~/services/send-access-token.server";
 import { deleteAccessTokenService } from "~/services/delete-access-token.server";
@@ -63,19 +64,19 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   const orderSyncLog = await orderSyncLogRepository.getOrderSyncLogByShop(
     session.shop,
   );
-  const productVariantSyncLog =
-    await productVariantSyncLogRepository.getProductVariantSyncLogByShop(
-      session.shop,
-    );
+  const productVariantSyncLog = await getProductVariantSyncLogView(
+    session.shop,
+  );
   const marketSyncLogs = await marketSyncLogRepository.getByShop(session.shop);
+  const logDomain = shop?.domain || session.shop;
   const isMarketsOverflowing = await checkMarketsService({
     admin,
-    domain: session.shop,
+    domain: logDomain,
     orgId: shop?.orgId,
   });
   const scriptConnectionStatus = await checkScriptConnectionService({
     admin,
-    domain: session.shop,
+    domain: logDomain,
     orgId: shop?.orgId,
   });
 
@@ -84,7 +85,7 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
     try {
       account = await getAccountInfo({
         apiKey: shop.apiKey,
-        domain: session.shop,
+        domain: logDomain,
         orgId: shop.orgId,
       });
     } catch (error) {
@@ -174,7 +175,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       if (shop?.apiKey) {
         await deleteAccessTokenService({
           apiKey: shop.apiKey,
-          domain: shop.shopUrl,
+          domain: shop.domain || shop.shopUrl,
           orgId: shop.orgId,
         });
       }
@@ -185,7 +186,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         orgId: shop?.orgId,
         errorMessage: `Account is not disconnected`,
         data: {
-          domain: session.shop,
+          domain: shop?.domain || session.shop,
           requestBody: {},
           responseBody: error,
           statusCode: error?.status ?? 500,
@@ -244,6 +245,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         await sendAccessTokenService({
           apiKey: shop.apiKey,
           domain: session.shop,
+          logDomain: shop.domain || session.shop,
           accessToken: session.accessToken,
         });
       }
@@ -258,7 +260,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       const shop = await shopRepository.getShop(session.shop);
       const isThemeExtensionActive = await checkThemeExtensionService({
         admin,
-        domain: session.shop,
+        domain: shop?.domain || session.shop,
         orgId: shop?.orgId,
       });
 
@@ -295,7 +297,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
       await toggleWebTrackingServer({
         shopId: shop.shopId,
-        domain: shop.shopUrl,
+        domain: shop.domain || shop.shopUrl,
         enabled: true,
         admin,
       });
@@ -315,7 +317,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
       await toggleWebTrackingServer({
         shopId: shop.shopId,
-        domain: shop.shopUrl,
+        domain: shop.domain || shop.shopUrl,
         enabled: false,
         admin,
       });
@@ -374,7 +376,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await sendLogEvent({
         orgId: shop.orgId,
         errorMessage: "",
-        data: JSON.stringify({ domain: session.shop }),
+        data: JSON.stringify({ domain: shop?.domain || session.shop }),
         message: EVENT_MESSAGES.DATA_SYNC_ENABLED,
         logLevel: "INFO",
       });
@@ -384,7 +386,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await sendLogEvent({
         orgId: shop?.orgId,
         errorMessage: error?.message,
-        data: JSON.stringify({ domain: session.shop }),
+        data: JSON.stringify({ domain: shop?.domain || session.shop }),
         message: EVENT_MESSAGES.DATA_SYNC_FAILED,
         logLevel: "ERROR",
       });
@@ -409,7 +411,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await sendLogEvent({
         orgId: shop?.orgId,
         errorMessage: "",
-        data: JSON.stringify({ domain: session.shop }),
+        data: JSON.stringify({ domain: shop?.domain || session.shop }),
         message: EVENT_MESSAGES.DATA_SYNC_DISABLED,
         logLevel: "INFO",
       });
@@ -419,7 +421,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await sendLogEvent({
         orgId: shop?.orgId,
         errorMessage: error?.message,
-        data: JSON.stringify({ domain: session.shop }),
+        data: JSON.stringify({ domain: shop?.domain || session.shop }),
         message: EVENT_MESSAGES.DATA_SYNC_FAILED,
         logLevel: "ERROR",
       });
@@ -464,7 +466,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await sendLogEvent({
         orgId: shop.orgId,
         errorMessage: "",
-        data: JSON.stringify({ domain: session.shop }),
+        data: JSON.stringify({ domain: shop?.domain || session.shop }),
         message: EVENT_MESSAGES.PRODUCT_SYNC_ENABLED,
         logLevel: "INFO",
       });
@@ -474,7 +476,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await sendLogEvent({
         orgId: shop?.orgId,
         errorMessage: error?.message,
-        data: JSON.stringify({ domain: session.shop }),
+        data: JSON.stringify({ domain: shop?.domain || session.shop }),
         message: EVENT_MESSAGES.PRODUCT_SYNC_FAILED,
         logLevel: "ERROR",
       });
@@ -499,7 +501,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await sendLogEvent({
         orgId: shop?.orgId,
         errorMessage: "",
-        data: JSON.stringify({ domain: session.shop }),
+        data: JSON.stringify({ domain: shop?.domain || session.shop }),
         message: EVENT_MESSAGES.PRODUCT_SYNC_DISABLED,
         logLevel: "INFO",
       });
@@ -509,7 +511,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await sendLogEvent({
         orgId: shop?.orgId,
         errorMessage: error?.message,
-        data: JSON.stringify({ domain: session.shop }),
+        data: JSON.stringify({ domain: shop?.domain || session.shop }),
         message: EVENT_MESSAGES.PRODUCT_SYNC_FAILED,
         logLevel: "ERROR",
       });
