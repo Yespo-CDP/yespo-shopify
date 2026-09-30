@@ -45,7 +45,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   switch (topic) {
     case "ORDERS_CREATE":
-      console.log('CREATE_ORDER', JSON.stringify(payload, null, 2))
       await sendPurchasedItemsService(payload, shop);
 
       // if (shop?.isOrderSyncEnabled) {
@@ -54,10 +53,15 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       break;
 
     case "ORDERS_UPDATED":
-      console.log('UPDATE_ORDER', JSON.stringify(payload, null, 2))
-
       if (shop?.isOrderSyncEnabled) {
-        await updateOrderService(payload as any, shop.apiKey, shop.id, shop.domain || session.shop, shop.orgId);
+        await updateOrderService(
+          payload as any,
+          shop.apiKey,
+          shop.id,
+          shop.domain || session.shop,
+          shop.orgId,
+          shop.shopUrl || session.shop,
+        );
       }
       break;
 

@@ -36,7 +36,6 @@ export const action = async ({request}: ActionFunctionArgs) => {
 
   switch (topic) {
     case "CARTS_UPDATE":
-      console.log('CARTS_UPDATE', JSON.stringify(payload, null, 2))
       await sendStatusCartService(payload, shop)
       break;
 

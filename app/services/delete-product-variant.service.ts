@@ -29,8 +29,6 @@ export const deleteProductVariantService = async (
   siteId?: string | null,
 ) => {
   try {
-    console.log("PRODUCTS_DELETE payload", JSON.stringify(payload));
-
     const numericProductId = payload?.id;
     if (numericProductId == null || numericProductId === "") {
       console.warn("PRODUCTS_DELETE webhook missing id — skipping");

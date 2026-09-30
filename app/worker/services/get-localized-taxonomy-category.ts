@@ -139,12 +139,7 @@ const fetchLocalizedTaxonomy = async ({
   locale: string;
 }): Promise<ProductTranslationCategory | null> => {
   const language = toStorefrontLanguage(locale);
-  if (!language) {
-    console.log(
-      `[taxonomy] skip ${productId} locale ${locale}: language code is not a Storefront LanguageCode`,
-    );
-    return null;
-  }
+  if (!language) return null;
 
   const response = await storefront.request(
     `query getLocalizedTaxonomy($id: ID!) @inContext(language: ${language}) {
@@ -159,32 +154,12 @@ const fetchLocalizedTaxonomy = async ({
     { variables: { id: productId } },
   );
 
-  console.log(
-    `[taxonomy] Storefront response for ${productId} locale ${locale} (${language}):`,
-    JSON.stringify(
-      {
-        data: response?.data ?? null,
-        errors: response?.errors ?? null,
-        extensions: response?.extensions ?? null,
-      },
-      null,
-      2,
-    ),
-  );
-
   const category = (
     response?.data as {
       product?: { category?: StorefrontCategory | null } | null;
     }
   )?.product?.category;
-  const mapped = category ? toYespoTaxonomy(category) : null;
-
-  console.log(
-    `[taxonomy] mapped category for ${productId} locale ${locale}:`,
-    JSON.stringify(mapped, null, 2),
-  );
-
-  return mapped;
+  return category ? toYespoTaxonomy(category) : null;
 };
 
 /**
@@ -212,12 +187,7 @@ export const attachLocalizedTaxonomyCategories = async ({
   >;
 }): Promise<void> => {
   const locales = Object.keys(productResult);
-  if (!shop || !categoryId || locales.length === 0) {
-    console.log(
-      `[taxonomy] skip product ${productId}: shop=${shop ?? "missing"} categoryId=${categoryId ?? "missing"} locales=${locales.length}`,
-    );
-    return;
-  }
+  if (!shop || !categoryId || locales.length === 0) return;
 
   try {
     const accessToken = await getStorefrontAccessToken(client, shop);
@@ -230,10 +200,6 @@ export const attachLocalizedTaxonomyCategories = async ({
         const key = cacheKey(shop, categoryId, locale);
         const cached = categoryByShopLocale.get(key);
         if (cached) {
-          console.log(
-            `[taxonomy] cache hit for ${productId} locale ${locale}:`,
-            JSON.stringify(cached, null, 2),
-          );
           productResult[locale].categories = [
             ...(productResult[locale].categories ?? []),
             cached,

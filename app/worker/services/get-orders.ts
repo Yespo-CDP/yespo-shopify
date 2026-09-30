@@ -109,6 +109,15 @@ export const getOrders = async ({
                       currencyCode
                     }
                   }
+                  variant {
+                    id
+                    image { url }
+                    product {
+                      handle
+                      onlineStoreUrl
+                      featuredImage { url }
+                    }
+                  }
                 }
               }
               createdAt

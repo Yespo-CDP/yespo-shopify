@@ -96,7 +96,7 @@ export const orderSyncHandler = async (
             const orderSyncUpdatedDate = orderSync?.updatedAt?.getTime() ?? 0;
 
             if (orderUpdatedDate > orderSyncUpdatedDate) {
-              const orderData = createOrderPayload(order);
+              const orderData = createOrderPayload(order, logDomain);
               ordersData.push(orderData);
 
               await orderSyncRepository.createOrUpdateOrderSync({
