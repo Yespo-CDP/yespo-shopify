@@ -338,6 +338,7 @@ App requests access to the following scopes:
   - `read_publications` – filter products by `published_status:published`
   - `read_translations` – read product, collection and variant translations
   - `read_locales` – read the shop primary and secondary locales (used to resolve the Yespo `languageCode` and which translations to send)
+  - `unauthenticated_read_product_listings` – create a Storefront access token and read localized taxonomy categories (Admin `TaxonomyCategory` has no locale)
 
 Shopify webhooks used:
   - `products/create` → creates new product variants in Yespo
@@ -427,7 +428,7 @@ On `update`, the `remove` object (never `null`) is used to clear absent optional
 Each variant must have at least one category. Categories are built from two Shopify sources:
 
 * **Collections** → flat categories with `type: "collection"` (`id` = numeric collection ID, `name` = collection title).
-* **Taxonomy category** → hierarchical category with `type: "category"`, where `path` is derived by splitting the Shopify `category.fullName` on `>` (e.g. `"Apparel > Clothing > Tops"` → `["Apparel", "Clothing", "Tops"]`).
+* **Taxonomy category** → hierarchical category with `type: "category"`, where `path` is derived by splitting the Shopify `category.fullName` on `>` (e.g. `"Apparel > Clothing > Tops"` → `["Apparel", "Clothing", "Tops"]`). Translated names for secondary locales come from the Storefront API (`unauthenticated_read_product_listings`): the worker creates a Storefront token and reads `product.category` in that locale.
 
 If a product has no collections or taxonomy category, it falls back to a default `Uncategorized` category so that Yespo's "at least one category" requirement is satisfied.
 
@@ -814,7 +815,7 @@ Create a `.env` file with the following:
 | **SHOPIFY_APP_URL**            | **Required.** Your shopify app url                                                                      | `https://your-domain.com`                          |
 | **SHOPIFY_YESPO_EXTENSION_ID** | **Required.** Extension ID (Auto generated after run `deploy` command)                                  | `c10***ff-****-48cc-****-f882b***fa8e`             |
 | **DATABASE_URL**               | **Required.** Database connect url                                                                      | `postgresql://admin:admin@localhost:5432/database` |
-| **SCOPES**                     | **Required.** Required access scopes                                                                    | **Must be** `read_markets,read_themes`             |
+| **SCOPES**                     | **Required.** Required access scopes                                                                    | **Must be** `read_markets,read_themes,unauthenticated_read_product_listings` |
 | **API_URL**                    | **Required.** Yespo api url                                                                             | **Must be** `https://yespo.io/api/v1`              |
 | **GENERAL_SCRIPT_HANDLE**      | **Required.** Handle for general metafield and extension name                                           | **Must be** `yespo-script`                         |
 | **WEB_PUSH_SCRIPT_HANDLE**     | **Required.** Handle for webpush metafield and extension name                                           | **Must be** `yespo-web-push-script`                |
@@ -846,6 +847,7 @@ The app requires the following access scopes:
 - `read_locales`
 - `read_publications`
 - `read_themes`
+- `unauthenticated_read_product_listings`
 - `write_app_proxy`
 
 #### Webhooks:
