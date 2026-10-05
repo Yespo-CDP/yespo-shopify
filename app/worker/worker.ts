@@ -1,6 +1,6 @@
 import { Worker } from "bullmq";
 
-import { redisConfig } from "~/config/redis";
+import { bullmqConnection } from "~/config/redis";
 import {
   eventDataRepository,
   shopRepository,
@@ -41,7 +41,7 @@ console.log("===RUN WORKER===");
 await registerMarketSyncCron();
 await registerDbCleanerCron();
 
-new Worker(
+const cronWorker = new Worker(
   "cron-jobs",
   async (job) => {
     if (job.name === MARKET_SYNC_CRON_JOB_NAME) {
@@ -57,12 +57,12 @@ new Worker(
     }
   },
   {
-    connection: redisConfig,
+    connection: bullmqConnection,
     concurrency: 1,
   },
 );
 
-new Worker<JobData>(
+const dataSyncWorker = new Worker<JobData>(
   "data-sync",
   async (job) => {
     try {
@@ -121,12 +121,12 @@ new Worker<JobData>(
     }
   },
   {
-    connection: redisConfig,
+    connection: bullmqConnection,
     concurrency: 10,
   },
 );
 
-new Worker<MarketSyncJobData>(
+const marketSyncWorker = new Worker<MarketSyncJobData>(
   "data-sync-market",
   async (job) => {
     try {
@@ -161,25 +161,25 @@ new Worker<MarketSyncJobData>(
     }
   },
   {
-    connection: redisConfig,
+    connection: bullmqConnection,
     concurrency: 10,
   },
 );
 
 // One job at a time: each run rewrites the shop's sync counters from a full
 // recount, so overlapping product jobs would overwrite each other.
-new Worker<ProductWebhookJobData>(
+const productWebhookWorker = new Worker<ProductWebhookJobData>(
   PRODUCT_WEBHOOK_QUEUE_NAME,
   async (job) => {
     await productWebhookHandler(job.data);
   },
   {
-    connection: redisConfig,
+    connection: bullmqConnection,
     concurrency: 1,
   },
 );
 
-new Worker<TokenMigrationJobData>(
+const tokenMigrationWorker = new Worker<TokenMigrationJobData>(
   "token-migration",
   async (job) => {
     const { shop } = job?.data ?? {};
@@ -189,7 +189,19 @@ new Worker<TokenMigrationJobData>(
     console.log(`Token migration ${shop}: ${result}`);
   },
   {
-    connection: redisConfig,
+    connection: bullmqConnection,
     concurrency: 5,
   },
 );
+
+for (const worker of [
+  cronWorker,
+  dataSyncWorker,
+  marketSyncWorker,
+  productWebhookWorker,
+  tokenMigrationWorker,
+]) {
+  worker.on("error", (error) => {
+    console.error(`[worker:${worker.name}] Redis error:`, error?.message);
+  });
+}

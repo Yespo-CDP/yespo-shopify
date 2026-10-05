@@ -1,6 +1,6 @@
 import { Queue } from "bullmq";
 
-import { redisConfig } from "~/config/redis";
+import { bullmqConnection } from "~/config/redis";
 import {
   DB_CLEANER_CRON_PATTERN,
   MARKET_SYNC_CRON_PATTERN,
@@ -20,28 +20,26 @@ import {
 import type { Shop, ShopWithMarketSyncLogs } from "~/@types/shop";
 import type { Session } from "@shopify/shopify-app-react-router/server";
 
-export const DataSyncQueue = new Queue("data-sync", {
-  connection: redisConfig,
-});
+function createQueue(name: string): Queue {
+  const queue = new Queue(name, { connection: bullmqConnection });
+  queue.on("error", (error) => {
+    console.error(`[queue:${name}] Redis error:`, error?.message);
+  });
+  return queue;
+}
 
-export const DataSyncMarketQueue = new Queue("data-sync-market", {
-  connection: redisConfig,
-});
+export const DataSyncQueue = createQueue("data-sync");
 
-export const CronQueue = new Queue("cron-jobs", {
-  connection: redisConfig,
-});
+export const DataSyncMarketQueue = createQueue("data-sync-market");
 
-export const TokenMigrationQueue = new Queue("token-migration", {
-  connection: redisConfig,
-});
+export const CronQueue = createQueue("cron-jobs");
+
+export const TokenMigrationQueue = createQueue("token-migration");
 
 export const PRODUCT_WEBHOOK_QUEUE_NAME = "product-webhooks";
 export const PRODUCT_WEBHOOK_JOB_NAME = "product-webhook";
 
-export const ProductWebhookQueue = new Queue(PRODUCT_WEBHOOK_QUEUE_NAME, {
-  connection: redisConfig,
-});
+export const ProductWebhookQueue = createQueue(PRODUCT_WEBHOOK_QUEUE_NAME);
 
 export type ProductWebhookTopic =
   "PRODUCTS_CREATE" | "PRODUCTS_UPDATE" | "PRODUCTS_DELETE";

@@ -2,6 +2,26 @@ import { getOfflineAccessToken } from "~/services/get-offline-session.server";
 import { createClient } from "~/worker/services/create-client";
 import { buildOrderItemLink } from "~/services/build-order-item-link";
 
+/**
+ * Shopify Admin API rejects input arrays larger than 250, including `nodes(ids:)`.
+ * @see https://shopify.dev/docs/api/usage/limits#input-limits
+ */
+const VARIANT_IDS_BATCH_SIZE = 250;
+
+const ORDER_ITEM_VARIANTS_QUERY = `query orderItemVariants($ids: [ID!]!) {
+  nodes(ids: $ids) {
+    ... on ProductVariant {
+      id
+      image { url }
+      product {
+        handle
+        onlineStoreUrl
+        featuredImage { url }
+      }
+    }
+  }
+}`;
+
 interface VariantNode {
   id?: string;
   image?: { url?: string | null } | null;
@@ -38,45 +58,38 @@ export async function getOrderItemProducts({
   if (!accessToken) return links;
 
   const client = createClient({ shop: shopUrl, accessToken });
-  const response = await client.request(
-    `query orderItemVariants($ids: [ID!]!) {
-      nodes(ids: $ids) {
-        ... on ProductVariant {
-          id
-          image { url }
-          product {
-            handle
-            onlineStoreUrl
-            featuredImage { url }
-          }
-        }
-      }
-    }`,
-    {
+
+  for (
+    let offset = 0;
+    offset < uniqueIds.length;
+    offset += VARIANT_IDS_BATCH_SIZE
+  ) {
+    const batch = uniqueIds.slice(offset, offset + VARIANT_IDS_BATCH_SIZE);
+    const response = await client.request(ORDER_ITEM_VARIANTS_QUERY, {
       variables: {
-        ids: uniqueIds.map((id) => `gid://shopify/ProductVariant/${id}`),
+        ids: batch.map((id) => `gid://shopify/ProductVariant/${id}`),
       },
-    },
-  );
+    });
 
-  const nodes = (response?.data as { nodes?: Array<VariantNode | null> })
-    ?.nodes;
+    const nodes = (response?.data as { nodes?: Array<VariantNode | null> })
+      ?.nodes;
 
-  for (const node of nodes ?? []) {
-    const variantId = node?.id?.split("/").pop();
-    if (!variantId) continue;
+    for (const node of nodes ?? []) {
+      const variantId = node?.id?.split("/").pop();
+      if (!variantId) continue;
 
-    links.set(
-      variantId,
-      buildOrderItemLink({
+      links.set(
         variantId,
-        shopDomain,
-        handle: node?.product?.handle,
-        onlineStoreUrl: node?.product?.onlineStoreUrl,
-        variantImageUrl: node?.image?.url,
-        featuredImageUrl: node?.product?.featuredImage?.url,
-      }),
-    );
+        buildOrderItemLink({
+          variantId,
+          shopDomain,
+          handle: node?.product?.handle,
+          onlineStoreUrl: node?.product?.onlineStoreUrl,
+          variantImageUrl: node?.image?.url,
+          featuredImageUrl: node?.product?.featuredImage?.url,
+        }),
+      );
+    }
   }
 
   return links;
