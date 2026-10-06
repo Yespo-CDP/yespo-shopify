@@ -41,8 +41,9 @@ export interface ProductVariant {
         url?: string;
         description?: string;
         categories?: Array<{
-          id: string;
+          id?: string;
           name: string;
+          path?: string[];
           type?: "category" | "collection";
         }>;
       }

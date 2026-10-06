@@ -1,6 +1,10 @@
-import type {ActionFunctionArgs} from "react-router";
-import {addDays} from "date-fns";
-import {customerRepository, eventDataRepository, shopRepository} from "~/repositories/repositories.server";
+import type { ActionFunctionArgs } from "react-router";
+import { addDays } from "date-fns";
+import {
+  customerRepository,
+  eventDataRepository,
+  shopRepository,
+} from "~/repositories/repositories.server";
 
 // Shared CORS headers
 const CORS_HEADERS = {
@@ -52,7 +56,7 @@ const jsonResponse = (data: object, status: number = 200): Response =>
  *   }
  * }
  */
-export const action = async ({request}: ActionFunctionArgs) => {
+export const action = async ({ request }: ActionFunctionArgs) => {
   // Handle CORS preflight request
   if (request.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -60,18 +64,26 @@ export const action = async ({request}: ActionFunctionArgs) => {
 
   try {
     const data = await request.json();
-    console.log('Public event data', data)
+    console.log("Public event data", data);
     if (!data.shop || !data.sc || !data.cartToken) {
-      return jsonResponse({ success: true }); // early return if data is incomplete
+      return jsonResponse({ success: true, error: null }); // early return if data is incomplete
     }
 
     const shop = await shopRepository.getShopByDomain(data.shop);
     if (!shop) {
-      return jsonResponse({ success: true }); // silently accept even if shop not found
+      return jsonResponse({
+        success: true,
+        error: `Shop ${data.shop} not found`,
+      }); // silently accept even if shop not found
     }
 
     const { id, ...customerWithoutId } = data.customer || {};
-    const customer = data.customer ? await customerRepository.upsertCustomer({ customerId: data.customer.id.toString(), ...customerWithoutId }) : null
+    const customer = data.customer
+      ? await customerRepository.upsertCustomer({
+          customerId: data.customer.id.toString(),
+          ...customerWithoutId,
+        })
+      : null;
 
     await eventDataRepository.createEventData({
       cartToken: data.cartToken,
@@ -82,18 +94,21 @@ export const action = async ({request}: ActionFunctionArgs) => {
       },
       ...(customer
         ? {
-          customer: {
-            connect: {
-              customerId: customer.customerId,
+            customer: {
+              connect: {
+                customerId: customer.customerId,
+              },
             },
-          },
-        }
+          }
         : {}),
     });
 
-    return jsonResponse({ success: true });
+    return jsonResponse({ success: true, error: null });
   } catch (error: any) {
     console.error("Failed to save event data:", error);
-    return jsonResponse({ success: false, error: error.message || "Unknown error" }, 400);
+    return jsonResponse(
+      { success: false, error: error.message || "Unknown error" },
+      400,
+    );
   }
-}
+};

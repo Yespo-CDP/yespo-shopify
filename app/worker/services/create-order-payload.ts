@@ -4,6 +4,7 @@ import type {
   OrderDisplayFulfillmentStatus,
 } from "~/@types/order";
 import { convertDateToUTC } from "~/utils/convert-date-to-utc";
+import { buildOrderItemLink } from "~/services/build-order-item-link";
 
 /**
  * Convert Shopify Order data to Yespo order data.
@@ -32,12 +33,15 @@ import { convertDateToUTC } from "~/utils/convert-date-to-utc";
  * - `order.displayFulfillmentStatus` (+ cancelledAt check) → `status`
  * - `order.shippingAddress` (formatted string) → `deliveryAddress`
  * - `order.lineItems.nodes[]`:
- *    - `lineItem.id` → `externalItemId`
+ *    - `lineItem.variant.id` → `externalItemId`
  *    - `lineItem.name` → `name`
  *    - `lineItem.quantity` → `quantity`
  *    - `lineItem.originalTotalSet.shopMoney.amount` → `cost`
+ *    - variant storefront URL → `url`
+ *    - variant image, else product featured image → `imageUrl`
  *
  * @param {OrderData} order - Shopify order data.
+ * @param {string} shopDomain - Storefront domain used when `onlineStoreUrl` is absent.
  * @returns {Promise<Order>} A promise that resolves when the order payload is created successfully.
  *
  * @example
@@ -45,7 +49,10 @@ import { convertDateToUTC } from "~/utils/convert-date-to-utc";
  * console.log(orderPayload);
  */
 
-export const createOrderPayload = (order: OrderData): Order => {
+export const createOrderPayload = (
+  order: OrderData,
+  shopDomain = "",
+): Order => {
   const customerFirstName = order?.customer?.firstName ?? "";
   const customerLastName = order?.customer?.lastName ?? "";
   const customerEmail = order?.customer?.defaultEmailAddress?.emailAddress;
@@ -106,12 +113,27 @@ export const createOrderPayload = (order: OrderData): Order => {
     date: convertDateToUTC(order.createdAt),
     status: statusMap(order.displayFulfillmentStatus),
     deliveryAddress: formatAddress(order?.shippingAddress),
-    items: order?.lineItems?.nodes?.map((lineItem) => ({
-      externalItemId: lineItem.id?.split("/").pop() ?? "",
-      name: lineItem.name,
-      quantity: lineItem.quantity,
-      cost: parseFloat(lineItem?.originalTotalSet?.shopMoney?.amount ?? "0"),
-    })),
+    items: order?.lineItems?.nodes?.map((lineItem) => {
+      const variantId = lineItem.variant?.id?.split("/").pop() ?? "";
+      const link = variantId
+        ? buildOrderItemLink({
+            variantId,
+            shopDomain,
+            handle: lineItem.variant?.product?.handle,
+            onlineStoreUrl: lineItem.variant?.product?.onlineStoreUrl,
+            variantImageUrl: lineItem.variant?.image?.url,
+            featuredImageUrl: lineItem.variant?.product?.featuredImage?.url,
+          })
+        : undefined;
+      return {
+        externalItemId: variantId || (lineItem.id?.split("/").pop() ?? ""),
+        name: lineItem.name,
+        quantity: lineItem.quantity,
+        cost: parseFloat(lineItem?.originalTotalSet?.shopMoney?.amount ?? "0"),
+        ...(link?.url ? { url: link.url } : {}),
+        ...(link?.imageUrl ? { imageUrl: link.imageUrl } : {}),
+      };
+    }),
   };
 
   return orderPayload;

@@ -1,6 +1,6 @@
-import Redis from "ioredis";
+import type Redis from "ioredis";
 
-import { redisConfig } from "~/config/redis";
+import { redisConnection } from "~/config/redis";
 
 /**
  * Redis-backed sliding-window rate limiter for Yespo API requests.
@@ -52,21 +52,8 @@ end
 return wait
 `;
 
-let client: Redis | null = null;
-
 function getRedis(): Redis {
-  if (!client) {
-    const url = redisConfig.url ?? "";
-    const isSecure = url.startsWith("rediss://");
-    client = new Redis(url, {
-      maxRetriesPerRequest: null,
-      ...(isSecure ? { tls: { rejectUnauthorized: false } } : {}),
-    });
-    client.on("error", (error) => {
-      console.error("Rate limiter Redis error:", error?.message);
-    });
-  }
-  return client;
+  return redisConnection;
 }
 
 /**

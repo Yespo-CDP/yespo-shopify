@@ -23,6 +23,8 @@ export interface Order {
     name: string;
     quantity: number;
     cost: number;
+    url?: string;
+    imageUrl?: string;
   }[];
 }
 
@@ -116,6 +118,15 @@ export interface OrderData {
           currencyCode: string;
         };
       };
+      variant?: {
+        id: string;
+        image?: { url?: string | null } | null;
+        product?: {
+          handle?: string | null;
+          onlineStoreUrl?: string | null;
+          featuredImage?: { url?: string | null } | null;
+        } | null;
+      } | null;
     }[];
   };
   createdAt: string;
@@ -380,6 +391,7 @@ export interface OrderCreatePayload {
     };
     product_exists: boolean;
     product_id: number;
+    variant_id: number | null;
     properties: any[];
     quantity: number;
     requires_shipping: boolean;

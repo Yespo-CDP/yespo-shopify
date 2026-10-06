@@ -31,6 +31,22 @@ export const withDefaultCategory = (
 ): YespoCategory[] =>
   categories.length > 0 ? categories : [DEFAULT_YESPO_CATEGORY];
 
+/**
+ * Taxonomy categories (`type: "category"`) from the default language, copied
+ * as-is for a translation locale. Collections already carry a localized name.
+ */
+export const primaryLanguageCategoryTranslations = (
+  primaryCategories: YespoCategory[],
+): YespoCategory[] =>
+  primaryCategories
+    .filter((category) => category.type === "category")
+    .map(({ id, name, path }) => ({
+      ...(id ? { id } : {}),
+      name,
+      ...(path?.length ? { path } : {}),
+      type: "category" as const,
+    }));
+
 /** Extracts the numeric id from a Shopify GID, e.g. "gid://shopify/Collection/123" → "123". */
 const stripGid = (gid: string): string => gid.split("/").pop() ?? gid;
 

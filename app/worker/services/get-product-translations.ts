@@ -4,6 +4,7 @@ import type {
   ProductTranslation,
   ProductTranslationCategory,
 } from "~/@types/product";
+import { attachLocalizedTaxonomyCategories } from "~/worker/services/get-localized-taxonomy-category";
 
 const MAX_DESCRIPTION_LENGTH = 9500;
 
@@ -126,6 +127,9 @@ const VARIANT_BATCH_SIZE = 50;
  * @param collections   - Collections to include as translated categories. Accepts
  *                        either Shopify GIDs or plain numeric IDs; original `name`
  *                        is used as fallback when no translation exists for a locale.
+ * @param shop          - myshopify domain used for the Storefront taxonomy query
+ * @param categoryId    - Shopify taxonomy category id. When absent, taxonomy
+ *                        translations are skipped.
  */
 export const getProductTranslations = async ({
   client,
@@ -135,6 +139,8 @@ export const getProductTranslations = async ({
   shopDomain,
   productHandle,
   collections = [],
+  shop,
+  categoryId,
 }: {
   client: GraphQLClient;
   productId: string;
@@ -143,6 +149,8 @@ export const getProductTranslations = async ({
   shopDomain: string;
   productHandle: string;
   collections?: Array<{ id: string; name: string }>;
+  shop?: string;
+  categoryId?: string | null;
 }): Promise<ProductTranslationsResult> => {
   const empty: ProductTranslationsResult = { product: {}, variants: {} };
   if (!locales.length) return empty;
@@ -266,6 +274,14 @@ export const getProductTranslations = async ({
         productResult[locale].categories = cats;
       }
     }
+
+    await attachLocalizedTaxonomyCategories({
+      client,
+      shop,
+      productId,
+      categoryId,
+      productResult,
+    });
 
     if (!variantGids.length) {
       return { product: productResult, variants: {} };

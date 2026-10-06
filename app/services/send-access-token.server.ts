@@ -26,17 +26,20 @@ import {sendAccessToken} from "~/api/send-access-token.server";
 export const sendAccessTokenService = async({
   apiKey,
   domain,
-  accessToken
+  accessToken,
+  logDomain,
 }: {
   apiKey: string;
   domain: string;
   accessToken: string;
+  logDomain?: string;
 }): Promise<void> => {
   try {
     await sendAccessToken({
       apiKey,
       domain,
-      accessToken
+      accessToken,
+      logDomain,
     })
   } catch (error) {
     console.error("Error occurred in Send Access Token Service", error);

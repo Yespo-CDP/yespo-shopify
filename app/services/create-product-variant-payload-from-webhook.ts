@@ -6,6 +6,7 @@ import type {
 import type { ProductTranslationsResult } from "~/worker/services/get-product-translations";
 import { appendVariantParam } from "~/worker/services/append-variant-param";
 import { withDefaultCategory } from "~/worker/services/map-yespo-categories";
+import { buildYespoVariantTranslations } from "~/worker/services/build-yespo-variant-translations";
 import { toRfc3339Utc } from "~/utils/convert-date-to-utc";
 
 export interface ProductWebhookImage {
@@ -148,6 +149,8 @@ export const createProductVariantPayloadFromWebhook = (
     );
   }
 
+  const resolvedCategories = withDefaultCategory(categories);
+
   const payload: ProductVariant = {
     action,
     productId: variant.id.toString(),
@@ -158,7 +161,7 @@ export const createProductVariantPayloadFromWebhook = (
     isInStock,
     price: parseFloat(variant.price ?? "0"),
     currency: shopCurrency,
-    categories: withDefaultCategory(categories),
+    categories: resolvedCategories,
     itemGroupId: product.id.toString(),
   };
 
@@ -181,27 +184,15 @@ export const createProductVariantPayloadFromWebhook = (
     payload.oldPrice = compareAtPrice;
   }
 
-  if (
-    translationsResult &&
-    Object.keys(translationsResult.product).length > 0
-  ) {
-    payload.translations = Object.entries(translationsResult.product).map(
-      ([locale, t]) => {
-        const translatedVariantTitle =
-          translationsResult.variants[variantId]?.[locale] ?? variantTitle;
-        return {
-          [locale]: {
-            ...t,
-            url: t.url ? appendVariantParam(t.url, variantId) : t.url,
-            name: t.name
-              ? translatedVariantTitle
-                ? `${t.name} - ${translatedVariantTitle}`
-                : t.name
-              : undefined,
-          },
-        };
-      },
-    );
+  const translations = buildYespoVariantTranslations({
+    productTranslations: translationsResult?.product,
+    variantTranslationsByLocale: translationsResult?.variants?.[variantId],
+    variantId,
+    variantTitle,
+    primaryCategories: resolvedCategories,
+  });
+  if (translations) {
+    payload.translations = translations;
   }
 
   // For update operations: explicitly remove fields/keys no longer present in Shopify.

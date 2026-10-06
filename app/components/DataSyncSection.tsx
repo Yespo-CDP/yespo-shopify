@@ -7,13 +7,13 @@ import type { OrderSyncLog } from "~/@types/orderSyncLog";
 // import type { MarketSyncLogRecord } from "~/@types/marketSyncLog";
 import DataSyncStatusBadge from "./ui/DataSyncStatusBadge";
 import DataSyncTooltip from "./ui/DataSyncTooltip";
-import { ProductVariantSyncLog } from "~/@types/productVariantSyncLog";
+import { ProductVariantSyncLogView } from "~/@types/productVariantSyncLog";
 
 export interface DataSyncSectionProps {
   disabled?: boolean;
   customersSyncLog?: CustomerSyncLog;
   orderSyncLog?: OrderSyncLog;
-  productVariantSyncLog?: ProductVariantSyncLog;
+  productVariantSyncLog?: ProductVariantSyncLogView;
   // marketSyncLogs?: MarketSyncLogRecord[];
   contactSyncEnabled?: boolean;
   orderSyncEnabled?: boolean;
@@ -268,49 +268,62 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
             )}
           </s-stack>
 
-          {productVariantSyncEnabled && (
+          {productVariantSyncEnabled && productVariantSyncLog && (
             <s-stack gap="small-200">
-              {productVariantSyncLog && (
-                <s-grid gridTemplateColumns="repeat(12, 1fr)" gap="small-100">
-                  <s-grid-item gridColumn="span 3">
-                    <s-text type="strong">
-                      {t("DataSyncSection.syncLog.productVariants")}:
+              <s-text>
+                {t("DataSyncSection.syncLog.variantsExplanation")}
+              </s-text>
+              <s-grid gridTemplateColumns="repeat(12, 1fr)" gap="small-100">
+                <s-grid-item gridColumn="span 3">
+                  <s-text type="strong">
+                    {t("DataSyncSection.syncLog.productVariants")}:
+                  </s-text>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 3">
+                  <s-stack direction="inline" justifyContent="end">
+                    <s-text>
+                      {t("DataSyncSection.syncLog.syncedCount")}:{" "}
+                      {productVariantSyncLog.syncedCount +
+                        productVariantSyncLog.skippedCount}
                     </s-text>
-                  </s-grid-item>
-                  <s-grid-item gridColumn="span 3">
-                    <s-stack direction="inline" justifyContent="end">
-                      <s-text>
-                        {t("DataSyncSection.syncLog.syncedCount")}:{" "}
-                        {productVariantSyncLog.syncedCount +
-                          productVariantSyncLog.skippedCount}
-                      </s-text>
-                    </s-stack>
-                  </s-grid-item>
-                  <s-grid-item gridColumn="span 2">
-                    <s-stack direction="inline" justifyContent="end">
-                      <s-text>
-                        {t("DataSyncSection.syncLog.failedCount")}:{" "}
-                        {productVariantSyncLog.failedCount}
-                      </s-text>
-                    </s-stack>
-                  </s-grid-item>
-                  <s-grid-item gridColumn="span 2">
-                    <s-stack direction="inline" justifyContent="end">
-                      <s-text>
-                        {t("DataSyncSection.syncLog.totalCount")}:{" "}
-                        {productVariantSyncLog.totalCount}
-                      </s-text>
-                    </s-stack>
-                  </s-grid-item>
-                  <s-grid-item gridColumn="span 2">
-                    <s-stack direction="inline" justifyContent="end">
-                      <DataSyncStatusBadge
-                        status={productVariantSyncLog?.status}
-                      />
-                    </s-stack>
-                  </s-grid-item>
-                </s-grid>
-              )}
+                  </s-stack>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 2">
+                  <s-stack direction="inline" justifyContent="end">
+                    <s-text>
+                      {t("DataSyncSection.syncLog.failedCount")}:{" "}
+                      {productVariantSyncLog.failedCount}
+                    </s-text>
+                  </s-stack>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 2">
+                  <s-stack direction="inline" justifyContent="end">
+                    <s-text>
+                      {t("DataSyncSection.syncLog.totalCount")}:{" "}
+                      {productVariantSyncLog.totalCount}
+                    </s-text>
+                  </s-stack>
+                </s-grid-item>
+                <s-grid-item gridColumn="span 2">
+                  <s-stack direction="inline" justifyContent="end">
+                    <DataSyncStatusBadge
+                      status={productVariantSyncLog.status}
+                    />
+                  </s-stack>
+                </s-grid-item>
+              </s-grid>
+              <s-banner
+                tone="info"
+                heading={t("DataSyncSection.syncLog.shopifyProducts", {
+                  count: productVariantSyncLog.syncedProductCount,
+                })}
+              >
+                {t("DataSyncSection.syncLog.syncedAsVariants", {
+                  count:
+                    productVariantSyncLog.syncedCount +
+                    productVariantSyncLog.skippedCount,
+                })}
+              </s-banner>
               {/* Market sync logs are temporarily hidden
               {marketSyncLogs.map((marketSyncLog) => (
                 <s-grid

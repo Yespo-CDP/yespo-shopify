@@ -154,6 +154,16 @@ export default class ProductVariantSyncRepositoryImpl
     });
   }
 
+  async countSyncedProductsByShop(shopId: number): Promise<number> {
+    const rows = await this.database.$queryRaw<Array<{ count: number }>>`
+      SELECT CAST(COUNT(DISTINCT "productId") AS INTEGER) AS count
+      FROM "ProductVariantSync"
+      WHERE "shopId" = ${shopId}
+        AND "syncFailed" = false
+    `;
+    return Number(rows[0]?.count ?? 0);
+  }
+
   async setSyncFailed(
     shopId: number,
     variantIds: string[],

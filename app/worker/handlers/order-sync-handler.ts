@@ -51,6 +51,9 @@ export const orderSyncHandler = async (
   console.log("shop", shop);
   console.log("accessToken", accessToken);
 
+  const shopRecord = await shopRepository.getShop(shop);
+  const logDomain = shopRecord?.domain || shop;
+
   const client = createClient({ shop, accessToken });
   const ordersCount = await getOrdersCount({ client });
   console.log("Total orders count", ordersCount, "\n");
@@ -93,7 +96,7 @@ export const orderSyncHandler = async (
             const orderSyncUpdatedDate = orderSync?.updatedAt?.getTime() ?? 0;
 
             if (orderUpdatedDate > orderSyncUpdatedDate) {
-              const orderData = createOrderPayload(order);
+              const orderData = createOrderPayload(order, logDomain);
               ordersData.push(orderData);
 
               await orderSyncRepository.createOrUpdateOrderSync({
@@ -115,7 +118,7 @@ export const orderSyncHandler = async (
             const contactsUpdateResponse = await createOrders({
               apiKey,
               orders: ordersData,
-              domain: shop,
+              domain: logDomain,
               orgId
             });
 
@@ -136,7 +139,7 @@ export const orderSyncHandler = async (
             orgId,
             errorMessage: '',
             data: {
-              domain: shop,
+              domain: logDomain,
               offset: ORDERS_CHUNK_SIZE,
               responseBody: ordersData,
               statusCode: 200
@@ -173,7 +176,7 @@ export const orderSyncHandler = async (
           orgId,
           errorMessage:  `Error bulk orders sync ${error?.message}`,
           data: {
-            domain: shop,
+            domain: logDomain,
             offset: ORDERS_CHUNK_SIZE,
             responseBody: {},
             statusCode: error?.status ?? 400
@@ -219,7 +222,7 @@ export const orderSyncHandler = async (
       orgId,
       errorMessage: `Orders sync failed: ${error?.message}`,
       data: JSON.stringify({
-        domain: shop,
+        domain: logDomain,
         skippedCount: totalSkippedCount,
         failedCount: totalFailedCount,
         syncedCount: totalSyncedCount,

@@ -25,8 +25,9 @@ export const EVENT_MESSAGES = {
   SEND_CONTACTS_BULK_FAILED: "SEND_CONTACTS_BULK_FAILED",
   SEND_ORDERS_BULK_SUCCESS: "SEND_ORDERS_BULK_SUCCESS",
   SEND_ORDERS_BULK_FAILED: "SEND_ORDERS_BULK_FAILED",
-  SEND_PRODUCT_VARIANTS_BULK_SUCCESS: "SEND_PRODUCT_VARIANTS_BULK_SUCCESS",
+  SEND_PRODUCTS_BULK_SUCCESS: "SEND_PRODUCTS_BULK_SUCCESS",
   SEND_PRODUCT_VARIANTS_BULK_FAILED: "SEND_PRODUCT_VARIANTS_BULK_FAILED",
+  DELETE_PRODUCTS_BULK_SUCCESS: "DELETE_PRODUCTS_BULK_SUCCESS",
   WEB_TRACKING_ENABLED: "WEB_TRACKING_ENABLED",
   WEB_TRACKING_DISABLED: "WEB_TRACKING_DISABLED",
   WEB_TRACKING_FAILED: "WEB_TRACKING_FAILED",
@@ -55,8 +56,6 @@ export const EVENT_MESSAGES = {
     "CUSTOM_LOG_APP_INBOX_MODE_ENABLED_ERROR",
   CUSTOM_LOG_APP_INBOX_MODE_DISABLED_ERROR:
     "CUSTOM_LOG_APP_INBOX_MODE_DISABLED_ERROR",
-  CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS:
-    "CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS",
   CUSTOM_LOG_SEND_PRODUCT_VARIANTS_ERROR:
     "CUSTOM_LOG_SEND_PRODUCT_VARIANTS_ERROR",
   CUSTOM_LOG_SEND_MARKET_PRODUCTS_SUCCESS:
@@ -116,6 +115,17 @@ export const MARKET_SYNC_CRON_PATTERN = "0 0 * * *";
 
 /** BullMQ repeatable job pattern for expired EventData cleanup — once per day at 00:00 UTC. */
 export const DB_CLEANER_CRON_PATTERN = "0 0 * * *";
+
+/**
+ * How long a product webhook job waits before it runs.
+ * Shopify sends products/create and then products/update (image, inventory)
+ * a few seconds apart. Each new webhook for the same product resets this
+ * delay, so the worker fetches the product once, after those updates land.
+ */
+export const PRODUCT_WEBHOOK_DEBOUNCE_MS = 8_000;
+
+/** Retries for a product webhook job after a transient Shopify or Yespo failure. */
+export const PRODUCT_WEBHOOK_JOB_ATTEMPTS = 5;
 
 /**
  * How many times `fetchWithErrorHandling` retries a request after the server

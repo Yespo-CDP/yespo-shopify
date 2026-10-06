@@ -116,6 +116,10 @@ export const updateProductVariantService = async (
                   c.type === "collection" && Boolean(c.id),
               )
               .map((c) => ({ id: c.id, name: c.name })),
+            shop: shopifyDomain,
+            categoryId: categories.find(
+              (category) => category.type === "category" && category.id,
+            )?.id,
           })
         : null;
 

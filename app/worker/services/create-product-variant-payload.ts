@@ -8,6 +8,7 @@ import {
   withDefaultCategory,
 } from "~/worker/services/map-yespo-categories";
 import { appendVariantParam } from "~/worker/services/append-variant-param";
+import { buildYespoVariantTranslations } from "~/worker/services/build-yespo-variant-translations";
 import { toRfc3339Utc } from "~/utils/convert-date-to-utc";
 
 /**
@@ -118,27 +119,15 @@ export const createProductVariantPayload = (
     payload.tags = tags;
   }
 
-  if (product.translations && Object.keys(product.translations).length > 0) {
-    payload.translations = Object.entries(product.translations).map(
-      ([locale, t]) => {
-        // Use translated variant title if available for this variant + locale,
-        // otherwise fall back to the original variant option title.
-        const translatedVariantTitle =
-          product.variantTranslations?.[productId]?.[locale] ?? variantTitle;
-
-        return {
-          [locale]: {
-            ...t,
-            url: t.url ? appendVariantParam(t.url, productId) : t.url,
-            name: t.name
-              ? translatedVariantTitle
-                ? `${t.name} - ${translatedVariantTitle}`
-                : t.name
-              : undefined,
-          },
-        };
-      },
-    );
+  const translations = buildYespoVariantTranslations({
+    productTranslations: product.translations,
+    variantTranslationsByLocale: product.variantTranslations?.[productId],
+    variantId: productId,
+    variantTitle,
+    primaryCategories: categories,
+  });
+  if (translations) {
+    payload.translations = translations;
   }
 
   // For update operations: explicitly remove fields/keys no longer present in Shopify.

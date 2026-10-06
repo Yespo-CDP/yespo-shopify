@@ -155,15 +155,7 @@ export const updateProductVariants = async ({
       orgId,
       errorMessage: "",
       data: logData,
-      message: EVENT_MESSAGES.SEND_PRODUCT_VARIANTS_BULK_SUCCESS,
-      logLevel: "INFO",
-    });
-
-    await sendLogEvent({
-      orgId,
-      errorMessage: "",
-      data: logData,
-      message: EVENT_MESSAGES.CUSTOM_LOG_SEND_PRODUCT_VARIANTS_SUCCESS,
+      message: EVENT_MESSAGES.SEND_PRODUCTS_BULK_SUCCESS,
       logLevel: "INFO",
     });
 

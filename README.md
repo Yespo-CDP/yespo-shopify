@@ -16,13 +16,29 @@ The app allows merchants to:
 
 ## Features and Implementation Details
 
+### Store domains
+
+Each shop stores two domains:
+
+- `shopUrl` — the permanent `*.myshopify.com` host (`myshopifyDomain`). Shopify sessions, webhooks, the Admin API, and background jobs use this host to identify the shop.
+- `domain` — the public storefront host (`primaryDomain.host`), the address a customer sees in the browser. For a shop with a custom domain this is that domain (for example `micronutrition.com.ua`). When no custom domain is set, it is the same `*.myshopify.com` host.
+
+`domain` is written when the app is installed or the merchant signs in again (`afterAuth`). A custom domain changed later in Shopify admin stays at the previous value until the next sign-in.
+
+Where each host is sent:
+
+- **Site and web push registration** (`POST /site/domains`, `POST /site/webpush/domain`, and the script fetches) use `domain`. Web push is bound to the host the browser is actually on.
+- **Yespo logs** put `domain` in the log envelope next to `requestBody`. That includes tracking (`StatusCart`, `PurchasedItems`), contact, order, product, and market sync, and account connection. If `domain` is empty, the log falls back to `shopUrl`.
+- **Tracking event bodies** do not contain a domain. `StatusCart` and `PurchasedItems` identify the site with `siteId`. The host appears only in the log envelope.
+- **Shopify access token** (`POST /shopify/token`) sends `shopUrl` in the request body. Yespo stores that host with the token. The log label for this call is still the public `domain`; the `*.myshopify.com` host is visible inside `requestBody`.
+
 ### Widgets
 
 **Purpose:** Register the store domain and inject the Yespo site script into the storefront automatically.
 
 #### Implementation:
 
-- [Register](https://docs.esputnik.com/reference/createdomain) the current store domain in Yespo.
+- [Register](https://docs.esputnik.com/reference/createdomain) the public storefront domain (`primaryDomain.host`) in Yespo.
 - [Retrieve](https://docs.esputnik.com/reference/getscript) the Yespo site script.
 - Store the script content in a Shopify metafield: yespo-script.
 - Inject the script into the storefront using a Theme App Extension (./extensions/yespo-extension).
@@ -33,7 +49,7 @@ The app allows merchants to:
 
 #### Implementation:
 
-- [Register](https://docs.esputnik.com/reference/addwebpushdomain) the current store domain in Yespo.
+- [Register](https://docs.esputnik.com/reference/addwebpushdomain) the public storefront domain (`primaryDomain.host`) in Yespo.
 - [Retrieve](https://docs.esputnik.com/reference/getscript) the push script and service worker content.
 - Store the push script in the yespo-web-push-script metafield.
 - Inject the push script into the storefront using the same Theme App Extension.
@@ -322,6 +338,7 @@ App requests access to the following scopes:
   - `read_publications` – filter products by `published_status:published`
   - `read_translations` – read product, collection and variant translations
   - `read_locales` – read the shop primary and secondary locales (used to resolve the Yespo `languageCode` and which translations to send)
+  - `unauthenticated_read_product_listings` – create a Storefront access token and read localized taxonomy categories (Admin `TaxonomyCategory` has no locale)
 
 Shopify webhooks used:
   - `products/create` → creates new product variants in Yespo
@@ -417,7 +434,7 @@ On `update`, the `remove` object (never `null`) is used to clear absent optional
 Each variant must have at least one category. Categories are built from two Shopify sources:
 
 * **Collections** → flat categories with `type: "collection"` (`id` = numeric collection ID, `name` = collection title).
-* **Taxonomy category** → hierarchical category with `type: "category"`, where `path` is derived by splitting the Shopify `category.fullName` on `>` (e.g. `"Apparel > Clothing > Tops"` → `["Apparel", "Clothing", "Tops"]`).
+* **Taxonomy category** → hierarchical category with `type: "category"`, where `path` is derived by splitting the Shopify `category.fullName` on `>` (e.g. `"Apparel > Clothing > Tops"` → `["Apparel", "Clothing", "Tops"]`). Translated names for secondary locales come from the Storefront API (`unauthenticated_read_product_listings`): the worker creates a Storefront token and reads `product.category` in that locale.
 
 If a product has no collections or taxonomy category, it falls back to a default `Uncategorized` category so that Yespo's "at least one category" requirement is satisfied.
 
@@ -425,11 +442,19 @@ If a product has no collections or taxonomy category, it falls back to a default
 
 #### Logging & Status Tracking:
 
-The Data Sync card shows:
+The Data Sync card shows variant statistics. Each Shopify variant is sent as its own Yespo product, so the variant total is often higher than the number of products in the shop.
 
-- **Synchronized** = `syncedCount + skippedCount`
-- **Failed** = `failedCount`
-- **Total** = `totalCount`
+Above the numbers: “Products are synced by variants. Each Shopify variant is sent to Yespo as a separate product.”
+
+- **Variants**
+  - **Synchronized** = `syncedCount + skippedCount`
+  - **Failed** = `failedCount`
+  - **Total** = `totalCount`
+
+Under the row, an info banner explains the product-to-variant relationship:
+
+- **Shopify products** — unique Shopify products that have at least one successfully synced variant (`ProductVariantSync.syncFailed = false`). A product is omitted when every one of its variants failed. The number is not stored on `ProductVariantSyncLog`. The page loader and `/api/sync-logs` compute `COUNT(DISTINCT productId)` for the shop when the card is rendered.
+- **These products were synced to Yespo as N variants** — `N` is the same **Synchronized** count as on the Variants row. Failed and Total stay on that row: those counters are variant counts.
 
 **Historical Enable** writes job stats for that run:
 
@@ -460,7 +485,7 @@ Webhooks are triggered when products are created, updated, or deleted in Shopify
   - `products/update` → variants created or updated in Yespo; variants removed from the product are deleted.
   - `products/delete` → all tracked variants of the product removed from Yespo.
 
-Because webhook payloads do not include collections, secondary locales, or translations, these are fetched separately via GraphQL before sending. Image URLs follow the same fallback as historical sync (variant image → featured image). `updatedDate` is normalized to UTC. After Yespo responds, Data Sync counters are refreshed from `ProductVariantSync` (see Logging above). Market data for the affected product is **not** sent to Yespo yet — market HTTP calls are stubbed (see Market Sync below).
+The webhook route only enqueues a BullMQ job (`product-webhooks`) and returns `200`. Jobs for the same product are coalesced and delayed by 8 seconds, so a CSV import's `products/create` followed by `products/update` becomes one run. The worker (`concurrency: 1`) then loads the product from the Admin API — including image, collections, category, and translations — and sends it to Yespo. Image URLs follow the same fallback as historical sync (variant image → featured image). `updatedDate` is normalized to UTC. After Yespo responds, Data Sync counters are refreshed from `ProductVariantSync` (see Logging above). Market data for the affected product is **not** sent to Yespo yet — market HTTP calls are stubbed (see Market Sync below).
 
 ---
 
@@ -800,7 +825,7 @@ Create a `.env` file with the following:
 | **SHOPIFY_APP_URL**            | **Required.** Your shopify app url                                                                      | `https://your-domain.com`                          |
 | **SHOPIFY_YESPO_EXTENSION_ID** | **Required.** Extension ID (Auto generated after run `deploy` command)                                  | `c10***ff-****-48cc-****-f882b***fa8e`             |
 | **DATABASE_URL**               | **Required.** Database connect url                                                                      | `postgresql://admin:admin@localhost:5432/database` |
-| **SCOPES**                     | **Required.** Required access scopes                                                                    | **Must be** `read_markets,read_themes`             |
+| **SCOPES**                     | **Required.** Required access scopes                                                                    | **Must be** `read_markets,read_themes,unauthenticated_read_product_listings` |
 | **API_URL**                    | **Required.** Yespo api url                                                                             | **Must be** `https://yespo.io/api/v1`              |
 | **GENERAL_SCRIPT_HANDLE**      | **Required.** Handle for general metafield and extension name                                           | **Must be** `yespo-script`                         |
 | **WEB_PUSH_SCRIPT_HANDLE**     | **Required.** Handle for webpush metafield and extension name                                           | **Must be** `yespo-web-push-script`                |
@@ -832,6 +857,7 @@ The app requires the following access scopes:
 - `read_locales`
 - `read_publications`
 - `read_themes`
+- `unauthenticated_read_product_listings`
 - `write_app_proxy`
 
 #### Webhooks:

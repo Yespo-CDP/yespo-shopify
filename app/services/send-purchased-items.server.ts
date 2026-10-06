@@ -84,7 +84,7 @@ export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
     await sendPurchasedItemsEvent({
       apiKey: shop.apiKey,
       purchasedItemsData,
-      domain: shop.shopUrl,
+      domain: shop.domain || shop.shopUrl,
       orgId: shop.orgId,
     });
 

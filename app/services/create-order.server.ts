@@ -1,6 +1,7 @@
 import { createOrders } from "~/api/create-orders";
 import { convertDateToUTC } from "~/utils/convert-date-to-utc";
 import { orderSyncRepository } from "~/repositories/repositories.server";
+import { getOrderItemProducts } from "~/services/get-order-item-products.server";
 import type { Order, OrderCreatePayload } from "~/@types/order";
 
 /**
@@ -13,6 +14,7 @@ import type { Order, OrderCreatePayload } from "~/@types/order";
  * @param {string} shopId - The shop id for connect order sync log to shop.
  * @param domain
  * @param orgId
+ * @param shopUrl - myshopify domain used to load variant URL and image
  * @returns {Promise<void>} A promise that resolves when the order creation completes.
  */
 export const createOrderService = async (
@@ -20,7 +22,8 @@ export const createOrderService = async (
   apiKey: string,
   shopId: number,
   domain: string,
-  orgId?: number | null
+  orgId?: number | null,
+  shopUrl?: string,
 ) => {
   try {
     const formatAddress = (address: OrderCreatePayload["shipping_address"]) =>
@@ -57,6 +60,19 @@ export const createOrderService = async (
       }
     };
 
+    const variantIds = (payload?.line_items ?? [])
+      .map((lineItem) => lineItem.variant_id)
+      .filter((variantId): variantId is number => variantId != null)
+      .map(String);
+    const itemLinks = await getOrderItemProducts({
+      shopUrl: shopUrl || domain,
+      shopDomain: domain,
+      variantIds,
+    }).catch((error) => {
+      console.error("Failed to load order item products:", error);
+      return new Map<string, { url: string; imageUrl: string }>();
+    });
+
     const order = {
       firstName: payload?.customer?.first_name ?? "",
       lastName: payload?.customer?.last_name ?? "",
@@ -74,12 +90,18 @@ export const createOrderService = async (
       date: convertDateToUTC(payload.created_at),
       status: statusMap(payload?.fulfillment_status),
       deliveryAddress: formatAddress(payload?.shipping_address ?? {}),
-      items: payload?.line_items?.map((lineItem) => ({
-        externalItemId: lineItem.id.toString(),
-        name: lineItem.name,
-        quantity: lineItem.quantity,
-        cost: parseFloat(lineItem.price),
-      })),
+      items: payload?.line_items?.map((lineItem) => {
+        const variantId = lineItem.variant_id?.toString();
+        const link = variantId ? itemLinks.get(variantId) : undefined;
+        return {
+          externalItemId: variantId || lineItem.id.toString(),
+          name: lineItem.name,
+          quantity: lineItem.quantity,
+          cost: parseFloat(lineItem.price),
+          ...(link?.url ? { url: link.url } : {}),
+          ...(link?.imageUrl ? { imageUrl: link.imageUrl } : {}),
+        };
+      }),
     };
 
     await createOrders({
