@@ -39,6 +39,8 @@ export async function enableProductSyncForRollout({
     return "skipped";
   }
 
+  const logDomain = shop.domain || shop.shopUrl;
+
   try {
     await productVariantSyncLogRepository.createOrUpdateProductVariantSyncLog(
       {
@@ -96,7 +98,7 @@ export async function enableProductSyncForRollout({
     await sendLogEvent({
       orgId: shop.orgId,
       errorMessage: error?.message,
-      data: JSON.stringify({ domain: shop.shopUrl }),
+      data: JSON.stringify({ domain: logDomain }),
       message: EVENT_MESSAGES.PRODUCT_SYNC_FAILED,
       logLevel: "ERROR",
     }).catch((logError) => {
@@ -112,7 +114,7 @@ export async function enableProductSyncForRollout({
   await sendLogEvent({
     orgId: shop.orgId,
     errorMessage: "",
-    data: JSON.stringify({ domain: shop.shopUrl }),
+    data: JSON.stringify({ domain: logDomain }),
     message: EVENT_MESSAGES.PRODUCT_SYNC_ENABLED,
     logLevel: "INFO",
   }).catch((logError) => {
