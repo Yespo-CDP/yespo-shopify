@@ -359,6 +359,12 @@ When sync is enabled:
 - Runs once after being enabled (or re-enabled)
 - Triggered after customers and orders synchronization
 
+#### Rollout for existing shops:
+
+Active shops that do not already have product sync on are stamped when this migration runs (`productSyncAutoEnable`). Contact and order sync do not matter. The stamp is per database, so local, staging, and production each capture their own shops at deploy time. Shops that already have product sync on are left alone.
+
+After the merchant grants `read_products`, `read_publications`, `read_translations`, `read_locales`, and `unauthenticated_read_product_listings`, product sync is enabled once — from `app/scopes_update`, or from the app home loader if those scopes were already on the session. A banner on the home page says sync is on. Dismissing it hides the banner and does not turn sync off. New installs are not stamped and do not see the banner. Turning product sync off afterwards does not turn it back on.
+
 ---
 
 #### Historical products sync:
@@ -435,15 +441,19 @@ If a product has no collections or taxonomy category, it falls back to a default
 
 #### Logging & Status Tracking:
 
-The Data Sync card shows two rows. Each Shopify variant is sent as its own Yespo product, so the variant total is often higher than the number of products in the shop.
+The Data Sync card shows variant statistics. Each Shopify variant is sent as its own Yespo product, so the variant total is often higher than the number of products in the shop.
 
-- **Products → Synchronized** — unique Shopify products that have at least one successfully synced variant (`ProductVariantSync.syncFailed = false`). A product is omitted when every one of its variants failed. The number is not stored on `ProductVariantSyncLog`. The page loader and `/api/sync-logs` compute `COUNT(DISTINCT productId)` for the shop when the card is rendered.
+Above the numbers: “Products are synced by variants. Each Shopify variant is sent to Yespo as a separate product.”
+
 - **Variants**
   - **Synchronized** = `syncedCount + skippedCount`
   - **Failed** = `failedCount`
   - **Total** = `totalCount`
 
-A hint under the rows says that each variant is sent separately, so the variant count can be higher than the product count. Failed and Total stay on the Variants row: those counters are variant counts.
+Under the row, an info banner explains the product-to-variant relationship:
+
+- **Shopify products** — unique Shopify products that have at least one successfully synced variant (`ProductVariantSync.syncFailed = false`). A product is omitted when every one of its variants failed. The number is not stored on `ProductVariantSyncLog`. The page loader and `/api/sync-logs` compute `COUNT(DISTINCT productId)` for the shop when the card is rendered.
+- **These products were synced to Yespo as N variants** — `N` is the same **Synchronized** count as on the Variants row. Failed and Total stay on that row: those counters are variant counts.
 
 **Historical Enable** writes job stats for that run:
 

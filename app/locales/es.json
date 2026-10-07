@@ -77,6 +77,10 @@
       "title": "Sincronización de datos",
       "customersAndOrdersTitle": "Sincronización de clientes y pedidos",
       "productSyncTitle": "Sincronización de productos",
+      "rolloutNotice": {
+        "heading": "Sincronización de productos activada",
+        "description": "La sincronización de productos ya está activada para tu tienda y ha comenzado la sincronización histórica."
+      },
       "description": "La sincronización de datos permite sincronizar clientes, pedidos y productos de Shopify con Yespo. Active cada sincronización de forma independiente.",
       "enable": "Habilitar",
       "disable": "Deshabilitar",
@@ -90,7 +94,11 @@
         "customers": "Clientes",
         "products": "Productos",
         "productVariants": "Variantes",
-        "productsHint": "Cada variante se envía por separado, por lo que el número de variantes puede ser mayor que el de productos.",
+        "variantsExplanation": "Los productos se sincronizan por variantes. Cada variante de Shopify se envía a Yespo como un producto independiente.",
+        "shopifyProducts_one": "Producto de Shopify: {{count}}",
+        "shopifyProducts_other": "Productos de Shopify: {{count}}",
+        "syncedAsVariants_one": "Estos productos se sincronizaron con Yespo como {{count}} variante.",
+        "syncedAsVariants_other": "Estos productos se sincronizaron con Yespo como {{count}} variantes.",
         "productsByCountry": "Productos ({{countryCode}})",
         "syncedCount": "Sincronizados",
         "skippedCount": "Omitidos",

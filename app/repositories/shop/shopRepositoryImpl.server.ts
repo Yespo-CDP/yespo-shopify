@@ -86,6 +86,53 @@ export default class ShopRepositoryImpl implements IShopRepository {
   }
 
   /**
+   * Claims a one-time product-sync rollout for a shop.
+   * The conditional update is the lock: a second caller sees count 0.
+   *
+   * @param {string} shopUrl - The unique URL identifier of the shop.
+   * @returns {Promise<boolean>} True when this call won the claim.
+   */
+  async claimProductSyncRollout(shopUrl: string): Promise<boolean> {
+    const result = await this.database.shop.updateMany({
+      where: {
+        shopUrl,
+        productSyncAutoEnable: true,
+        apiKey: { not: null },
+      },
+      data: {
+        isProductVariantSyncEnabled: true,
+        isMarketSyncEnabled: false,
+        productSyncAutoEnable: false,
+        productSyncNoticePending: true,
+      },
+    });
+
+    return result.count === 1;
+  }
+
+  /**
+   * Restores a shop to the pre-rollout state after a failed enable.
+   *
+   * @param {string} shopUrl - The unique URL identifier of the shop.
+   * @param {boolean} isMarketSyncEnabled - Market sync flag to put back.
+   * @returns {Promise<void>}
+   */
+  async releaseProductSyncRollout(
+    shopUrl: string,
+    isMarketSyncEnabled: boolean,
+  ): Promise<void> {
+    await this.database.shop.updateMany({
+      where: { shopUrl },
+      data: {
+        isProductVariantSyncEnabled: false,
+        isMarketSyncEnabled,
+        productSyncAutoEnable: true,
+        productSyncNoticePending: false,
+      },
+    });
+  }
+
+  /**
    * Deletes a shop by its URL.
    *
    * @param {string} shopUrl - The unique URL identifier of the shop to delete.

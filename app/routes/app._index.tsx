@@ -15,6 +15,7 @@ import UsefulLinksSection from "~/components/UsefulLinksSection";
 import { loaderHandler, actionHandler } from "~/lib/app.server";
 import WebTrackingSection from "~/components/WebTrackingSection";
 import DataSyncSection from "~/components/DataSyncSection";
+import ProductSyncRolloutBanner from "~/components/ProductSyncRolloutBanner";
 import AppInboxSection from "~/components/AppInboxSection";
 
 /**
@@ -221,6 +222,10 @@ export default function Index() {
             disabled={
               isMarketsOverflowing || isSubmitting || isLoading || !account
             }
+          />
+
+          <ProductSyncRolloutBanner
+            pending={Boolean(shop?.productSyncNoticePending)}
           />
 
           <DataSyncSection

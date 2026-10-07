@@ -28,6 +28,7 @@ import { deleteAccessTokenService } from "~/services/delete-access-token.server"
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
 import switchAppInboxScriptServer from "~/services/switch-app-inbox-script-mode.server";
+import { enableProductSyncForRollout } from "~/services/enable-product-sync-for-rollout.server";
 
 /**
  * Loader function for initializing data needed on the page.
@@ -58,6 +59,15 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   if (!shop) {
     await afterAuth({ session, admin });
     shop = await shopRepository.getShop(session.shop);
+  }
+  if (shop?.productSyncAutoEnable) {
+    const rollout = await enableProductSyncForRollout({
+      shopUrl: session.shop,
+      scopes: session.scope,
+    });
+    if (rollout === "enabled") {
+      shop = await shopRepository.getShop(session.shop);
+    }
   }
   const customersSyncLog =
     await customerSyncLogRepository.getCustomerSyncLogByShop(session.shop);
@@ -483,6 +493,18 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
       return { success, errors };
     }
+  }
+
+  if (intent === "dismiss-product-sync-notice") {
+    const shop = await shopRepository.getShop(session.shop);
+    if (!shop) {
+      errors.productSync = t("General.errors.shopNotFound");
+      return { success, errors };
+    }
+
+    await shopRepository.updateShop(session.shop, {
+      productSyncNoticePending: false,
+    });
   }
 
   if (intent === "products-sync-disable") {
