@@ -6,13 +6,12 @@ import { encryptApiKey } from "~/services/api-key-crypto.server";
  * One-time encryption of Shop.apiKey values that are still plaintext
  * (`apiKeyIv` and `apiKeyAuthTag` are both null).
  *
- * The first run encrypts a single shop. Other shops are skipped.
- * After that shop works against Yespo, clear ONLY_SHOP_URL to encrypt the rest.
+ * Encrypts every shop that still has a plaintext key. Already encrypted
+ * rows are excluded by the query, so a second run is a no-op.
  *
  * Requires DATABASE_URL and API_KEY_ENCRYPTION_KEY in the environment.
  * Usage: npm run encrypt:api-keys
  */
-const ONLY_SHOP_URL: string | null = "yespo-staging-store2.myshopify.com";
 
 const prisma = new PrismaClient();
 
@@ -33,17 +32,7 @@ try {
     },
   });
 
-  if (ONLY_SHOP_URL && !shops.some((shop) => shop.shopUrl === ONLY_SHOP_URL)) {
-    console.log(`no plaintext apiKey for ${ONLY_SHOP_URL}`);
-  }
-
   for (const shop of shops) {
-    if (ONLY_SHOP_URL && shop.shopUrl !== ONLY_SHOP_URL) {
-      skipped += 1;
-      console.log(`skip ${shop.shopUrl}`);
-      continue;
-    }
-
     if (!shop.apiKey) {
       skipped += 1;
       console.log(`skip empty apiKey for ${shop.shopUrl}`);
