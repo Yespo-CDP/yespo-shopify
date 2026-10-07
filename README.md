@@ -790,7 +790,9 @@ used for storing tracking and scripts configurations (custom namespace: $app).
 
 ## Yespo API Authentication
 
-The app uses a Yespo API key, provided by the merchant during onboarding, to authorize all API requests. The key is stored securely and used for:
+The app uses a Yespo API key, provided by the merchant during onboarding, to authorize all API requests. The key is encrypted at rest (AES-256-GCM). See [API key encryption](docs/api-key-encryption.md). Encrypt existing keys on staging and verify them **before deploying to production**.
+
+The key is used for:
 - Contacts sync
 - Orders sync
 - Products sync
@@ -836,6 +838,7 @@ Create a `.env` file with the following:
 | **WEB_TRACKER_URL**            | **Required.** Yespo tracker api url                                                                     | **Must be** `https://tracker.yespo.io/api/v2`      |
 | **HOST_URL**                   | **Required.** App host url metafield name  for the extension to work correctly                          | **Must be** `yespo-app-host`                       |
 | **REDIS_URL**                  | **Required.** Redis url for connecting and configuring the data synchronization worker                  | `redis://localhost:6379`                           |
+| **API_KEY_ENCRYPTION_KEY**     | **Required.** AES-256 key for `Shop.apiKey`, 32 bytes encoded as base64. One value per environment; do not rotate it after keys are encrypted. | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
 
 
 #### Required Shopify Scopes:

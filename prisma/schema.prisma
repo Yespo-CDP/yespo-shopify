@@ -42,6 +42,8 @@ model Shop {
   name                        String
   domain                      String    @unique @default("")
   apiKey                      String?
+  apiKeyIv                    String?
+  apiKeyAuthTag               String?
   orgId                       Int?
   siteId                      String?
   defaultCurrency             String?
