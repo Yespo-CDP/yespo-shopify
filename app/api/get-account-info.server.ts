@@ -46,7 +46,6 @@ export const getAccountInfo = async ({
         errorMessage: `Get account info error: invalid api key`,
         data: {
           domain,
-          requestBody: { apiKey },
           responseBody: responseParse,
           statusCode: response.status
         },
@@ -62,7 +61,6 @@ export const getAccountInfo = async ({
         errorMessage: `Get account info error`,
         data: {
           domain,
-          requestBody: { apiKey },
           responseBody: responseParse,
           statusCode: response.status
         },
@@ -81,7 +79,6 @@ export const getAccountInfo = async ({
       errorMessage: `Get account info error: ${error.message}`,
       data: {
         domain,
-        requestBody: { apiKey },
         responseBody: error,
         statusCode: error?.status ?? 500
       },

@@ -6,6 +6,10 @@ import type {
   ShopUpdate,
   ShopWithMarketSyncLogs,
 } from "~/@types/shop";
+import {
+  revealShopApiKey,
+  sealShopApiKeyWrite,
+} from "~/services/api-key-crypto.server";
 import type IShopRepository from "./shopRepository.server";
 
 /**
@@ -29,9 +33,10 @@ export default class ShopRepositoryImpl implements IShopRepository {
    * @returns {Promise<Shop | null>} A promise that resolves to the Shop object if found, or null otherwise.
    */
   async getShop(shopUrl: string): Promise<Shop | null> {
-    return this.database.shop.findFirst({
+    const shop = await this.database.shop.findFirst({
       where: { shopUrl },
     });
+    return shop ? revealShopApiKey(shop) : null;
   }
 
   /**
@@ -41,9 +46,10 @@ export default class ShopRepositoryImpl implements IShopRepository {
    * @returns {Promise<Shop | null>} A promise that resolves to the Shop object if found, or null otherwise.
    */
   async getShopByDomain(domain: string): Promise<Shop | null> {
-    return this.database.shop.findFirst({
+    const shop = await this.database.shop.findFirst({
       where: { domain },
     });
+    return shop ? revealShopApiKey(shop) : null;
   }
 
   /**
@@ -53,9 +59,10 @@ export default class ShopRepositoryImpl implements IShopRepository {
    * @returns {Promise<Shop>} A promise that resolves to the newly created Shop object.
    */
   async createShop(data: ShopCreate): Promise<Shop> {
-    return this.database.shop.create({
-      data,
+    const shop = await this.database.shop.create({
+      data: sealShopApiKeyWrite(data),
     });
+    return revealShopApiKey(shop);
   }
 
   /**
@@ -79,10 +86,11 @@ export default class ShopRepositoryImpl implements IShopRepository {
       throw new Error("Shop not found");
     }
 
-    return this.database.shop.update({
+    const updated = await this.database.shop.update({
       where: { id: shop.id },
-      data,
+      data: sealShopApiKeyWrite(data),
     });
+    return revealShopApiKey(updated);
   }
 
   /**
@@ -139,13 +147,14 @@ export default class ShopRepositoryImpl implements IShopRepository {
    * @returns {Promise<Shop>} A promise that resolves to the deleted Shop object.
    */
   async deleteShop(shopUrl: string): Promise<Shop> {
-    return this.database.shop.delete({
+    const shop = await this.database.shop.delete({
       where: { shopUrl },
     });
+    return revealShopApiKey(shop);
   }
 
   async getShopsForMarketSync(): Promise<ShopWithMarketSyncLogs[]> {
-    return this.database.shop.findMany({
+    const shops = await this.database.shop.findMany({
       where: {
         active: true,
         isMarketSyncEnabled: true,
@@ -157,9 +166,11 @@ export default class ShopRepositoryImpl implements IShopRepository {
         },
       },
     });
+    return shops.map(revealShopApiKey);
   }
 
   async getAllShops(): Promise<Shop[]> {
-    return this.database.shop.findMany();
+    const shops = await this.database.shop.findMany();
+    return shops.map(revealShopApiKey);
   }
 }

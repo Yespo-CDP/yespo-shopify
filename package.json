@@ -22,7 +22,8 @@
     "docs:md": "typedoc --options typedoc.md.json",
     "docs": "npm run docs:html && npm run docs:md",
     "worker": "npx tsx ./app/worker/worker.ts",
-    "migrate:tokens": "npx tsx ./app/scripts/migrate-tokens.ts"
+    "migrate:tokens": "npx tsx ./app/scripts/migrate-tokens.ts",
+    "encrypt:api-keys": "npx tsx ./app/scripts/encrypt-api-keys.ts"
   },
   "type": "module",
   "engines": {
