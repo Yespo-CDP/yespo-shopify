@@ -15,6 +15,8 @@ import {
 } from "~/repositories/repositories.server";
 import { createClient } from "../services/create-client";
 import { createProductVariantPayload } from "../services/create-product-variant-payload";
+import { fetchShopMarketsConfig } from "../services/fetch-shop-markets-config";
+import { getPublishedInAnyMarket } from "../services/get-product-market-publication";
 import { fetchAllProductVariants } from "../services/get-product-variants";
 import { getProductById } from "../services/get-products";
 import { getShopPrimaryLocale } from "../services/get-shop-primary-locale";
@@ -111,6 +113,13 @@ async function syncProductFromAdmin(
 
   const variants = await fetchAllProductVariants({ client, product });
   const shopDomain = shopData.domain || data.shop;
+  const marketsConfig = await fetchShopMarketsConfig({ client });
+  const publishedInAnyMarket = await getPublishedInAnyMarket({
+    client,
+    productIds: [product.id],
+    countries: marketsConfig.countries,
+  });
+  const isPublishedInAnyMarket = publishedInAnyMarket.get(product.id) ?? false;
 
   const variantIds = variants.map((variant) => variant.id);
   const existingSyncs =
@@ -169,6 +178,7 @@ async function syncProductFromAdmin(
         shopDomain,
         action,
         existing?.syncedTagKeys ?? [],
+        isPublishedInAnyMarket,
       );
       if (action === "create") {
         console.log(

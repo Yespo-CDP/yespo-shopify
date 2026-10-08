@@ -42,8 +42,10 @@ export const deleteProductVariants = async ({
       })),
     };
 
+    const url = `${process.env.API_URL}/products`;
+
     const response = await fetchWithErrorHandling(
-      `${process.env.API_URL}/products`,
+      url,
       {
         method: "DELETE",
         headers: {

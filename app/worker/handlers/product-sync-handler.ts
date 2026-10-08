@@ -11,6 +11,8 @@ import { getProducts } from "../services/get-products";
 import { getProductVariantsCount } from "../services/get-product-variants-count";
 import { fetchAllProductVariants } from "../services/get-product-variants";
 import { createProductVariantPayload } from "../services/create-product-variant-payload";
+import { fetchShopMarketsConfig } from "../services/fetch-shop-markets-config";
+import { getPublishedInAnyMarket } from "../services/get-product-market-publication";
 import { getShopPrimaryLocale } from "../services/get-shop-primary-locale";
 import { getShopSecondaryLocales } from "../services/get-shop-locales";
 import {
@@ -60,6 +62,7 @@ export const productSyncHandler = async (
     primaryLocale: languageCode,
   });
   const hasTranslations = secondaryLocales.length > 0;
+  const marketsConfig = await fetchShopMarketsConfig({ client });
 
   // Persist defaultLanguageCode after the first batch when it differs from DB.
   let needsLanguageCodePersist = languageCode !== storedLanguageCode;
@@ -87,6 +90,11 @@ export const productSyncHandler = async (
           const products = response.products;
           cursor = response.cursor;
           shopCurrency = response.shopCurrency ?? shopCurrency;
+          const publishedInAnyMarket = await getPublishedInAnyMarket({
+            client,
+            productIds: products.map((product) => product.id),
+            countries: marketsConfig.countries,
+          });
 
           const productVariantsData: ProductVariant[] = [];
           let chunkSkippedCount = 0;
@@ -160,6 +168,7 @@ export const productSyncHandler = async (
                   shopDomain,
                   action,
                   previousTagKeys,
+                  publishedInAnyMarket.get(product.id) ?? false,
                 );
                 productVariantsData.push(payload);
 

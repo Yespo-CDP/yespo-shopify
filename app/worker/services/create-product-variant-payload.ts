@@ -10,6 +10,7 @@ import {
 import { appendVariantParam } from "~/worker/services/append-variant-param";
 import { buildYespoVariantTranslations } from "~/worker/services/build-yespo-variant-translations";
 import { toRfc3339Utc } from "~/utils/convert-date-to-utc";
+import { resolveVariantIsInStock } from "~/worker/services/resolve-variant-is-in-stock";
 
 /**
  * Builds Yespo tags from variant selectedOptions.
@@ -40,6 +41,7 @@ function mapSelectedOptions(
  * @param shopDomain - Shop domain used to construct product URL when onlineStoreUrl is null
  * @param action - "create" for new variants, "update" for previously synced ones
  * @param previousTagKeys - Tag keys that were sent in the previous sync (from ProductVariantSync.syncedTagKeys)
+ * @param publishedInAnyMarket - True when the product is published in at least one enabled market
  */
 export const createProductVariantPayload = (
   product: ProductData,
@@ -48,6 +50,7 @@ export const createProductVariantPayload = (
   shopDomain = "",
   action: "create" | "update" = "create",
   previousTagKeys: string[] = [],
+  publishedInAnyMarket = false,
 ): ProductVariant => {
   const variantTitle =
     variant.title === "Default Title" ? "" : variant.title.trim();
@@ -70,8 +73,10 @@ export const createProductVariantPayload = (
   const currency =
     variant.contextualPricing?.price?.currencyCode ?? shopCurrency;
 
-  const isInStock: 0 | 1 =
-    variant.inventoryQuantity == null || variant.inventoryQuantity > 0 ? 1 : 0;
+  const isInStock = resolveVariantIsInStock(
+    variant.inventoryQuantity,
+    publishedInAnyMarket,
+  );
 
   const mappedCategories = mapShopifyCategories({
     collections: product.collections?.nodes,
