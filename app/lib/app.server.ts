@@ -518,6 +518,8 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await shopRepository.updateShop(shop.domain, {
         isProductVariantSyncEnabled: false,
         isMarketSyncEnabled: false,
+        productSyncNoticePending: false,
+        productSyncAutoEnable: false,
       });
 
       await sendLogEvent({
