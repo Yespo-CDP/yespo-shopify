@@ -1,6 +1,11 @@
 import type { ActionFunctionArgs } from "react-router";
 
 import { shopRepository } from "~/repositories/repositories.server";
+import { shouldTrackMarketId } from "~/services/market-tracking";
+import {
+  countEnabledMarkets,
+  setMarketTrackingMetafield,
+} from "~/services/sync-market-tracking-metafield.server";
 import { reconcileMarketWebPushScripts } from "~/services/sync-market-web-push-scripts.server";
 
 import { authenticate } from "../shopify.server";
@@ -16,6 +21,7 @@ const MARKET_WEBHOOK_TOPICS = new Set([
  *
  * Re-reads enabled market root URLs and updates the multi-domain web push
  * metafield when the storefront host set no longer matches it.
+ * Also refreshes market-tracking-enabled from the current market count.
  * Returns 500 so Shopify retries when a new host cannot be registered.
  */
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -52,9 +58,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         `[${topic}] ${shop} added ${result.added.join(", ") || "none"}, removed ${result.removed.join(", ") || "none"}`,
       );
     }
+
+    const enabledMarketCount = await countEnabledMarkets(admin);
+    const trackingUpdated = await setMarketTrackingMetafield({
+      admin,
+      shopId: shopRecord.shopId,
+      enabled: shouldTrackMarketId(
+        shopRecord.isMarketSyncEnabled,
+        enabledMarketCount,
+      ),
+    });
+    if (!trackingUpdated) {
+      throw new Error("Failed to update market tracking metafield");
+    }
   } catch (error) {
     console.error(`[${topic}]`, error);
-    return new Response("Failed to update market web push domains", {
+    return new Response("Failed to update market storefront settings", {
       status: 500,
     });
   }

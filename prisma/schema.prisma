@@ -110,6 +110,7 @@ model GdprCustomerDataRequest {
 model EventData {
   cartToken String    @id
   sc        String
+  marketId  String?
   ttl       DateTime
   createdAt DateTime  @default(now())
   updatedAt DateTime? @updatedAt

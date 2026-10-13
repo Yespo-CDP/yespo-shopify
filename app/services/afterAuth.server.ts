@@ -15,6 +15,8 @@ const WEB_PUSH_MULTI_DOMAIN_HANDLE =
   process.env.WEB_PUSH_MULTI_DOMAIN_HANDLE ?? "yespo-web-push-multi-domain";
 const WEB_TRACKING_ENABLED =
   process.env.WEB_TRACKING_ENABLED ?? "web-tracking-enabled";
+const MARKET_TRACKING_ENABLED =
+  process.env.MARKET_TRACKING_ENABLED ?? "market-tracking-enabled";
 const HOST_URL =
   process.env.HOST_URL ?? "yespo-app-host";
 
@@ -87,6 +89,11 @@ admin,
     key: WEB_TRACKING_ENABLED,
   });
 
+  const marketTrackingDefinition = await getMetafieldDefinition({
+    admin,
+    key: MARKET_TRACKING_ENABLED,
+  });
+
   const hostDefinition = await getMetafieldDefinition({
     admin,
     key: HOST_URL,
@@ -135,6 +142,17 @@ admin,
     });
   }
 
+  if (!marketTrackingDefinition) {
+    await createMetafieldDefinition({
+      admin,
+      key: MARKET_TRACKING_ENABLED,
+      name: "Market tracking enabled",
+      type: "boolean",
+      description:
+        "Send marketId in web tracking events when the shop syncs more than one market",
+    });
+  }
+
   if (!hostDefinition) {
     await createMetafieldDefinition({
       admin,
@@ -154,6 +172,7 @@ admin,
         WEB_PUSH_SCRIPT_HANDLE,
         WEB_PUSH_MULTI_DOMAIN_HANDLE,
         WEB_TRACKING_ENABLED,
+        MARKET_TRACKING_ENABLED,
         HOST_URL,
       ],
     });

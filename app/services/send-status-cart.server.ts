@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import type {ICartCustomer, StatusCartEvent} from "~/@types/statusCart";
 import {buildCustomerData} from "~/utils/buildCustomerData";
 import {sendStatusCartEvent} from "~/api/send-status-cart-event";
+import {resolveTrackingMarketId} from "~/services/resolve-tracking-market-id.server";
 
 /**
  * Sends status cart event data to the tracking service based on the given payload and shop.
@@ -41,6 +42,7 @@ export const sendStatusCartService = async (payload: any, shop: Shop) => {
     }
 
     const customerData: ICartCustomer = buildCustomerData(eventData.customer)
+    const marketId = await resolveTrackingMarketId(shop, eventData.marketId)
 
     const productsData = payload.line_items.map((item: any) => ({
       productKey: item.id.toString(),
@@ -58,6 +60,7 @@ export const sendStatusCartService = async (payload: any, shop: Shop) => {
         cookies: {
           sc: eventData.sc
         },
+        ...(marketId ? { marketId } : {}),
           ...customerData
       },
       StatusCart: {

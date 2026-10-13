@@ -54,6 +54,7 @@ export default class EventDataRepositoryImpl implements IEventDataRepository {
       },
       update: {
         sc: data.sc,
+        marketId: data.marketId ?? null,
         customer: data.customer
       }
     })

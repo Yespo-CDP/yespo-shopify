@@ -29,6 +29,7 @@ import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
 import switchAppInboxScriptServer from "~/services/switch-app-inbox-script-mode.server";
 import { enableProductSyncForRollout } from "~/services/enable-product-sync-for-rollout.server";
+import { setMarketTrackingMetafield } from "~/services/sync-market-tracking-metafield.server";
 
 /**
  * Loader function for initializing data needed on the page.
@@ -66,6 +67,13 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
     });
     if (rollout === "enabled") {
       shop = await shopRepository.getShop(session.shop);
+      if (shop?.shopId) {
+        await setMarketTrackingMetafield({
+          admin,
+          shopId: shop.shopId,
+          enabled: false,
+        });
+      }
     }
   }
   const customersSyncLog =
@@ -343,6 +351,13 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         isOrderSyncEnabled: true,
         isMarketSyncEnabled: false,
       });
+      if (shop.shopId) {
+        await setMarketTrackingMetafield({
+          admin,
+          shopId: shop.shopId,
+          enabled: false,
+        });
+      }
 
       await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
         status: "NOT_STARTED",
@@ -444,6 +459,13 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         isProductVariantSyncEnabled: true,
         isMarketSyncEnabled: false,
       });
+      if (shop.shopId) {
+        await setMarketTrackingMetafield({
+          admin,
+          shopId: shop.shopId,
+          enabled: false,
+        });
+      }
 
       await productVariantSyncLogRepository.createOrUpdateProductVariantSyncLog(
         {
@@ -514,6 +536,13 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         productSyncNoticePending: false,
         productSyncAutoEnable: false,
       });
+      if (shop.shopId) {
+        await setMarketTrackingMetafield({
+          admin,
+          shopId: shop.shopId,
+          enabled: false,
+        });
+      }
 
       await sendLogEvent({
         orgId: shop?.orgId,
