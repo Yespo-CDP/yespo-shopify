@@ -3,11 +3,6 @@
     "title": "Welcome To The Yespo App",
     "description": "We’re glad to have you here! Yespo was created to provide ecommerce stores with a complete toolset for marketing automation. If you have any questions about using our app, our support <supportLink>article</supportLink> covers everything you need. If you still need help, don’t hesitate to email us. Welcome aboard!"
   },
-  "UnsupportedMarketsSection": {
-    "title": "Attention!",
-    "description": "The app supports only one active market.",
-    "button": "Go to settings"
-  },
   "AccountConnectionSection": {
     "title": "Account connection",
     "helpText": "If you need help",
@@ -78,8 +73,8 @@
     "customersAndOrdersTitle": "Customers and Orders sync",
     "productSyncTitle": "Product Sync",
     "rolloutNotice": {
-      "heading": "Product sync is on",
-      "description": "Product sync is now enabled for your store, and historical synchronization has started."
+      "heading": "Historical data synchronization",
+      "description": "Historical data synchronization has started for your store."
     },
     "description": "Data sync allows syncing customers, orders, and products from Shopify with Yespo. Enable each sync independently.",
     "enable": "Enable",
@@ -167,8 +162,10 @@
     "button": {
       "configure": "Install scripts",
       "tryAgain": "Try again",
-      "activateThemeExtension": "Activate theme extension"
+      "activateThemeExtension": "Activate theme extension",
+      "syncMarketWebPushScripts": "Save web push scripts for markets"
     },
+    "marketWebPushScriptsSuccess": "Web push scripts saved for market domains.",
     "success": "Installed successfully.",
     "errors": {
       "requestScriptError": "Error requesting script",
@@ -176,6 +173,7 @@
       "createWebPushDomainError": "Error creating webpush domain",
       "domainAlreadyRegisteredError": "Domain is already registered.",
       "domainCantBeReachedError": "Domain can't be reached.",
+      "marketWebPushScriptsError": "Could not save web push scripts for market domains.",
       "support": "Рlease contact Yespo support."
     }
   },

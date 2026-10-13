@@ -25,6 +25,7 @@ export interface ConnectionStatusSectionProps {
   platformUrl: string;
   errors?: { [key: string]: string };
   disabled?: boolean;
+  syncMarketScriptsDisabled?: boolean;
 }
 
 /**
@@ -62,6 +63,7 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
   platformUrl,
   errors,
   disabled,
+  syncMarketScriptsDisabled,
 }) => {
   const revalidator = useRevalidator();
   const {t} = useTranslation();
@@ -109,6 +111,17 @@ const ConnectionStatusSection: FC<ConnectionStatusSectionProps> = ({
                 successMessage={isAppExtensionActive ? t("ConnectionStatusSection.banner.webPushScriptInstalled") : t("ConnectionStatusSection.banner.webPushScriptReady")}
                 intentName={'retry-install-webpush-script'}
               />
+
+              <Form method="post" name="sync-market-web-push-scripts">
+                <input type="hidden" name="intent" value="sync-market-web-push-scripts"/>
+                <s-button
+                  variant="secondary"
+                  type="submit"
+                  disabled={syncMarketScriptsDisabled}
+                >
+                  {t("ConnectionStatusSection.button.syncMarketWebPushScripts")}
+                </s-button>
+              </Form>
             </s-stack>
           )
         }

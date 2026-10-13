@@ -56,7 +56,11 @@ export const getWebpushScript = async ({
         logLevel: "ERROR",
       });
 
-      throw new Error("requestScriptError");
+      console.error(
+        "Error fetching webpush script: empty script",
+        response,
+      );
+      throw new Error("requestScriptError", { cause: response });
     }
 
     await sendLogEvent({
@@ -73,7 +77,11 @@ export const getWebpushScript = async ({
 
     return script;
   } catch (error: any) {
-    console.error("Error fetching webpush script:", error);
+    console.error(
+      "Error fetching webpush script:",
+      error?.message,
+      error?.responseData ?? "",
+    );
 
     await sendLogEvent({
       orgId,
@@ -87,6 +95,6 @@ export const getWebpushScript = async ({
       logLevel: "ERROR",
     });
 
-    throw new Error("requestScriptError");
+    throw new Error("requestScriptError", { cause: error });
   }
 };

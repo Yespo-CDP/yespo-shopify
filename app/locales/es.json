@@ -3,11 +3,6 @@
       "title": "Bienvenido a la aplicación Yespo",
       "description": "¡Nos alegra tenerte aquí! Yespo fue creado para ofrecer a las tiendas de comercio electrónico un conjunto completo de herramientas de automatización de marketing. Si tienes alguna pregunta sobre el uso de nuestra aplicación, nuestro <supportLink>artículo</supportLink> de soporte cubre todo lo que necesitas. Si aún necesitas ayuda, no dudes en escribirnos por correo electrónico. ¡Bienvenido!"
     },
-    "UnsupportedMarketsSection": {
-      "title": "¡Atención!",
-      "description": "La aplicación solo admite un mercado activo.",
-      "button": "Ir a configuración"
-    },
     "AccountConnectionSection": {
       "title": "Conexión de la cuenta",
       "helpText": "Si necesitas ayuda",
@@ -78,8 +73,8 @@
       "customersAndOrdersTitle": "Sincronización de clientes y pedidos",
       "productSyncTitle": "Sincronización de productos",
       "rolloutNotice": {
-        "heading": "Sincronización de productos activada",
-        "description": "La sincronización de productos ya está activada para tu tienda y ha comenzado la sincronización histórica."
+        "heading": "Sincronización de datos históricos",
+        "description": "La sincronización de datos históricos de tu tienda ha comenzado."
       },
       "description": "La sincronización de datos permite sincronizar clientes, pedidos y productos de Shopify con Yespo. Active cada sincronización de forma independiente.",
       "enable": "Habilitar",
@@ -161,8 +156,10 @@
       "button": {
         "configure": "Instalar scripts",
         "tryAgain": "Intentar de nuevo",
-        "activateThemeExtension": "Activar extensión del tema"
+        "activateThemeExtension": "Activar extensión del tema",
+        "syncMarketWebPushScripts": "Guardar scripts de web push de los mercados"
       },
+      "marketWebPushScriptsSuccess": "Scripts de web push guardados para los dominios de mercado.",
       "success": "Instalado correctamente.",
       "errors": {
         "requestScriptError": "Error al solicitar el script",
@@ -170,6 +167,7 @@
         "createWebPushDomainError": "Error al crear el dominio webpush",
         "domainAlreadyRegisteredError": "El dominio ya está registrado.",
         "domainCantBeReachedError": "El dominio no puede ser alcanzado.",
+        "marketWebPushScriptsError": "No se pudieron guardar los scripts de web push de los dominios de mercado.",
         "support": "Por favor, contacte con el soporte de Yespo."
       }
     },

@@ -24,6 +24,8 @@ const GENERAL_SCRIPT_HANDLE =
   process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
 const WEB_PUSH_SCRIPT_HANDLE =
   process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
+const WEB_PUSH_MULTI_DOMAIN_HANDLE =
+  process.env.WEB_PUSH_MULTI_DOMAIN_HANDLE ?? "yespo-web-push-multi-domain";
 
 const checkScriptConnectionService = async ({
   admin,
@@ -49,8 +51,14 @@ const checkScriptConnectionService = async ({
     key: WEB_PUSH_SCRIPT_HANDLE,
   });
 
+  const webPushMultiDomainMetafield = await getMetafield({
+    admin,
+    key: WEB_PUSH_MULTI_DOMAIN_HANDLE,
+  });
+
   const isGeneralScriptExist = !!metafield?.value;
-  const isWebPushScriptExist = !!webPushMetafield?.value;
+  const isWebPushScriptExist =
+    !!webPushMetafield?.value || !!webPushMultiDomainMetafield?.value;
 
   return {
     isThemeExtensionActive,

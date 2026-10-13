@@ -114,7 +114,11 @@ export const createWebPushDomain = async ({
 
     return { result: response?.success?.status ?? "ok" };
   } catch (error: any) {
-    console.error("Error creating webpush domain:", error?.message);
+    console.error(
+      "Error creating webpush domain:",
+      error?.message,
+      error?.responseData ?? "",
+    );
 
     await sendLogEvent({
       orgId,
@@ -129,12 +133,11 @@ export const createWebPushDomain = async ({
       logLevel: 'ERROR'
     })
 
-    if (error?.message?.includes("Domain is already registered")) {
-      throw new Error("domainAlreadyRegisteredError");
-    } else if (error?.message?.includes("Domain can't be reached")) {
-      throw new Error("domainCantBeReachedError");
-    } else {
-      throw new Error("createWebPushDomainError");
-    }
+    const code = error?.message?.includes("Domain is already registered")
+      ? "domainAlreadyRegisteredError"
+      : error?.message?.includes("Domain can't be reached")
+        ? "domainCantBeReachedError"
+        : "createWebPushDomainError";
+    throw new Error(code, { cause: error });
   }
 };

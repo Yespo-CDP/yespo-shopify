@@ -3,11 +3,6 @@
       "title": "Willkommen in der Yespo App",
       "description": "Wir freuen uns, Sie hier zu haben! Yespo wurde entwickelt, um E-Commerce-Shops ein vollständiges Toolkit für Marketing-Automatisierung bereitzustellen. Wenn Sie Fragen zur Nutzung unserer App haben, deckt unser <supportLink>Support-Artikel</supportLink> alles ab, was Sie benötigen. Sollten Sie weitere Hilfe benötigen, zögern Sie nicht, uns per E-Mail zu kontaktieren. Willkommen an Bord!"
     },
-    "UnsupportedMarketsSection": {
-      "title": "Achtung!",
-      "description": "Die App unterstützt nur einen aktiven Markt.",
-      "button": "Zu den Einstellungen"
-    },
     "AccountConnectionSection": {
       "title": "Kontoverbindung",
       "helpText": "Wenn Sie Hilfe benötigen",
@@ -78,8 +73,8 @@
       "customersAndOrdersTitle": "Kunden- und Bestellsynchronisierung",
       "productSyncTitle": "Produktsynchronisierung",
       "rolloutNotice": {
-        "heading": "Produktsynchronisierung ist aktiv",
-        "description": "Die Produktsynchronisierung ist für deinen Shop jetzt aktiviert, und die historische Synchronisierung wurde gestartet."
+        "heading": "Synchronisierung historischer Daten",
+        "description": "Die Synchronisierung historischer Daten für deinen Shop wurde gestartet."
       },
       "description": "Die Datensynchronisierung ermöglicht das Synchronisieren von Kunden, Bestellungen und Produkten von Shopify mit Yespo. Aktivieren Sie jede Synchronisierung unabhängig.",
       "enable": "Aktivieren",
@@ -161,8 +156,10 @@
       "button": {
         "configure": "Skripte installieren",
         "tryAgain": "Erneut versuchen",
-        "activateThemeExtension": "Theme-Erweiterung aktivieren"
+        "activateThemeExtension": "Theme-Erweiterung aktivieren",
+        "syncMarketWebPushScripts": "Web-Push-Skripte für Märkte speichern"
       },
+      "marketWebPushScriptsSuccess": "Web-Push-Skripte für Marktdomains gespeichert.",
       "success": "Erfolgreich installiert.",
       "errors": {
         "requestScriptError": "Fehler beim Anfordern des Skripts",
@@ -170,6 +167,7 @@
         "createWebPushDomainError": "Fehler beim Erstellen der Web-Push-Domain",
         "domainAlreadyRegisteredError": "Domain ist bereits registriert.",
         "domainCantBeReachedError": "Domain ist nicht erreichbar.",
+        "marketWebPushScriptsError": "Web-Push-Skripte für Marktdomains konnten nicht gespeichert werden.",
         "support": "Bitte wenden Sie sich an den Yespo-Support."
       }
     },

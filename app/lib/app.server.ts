@@ -13,7 +13,7 @@ import { connectAccountService } from "~/services/connect-account.server";
 import { disconnectAccountService } from "~/services/disconnect-account.server";
 import { connectGeneralScriptService } from "~/services/connect-general-script.server";
 import { connectWebPushScriptService } from "~/services/connect-webpush-script.server";
-import checkMarketsService from "~/services/check-markets.server";
+import { syncMarketWebPushScripts } from "~/services/sync-market-web-push-scripts.server";
 import checkScriptConnectionService from "~/services/check-script-connection.server";
 import checkThemeExtensionService from "~/services/check-theme-extension.server";
 import { authenticate } from "~/shopify.server";
@@ -34,7 +34,7 @@ import { enableProductSyncForRollout } from "~/services/enable-product-sync-for-
  * Loader function for initializing data needed on the page.
  *
  * This function authenticates the admin, retrieves shop information,
- * checks whether there are too many markets, verifies script connection status,
+ * verifies script connection status,
  * and fetches account info from an external API if an API key exists.
  *
  * @param {LoaderFunctionArgs} args - The arguments containing the request.
@@ -42,7 +42,6 @@ import { enableProductSyncForRollout } from "~/services/enable-product-sync-for-
  *   shop: Shop | null,
  *   account: Account | null,
  *   scriptConnectionStatus: any,
- *   isMarketsOverflowing: boolean,
  *   customersSyncLog: CustomerSyncLog[],
  *   orderSyncLog: OrderSyncLog[],
  *   productVariantSyncLog: ProductVariantSyncLog[],
@@ -79,11 +78,6 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   );
   const marketSyncLogs = await marketSyncLogRepository.getByShop(session.shop);
   const logDomain = shop?.domain || session.shop;
-  const isMarketsOverflowing = await checkMarketsService({
-    admin,
-    domain: logDomain,
-    orgId: shop?.orgId,
-  });
   const scriptConnectionStatus = await checkScriptConnectionService({
     admin,
     domain: logDomain,
@@ -103,7 +97,6 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
       account = null;
     }
   }
-  console.log(shop);
   return {
     shop,
     account,
@@ -116,7 +109,6 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
         shop?.isWebPushScriptInstalled ||
         scriptConnectionStatus.isWebPushScriptExist,
     },
-    isMarketsOverflowing,
     customersSyncLog,
     orderSyncLog,
     productVariantSyncLog,
@@ -175,6 +167,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       isWebPushScriptExist?: boolean;
       isThemeExtensionActive?: boolean;
     };
+    marketWebPushScripts?: boolean;
   } = {};
 
   if (intent === "account-disconnection") {
@@ -562,6 +555,32 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     await shopRepository.updateShop(session.shop, {
       isGeneralScriptInstalled,
     });
+  }
+
+  if (intent === "sync-market-web-push-scripts") {
+    const shop = await shopRepository.getShop(session.shop);
+
+    if (!shop?.apiKey || !shop.shopId) {
+      errors.script = t("General.errors.shopNotFound");
+      return { success, errors };
+    }
+
+    try {
+      await syncMarketWebPushScripts({
+        admin,
+        apiKey: shop.apiKey,
+        shopId: shop.shopId,
+        domain: shop.domain || shop.shopUrl,
+        orgId: shop.orgId,
+      });
+      success.marketWebPushScripts = true;
+    } catch (error: any) {
+      console.error("[sync-market-web-push-scripts]", error);
+      errors.script = t(
+        "ConnectionStatusSection.errors.marketWebPushScriptsError",
+      );
+      return { success, errors };
+    }
   }
 
   if (intent === "retry-install-webpush-script") {

@@ -11,6 +11,8 @@ const GENERAL_SCRIPT_HANDLE =
   process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
 const WEB_PUSH_SCRIPT_HANDLE =
   process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
+const WEB_PUSH_MULTI_DOMAIN_HANDLE =
+  process.env.WEB_PUSH_MULTI_DOMAIN_HANDLE ?? "yespo-web-push-multi-domain";
 const WEB_TRACKING_ENABLED =
   process.env.WEB_TRACKING_ENABLED ?? "web-tracking-enabled";
 const HOST_URL =
@@ -75,6 +77,11 @@ admin,
     key: WEB_PUSH_SCRIPT_HANDLE,
   });
 
+  const webPushMultiDomainDefinition = await getMetafieldDefinition({
+    admin,
+    key: WEB_PUSH_MULTI_DOMAIN_HANDLE,
+  });
+
   const webTrackingDefinition = await getMetafieldDefinition({
     admin,
     key: WEB_TRACKING_ENABLED,
@@ -106,6 +113,17 @@ admin,
     });
   }
 
+  if (!webPushMultiDomainDefinition) {
+    await createMetafieldDefinition({
+      admin,
+      key: WEB_PUSH_MULTI_DOMAIN_HANDLE,
+      name: "Yespo web push multi domain",
+      type: "json",
+      description:
+        "Web push scripts keyed by storefront domain",
+    });
+  }
+
   if (!webTrackingDefinition) {
     await createMetafieldDefinition({
       admin,
@@ -131,7 +149,13 @@ admin,
     await deleteMetafields({
       admin,
       ownerId: shop?.id,
-      keys: [GENERAL_SCRIPT_HANDLE, WEB_PUSH_SCRIPT_HANDLE, WEB_TRACKING_ENABLED, HOST_URL],
+      keys: [
+        GENERAL_SCRIPT_HANDLE,
+        WEB_PUSH_SCRIPT_HANDLE,
+        WEB_PUSH_MULTI_DOMAIN_HANDLE,
+        WEB_TRACKING_ENABLED,
+        HOST_URL,
+      ],
     });
   }
 
