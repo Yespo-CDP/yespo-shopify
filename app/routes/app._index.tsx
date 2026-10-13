@@ -59,7 +59,7 @@ export default function Index() {
     customersSyncLog,
     orderSyncLog,
     productVariantSyncLog,
-    // marketSyncLogs,
+    marketSyncLogs,
     ENV,
   } = loaderData;
   const navigation = useNavigation();
@@ -72,14 +72,14 @@ export default function Index() {
   const [productVariantSyncLogData, setProductVariantSyncLogData] = useState(
     productVariantSyncLog,
   );
-  // const [marketSyncLogsData, setMarketSyncLogsData] = useState(marketSyncLogs);
+  const [marketSyncLogsData, setMarketSyncLogsData] = useState(marketSyncLogs);
 
   useEffect(() => {
     setCustomersSyncLogData(customersSyncLog);
     setOrderSyncLogData(orderSyncLog);
     setProductVariantSyncLogData(productVariantSyncLog);
-    // setMarketSyncLogsData(marketSyncLogs);
-  }, [customersSyncLog, orderSyncLog, productVariantSyncLog]);
+    setMarketSyncLogsData(marketSyncLogs);
+  }, [customersSyncLog, orderSyncLog, productVariantSyncLog, marketSyncLogs]);
 
   useEffect(() => {
     if (actionData?.success?.apiKey) {
@@ -114,10 +114,10 @@ export default function Index() {
       orderSyncLogData?.status === "IN_PROGRESS" ||
       productVariantSyncLogData?.status === "NOT_STARTED" ||
       productVariantSyncLogData?.status === "IN_PROGRESS" ||
-      shop?.isProductVariantSyncEnabled;
-      // || marketSyncLogsData?.some(
-      //      (log) => log.status === "NOT_STARTED" || log.status === "IN_PROGRESS",
-      //    );
+      shop?.isProductVariantSyncEnabled ||
+      marketSyncLogsData?.some(
+        (log) => log.status === "NOT_STARTED" || log.status === "IN_PROGRESS",
+      );
 
     if (!shouldPoll) return;
 
@@ -127,7 +127,7 @@ export default function Index() {
       setCustomersSyncLogData(updated?.customersSyncLog);
       setOrderSyncLogData(updated?.orderSyncLog);
       setProductVariantSyncLogData(updated?.productVariantSyncLog);
-      // setMarketSyncLogsData(updated?.marketSyncLogs ?? []);
+      setMarketSyncLogsData(updated?.marketSyncLogs ?? []);
     }, 3000);
 
     return () => clearInterval(intervalId);
@@ -136,7 +136,7 @@ export default function Index() {
     orderSyncLogData,
     productVariantSyncLogData,
     shop?.isProductVariantSyncEnabled,
-    // marketSyncLogsData,
+    marketSyncLogsData,
   ]);
 
   return (
@@ -237,7 +237,7 @@ export default function Index() {
             customersSyncLog={customersSyncLogData as any}
             orderSyncLog={orderSyncLogData as any}
             productVariantSyncLog={productVariantSyncLogData as any}
-            // marketSyncLogs={marketSyncLogsData as any}
+            marketSyncLogs={marketSyncLogsData as any}
           />
 
           <UsefulLinksSection />

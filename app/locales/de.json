@@ -71,12 +71,12 @@
     "DataSyncSection": {
       "title": "Datensynchronisierung",
       "customersAndOrdersTitle": "Kunden- und Bestellsynchronisierung",
-      "productSyncTitle": "Produktsynchronisierung",
+      "productSyncTitle": "Produkt- und Marktsynchronisierung",
       "rolloutNotice": {
         "heading": "Synchronisierung historischer Daten",
         "description": "Die Synchronisierung historischer Daten für deinen Shop wurde gestartet."
       },
-      "description": "Die Datensynchronisierung ermöglicht das Synchronisieren von Kunden, Bestellungen und Produkten von Shopify mit Yespo. Aktivieren Sie jede Synchronisierung unabhängig.",
+      "description": "Die Datensynchronisierung ermöglicht das Synchronisieren von Kunden, Bestellungen, Produkten und Märkten von Shopify mit Yespo. Aktivieren Sie jede Synchronisierung unabhängig.",
       "enable": "Aktivieren",
       "disable": "Deaktivieren",
       "status": {
@@ -94,7 +94,8 @@
         "shopifyProducts_other": "Shopify-Produkte: {{count}}",
         "syncedAsVariants_one": "Diese Produkte wurden als {{count}} Variante mit Yespo synchronisiert.",
         "syncedAsVariants_other": "Diese Produkte wurden als {{count}} Varianten mit Yespo synchronisiert.",
-        "productsByCountry": "Produkte ({{countryCode}})",
+        "marketsExplanation": "Marktsynchronisierung nach Land.",
+        "productsByCountry": "Varianten ({{countryCode}})",
         "syncedCount": "Synchronisiert",
         "skippedCount": "Übersprungen",
         "failedCount": "Fehlgeschlagen",

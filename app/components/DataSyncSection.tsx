@@ -4,7 +4,7 @@ import { useFetcher } from "react-router";
 
 import type { CustomerSyncLog } from "~/@types/customerSyncLog";
 import type { OrderSyncLog } from "~/@types/orderSyncLog";
-// import type { MarketSyncLogRecord } from "~/@types/marketSyncLog";
+import type { MarketSyncLogRecord } from "~/@types/marketSyncLog";
 import DataSyncStatusBadge from "./ui/DataSyncStatusBadge";
 import DataSyncTooltip from "./ui/DataSyncTooltip";
 import { ProductVariantSyncLogView } from "~/@types/productVariantSyncLog";
@@ -14,7 +14,7 @@ export interface DataSyncSectionProps {
   customersSyncLog?: CustomerSyncLog;
   orderSyncLog?: OrderSyncLog;
   productVariantSyncLog?: ProductVariantSyncLogView;
-  // marketSyncLogs?: MarketSyncLogRecord[];
+  marketSyncLogs?: MarketSyncLogRecord[];
   contactSyncEnabled?: boolean;
   orderSyncEnabled?: boolean;
   productVariantSyncEnabled?: boolean;
@@ -25,7 +25,7 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
   customersSyncLog,
   orderSyncLog,
   productVariantSyncLog,
-  // marketSyncLogs = [],
+  marketSyncLogs = [],
   orderSyncEnabled = false,
   contactSyncEnabled = false,
   productVariantSyncEnabled = false,
@@ -324,7 +324,11 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
                     productVariantSyncLog.skippedCount,
                 })}
               </s-banner>
-              {/* Market sync logs are temporarily hidden
+              {marketSyncLogs.length > 0 && (
+                <s-text>
+                  {t("DataSyncSection.syncLog.marketsExplanation")}
+                </s-text>
+              )}
               {marketSyncLogs.map((marketSyncLog) => (
                 <s-grid
                   key={marketSyncLog.countryCode}
@@ -370,7 +374,6 @@ const DataSyncSection: FC<DataSyncSectionProps> = ({
                   </s-grid-item>
                 </s-grid>
               ))}
-              */}
             </s-stack>
           )}
         </s-stack>

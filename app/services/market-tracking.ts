@@ -15,6 +15,14 @@ export function shouldTrackMarketId(
 }
 
 /**
+ * A shop always has one primary market. Market catalog sync starts only when
+ * another enabled market exists.
+ */
+export function shouldEnableMarketSync(enabledMarketCount: number): boolean {
+  return enabledMarketCount > 1;
+}
+
+/**
  * Accepts the same market id shape Yespo stores: lowercase letters, digits,
  * `.`, `_`, and `-`, at most 128 characters. Anything else is dropped.
  */

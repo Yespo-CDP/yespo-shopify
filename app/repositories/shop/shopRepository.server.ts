@@ -47,9 +47,13 @@ export default interface ShopRepository {
    * Succeeds only while `productSyncAutoEnable` is still true and an API key exists.
    *
    * @param {string} shopUrl - The unique URL identifier of the shop.
+   * @param {boolean} isMarketSyncEnabled - Whether this shop has markets to sync.
    * @returns {Promise<boolean>} True when this call won the claim.
    */
-  claimProductSyncRollout(shopUrl: string): Promise<boolean>;
+  claimProductSyncRollout(
+    shopUrl: string,
+    isMarketSyncEnabled: boolean,
+  ): Promise<boolean>;
 
   /**
    * Restores a shop to the pre-rollout state after a failed enable.
