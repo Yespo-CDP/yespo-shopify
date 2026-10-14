@@ -29,6 +29,7 @@ import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
 import switchAppInboxScriptServer from "~/services/switch-app-inbox-script-mode.server";
 import { enableProductSyncForRollout } from "~/services/enable-product-sync-for-rollout.server";
+import { ensureWebPushMultiDomain } from "~/services/ensure-web-push-multi-domain.server";
 import { shouldEnableMarketSync } from "~/services/market-tracking";
 import { countEnabledMarkets } from "~/services/sync-market-tracking-metafield.server";
 
@@ -71,6 +72,13 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
     if (rollout === "enabled") {
       shop = await shopRepository.getShop(session.shop);
     }
+  }
+  if (shop) {
+    await ensureWebPushMultiDomain({
+      admin,
+      shopUrl: session.shop,
+      scopes: session.scope,
+    });
   }
   const customersSyncLog =
     await customerSyncLogRepository.getCustomerSyncLogByShop(session.shop);

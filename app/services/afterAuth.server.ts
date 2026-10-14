@@ -6,6 +6,7 @@ import getShop from "~/shopify/queries/get-shop.server";
 import shopify from "~/shopify.server";
 import getMetafieldDefinition from "~/shopify/queries/get-metafield-definition";
 import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
+import { ensureWebPushMultiDomain } from "~/services/ensure-web-push-multi-domain.server";
 
 const GENERAL_SCRIPT_HANDLE =
   process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
@@ -79,11 +80,6 @@ admin,
     key: WEB_PUSH_SCRIPT_HANDLE,
   });
 
-  const webPushMultiDomainDefinition = await getMetafieldDefinition({
-    admin,
-    key: WEB_PUSH_MULTI_DOMAIN_HANDLE,
-  });
-
   const webTrackingDefinition = await getMetafieldDefinition({
     admin,
     key: WEB_TRACKING_ENABLED,
@@ -112,17 +108,6 @@ admin,
       name: "Yespo web push script",
       description:
         "This is a app metafield definition for Yespo web push script",
-    });
-  }
-
-  if (!webPushMultiDomainDefinition) {
-    await createMetafieldDefinition({
-      admin,
-      key: WEB_PUSH_MULTI_DOMAIN_HANDLE,
-      name: "Yespo web push multi domain",
-      type: "json",
-      description:
-        "Web push scripts keyed by storefront domain",
     });
   }
 
@@ -163,6 +148,12 @@ admin,
   }
 
   shopify.registerWebhooks({ session });
+
+  await ensureWebPushMultiDomain({
+    admin,
+    shopUrl: session.shop,
+    scopes: session.scope,
+  });
 };
 
 export default afterAuth;
