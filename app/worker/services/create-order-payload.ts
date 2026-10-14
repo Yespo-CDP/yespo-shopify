@@ -5,6 +5,7 @@ import type {
 } from "~/@types/order";
 import { convertDateToUTC } from "~/utils/convert-date-to-utc";
 import { buildOrderItemLink } from "~/services/build-order-item-link";
+import { orderMarketIdCandidate } from "~/services/resolve-order-market-id";
 
 /**
  * Convert Shopify Order data to Yespo order data.
@@ -29,6 +30,7 @@ import { buildOrderItemLink } from "~/services/build-order-item-link";
  * - `order.totalShippingPriceSet.shopMoney.amount` → `shipping`
  * - `order.totalTaxSet.shopMoney.amount` → `taxes`
  * - `order.currencyCode` → `currency`
+ * - shipping, else billing, else customer country → `marketId` (when market tracking is on)
  * - `order.createdAt` (converted to UTC) → `date`
  * - `order.displayFulfillmentStatus` (+ cancelledAt check) → `status`
  * - `order.shippingAddress` (formatted string) → `deliveryAddress`
@@ -42,7 +44,8 @@ import { buildOrderItemLink } from "~/services/build-order-item-link";
  *
  * @param {OrderData} order - Shopify order data.
  * @param {string} shopDomain - Storefront domain used when `onlineStoreUrl` is absent.
- * @returns {Promise<Order>} A promise that resolves when the order payload is created successfully.
+ * @param {boolean} includeMarketId - Set when the shop syncs more than one market.
+ * @returns {Order} Yespo order payload.
  *
  * @example
  * const orderPayload = await createOrderPayload(order);
@@ -52,6 +55,7 @@ import { buildOrderItemLink } from "~/services/build-order-item-link";
 export const createOrderPayload = (
   order: OrderData,
   shopDomain = "",
+  includeMarketId = false,
 ): Order => {
   const customerFirstName = order?.customer?.firstName ?? "";
   const customerLastName = order?.customer?.lastName ?? "";
@@ -96,6 +100,14 @@ export const createOrderPayload = (
     }
   };
 
+  const marketId = includeMarketId
+    ? orderMarketIdCandidate({
+        shippingCountryCode: order.shippingAddress?.countryCodeV2,
+        billingCountryCode: order.billingAddress?.countryCodeV2,
+        customerCountryCode: order.customer?.defaultAddress?.countryCodeV2,
+      })
+    : null;
+
   const orderPayload: Order = {
     externalCustomerId,
     externalOrderId,
@@ -110,6 +122,7 @@ export const createOrderPayload = (
     ),
     taxes: parseFloat(order?.totalTaxSet?.shopMoney?.amount ?? "0"),
     currency: order.currencyCode,
+    ...(marketId ? { marketId } : {}),
     date: convertDateToUTC(order.createdAt),
     status: statusMap(order.displayFulfillmentStatus),
     deliveryAddress: formatAddress(order?.shippingAddress),

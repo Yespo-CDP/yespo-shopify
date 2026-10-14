@@ -10,6 +10,7 @@ export interface Order {
   shipping?: number;
   discount?: number;
   currency: string;
+  marketId?: string;
   date: string;
   status:
     | "INITIALIZED"
@@ -82,6 +83,9 @@ export interface OrderData {
     zip?: string;
     phone?: string;
     provinceCode?: string;
+    countryCodeV2?: string;
+  };
+  billingAddress?: {
     countryCodeV2?: string;
   };
   customer?: {
@@ -162,6 +166,7 @@ export interface OrderCreatePayload {
   confirmed: boolean;
   contact_email: string;
   created_at: string;
+  cart_token?: string | null;
   currency: string;
   current_shipping_price_set?: {
     shop_money: {

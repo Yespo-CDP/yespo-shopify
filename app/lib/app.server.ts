@@ -30,10 +30,7 @@ import { EVENT_MESSAGES } from "~/config/constants";
 import switchAppInboxScriptServer from "~/services/switch-app-inbox-script-mode.server";
 import { enableProductSyncForRollout } from "~/services/enable-product-sync-for-rollout.server";
 import { shouldEnableMarketSync } from "~/services/market-tracking";
-import {
-  countEnabledMarkets,
-  setMarketTrackingMetafield,
-} from "~/services/sync-market-tracking-metafield.server";
+import { countEnabledMarkets } from "~/services/sync-market-tracking-metafield.server";
 
 /**
  * Loader function for initializing data needed on the page.
@@ -73,13 +70,6 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
     });
     if (rollout === "enabled") {
       shop = await shopRepository.getShop(session.shop);
-      if (shop?.shopId) {
-        await setMarketTrackingMetafield({
-          admin,
-          shopId: shop.shopId,
-          enabled: enableMarketSync,
-        });
-      }
     }
   }
   const customersSyncLog =
@@ -458,13 +448,6 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         isProductVariantSyncEnabled: true,
         isMarketSyncEnabled: enableMarketSync,
       });
-      if (shop.shopId) {
-        await setMarketTrackingMetafield({
-          admin,
-          shopId: shop.shopId,
-          enabled: enableMarketSync,
-        });
-      }
 
       await productVariantSyncLogRepository.createOrUpdateProductVariantSyncLog(
         {
@@ -535,13 +518,6 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         productSyncNoticePending: false,
         productSyncAutoEnable: false,
       });
-      if (shop.shopId) {
-        await setMarketTrackingMetafield({
-          admin,
-          shopId: shop.shopId,
-          enabled: false,
-        });
-      }
 
       await sendLogEvent({
         orgId: shop?.orgId,

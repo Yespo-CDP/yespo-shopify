@@ -1,6 +1,3 @@
-export const MARKET_TRACKING_ENABLED_KEY =
-  process.env.MARKET_TRACKING_ENABLED ?? "market-tracking-enabled";
-
 const MARKET_ID_PATTERN = /^[a-z0-9._-]{1,128}$/;
 
 /**

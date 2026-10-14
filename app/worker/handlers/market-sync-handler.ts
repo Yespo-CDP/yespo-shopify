@@ -13,9 +13,6 @@ import {
 } from "~/api/update-market-products";
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
-import { shouldTrackMarketId } from "~/services/market-tracking";
-import { setMarketTrackingMetafieldWithClient } from "~/services/sync-market-tracking-metafield.server";
-
 import {
   runBulkQuery,
   waitForBulkOperation,
@@ -155,13 +152,6 @@ export const marketSyncHandler = async (
   const logDomain = shopData?.domain || shop;
   if (!shopData?.isMarketSyncEnabled) {
     console.log(`⚠️ Market sync disabled for ${shop}`);
-    if (shopData?.shopId) {
-      await setMarketTrackingMetafieldWithClient({
-        client: createClient({ shop, accessToken }),
-        shopId: shopData.shopId,
-        enabled: false,
-      });
-    }
     return;
   }
 
@@ -213,14 +203,6 @@ export const marketSyncHandler = async (
     );
 
     await shopMarketRepository.replaceAll(shopId, marketsConfig.markets);
-
-    if (shopData.shopId) {
-      await setMarketTrackingMetafieldWithClient({
-        client,
-        shopId: shopData.shopId,
-        enabled: shouldTrackMarketId(true, marketsConfig.markets.length),
-      });
-    }
 
     if (marketsConfig.countries.length === 0) {
       console.log(`⚠️ No enabled market countries for ${shop}`);

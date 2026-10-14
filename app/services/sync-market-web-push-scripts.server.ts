@@ -241,10 +241,10 @@ async function loadWebPushScript({
 
 /**
  * Compares current market root-URL hosts with the multi-domain metafield.
- * Registers scripts for new hosts, drops hosts that no longer belong to an
- * enabled market, and writes the metafield only when that set changed.
- * Shops that have never stored market scripts and have web push off are left
- * untouched.
+ * Registers scripts for new hosts and leaves hosts already stored, including
+ * ones whose market is no longer enabled. Writes the metafield only when a
+ * new host was added. Shops that have never stored market scripts and have
+ * web push off are left untouched.
  */
 export async function reconcileMarketWebPushScripts({
   admin,
@@ -274,18 +274,14 @@ export async function reconcileMarketWebPushScripts({
 
   const rootUrls = await fetchEnabledMarketRootUrls(admin);
   const desiredHosts = collectStorefrontHosts(domain, rootUrls);
-  const { added, removed } = diffStorefrontHosts(desiredHosts, storedHosts);
+  const { added } = diffStorefrontHosts(desiredHosts, storedHosts);
 
-  if (added.length === 0 && removed.length === 0) {
-    return { changed: false, added, removed };
+  if (added.length === 0) {
+    return { changed: false, added, removed: [] };
   }
 
   for (const host of added) {
     scripts[host] = await loadWebPushScript({ apiKey, host, orgId });
-  }
-
-  for (const host of removed) {
-    delete scripts[host];
   }
 
   const definition = await getMetafieldDefinition({
@@ -315,5 +311,5 @@ export async function reconcileMarketWebPushScripts({
     throw new Error("marketWebPushScriptsError");
   }
 
-  return { changed: true, added, removed };
+  return { changed: true, added, removed: [] };
 }

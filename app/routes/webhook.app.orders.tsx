@@ -61,6 +61,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           shop.domain || session.shop,
           shop.orgId,
           shop.shopUrl || session.shop,
+          shop.isMarketSyncEnabled,
         );
       }
       break;

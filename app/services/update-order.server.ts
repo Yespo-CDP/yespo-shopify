@@ -1,7 +1,15 @@
 import { createOrders } from "~/api/create-orders";
 import { convertDateToUTC } from "~/utils/convert-date-to-utc";
-import { orderSyncRepository } from "~/repositories/repositories.server";
+import {
+  eventDataRepository,
+  orderSyncRepository,
+} from "~/repositories/repositories.server";
 import { getOrderItemProducts } from "~/services/get-order-item-products.server";
+import {
+  orderMarketIdCandidate,
+  readOrderCartToken,
+} from "~/services/resolve-order-market-id";
+import { resolveTrackingMarketId } from "~/services/resolve-tracking-market-id.server";
 import type { Order, OrderCreatePayload } from "~/@types/order";
 
 /**
@@ -27,6 +35,7 @@ import type { Order, OrderCreatePayload } from "~/@types/order";
  * - `payload.total_shipping_price_set.shop_money.amount` → `shipping`
  * - `payload.current_total_tax` → `taxes`
  * - `payload.currency` → `currency`
+ * - visit `marketId`, else address country code → `marketId`
  * - `payload.created_at` (converted to UTC) → `date`
  * - `payload.fulfillment_status` (+ cancelled_at check) → `status`
  * - `payload.shipping_address` (formatted string) → `deliveryAddress`
@@ -47,6 +56,7 @@ import type { Order, OrderCreatePayload } from "~/@types/order";
  * @param domain
  * @param orgId
  * @param shopUrl - myshopify domain used to load variant URL and image
+ * @param isMarketSyncEnabled - When off, or when the shop has a single market, `marketId` is omitted
  * @returns {Promise<void>} A promise that resolves when the order creation completes.
  */
 export const updateOrderService = async (
@@ -56,6 +66,7 @@ export const updateOrderService = async (
   domain: string,
   orgId?: number | null,
   shopUrl?: string,
+  isMarketSyncEnabled?: boolean | null,
 ) => {
   try {
     const formatAddress = (address: OrderCreatePayload["shipping_address"]) =>
@@ -105,6 +116,20 @@ export const updateOrderService = async (
       return new Map<string, { url: string; imageUrl: string }>();
     });
 
+    const cartToken = readOrderCartToken(payload);
+    const eventData = cartToken
+      ? await eventDataRepository.getEventData(cartToken)
+      : null;
+    const marketId = await resolveTrackingMarketId(
+      { id: shopId, isMarketSyncEnabled },
+      orderMarketIdCandidate({
+        storedMarketId: eventData?.marketId,
+        shippingCountryCode: payload.shipping_address?.country_code,
+        billingCountryCode: payload.billing_address?.country_code,
+        customerCountryCode: payload.customer?.default_address?.country_code,
+      }),
+    );
+
     const order: Order = {
       firstName: payload?.customer?.first_name ?? "",
       lastName: payload?.customer?.last_name ?? "",
@@ -119,6 +144,7 @@ export const updateOrderService = async (
       ),
       taxes: parseFloat(payload?.current_total_tax ?? "0"),
       currency: payload.currency,
+      ...(marketId ? { marketId } : {}),
       date: convertDateToUTC(payload.created_at),
       status: statusMap(payload?.fulfillment_status),
       deliveryAddress: formatAddress(payload?.shipping_address ?? {}),

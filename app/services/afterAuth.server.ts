@@ -89,11 +89,6 @@ admin,
     key: WEB_TRACKING_ENABLED,
   });
 
-  const marketTrackingDefinition = await getMetafieldDefinition({
-    admin,
-    key: MARKET_TRACKING_ENABLED,
-  });
-
   const hostDefinition = await getMetafieldDefinition({
     admin,
     key: HOST_URL,
@@ -139,17 +134,6 @@ admin,
       type: "boolean",
       description:
         "This is a app metafield definition for Yespo web tracking capability",
-    });
-  }
-
-  if (!marketTrackingDefinition) {
-    await createMetafieldDefinition({
-      admin,
-      key: MARKET_TRACKING_ENABLED,
-      name: "Market tracking enabled",
-      type: "boolean",
-      description:
-        "Send marketId in web tracking events when the shop syncs more than one market",
     });
   }
 
