@@ -11,8 +11,8 @@ import { createClient } from "../services/create-client";
 import { getOrders } from "../services/get-orders";
 import { getOrdersCount } from "../services/get-orders-count";
 import { createOrderPayload } from "../services/create-order-payload";
-import {sendLogEvent} from "~/api/send-log-event";
-import {EVENT_MESSAGES} from "~/config/constants";
+import { sendLogEvent } from "~/api/send-log-event";
+import { EVENT_MESSAGES } from "~/config/constants";
 
 const ORDERS_CHUNK_SIZE = 150; // Shopify max limit 250 (this does not include 100 lineItems in each orders)
 
@@ -47,7 +47,7 @@ export const orderSyncHandler = async (
   accessToken: string,
   apiKey: string,
   shopId: number,
-  orgId?: number | null
+  orgId?: number | null,
 ) => {
   console.log(`⏳ Synchronizing orders start for ${shop}`);
   console.log("shop", shop);
@@ -128,7 +128,7 @@ export const orderSyncHandler = async (
               apiKey,
               orders: ordersData,
               domain: logDomain,
-              orgId
+              orgId,
             });
 
             if (contactsUpdateResponse?.failedOrders) {
@@ -146,16 +146,16 @@ export const orderSyncHandler = async (
 
           await sendLogEvent({
             orgId,
-            errorMessage: '',
+            errorMessage: "",
             data: {
               domain: logDomain,
               offset: ORDERS_CHUNK_SIZE,
               responseBody: ordersData,
-              statusCode: 200
+              statusCode: 200,
             },
             message: EVENT_MESSAGES.SEND_ORDERS_BULK_SUCCESS,
-            logLevel: 'INFO'
-          })
+            logLevel: "INFO",
+          });
 
           console.log("Total orders in chunk:", orders?.length);
           console.log("Total skipped orders in chunk:", chunkSkippedCount);
@@ -183,16 +183,16 @@ export const orderSyncHandler = async (
 
         await sendLogEvent({
           orgId,
-          errorMessage:  `Error bulk orders sync ${error?.message}`,
+          errorMessage: `Error bulk orders sync ${error?.message}`,
           data: {
             domain: logDomain,
             offset: ORDERS_CHUNK_SIZE,
             responseBody: {},
-            statusCode: error?.status ?? 400
+            statusCode: error?.status ?? 400,
           },
           message: EVENT_MESSAGES.SEND_ORDERS_BULK_FAILED,
-          logLevel: 'ERROR'
-        })
+          logLevel: "ERROR",
+        });
 
         throw Error(error);
       }
