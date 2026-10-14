@@ -56,7 +56,6 @@ import type { Order, OrderCreatePayload } from "~/@types/order";
  * @param domain
  * @param orgId
  * @param shopUrl - myshopify domain used to load variant URL and image
- * @param isMarketSyncEnabled - When off, or when the shop has a single market, `marketId` is omitted
  * @returns {Promise<void>} A promise that resolves when the order creation completes.
  */
 export const updateOrderService = async (
@@ -66,7 +65,6 @@ export const updateOrderService = async (
   domain: string,
   orgId?: number | null,
   shopUrl?: string,
-  isMarketSyncEnabled?: boolean | null,
 ) => {
   try {
     const formatAddress = (address: OrderCreatePayload["shipping_address"]) =>
@@ -121,7 +119,7 @@ export const updateOrderService = async (
       ? await eventDataRepository.getEventData(cartToken)
       : null;
     const marketId = await resolveTrackingMarketId(
-      { id: shopId, isMarketSyncEnabled },
+      shopUrl || "",
       orderMarketIdCandidate({
         storedMarketId: eventData?.marketId,
         shippingCountryCode: payload.shipping_address?.country_code,

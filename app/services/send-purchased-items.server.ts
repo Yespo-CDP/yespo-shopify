@@ -58,7 +58,7 @@ export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
     }
 
     const customerData: ICartCustomer = buildCustomerData(payload.customer);
-    const marketId = await resolveTrackingMarketId(shop, eventData.marketId);
+    const marketId = await resolveTrackingMarketId(shop.shopUrl, eventData.marketId);
 
     const productsData = payload.line_items.map((item: any) => ({
       productKey: item.variant_id.toString(),

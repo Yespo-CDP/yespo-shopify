@@ -2,18 +2,33 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  countStorefrontHosts,
   readMarketId,
   shouldEnableMarketSync,
   shouldTrackMarketId,
 } from "./market-tracking";
 
-test("tracks a market only when sync is on and more than one market exists", () => {
-  assert.equal(shouldTrackMarketId(true, 2), true);
-  assert.equal(shouldTrackMarketId(true, 1), false);
-  assert.equal(shouldTrackMarketId(true, 0), false);
-  assert.equal(shouldTrackMarketId(false, 3), false);
-  assert.equal(shouldTrackMarketId(null, 2), false);
-  assert.equal(shouldTrackMarketId(undefined, 2), false);
+test("tracks a market when the metafield lists more than one storefront", () => {
+  assert.equal(shouldTrackMarketId(2), true);
+  assert.equal(shouldTrackMarketId(1), false);
+  assert.equal(shouldTrackMarketId(0), false);
+});
+
+test("counts hosts stored in the multi-domain metafield", () => {
+  assert.equal(
+    countStorefrontHosts(
+      JSON.stringify({ "a.example": "<script>", "b.example": "<script>" }),
+    ),
+    2,
+  );
+  assert.equal(
+    countStorefrontHosts(JSON.stringify({ "a.example": "<script>" })),
+    1,
+  );
+  assert.equal(countStorefrontHosts(null), 0);
+  assert.equal(countStorefrontHosts(""), 0);
+  assert.equal(countStorefrontHosts("not-json"), 0);
+  assert.equal(countStorefrontHosts("[]"), 0);
 });
 
 test("enables market sync only when the shop has more than one market", () => {

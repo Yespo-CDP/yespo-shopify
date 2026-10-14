@@ -17,7 +17,7 @@ export interface Contact {
   address?: Address;
 }
 
-export interface AppInboxContactData  {
+export interface AppInboxContactData {
   email?: string | null;
   phone?: string | null;
   externalCustomerId: string;

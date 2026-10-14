@@ -44,7 +44,7 @@ import { orderMarketIdCandidate } from "~/services/resolve-order-market-id";
  *
  * @param {OrderData} order - Shopify order data.
  * @param {string} shopDomain - Storefront domain used when `onlineStoreUrl` is absent.
- * @param {boolean} includeMarketId - Set when the shop syncs more than one market.
+ * @param {boolean} includeMarketId - Set when the multi-domain metafield lists more than one storefront.
  * @returns {Order} Yespo order payload.
  *
  * @example
