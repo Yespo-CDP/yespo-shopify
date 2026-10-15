@@ -232,7 +232,8 @@ async function enqueueMarketSyncJobIfEligible(shop: Shop): Promise<boolean> {
 }
 
 /**
- * Enqueues a market sync job after a shop's data-sync (products) finishes.
+ * Enqueues a market sync job after a shop's data-sync (products) finishes,
+ * and after a markets webhook when a market is added, enabled, or removed.
  * No-ops when the shop is missing, market sync is disabled, or a fresh
  * IN_PROGRESS run already exists. Unlike the daily cron, this path does not
  * apply MARKET_SYNC_MIN_INTERVAL_MS.
