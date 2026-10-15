@@ -30,7 +30,7 @@ import { orderMarketIdCandidate } from "~/services/resolve-order-market-id";
  * - `order.totalShippingPriceSet.shopMoney.amount` → `shipping`
  * - `order.totalTaxSet.shopMoney.amount` → `taxes`
  * - `order.currencyCode` → `currency`
- * - shipping, else billing, else customer country → `marketId` (when market tracking is on)
+ * - shipping, else billing, else customer country → `marketId`
  * - `order.createdAt` (converted to UTC) → `date`
  * - `order.displayFulfillmentStatus` (+ cancelledAt check) → `status`
  * - `order.shippingAddress` (formatted string) → `deliveryAddress`
@@ -44,7 +44,6 @@ import { orderMarketIdCandidate } from "~/services/resolve-order-market-id";
  *
  * @param {OrderData} order - Shopify order data.
  * @param {string} shopDomain - Storefront domain used when `onlineStoreUrl` is absent.
- * @param {boolean} includeMarketId - Set when the multi-domain metafield lists more than one storefront.
  * @returns {Order} Yespo order payload.
  *
  * @example
@@ -55,7 +54,6 @@ import { orderMarketIdCandidate } from "~/services/resolve-order-market-id";
 export const createOrderPayload = (
   order: OrderData,
   shopDomain = "",
-  includeMarketId = false,
 ): Order => {
   const customerFirstName = order?.customer?.firstName ?? "";
   const customerLastName = order?.customer?.lastName ?? "";
@@ -100,13 +98,11 @@ export const createOrderPayload = (
     }
   };
 
-  const marketId = includeMarketId
-    ? orderMarketIdCandidate({
-        shippingCountryCode: order.shippingAddress?.countryCodeV2,
-        billingCountryCode: order.billingAddress?.countryCodeV2,
-        customerCountryCode: order.customer?.defaultAddress?.countryCodeV2,
-      })
-    : null;
+  const marketId = orderMarketIdCandidate({
+    shippingCountryCode: order.shippingAddress?.countryCodeV2,
+    billingCountryCode: order.billingAddress?.countryCodeV2,
+    customerCountryCode: order.customer?.defaultAddress?.countryCodeV2,
+  });
 
   const orderPayload: Order = {
     externalCustomerId,

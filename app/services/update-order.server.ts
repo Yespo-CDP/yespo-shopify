@@ -9,7 +9,6 @@ import {
   orderMarketIdCandidate,
   readOrderCartToken,
 } from "~/services/resolve-order-market-id";
-import { resolveTrackingMarketId } from "~/services/resolve-tracking-market-id.server";
 import type { Order, OrderCreatePayload } from "~/@types/order";
 
 /**
@@ -118,15 +117,12 @@ export const updateOrderService = async (
     const eventData = cartToken
       ? await eventDataRepository.getEventData(cartToken)
       : null;
-    const marketId = await resolveTrackingMarketId(
-      shopUrl || "",
-      orderMarketIdCandidate({
-        storedMarketId: eventData?.marketId,
-        shippingCountryCode: payload.shipping_address?.country_code,
-        billingCountryCode: payload.billing_address?.country_code,
-        customerCountryCode: payload.customer?.default_address?.country_code,
-      }),
-    );
+    const marketId = orderMarketIdCandidate({
+      storedMarketId: eventData?.marketId,
+      shippingCountryCode: payload.shipping_address?.country_code,
+      billingCountryCode: payload.billing_address?.country_code,
+      customerCountryCode: payload.customer?.default_address?.country_code,
+    });
 
     const order: Order = {
       firstName: payload?.customer?.first_name ?? "",

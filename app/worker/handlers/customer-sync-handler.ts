@@ -11,8 +11,6 @@ import { getCustomersCount } from "../services/get-customers-count";
 import { createContactPayload } from "../services/create-contact-payload";
 import {sendLogEvent} from "~/api/send-log-event";
 import {EVENT_MESSAGES} from "~/config/constants";
-import { shouldTrackMarketId } from "~/services/market-tracking";
-import { loadStorefrontHostCount } from "~/services/resolve-tracking-market-id.server";
 
 const CUSTOMERS_CHUNK_SIZE = 200; // Shopify max limit 250
 
@@ -54,13 +52,6 @@ export const customerSyncHandler = async (
 
   const shopRecord = await shopRepository.getShop(shop);
   const logDomain = shopRecord?.domain || shop;
-  const hostCount = await loadStorefrontHostCount(shop);
-  const trackMarketId = shouldTrackMarketId(hostCount);
-  console.log("[contact marketId] bulk sync", {
-    shop,
-    hostCount,
-    trackMarketId,
-  });
 
   const client = createClient({ shop, accessToken });
   const customersCount = await getCustomersCount({ client });
@@ -108,7 +99,7 @@ export const customerSyncHandler = async (
               customerSync?.updatedAt?.getTime() ?? 0;
 
             if (customerUpdatedDate > customerSyncUpdatedDate) {
-              const contact = createContactPayload(customer, trackMarketId);
+              const contact = createContactPayload(customer);
               contactsData.push(contact);
 
               await customerSyncRepository.createOrUpdateCustomerSync({

@@ -5,7 +5,7 @@ import { buildCustomerData } from "~/utils/buildCustomerData";
 import { v4 as uuidv4 } from "uuid";
 import type { PurchasedItemsEvent } from "~/@types/purchasedItems";
 import { sendPurchasedItemsEvent } from "~/api/send-purchased-items-event";
-import { resolveTrackingMarketId } from "~/services/resolve-tracking-market-id.server";
+import { readMarketId } from "~/services/market-tracking";
 
 /**
  * Sends purchased items event data to the tracking service based on the given webhook payload and shop.
@@ -58,10 +58,7 @@ export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
     }
 
     const customerData: ICartCustomer = buildCustomerData(payload.customer);
-    const marketId = await resolveTrackingMarketId(
-      shop.shopUrl,
-      eventData.marketId,
-    );
+    const marketId = readMarketId(eventData.marketId) ?? undefined;
 
     const productsData = payload.line_items.map((item: any) => ({
       productKey: item.variant_id.toString(),

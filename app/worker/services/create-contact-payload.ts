@@ -23,10 +23,9 @@ import { contactMarketId } from "~/services/market-tracking";
  * - `customer.defaultAddress.city` → `address.town`
  * - `customer.defaultAddress.address1` → `address.address`
  * - `customer.defaultAddress.zip` → `address.postcode`
- * - `customer.defaultAddress.countryCodeV2` → `marketId` (when the shop has more than one storefront)
+ * - `customer.defaultAddress.countryCodeV2` → `marketId`
  *
  * @param {CustomerData} customer - Shopify customer data.
- * @param {boolean} includeMarketId - Set when the multi-domain metafield lists more than one storefront.
  * @returns {Contact} Yespo contact payload.
  *
  * @example
@@ -34,10 +33,7 @@ import { contactMarketId } from "~/services/market-tracking";
  * console.log(contact);
  */
 
-export const createContactPayload = (
-  customer: CustomerData,
-  includeMarketId = false,
-): Contact => {
+export const createContactPayload = (customer: CustomerData): Contact => {
   const channels = [];
   const customerFirstName = customer?.firstName ?? "";
   const customerLastName = customer?.lastName ?? "";
@@ -75,10 +71,7 @@ export const createContactPayload = (
     };
   }
 
-  const marketId = contactMarketId(
-    customerAddress?.countryCodeV2,
-    includeMarketId,
-  );
+  const marketId = contactMarketId(customerAddress?.countryCodeV2);
 
   const contact: Contact = {
     firstName: customerFirstName,

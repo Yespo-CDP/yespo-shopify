@@ -16,14 +16,13 @@ function order(overrides: Partial<OrderData> = {}): OrderData {
   };
 }
 
-test("uses the shipping country as marketId when tracking is on", () => {
+test("uses the shipping country as marketId", () => {
   const payload = createOrderPayload(
     order({
       shippingAddress: { id: "ship", countryCodeV2: "US" },
       billingAddress: { countryCodeV2: "UA" },
     }),
     "shop.example",
-    true,
   );
 
   assert.equal(payload.marketId, "us");
@@ -41,7 +40,6 @@ test("uses the billing country when the order has no shipping address", () => {
       },
     }),
     "shop.example",
-    true,
   );
 
   assert.equal(payload.marketId, "de");
@@ -58,20 +56,18 @@ test("uses the customer country when shipping and billing are absent", () => {
       },
     }),
     "shop.example",
-    true,
   );
 
   assert.equal(payload.marketId, "pl");
 });
 
-test("omits marketId when the shop is not tracking markets", () => {
+test("sets marketId from the shipping country for a single-market shop", () => {
   const payload = createOrderPayload(
     order({
       shippingAddress: { id: "ship", countryCodeV2: "US" },
     }),
     "shop.example",
-    false,
   );
 
-  assert.equal(payload.marketId, undefined);
+  assert.equal(payload.marketId, "us");
 });
