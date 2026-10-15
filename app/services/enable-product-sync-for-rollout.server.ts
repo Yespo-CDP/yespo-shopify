@@ -21,9 +21,11 @@ export type ProductSyncRolloutResult = "enabled" | "skipped" | "failed";
 export async function enableProductSyncForRollout({
   shopUrl,
   scopes,
+  isMarketSyncEnabled = false,
 }: {
   shopUrl: string;
   scopes: string | string[] | null | undefined;
+  isMarketSyncEnabled?: boolean;
 }): Promise<ProductSyncRolloutResult> {
   if (!hasProductSyncScopes(scopes)) {
     return "skipped";
@@ -34,7 +36,10 @@ export async function enableProductSyncForRollout({
     return "skipped";
   }
 
-  const claimed = await shopRepository.claimProductSyncRollout(shop.shopUrl);
+  const claimed = await shopRepository.claimProductSyncRollout(
+    shop.shopUrl,
+    isMarketSyncEnabled,
+  );
   if (!claimed) {
     return "skipped";
   }

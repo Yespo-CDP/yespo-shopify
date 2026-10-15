@@ -3,11 +3,6 @@
       "title": "Bienvenue dans l’application Yespo",
       "description": "Nous sommes ravis de vous accueillir ! Yespo a été créé pour offrir aux boutiques e-commerce une suite complète d’outils d’automatisation marketing. Si vous avez des questions concernant l’utilisation de notre application, notre <supportLink>article</supportLink> d’assistance couvre tout ce dont vous avez besoin. Si vous avez encore besoin d’aide, n’hésitez pas à nous contacter par e-mail. Bienvenue à bord !"
     },
-    "UnsupportedMarketsSection": {
-      "title": "Attention !",
-      "description": "L’application ne prend en charge qu’un seul marché actif.",
-      "button": "Aller aux paramètres"
-    },
     "AccountConnectionSection": {
       "title": "Connexion du compte",
       "helpText": "Si vous avez besoin d’aide",
@@ -76,12 +71,12 @@
     "DataSyncSection": {
       "title": "Synchronisation des données",
       "customersAndOrdersTitle": "Synchronisation des clients et des commandes",
-      "productSyncTitle": "Synchronisation des produits",
+      "productSyncTitle": "Synchronisation des produits et des marchés",
       "rolloutNotice": {
-        "heading": "Synchronisation des produits activée",
-        "description": "La synchronisation des produits est maintenant activée pour votre boutique, et la synchronisation historique a démarré."
+        "heading": "Synchronisation des données historiques",
+        "description": "La synchronisation des données historiques de votre boutique a démarré."
       },
-      "description": "La synchronisation des données permet de synchroniser les clients, les commandes et les produits de Shopify avec Yespo. Activez chaque synchronisation indépendamment.",
+      "description": "La synchronisation des données permet de synchroniser les clients, les commandes, les produits et les marchés de Shopify avec Yespo. Activez chaque synchronisation indépendamment.",
       "enable": "Activer",
       "disable": "Désactiver",
       "status": {
@@ -99,7 +94,8 @@
         "shopifyProducts_other": "Produits Shopify : {{count}}",
         "syncedAsVariants_one": "Ces produits ont été synchronisés avec Yespo en tant que {{count}} variante.",
         "syncedAsVariants_other": "Ces produits ont été synchronisés avec Yespo en tant que {{count}} variantes.",
-        "productsByCountry": "Produits ({{countryCode}})",
+        "marketsExplanation": "Synchronisation des marchés par pays.",
+        "productsByCountry": "Variantes ({{countryCode}})",
         "syncedCount": "Synchronisé",
         "skippedCount": "Ignoré",
         "failedCount": "Échoué",
@@ -161,8 +157,10 @@
       "button": {
         "configure": "Installer les scripts",
         "tryAgain": "Réessayer",
-        "activateThemeExtension": "Activer l’extension du thème"
+        "activateThemeExtension": "Activer l’extension du thème",
+        "syncMarketWebPushScripts": "Enregistrer les scripts web push des marchés"
       },
+      "marketWebPushScriptsSuccess": "Scripts web push enregistrés pour les domaines des marchés.",
       "success": "Installation réussie.",
       "errors": {
         "requestScriptError": "Erreur lors de la demande du script",
@@ -170,6 +168,7 @@
         "createWebPushDomainError": "Erreur lors de la création du domaine Web Push",
         "domainAlreadyRegisteredError": "Le domaine est déjà enregistré.",
         "domainCantBeReachedError": "Le domaine est inaccessible.",
+        "marketWebPushScriptsError": "Impossible d'enregistrer les scripts web push des domaines des marchés.",
         "support": "Veuillez contacter le support Yespo."
       }
     },

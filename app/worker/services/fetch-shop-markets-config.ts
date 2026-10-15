@@ -122,7 +122,6 @@ export async function fetchShopMarketsConfig({
     (market) => market.enabled,
   );
   const markets = enabledNodes.map(mapMarketNode);
-  console.log("markets", markets);
 
   dumpMarketsRootUrlsDebug(
     enabledNodes.map((node) => ({

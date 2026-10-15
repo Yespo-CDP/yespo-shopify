@@ -1,5 +1,6 @@
 import type { Contact } from "~/@types/contact";
 import type { CustomerData } from "~/@types/customer";
+import { contactMarketId } from "~/services/market-tracking";
 
 /**
  * Convert Shopify Customer data to Yespo Contact data.
@@ -22,16 +23,21 @@ import type { CustomerData } from "~/@types/customer";
  * - `customer.defaultAddress.city` → `address.town`
  * - `customer.defaultAddress.address1` → `address.address`
  * - `customer.defaultAddress.zip` → `address.postcode`
+ * - `customer.defaultAddress.countryCodeV2` → `marketId` (when the shop has more than one storefront)
  *
  * @param {CustomerData} customer - Shopify customer data.
- * @returns {Promise<Contact>} A promise that resolves when the contact is created successfully.
+ * @param {boolean} includeMarketId - Set when the multi-domain metafield lists more than one storefront.
+ * @returns {Contact} Yespo contact payload.
  *
  * @example
  * const contact = await createContactPayload(customer);
  * console.log(contact);
  */
 
-export const createContactPayload = (customer: CustomerData): Contact => {
+export const createContactPayload = (
+  customer: CustomerData,
+  includeMarketId = false,
+): Contact => {
   const channels = [];
   const customerFirstName = customer?.firstName ?? "";
   const customerLastName = customer?.lastName ?? "";
@@ -69,12 +75,18 @@ export const createContactPayload = (customer: CustomerData): Contact => {
     };
   }
 
+  const marketId = contactMarketId(
+    customerAddress?.countryCodeV2,
+    includeMarketId,
+  );
+
   const contact: Contact = {
     firstName: customerFirstName,
     lastName: customerLastName,
     channels,
     externalCustomerId: externalCustomerId,
     address: address,
+    ...(marketId ? { marketId } : {}),
   };
 
   return contact;

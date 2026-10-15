@@ -98,9 +98,13 @@ export default class ShopRepositoryImpl implements IShopRepository {
    * The conditional update is the lock: a second caller sees count 0.
    *
    * @param {string} shopUrl - The unique URL identifier of the shop.
+   * @param {boolean} isMarketSyncEnabled - Whether this shop has markets to sync.
    * @returns {Promise<boolean>} True when this call won the claim.
    */
-  async claimProductSyncRollout(shopUrl: string): Promise<boolean> {
+  async claimProductSyncRollout(
+    shopUrl: string,
+    isMarketSyncEnabled: boolean,
+  ): Promise<boolean> {
     const result = await this.database.shop.updateMany({
       where: {
         shopUrl,
@@ -109,7 +113,7 @@ export default class ShopRepositoryImpl implements IShopRepository {
       },
       data: {
         isProductVariantSyncEnabled: true,
-        isMarketSyncEnabled: false,
+        isMarketSyncEnabled,
         productSyncAutoEnable: false,
         productSyncNoticePending: true,
       },

@@ -13,7 +13,7 @@ import { connectAccountService } from "~/services/connect-account.server";
 import { disconnectAccountService } from "~/services/disconnect-account.server";
 import { connectGeneralScriptService } from "~/services/connect-general-script.server";
 import { connectWebPushScriptService } from "~/services/connect-webpush-script.server";
-import checkMarketsService from "~/services/check-markets.server";
+import { syncMarketWebPushScripts } from "~/services/sync-market-web-push-scripts.server";
 import checkScriptConnectionService from "~/services/check-script-connection.server";
 import checkThemeExtensionService from "~/services/check-theme-extension.server";
 import { authenticate } from "~/shopify.server";
@@ -29,12 +29,15 @@ import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
 import switchAppInboxScriptServer from "~/services/switch-app-inbox-script-mode.server";
 import { enableProductSyncForRollout } from "~/services/enable-product-sync-for-rollout.server";
+import { ensureWebPushMultiDomain } from "~/services/ensure-web-push-multi-domain.server";
+import { shouldEnableMarketSync } from "~/services/market-tracking";
+import { countEnabledMarkets } from "~/services/sync-market-tracking-metafield.server";
 
 /**
  * Loader function for initializing data needed on the page.
  *
  * This function authenticates the admin, retrieves shop information,
- * checks whether there are too many markets, verifies script connection status,
+ * verifies script connection status,
  * and fetches account info from an external API if an API key exists.
  *
  * @param {LoaderFunctionArgs} args - The arguments containing the request.
@@ -42,7 +45,6 @@ import { enableProductSyncForRollout } from "~/services/enable-product-sync-for-
  *   shop: Shop | null,
  *   account: Account | null,
  *   scriptConnectionStatus: any,
- *   isMarketsOverflowing: boolean,
  *   customersSyncLog: CustomerSyncLog[],
  *   orderSyncLog: OrderSyncLog[],
  *   productVariantSyncLog: ProductVariantSyncLog[],
@@ -61,13 +63,22 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
     shop = await shopRepository.getShop(session.shop);
   }
   if (shop?.productSyncAutoEnable) {
+    const enableMarketSync = await readMarketSyncEnabled(admin);
     const rollout = await enableProductSyncForRollout({
       shopUrl: session.shop,
       scopes: session.scope,
+      isMarketSyncEnabled: enableMarketSync,
     });
     if (rollout === "enabled") {
       shop = await shopRepository.getShop(session.shop);
     }
+  }
+  if (shop) {
+    await ensureWebPushMultiDomain({
+      admin,
+      shopUrl: session.shop,
+      scopes: session.scope,
+    });
   }
   const customersSyncLog =
     await customerSyncLogRepository.getCustomerSyncLogByShop(session.shop);
@@ -79,11 +90,6 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
   );
   const marketSyncLogs = await marketSyncLogRepository.getByShop(session.shop);
   const logDomain = shop?.domain || session.shop;
-  const isMarketsOverflowing = await checkMarketsService({
-    admin,
-    domain: logDomain,
-    orgId: shop?.orgId,
-  });
   const scriptConnectionStatus = await checkScriptConnectionService({
     admin,
     domain: logDomain,
@@ -103,7 +109,6 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
       account = null;
     }
   }
-  console.log(shop);
   return {
     shop,
     account,
@@ -116,7 +121,6 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
         shop?.isWebPushScriptInstalled ||
         scriptConnectionStatus.isWebPushScriptExist,
     },
-    isMarketsOverflowing,
     customersSyncLog,
     orderSyncLog,
     productVariantSyncLog,
@@ -175,6 +179,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       isWebPushScriptExist?: boolean;
       isThemeExtensionActive?: boolean;
     };
+    marketWebPushScripts?: boolean;
   } = {};
 
   if (intent === "account-disconnection") {
@@ -348,7 +353,6 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       await shopRepository.updateShop(shop.domain, {
         isContactSyncEnabled: true,
         isOrderSyncEnabled: true,
-        isMarketSyncEnabled: false,
       });
 
       await customerSyncLogRepository.createOrUpdateCustomerSyncLog({
@@ -447,9 +451,10 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         return { success, errors };
       }
 
+      const enableMarketSync = await readMarketSyncEnabled(admin);
       await shopRepository.updateShop(shop.domain, {
         isProductVariantSyncEnabled: true,
-        isMarketSyncEnabled: false,
+        isMarketSyncEnabled: enableMarketSync,
       });
 
       await productVariantSyncLogRepository.createOrUpdateProductVariantSyncLog(
@@ -564,6 +569,32 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     });
   }
 
+  if (intent === "sync-market-web-push-scripts") {
+    const shop = await shopRepository.getShop(session.shop);
+
+    if (!shop?.apiKey || !shop.shopId) {
+      errors.script = t("General.errors.shopNotFound");
+      return { success, errors };
+    }
+
+    try {
+      await syncMarketWebPushScripts({
+        admin,
+        apiKey: shop.apiKey,
+        shopId: shop.shopId,
+        domain: shop.domain || shop.shopUrl,
+        orgId: shop.orgId,
+      });
+      success.marketWebPushScripts = true;
+    } catch (error: any) {
+      console.error("[sync-market-web-push-scripts]", error);
+      errors.script = t(
+        "ConnectionStatusSection.errors.marketWebPushScriptsError",
+      );
+      return { success, errors };
+    }
+  }
+
   if (intent === "retry-install-webpush-script") {
     const shop = await shopRepository.getShop(session.shop);
 
@@ -653,3 +684,12 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
   return { success, errors };
 };
+
+async function readMarketSyncEnabled(admin: any): Promise<boolean> {
+  try {
+    return shouldEnableMarketSync(await countEnabledMarkets(admin));
+  } catch (error) {
+    console.error("Failed to read shop markets for product sync", error);
+    return false;
+  }
+}

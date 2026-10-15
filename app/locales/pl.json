@@ -3,11 +3,6 @@
     "title": "Witamy w Yespo App",
     "description": "Cieszymy się, że jesteś z nami! Yespo zostało stworzone, aby zapewnić sklepom e-commerce kompletny zestaw narzędzi do automatyzacji marketingu. Jeśli masz jakiekolwiek pytania dotyczące korzystania z naszej aplikacji, nasz <supportLink>artykuł</supportLink> zawiera wszystkie potrzebne informacje. Jeśli nadal potrzebujesz pomocy, nie wahaj się do nas napisać. Witamy na pokładzie!"
   },
-  "UnsupportedMarketsSection": {
-    "title": "Uwaga!",
-    "description": "Aplikacja obsługuje tylko jeden aktywny rynek.",
-    "button": "Przejdź do ustawień"
-  },
   "AccountConnectionSection": {
     "title": "Połączenie konta",
     "helpText": "Jeśli potrzebujesz pomocy",
@@ -75,12 +70,12 @@
   "DataSyncSection": {
     "title": "Synchronizacja danych",
     "customersAndOrdersTitle": "Synchronizacja klientów i zamówień",
-    "productSyncTitle": "Synchronizacja produktów",
+    "productSyncTitle": "Synchronizacja produktów i rynków",
     "rolloutNotice": {
-      "heading": "Synchronizacja produktów włączona",
-      "description": "Synchronizacja produktów jest teraz włączona dla Twojego sklepu i rozpoczęto synchronizację danych historycznych."
+      "heading": "Synchronizacja danych historycznych",
+      "description": "Synchronizacja danych historycznych Twojego sklepu została rozpoczęta."
     },
-    "description": "Synchronizacja danych umożliwia synchronizację klientów, zamówień i produktów z Shopify z Yespo. Włącz każdą synchronizację niezależnie.",
+    "description": "Synchronizacja danych umożliwia synchronizację klientów, zamówień, produktów i rynków z Shopify z Yespo. Włącz każdą synchronizację niezależnie.",
     "enable": "Włączać",
     "disable": "Wyłączyć",
     "status": {
@@ -102,7 +97,8 @@
       "syncedAsVariants_few": "Te produkty zostały zsynchronizowane z Yespo jako {{count}} warianty.",
       "syncedAsVariants_many": "Te produkty zostały zsynchronizowane z Yespo jako {{count}} wariantów.",
       "syncedAsVariants_other": "Te produkty zostały zsynchronizowane z Yespo jako {{count}} wariantów.",
-      "productsByCountry": "Produkty ({{countryCode}})",
+      "marketsExplanation": "Synchronizacja rynków według kraju.",
+      "productsByCountry": "Warianty ({{countryCode}})",
       "syncedCount": "Zsynchronizowano",
       "skippedCount": "Pominięto",
       "failedCount": "Nieudane",
@@ -164,8 +160,10 @@
     "button": {
       "configure": "Zainstaluj skrypty",
       "tryAgain": "Spróbuj ponownie",
-      "activateThemeExtension": "Aktywuj rozszerzenie motywu"
+      "activateThemeExtension": "Aktywuj rozszerzenie motywu",
+      "syncMarketWebPushScripts": "Zapisz skrypty web push dla rynków"
     },
+    "marketWebPushScriptsSuccess": "Skrypty web push zapisane dla domen rynków.",
     "success": "Pomyślnie zainstalowano.",
     "errors": {
       "requestScriptError": "Błąd podczas pobierania skryptu",
@@ -173,6 +171,7 @@
       "createWebPushDomainError": "Błąd tworzenia domeny WebPush",
       "domainAlreadyRegisteredError": "Domena już zarejestrowana.",
       "domainCantBeReachedError": "Domena jest nieosiągalna.",
+      "marketWebPushScriptsError": "Nie udało się zapisać skryptów web push dla domen rynków.",
       "support": "Skontaktuj się z pomocą techniczną Yespo."
     }
   },

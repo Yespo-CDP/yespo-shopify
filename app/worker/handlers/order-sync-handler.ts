@@ -4,13 +4,15 @@ import {
   orderSyncRepository,
   orderSyncLogRepository,
 } from "~/repositories/repositories.server";
+import { shouldTrackMarketId } from "~/services/market-tracking";
+import { loadStorefrontHostCount } from "~/services/resolve-tracking-market-id.server";
 import { createOrders } from "~/api/create-orders";
 import { createClient } from "../services/create-client";
 import { getOrders } from "../services/get-orders";
 import { getOrdersCount } from "../services/get-orders-count";
 import { createOrderPayload } from "../services/create-order-payload";
-import {sendLogEvent} from "~/api/send-log-event";
-import {EVENT_MESSAGES} from "~/config/constants";
+import { sendLogEvent } from "~/api/send-log-event";
+import { EVENT_MESSAGES } from "~/config/constants";
 
 const ORDERS_CHUNK_SIZE = 150; // Shopify max limit 250 (this does not include 100 lineItems in each orders)
 
@@ -45,7 +47,7 @@ export const orderSyncHandler = async (
   accessToken: string,
   apiKey: string,
   shopId: number,
-  orgId?: number | null
+  orgId?: number | null,
 ) => {
   console.log(`⏳ Synchronizing orders start for ${shop}`);
   console.log("shop", shop);
@@ -53,6 +55,9 @@ export const orderSyncHandler = async (
 
   const shopRecord = await shopRepository.getShop(shop);
   const logDomain = shopRecord?.domain || shop;
+  const trackMarketId = shouldTrackMarketId(
+    await loadStorefrontHostCount(shop),
+  );
 
   const client = createClient({ shop, accessToken });
   const ordersCount = await getOrdersCount({ client });
@@ -96,7 +101,11 @@ export const orderSyncHandler = async (
             const orderSyncUpdatedDate = orderSync?.updatedAt?.getTime() ?? 0;
 
             if (orderUpdatedDate > orderSyncUpdatedDate) {
-              const orderData = createOrderPayload(order, logDomain);
+              const orderData = createOrderPayload(
+                order,
+                logDomain,
+                trackMarketId,
+              );
               ordersData.push(orderData);
 
               await orderSyncRepository.createOrUpdateOrderSync({
@@ -119,7 +128,7 @@ export const orderSyncHandler = async (
               apiKey,
               orders: ordersData,
               domain: logDomain,
-              orgId
+              orgId,
             });
 
             if (contactsUpdateResponse?.failedOrders) {
@@ -137,16 +146,16 @@ export const orderSyncHandler = async (
 
           await sendLogEvent({
             orgId,
-            errorMessage: '',
+            errorMessage: "",
             data: {
               domain: logDomain,
               offset: ORDERS_CHUNK_SIZE,
               responseBody: ordersData,
-              statusCode: 200
+              statusCode: 200,
             },
             message: EVENT_MESSAGES.SEND_ORDERS_BULK_SUCCESS,
-            logLevel: 'INFO'
-          })
+            logLevel: "INFO",
+          });
 
           console.log("Total orders in chunk:", orders?.length);
           console.log("Total skipped orders in chunk:", chunkSkippedCount);
@@ -174,16 +183,16 @@ export const orderSyncHandler = async (
 
         await sendLogEvent({
           orgId,
-          errorMessage:  `Error bulk orders sync ${error?.message}`,
+          errorMessage: `Error bulk orders sync ${error?.message}`,
           data: {
             domain: logDomain,
             offset: ORDERS_CHUNK_SIZE,
             responseBody: {},
-            statusCode: error?.status ?? 400
+            statusCode: error?.status ?? 400,
           },
           message: EVENT_MESSAGES.SEND_ORDERS_BULK_FAILED,
-          logLevel: 'ERROR'
-        })
+          logLevel: "ERROR",
+        });
 
         throw Error(error);
       }

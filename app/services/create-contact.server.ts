@@ -1,5 +1,10 @@
 import { createContact } from "~/api/create-contact";
 import { customerSyncRepository } from "~/repositories/repositories.server";
+import {
+  contactMarketId,
+  shouldTrackMarketId,
+} from "~/services/market-tracking";
+import { loadStorefrontHostCount } from "~/services/resolve-tracking-market-id.server";
 
 /**
  * Creates a contact using the provided payload and API key.
@@ -22,6 +27,7 @@ import { customerSyncRepository } from "~/repositories/repositories.server";
  * - `payload.last_name` → `lastName`
  * - `payload.email` → `channels[type=email].value`
  * - `payload.phone` → `channels[type=sms].value`
+ * - `payload.default_address.country_code` → `marketId` (when the shop has more than one storefront)
  * - `payload.admin_graphql_api_id` → `customerId` (for db sync log)
  * - `payload.created_at` → `createdAt` (for db sync log)
  * - `payload.updated_at` → `updatedAt` (for db sync log)
@@ -37,6 +43,7 @@ export const createContactService = async (
   shopId: number,
   shopUrl: string,
   orgId?: number | null,
+  myshopifyDomain?: string,
 ) => {
   try {
     const channels = [];
@@ -55,11 +62,26 @@ export const createContactService = async (
       });
     }
 
+    const countryCode = payload.default_address?.country_code ?? null;
+    const hostCount = await loadStorefrontHostCount(myshopifyDomain || "");
+    const marketId = contactMarketId(
+      countryCode,
+      shouldTrackMarketId(hostCount),
+    );
+    console.log("[contact marketId] create", {
+      shop: myshopifyDomain || shopUrl,
+      customerId: payload.id,
+      countryCode,
+      hostCount,
+      marketId: marketId ?? null,
+    });
+
     const contactData = {
       firstName: payload.first_name || "",
       lastName: payload.last_name || "",
       channels,
       externalCustomerId: payload.id.toString(),
+      ...(marketId ? { marketId } : {}),
     };
 
     await createContact({

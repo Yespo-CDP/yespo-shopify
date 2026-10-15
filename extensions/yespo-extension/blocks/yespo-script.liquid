@@ -1,5 +1,6 @@
 {%- assign yespo_script = shop.metafields['$app'].yespo-script -%}
 {%- assign yespo_web_push_script = shop.metafields['$app'].yespo-web-push-script -%}
+{%- assign yespo_web_push_multi_domain = shop.metafields['$app'].yespo-web-push-multi-domain -%}
 {%- assign yespo_web_tracking_enabled = shop.metafields['$app'].web-tracking-enabled.value -%}
 {%- assign yespo_app_host = shop.metafields['$app'].yespo-app-host -%}
 
@@ -71,11 +72,41 @@
   {% render 'yespo-storefront-sync' %}
 {% endif %}
 
-{% if yespo_web_push_script != blank %}
+{% if yespo_web_push_multi_domain != blank %}
+  <script>
+    (function () {
+      var scriptsByHost = {{ yespo_web_push_multi_domain.value | json }};
+      if (!scriptsByHost || typeof scriptsByHost !== 'object') return;
+
+      var code = scriptsByHost[window.location.hostname];
+      if (!code) return;
+
+      var holder = document.createElement('template');
+      holder.innerHTML = code;
+      var nodes = holder.content.querySelectorAll('script');
+      if (!nodes.length) {
+        var inlineScript = document.createElement('script');
+        inlineScript.text = code;
+        document.head.appendChild(inlineScript);
+        return;
+      }
+
+      nodes.forEach(function (node) {
+        var copy = document.createElement('script');
+        Array.prototype.forEach.call(node.attributes, function (attr) {
+          copy.setAttribute(attr.name, attr.value);
+        });
+        copy.text = node.textContent || '';
+        document.head.appendChild(copy);
+      });
+    })();
+  </script>
+{% elsif yespo_web_push_script != blank %}
   {{ yespo_web_push_script }}
 {% endif %}
 
 {% assign current_variant = product.selected_or_first_available_variant %}
+{% assign yespo_market_domain_count = yespo_web_push_multi_domain.value | size %}
 
 
 <script id="yespo_data" type="application/json">
@@ -83,6 +114,7 @@
     "host": {{ yespo_app_host | json }},
     "pageTemplate": {{ template.name | json }},
     "domain":  {{ shop.domain | json }},
+    "marketId": {% if yespo_market_domain_count > 1 and localization.country.iso_code != blank %}{{ localization.country.iso_code | downcase | json }}{% else %}null{% endif %},
     "product": {{ product | json }},
     "currentVariant": {{ current_variant | json }},
     "language": "{{ localization.language.iso_code }}",

@@ -75,6 +75,9 @@ export const getOrders = async ({
                 provinceCode
                 countryCodeV2
               }
+              billingAddress {
+                countryCodeV2
+              }
               customer {
                 id
                 firstName

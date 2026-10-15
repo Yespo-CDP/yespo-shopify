@@ -15,9 +15,10 @@ export interface Contact {
   channels: Channel[];
   externalCustomerId: string;
   address?: Address;
+  marketId?: string;
 }
 
-export interface AppInboxContactData  {
+export interface AppInboxContactData {
   email?: string | null;
   phone?: string | null;
   externalCustomerId: string;

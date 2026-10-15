@@ -6,13 +6,18 @@ import getShop from "~/shopify/queries/get-shop.server";
 import shopify from "~/shopify.server";
 import getMetafieldDefinition from "~/shopify/queries/get-metafield-definition";
 import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
+import { ensureWebPushMultiDomain } from "~/services/ensure-web-push-multi-domain.server";
 
 const GENERAL_SCRIPT_HANDLE =
   process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
 const WEB_PUSH_SCRIPT_HANDLE =
   process.env.WEB_PUSH_SCRIPT_HANDLE ?? "yespo-web-push-script";
+const WEB_PUSH_MULTI_DOMAIN_HANDLE =
+  process.env.WEB_PUSH_MULTI_DOMAIN_HANDLE ?? "yespo-web-push-multi-domain";
 const WEB_TRACKING_ENABLED =
   process.env.WEB_TRACKING_ENABLED ?? "web-tracking-enabled";
+const MARKET_TRACKING_ENABLED =
+  process.env.MARKET_TRACKING_ENABLED ?? "market-tracking-enabled";
 const HOST_URL =
   process.env.HOST_URL ?? "yespo-app-host";
 
@@ -131,11 +136,24 @@ admin,
     await deleteMetafields({
       admin,
       ownerId: shop?.id,
-      keys: [GENERAL_SCRIPT_HANDLE, WEB_PUSH_SCRIPT_HANDLE, WEB_TRACKING_ENABLED, HOST_URL],
+      keys: [
+        GENERAL_SCRIPT_HANDLE,
+        WEB_PUSH_SCRIPT_HANDLE,
+        WEB_PUSH_MULTI_DOMAIN_HANDLE,
+        WEB_TRACKING_ENABLED,
+        MARKET_TRACKING_ENABLED,
+        HOST_URL,
+      ],
     });
   }
 
   shopify.registerWebhooks({ session });
+
+  await ensureWebPushMultiDomain({
+    admin,
+    shopUrl: session.shop,
+    scopes: session.scope,
+  });
 };
 
 export default afterAuth;

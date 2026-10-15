@@ -13,7 +13,6 @@ import {
 } from "~/api/update-market-products";
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
-
 import {
   runBulkQuery,
   waitForBulkOperation,

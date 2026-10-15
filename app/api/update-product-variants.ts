@@ -111,11 +111,6 @@ export const updateProductVariants = async ({
 
     const url = `${process.env.API_URL}/products`;
 
-    console.log(
-      `[yespo] POST /products (${requestBody.products.length} product(s)) for ${domain}:`,
-      JSON.stringify(requestBody, null, 2),
-    );
-
     const response = await fetchWithErrorHandling(url, {
       method: "POST",
       headers: {
@@ -124,11 +119,6 @@ export const updateProductVariants = async ({
       },
       body: JSON.stringify(requestBody),
     });
-
-    console.log(
-      `[yespo] POST /products response ${response.status} for ${domain}:`,
-      JSON.stringify(response.responseData, null, 2),
-    );
 
     // Yespo returns { requestId, summary, items }. A single accepted/rejected
     // item is serialized as an object, not a one-element array.

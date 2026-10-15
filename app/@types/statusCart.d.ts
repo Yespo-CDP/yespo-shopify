@@ -15,6 +15,7 @@ export interface IGeneralInfo {
   cookies: {
     sc: string
   }
+  marketId?: string;
 }
 interface ICartProduct {
   productKey: string;

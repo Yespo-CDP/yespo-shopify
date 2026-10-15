@@ -5,6 +5,7 @@ import {
   eventDataRepository,
   shopRepository,
 } from "~/repositories/repositories.server";
+import { readMarketId } from "~/services/market-tracking";
 
 // Shared CORS headers
 const CORS_HEADERS = {
@@ -88,6 +89,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     await eventDataRepository.createEventData({
       cartToken: data.cartToken,
       sc: data.sc,
+      marketId: readMarketId(data.marketId),
       ttl: addDays(new Date(), 14),
       shop: {
         connect: { id: shop.id },

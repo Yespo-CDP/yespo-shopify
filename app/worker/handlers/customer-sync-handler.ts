@@ -11,6 +11,8 @@ import { getCustomersCount } from "../services/get-customers-count";
 import { createContactPayload } from "../services/create-contact-payload";
 import {sendLogEvent} from "~/api/send-log-event";
 import {EVENT_MESSAGES} from "~/config/constants";
+import { shouldTrackMarketId } from "~/services/market-tracking";
+import { loadStorefrontHostCount } from "~/services/resolve-tracking-market-id.server";
 
 const CUSTOMERS_CHUNK_SIZE = 200; // Shopify max limit 250
 
@@ -52,6 +54,13 @@ export const customerSyncHandler = async (
 
   const shopRecord = await shopRepository.getShop(shop);
   const logDomain = shopRecord?.domain || shop;
+  const hostCount = await loadStorefrontHostCount(shop);
+  const trackMarketId = shouldTrackMarketId(hostCount);
+  console.log("[contact marketId] bulk sync", {
+    shop,
+    hostCount,
+    trackMarketId,
+  });
 
   const client = createClient({ shop, accessToken });
   const customersCount = await getCustomersCount({ client });
@@ -99,7 +108,7 @@ export const customerSyncHandler = async (
               customerSync?.updatedAt?.getTime() ?? 0;
 
             if (customerUpdatedDate > customerSyncUpdatedDate) {
-              const contact = createContactPayload(customer);
+              const contact = createContactPayload(customer, trackMarketId);
               contactsData.push(contact);
 
               await customerSyncRepository.createOrUpdateCustomerSync({
@@ -118,6 +127,16 @@ export const customerSyncHandler = async (
           }
 
           if (contactsData?.length > 0) {
+            console.log("[contact marketId] bulk chunk", {
+              shop,
+              sent: contactsData.length,
+              markets: contactsData
+                .filter((contact) => contact.marketId)
+                .map((contact) => ({
+                  externalCustomerId: contact.externalCustomerId,
+                  marketId: contact.marketId,
+                })),
+            });
             const contactsUpdateResponse = await updateContacts({
               apiKey,
               contactsData,

@@ -26,7 +26,7 @@ Each shop stores two domains:
 
 Where each host is sent:
 
-- **Site and web push registration** (`POST /site/domains`, `POST /site/webpush/domain`, and the script fetches) use `domain`. Web push is bound to the host the browser is actually on.
+- **Site and web push registration** (`POST /site/domains`, `POST /site/webpush/domain`, and the script fetches) use `domain`. Web push is bound to the host the browser is actually on. Extra market hosts are registered the same way; see [Market domains](#market-domains).
 - **Yespo logs** put `domain` in the log envelope next to `requestBody`. That includes tracking (`StatusCart`, `PurchasedItems`), contact, order, product, and market sync, and account connection. If `domain` is empty, the log falls back to `shopUrl`.
 - **Tracking event bodies** do not contain a domain. `StatusCart` and `PurchasedItems` identify the site with `siteId`. The host appears only in the log envelope.
 - **Shopify access token** (`POST /shopify/token`) sends `shopUrl` in the request body. Yespo stores that host with the token. The log label for this call is still the public `domain`; the `*.myshopify.com` host is visible inside `requestBody`.
@@ -52,6 +52,30 @@ Where each host is sent:
 - [Retrieve](https://docs.esputnik.com/reference/getscript) the push script and service worker content.
 - Store the push script in the yespo-web-push-script metafield.
 - Inject the push script into the storefront using the same Theme App Extension.
+
+#### Market domains
+
+A shop with Shopify Markets can serve the storefront on more than one host (`shop.de`, `shop.fr`, plus the primary domain). Web push is bound to the host the browser is actually on, so each distinct hostname needs its own Yespo domain and script.
+
+- Enabled markets are read with the Admin [`markets`](https://shopify.dev/docs/api/admin-graphql/latest/queries/markets) query, 250 per page, following `pageInfo.endCursor` until the list ends. Only `enabled` markets contribute `webPresence.rootUrls`.
+- `collectStorefrontHosts` turns the primary `domain` and those root URLs into one sorted list of unique lowercased hostnames. Several locale URLs on the same host (`https://shop.de/de` and `https://shop.de/en`) are one domain. Empty and malformed URLs are dropped.
+- Each host is registered with `POST /site/webpush/domain`, then its script is fetched. The result is stored in the JSON shop metafield `yespo-web-push-multi-domain` (`$app` namespace) as `{ "hostname": "<script>" }`. The single-domain metafield `yespo-web-push-script` is left as it is.
+- The theme block `yespo-script.liquid` reads that JSON and injects the script for `window.location.hostname`. When the multi-domain metafield is empty, it falls back to `yespo-web-push-script`.
+- The JSON value is written with `collapseWhitespace: false`, so spaces inside the stored scripts stay intact. Newlines are still removed before the write.
+
+A merchant can refresh every host from the connection status screen (`syncMarketWebPushScripts`). That re-registers each current host and replaces every stored script.
+
+#### Market webhook
+
+`markets/create`, `markets/update`, and `markets/delete` are delivered to `/webhooks/app/markets`. The handler does not trust the webhook body. It reads the current root URLs again and compares those hosts with the keys of `yespo-web-push-multi-domain` (`reconcileMarketWebPushScripts`).
+
+- A host that was not in the metafield is registered and its script is fetched, then added.
+- A host that is no longer on an enabled market, and is not the primary domain, is removed from the metafield. The Yespo domain registration is not deleted.
+- When the host set is unchanged, the metafield is not written.
+- Shops with no API key are skipped. Shops that never installed web push and whose multi-domain metafield is still empty are skipped too.
+- If a new host cannot be registered, the handler responds with HTTP 500 and does not write the metafield, so Shopify retries the webhook.
+
+Disabling a market and enabling it again removes that host from the metafield, then adds it back. Registration runs again. Yespo answers that the domain is already registered; `domainAlreadyRegisteredError` is ignored and the script is fetched again. `createWebPushDomain` still logs that response as `ADD_WEB_PUSH_DOMAIN_FAILED` before the error is swallowed. The metafield update itself succeeds.
 
 #### Service Worker Installation:
 
@@ -455,6 +479,8 @@ Under the row, an info banner explains the product-to-variant relationship:
 - **Shopify products** — unique Shopify products that have at least one successfully synced variant (`ProductVariantSync.syncFailed = false`). A product is omitted when every one of its variants failed. The number is not stored on `ProductVariantSyncLog`. The page loader and `/api/sync-logs` compute `COUNT(DISTINCT productId)` for the shop when the card is rendered.
 - **These products were synced to Yespo as N variants** — `N` is the same **Synchronized** count as on the Variants row. Failed and Total stay on that row: those counters are variant counts.
 
+Under that banner, when the shop has per-country market logs, a plain line reads “Market synchronization by country.” Each following row is one country, labeled **Variants (CC)** (for example **Variants (DE)**), with the same Synchronized, Failed, Total, and status columns. The section title is **Product and Markets Sync**. Market sync is turned on together with product sync when the shop has more than one enabled market.
+
 **Historical Enable** writes job stats for that run:
 
 - `totalCount` – product variants counted in Shopify (`status:active AND published_status:published`).
@@ -501,7 +527,7 @@ The webhook route only enqueues a BullMQ job (`product-webhooks`) and returns `2
 
 ### Market Sync (Shopify → Yespo)
 
-> **Current status:** market synchronization is **implemented in code but not live**. The HTTP call to `POST /v1/markets` is commented out (`app/api/update-market-products.ts`); payloads are written to `debug/` only. UI market-sync logs are hidden. This path will be uncommented and extended later. Until then, enabling product sync does **not** send market data to Yespo.
+> **Current status:** market sync is enabled with product sync when the shop has more than one enabled market, and the Data Sync card shows one log row per country under “Market synchronization by country.” The HTTP call to `POST /v1/markets` is still commented out (`app/api/update-market-products.ts`); payloads are written to `debug/` only. Until that call is uncommented, enabling product sync does **not** send market data to Yespo.
 
 **Purpose:** Automatically sync market-specific data (per-country prices, stock and storefront URLs) from Shopify to Yespo so recommendations work correctly across markets.
 The process covers both historical synchronization and real-time synchronization through the product webhooks.
@@ -522,7 +548,7 @@ App requests access to the following scopes:
 
 - Open the Yespo app
 - Connect your Yespo account
-- Enable sync in the **Data Sync** section (market sync is enabled together with product sync)
+- Enable **Product and Markets Sync** in the **Data Sync** section. Market sync turns on with product sync only when the shop has more than one enabled market. A shop with a single market keeps market sync off.
 
 When sync is enabled:
 
@@ -830,6 +856,7 @@ Create a `.env` file with the following:
 | **API_URL**                    | **Required.** Yespo api url                                                                             | **Must be** `https://yespo.io/api/v1`              |
 | **GENERAL_SCRIPT_HANDLE**      | **Required.** Handle for general metafield and extension name                                           | **Must be** `yespo-script`                         |
 | **WEB_PUSH_SCRIPT_HANDLE**     | **Required.** Handle for webpush metafield and extension name                                           | **Must be** `yespo-web-push-script`                |
+| **WEB_PUSH_MULTI_DOMAIN_HANDLE** | Handle for the JSON metafield that stores web push scripts by storefront host                         | `yespo-web-push-multi-domain`                      |
 | **DOCK_URL**                   | Yespo dock link                                                                                         | `https://docs.yespo.io`                            |
 | **PLATFORM_URL**               | Yespo platform link                                                                                     | `https://my.yespo.io`                              |
 | **SERVICE_WORKER_NAME**        | **Required.** Web push service worker file name, in *.js format                                         | **Must be** `service-worker.js`                    |
@@ -880,6 +907,9 @@ Shopify webhooks (API version: 2025-10) used by the app:
 | **products/create**        | Triggered when a new product is created.                                      | `/webhooks/app/products`      |
 | **products/update**        | Triggered when an existing product’s data is updated.                         | `/webhooks/app/products`      |
 | **products/delete**        | Triggered when a product is deleted.                                          | `/webhooks/app/products`      |
+| **markets/create**         | Triggered when a market is created. Reconciles web push hosts with the multi-domain metafield. | `/webhooks/app/markets`       |
+| **markets/update**         | Triggered when a market is updated. Reconciles web push hosts with the multi-domain metafield. | `/webhooks/app/markets`       |
+| **markets/delete**         | Triggered when a market is deleted. Reconciles web push hosts with the multi-domain metafield. | `/webhooks/app/markets`       |
 | **carts/update**           | Triggered when a cart is updated in the online store.                         | `/webhooks/app/carts`         |
 
 

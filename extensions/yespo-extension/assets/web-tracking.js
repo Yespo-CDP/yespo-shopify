@@ -54,11 +54,28 @@ class EventTracker {
     return decoded;
   }
 
+  sendTrackedEvent(eventName, payload) {
+    const body = payload ? { ...payload } : {};
+    if (this.data?.marketId) {
+      body.GeneralInfo = {
+        ...(body.GeneralInfo || {}),
+        marketId: this.data.marketId,
+      };
+    }
+
+    if (Object.keys(body).length === 0) {
+      window.eS('sendEvent', eventName);
+      return;
+    }
+
+    window.eS('sendEvent', eventName, body);
+  }
+
   sendPage404Event() {
     try {
       //console.log('this.data', this.data)
       if (this.data.pageTemplate === '404') {
-        window.eS('sendEvent', 'NotFound');
+        this.sendTrackedEvent('NotFound');
       }
     } catch (e) {
       console.error('Failed send 404 page event')
@@ -68,7 +85,7 @@ class EventTracker {
   sendCartStatusPageEvent() {
     try {
       if (this.data.pageTemplate === 'cart') {
-        window.eS('sendEvent', 'StatusCartPage');
+        this.sendTrackedEvent('StatusCartPage');
       }
     } catch (e) {
       console.error('Failed send status cart page event')
@@ -78,7 +95,7 @@ class EventTracker {
   sendMainPageEvent() {
     try {
       if (this.data.pageTemplate === 'index') {
-        window.eS('sendEvent', 'MainPage');
+        this.sendTrackedEvent('MainPage');
       }
     } catch (e) {
       console.error('Failed send main page event')
@@ -93,7 +110,7 @@ class EventTracker {
         if (this.lastProductPageKey === productKey) return;
 
         this.lastProductPageKey = productKey;
-        window.eS('sendEvent', 'ProductPage', {
+        this.sendTrackedEvent('ProductPage', {
           ProductPage: {
             productKey,
             price: (productVariant.price / 100).toFixed(2),
@@ -114,7 +131,7 @@ class EventTracker {
         const searchParams = new URLSearchParams(window.location.search);
         const typeName = searchParams.get('q');
 
-        window.eS('sendEvent', 'CategoryPage', {
+        this.sendTrackedEvent('CategoryPage', {
           CategoryPage: {
             categoryKey: typeName,
           }
@@ -141,7 +158,7 @@ class EventTracker {
         //console.log('categoryKey',categoryKey)
 
         if (categoryKey) {
-          window.eS('sendEvent', 'CategoryPage', {
+          this.sendTrackedEvent('CategoryPage', {
             CategoryPage: {
               categoryKey: categoryKey,
             }
@@ -246,7 +263,7 @@ class EventTracker {
           customerData.user_phone = customer.phone;
         }
 
-        window.eS('sendEvent', 'CustomerData', {
+        this.sendTrackedEvent('CustomerData', {
           CustomerData: customerData
         });
       }
@@ -267,7 +284,8 @@ class EventTracker {
           shop: data.domain,
           sc: data.sc,
           cartToken: data.token,
-          customer: data.customer
+          customer: data.customer,
+          marketId: data.marketId || null
         }),
         keepalive: true
       });
@@ -289,6 +307,7 @@ class EventTracker {
      sc,
      token,
      customer,
+     marketId: this.data.marketId,
    })
   }
 
@@ -304,6 +323,7 @@ class EventTracker {
     const customer = this.data.customer;
     const host = this.data.host;
     const domain = this.data.domain;
+    const marketId = this.data.marketId;
 
     window.fetch = async function (...args) {
       const [url, options] = args;
@@ -328,7 +348,8 @@ class EventTracker {
             domain,
             sc,
             token: cartToken,
-            customer
+            customer,
+            marketId
           });
 
           return response;

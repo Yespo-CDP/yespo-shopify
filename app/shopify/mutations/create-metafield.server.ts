@@ -4,8 +4,8 @@ import type { Metafield } from "~/@types/metafield";
  * Creates a metafield on the Shopify shop using the admin GraphQL API.
  *
  * This function sends a `metafieldsSet` GraphQL mutation to Shopify, creating a metafield
- * in the `$app` namespace with a `single_line_text_field` type. It automatically strips
- * newline characters and trims excess whitespace from the value.
+ * in the `$app` namespace with a `single_line_text_field` type. Newlines are removed.
+ * Extra spaces are collapsed unless `collapseWhitespace` is false.
  *
  * @param {Object} params - The input parameters.
  * @param {any} params.admin - The authenticated Shopify Admin API client.
@@ -25,18 +25,29 @@ import type { Metafield } from "~/@types/metafield";
  * });
  */
 
+function normalizeMetafieldValue(value: string, collapseWhitespace: boolean): string {
+  const withoutNewlines = value.replace(/\r?\n/g, "");
+  if (!collapseWhitespace) {
+    return withoutNewlines.trim();
+  }
+  return withoutNewlines.replace(/\s+/g, " ").trim();
+}
+
 async function createMetafield({
   admin,
   shopId,
   key,
   value,
-  type = "single_line_text_field"
+  type = "single_line_text_field",
+  collapseWhitespace = true,
 }: {
   admin: any;
   shopId: string;
   key: string;
   value: string;
-  type?: string
+  type?: string;
+  /** When false, spaces inside the value are kept. Raw newlines are still removed. */
+  collapseWhitespace?: boolean;
 }): Promise<Metafield | null> {
   try {
     const response = await admin.graphql(
@@ -66,7 +77,7 @@ async function createMetafield({
               key,
               namespace: "$app",
               type: type,
-              value: value.replace(/\n/g, "").replace(/\s+/g, " ").trim(),
+              value: normalizeMetafieldValue(value, collapseWhitespace),
               ownerId: shopId,
             },
           ],
@@ -76,8 +87,16 @@ async function createMetafield({
 
     const responseParse = await response.json();
     const metafieldData = responseParse?.data as {
-      metafieldsSet: { metafields: Metafield[] };
+      metafieldsSet: {
+        metafields: Metafield[];
+        userErrors?: { field?: string[]; message: string }[];
+      };
     };
+    const userErrors = metafieldData?.metafieldsSet?.userErrors ?? [];
+    if (userErrors.length > 0) {
+      console.error("metafieldsSet userErrors", userErrors);
+      return null;
+    }
     console.log('metafieldData', JSON.stringify(metafieldData, null, 2))
     const metafield = metafieldData?.metafieldsSet?.metafields[0];
 

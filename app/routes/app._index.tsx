@@ -8,7 +8,6 @@ import { useAppBridge } from "@shopify/app-bridge-react";
 import { Trans, useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 
-import UnsupportedMarketsSection from "~/components/UnsupportedMarketsSection";
 import AccountConnectionSection from "~/components/AccountConnectionSection";
 import ConnectionStatusSection from "~/components/ConnectionStatusSection";
 import UsefulLinksSection from "~/components/UsefulLinksSection";
@@ -42,7 +41,6 @@ export const action = actionHandler;
  * - Connection status section (showing connection status script and app extension status).
  * - Enable/disable web tracking section.
  * - Enable/disable sync contacts section.
- * - Unsupported markets warning if applicable.
  * - Useful links section.
  *
  * Uses Shopify App Bridge for toast notifications.
@@ -57,12 +55,11 @@ export default function Index() {
   const {
     shop,
     account,
-    isMarketsOverflowing,
     scriptConnectionStatus,
     customersSyncLog,
     orderSyncLog,
     productVariantSyncLog,
-    // marketSyncLogs,
+    marketSyncLogs,
     ENV,
   } = loaderData;
   const navigation = useNavigation();
@@ -75,18 +72,22 @@ export default function Index() {
   const [productVariantSyncLogData, setProductVariantSyncLogData] = useState(
     productVariantSyncLog,
   );
-  // const [marketSyncLogsData, setMarketSyncLogsData] = useState(marketSyncLogs);
+  const [marketSyncLogsData, setMarketSyncLogsData] = useState(marketSyncLogs);
 
   useEffect(() => {
     setCustomersSyncLogData(customersSyncLog);
     setOrderSyncLogData(orderSyncLog);
     setProductVariantSyncLogData(productVariantSyncLog);
-    // setMarketSyncLogsData(marketSyncLogs);
-  }, [customersSyncLog, orderSyncLog, productVariantSyncLog]);
+    setMarketSyncLogsData(marketSyncLogs);
+  }, [customersSyncLog, orderSyncLog, productVariantSyncLog, marketSyncLogs]);
 
   useEffect(() => {
     if (actionData?.success?.apiKey) {
       shopify.toast.show(t("AccountConnectionSection.success"), {
+        duration: 2000,
+      });
+    } else if (actionData?.success?.marketWebPushScripts) {
+      shopify.toast.show(t("ConnectionStatusSection.marketWebPushScriptsSuccess"), {
         duration: 2000,
       });
     } else if (actionData?.success?.connection?.ok) {
@@ -113,10 +114,10 @@ export default function Index() {
       orderSyncLogData?.status === "IN_PROGRESS" ||
       productVariantSyncLogData?.status === "NOT_STARTED" ||
       productVariantSyncLogData?.status === "IN_PROGRESS" ||
-      shop?.isProductVariantSyncEnabled;
-      // || marketSyncLogsData?.some(
-      //      (log) => log.status === "NOT_STARTED" || log.status === "IN_PROGRESS",
-      //    );
+      shop?.isProductVariantSyncEnabled ||
+      marketSyncLogsData?.some(
+        (log) => log.status === "NOT_STARTED" || log.status === "IN_PROGRESS",
+      );
 
     if (!shouldPoll) return;
 
@@ -126,7 +127,7 @@ export default function Index() {
       setCustomersSyncLogData(updated?.customersSyncLog);
       setOrderSyncLogData(updated?.orderSyncLog);
       setProductVariantSyncLogData(updated?.productVariantSyncLog);
-      // setMarketSyncLogsData(updated?.marketSyncLogs ?? []);
+      setMarketSyncLogsData(updated?.marketSyncLogs ?? []);
     }, 3000);
 
     return () => clearInterval(intervalId);
@@ -135,14 +136,13 @@ export default function Index() {
     orderSyncLogData,
     productVariantSyncLogData,
     shop?.isProductVariantSyncEnabled,
-    // marketSyncLogsData,
+    marketSyncLogsData,
   ]);
 
   return (
     <s-page>
       <s-box paddingBlockEnd="large-500">
         <s-stack gap="base">
-          {isMarketsOverflowing && <UnsupportedMarketsSection />}
           <s-stack gap="small-300">
             <s-stack direction="inline" gap="small-300" alignItems="center">
               <s-box blockSize={"48px"}>
@@ -174,7 +174,7 @@ export default function Index() {
             apiKey={shop?.apiKey ?? ""}
             account={account}
             errors={actionData?.errors}
-            disabled={isMarketsOverflowing || isSubmitting || isLoading}
+            disabled={isSubmitting || isLoading}
             platformUrl={ENV.PLATFORM_URL}
           />
           <ConnectionStatusSection
@@ -190,19 +190,20 @@ export default function Index() {
             dockUrl={ENV.DOCK_URL}
             platformUrl={ENV.PLATFORM_URL}
             disabled={
-              isMarketsOverflowing ||
               isSubmitting ||
               isLoading ||
               !shop?.apiKey ||
               (!scriptConnectionStatus?.isGeneralScriptExist &&
                 !scriptConnectionStatus?.isWebPushScriptExist)
             }
+            syncMarketScriptsDisabled={
+              isSubmitting || isLoading || !shop?.apiKey
+            }
           />
 
           <AppInboxSection
             appInboxEnabled={Boolean(shop?.isAppInboxEnabled)}
             disabled={
-              isMarketsOverflowing ||
               !scriptConnectionStatus?.isGeneralScriptExist ||
               isSubmitting ||
               isLoading ||
@@ -219,9 +220,7 @@ export default function Index() {
             }
             isAppExtensionActive={scriptConnectionStatus.isThemeExtensionActive}
             webTrackerEnabled={shop?.isWebTrackingEnabled ?? false}
-            disabled={
-              isMarketsOverflowing || isSubmitting || isLoading || !account
-            }
+            disabled={isSubmitting || isLoading || !account}
           />
 
           <ProductSyncRolloutBanner
@@ -234,13 +233,11 @@ export default function Index() {
             productVariantSyncEnabled={Boolean(
               shop?.isProductVariantSyncEnabled,
             )}
-            disabled={
-              isMarketsOverflowing || isSubmitting || isLoading || !account
-            }
+            disabled={isSubmitting || isLoading || !account}
             customersSyncLog={customersSyncLogData as any}
             orderSyncLog={orderSyncLogData as any}
             productVariantSyncLog={productVariantSyncLogData as any}
-            // marketSyncLogs={marketSyncLogsData as any}
+            marketSyncLogs={marketSyncLogsData as any}
           />
 
           <UsefulLinksSection />
