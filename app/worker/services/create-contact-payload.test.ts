@@ -25,3 +25,19 @@ test("omits marketId when the customer has no default address country", () => {
   const contact = createContactPayload(customer());
   assert.equal(contact.marketId, undefined);
 });
+
+test("replaces a country outside the shop markets with the backup region", () => {
+  const contact = createContactPayload(customer("DE"), {
+    marketCountryCodes: ["ua"],
+    backupRegionCode: "ua",
+  });
+  assert.equal(contact.marketId, "ua");
+});
+
+test("omits marketId on bulk update when the customer has no country", () => {
+  const contact = createContactPayload(customer(), {
+    marketCountryCodes: ["ua"],
+    backupRegionCode: "ua",
+  });
+  assert.equal(contact.marketId, undefined);
+});

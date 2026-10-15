@@ -9,6 +9,7 @@ import { createClient } from "../services/create-client";
 import { getCustomers } from "../services/get-customers";
 import { getCustomersCount } from "../services/get-customers-count";
 import { createContactPayload } from "../services/create-contact-payload";
+import { fetchContactMarketContext } from "~/services/fetch-contact-market-context.server";
 import {sendLogEvent} from "~/api/send-log-event";
 import {EVENT_MESSAGES} from "~/config/constants";
 
@@ -52,6 +53,7 @@ export const customerSyncHandler = async (
 
   const shopRecord = await shopRepository.getShop(shop);
   const logDomain = shopRecord?.domain || shop;
+  const marketContext = await fetchContactMarketContext(shop);
 
   const client = createClient({ shop, accessToken });
   const customersCount = await getCustomersCount({ client });
@@ -99,7 +101,7 @@ export const customerSyncHandler = async (
               customerSync?.updatedAt?.getTime() ?? 0;
 
             if (customerUpdatedDate > customerSyncUpdatedDate) {
-              const contact = createContactPayload(customer);
+              const contact = createContactPayload(customer, marketContext);
               contactsData.push(contact);
 
               await customerSyncRepository.createOrUpdateCustomerSync({

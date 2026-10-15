@@ -1,6 +1,6 @@
 import { createContact } from "~/api/create-contact";
 import { customerSyncRepository } from "~/repositories/repositories.server";
-import { contactMarketId } from "~/services/market-tracking";
+import { resolveShopContactMarketId } from "~/services/fetch-contact-market-context.server";
 
 /**
  * Creates a contact using the provided payload and API key.
@@ -23,7 +23,7 @@ import { contactMarketId } from "~/services/market-tracking";
  * - `payload.last_name` → `lastName`
  * - `payload.email` → `channels[type=email].value`
  * - `payload.phone` → `channels[type=sms].value`
- * - `payload.default_address.country_code` → `marketId`
+ * - `payload.default_address.country_code` → `marketId` when that country is an enabled shop market; otherwise the shop backup region
  * - `payload.admin_graphql_api_id` → `customerId` (for db sync log)
  * - `payload.created_at` → `createdAt` (for db sync log)
  * - `payload.updated_at` → `updatedAt` (for db sync log)
@@ -59,7 +59,11 @@ export const createContactService = async (
     }
 
     const countryCode = payload.default_address?.country_code ?? null;
-    const marketId = contactMarketId(countryCode);
+    const marketId = await resolveShopContactMarketId({
+      shopUrl: myshopifyDomain || "",
+      countryCode,
+      whenCountryMissing: "backup",
+    });
     console.log("[contact marketId] create", {
       shop: myshopifyDomain || shopUrl,
       customerId: payload.id,
