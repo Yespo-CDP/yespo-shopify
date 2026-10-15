@@ -149,11 +149,12 @@ export const marketSyncHandler = async (
   console.log(`⏳ Market sync start for ${shop}`);
 
   const shopData = await shopRepository.getShop(shop);
-  const logDomain = shopData?.domain || shop;
-  if (!shopData?.isMarketSyncEnabled) {
-    console.log(`⚠️ Market sync disabled for ${shop}`);
+  if (!shopData) {
+    console.log(`⚠️ Market sync: shop not found for ${shop}`);
     return;
   }
+  const logDomain = shopData.domain || shop;
+  const marketSyncEnabled = Boolean(shopData.isMarketSyncEnabled);
 
   const client = createClient({ shop, accessToken });
   let marketsConfig: ShopMarketsConfig = {
@@ -196,6 +197,13 @@ export const marketSyncHandler = async (
       siteId,
       currentCountries: marketsConfig.countries,
     });
+
+    // A markets webhook turns the flag off only after this job is queued, so
+    // cleanup above still runs. Skip the catalog bulk when sync is disabled.
+    if (!marketSyncEnabled) {
+      console.log(`⚠️ Market sync disabled for ${shop}`);
+      return;
+    }
 
     const previousShopMarkets = await shopMarketRepository.getByShopId(shopId);
     const previousLocalesByMarketId = new Map(

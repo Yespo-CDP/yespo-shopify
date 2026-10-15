@@ -17,16 +17,27 @@ function customer(countryCode?: string): CustomerData {
 }
 
 test("sets marketId from the customer's default address country", () => {
-  const contact = createContactPayload(customer("DE"), true);
+  const contact = createContactPayload(customer("DE"));
   assert.equal(contact.marketId, "de");
 });
 
-test("omits marketId when the shop has a single storefront", () => {
-  const contact = createContactPayload(customer("DE"), false);
+test("omits marketId when the customer has no default address country", () => {
+  const contact = createContactPayload(customer());
   assert.equal(contact.marketId, undefined);
 });
 
-test("omits marketId when the customer has no default address country", () => {
-  const contact = createContactPayload(customer(), true);
+test("replaces a country outside the shop markets with the backup region", () => {
+  const contact = createContactPayload(customer("DE"), {
+    marketCountryCodes: ["ua"],
+    backupRegionCode: "ua",
+  });
+  assert.equal(contact.marketId, "ua");
+});
+
+test("omits marketId on bulk update when the customer has no country", () => {
+  const contact = createContactPayload(customer(), {
+    marketCountryCodes: ["ua"],
+    backupRegionCode: "ua",
+  });
   assert.equal(contact.marketId, undefined);
 });

@@ -1,6 +1,9 @@
 import type { Contact } from "~/@types/contact";
 import type { CustomerData } from "~/@types/customer";
-import { contactMarketId } from "~/services/market-tracking";
+import {
+  resolveContactMarketId,
+  type ContactMarketContext,
+} from "~/services/market-tracking";
 
 /**
  * Convert Shopify Customer data to Yespo Contact data.
@@ -23,10 +26,10 @@ import { contactMarketId } from "~/services/market-tracking";
  * - `customer.defaultAddress.city` → `address.town`
  * - `customer.defaultAddress.address1` → `address.address`
  * - `customer.defaultAddress.zip` → `address.postcode`
- * - `customer.defaultAddress.countryCodeV2` → `marketId` (when the shop has more than one storefront)
+ * - `customer.defaultAddress.countryCodeV2` → `marketId` when that country is an enabled shop market; otherwise the shop backup region. Omitted when the customer has no country.
  *
  * @param {CustomerData} customer - Shopify customer data.
- * @param {boolean} includeMarketId - Set when the multi-domain metafield lists more than one storefront.
+ * @param {ContactMarketContext | null} marketContext - Enabled market countries and the shop backup region. Null keeps the address country as-is.
  * @returns {Contact} Yespo contact payload.
  *
  * @example
@@ -36,7 +39,7 @@ import { contactMarketId } from "~/services/market-tracking";
 
 export const createContactPayload = (
   customer: CustomerData,
-  includeMarketId = false,
+  marketContext: ContactMarketContext | null = null,
 ): Contact => {
   const channels = [];
   const customerFirstName = customer?.firstName ?? "";
@@ -75,10 +78,11 @@ export const createContactPayload = (
     };
   }
 
-  const marketId = contactMarketId(
-    customerAddress?.countryCodeV2,
-    includeMarketId,
-  );
+  const marketId = resolveContactMarketId({
+    countryCode: customerAddress?.countryCodeV2,
+    marketContext,
+    whenCountryMissing: "omit",
+  });
 
   const contact: Contact = {
     firstName: customerFirstName,

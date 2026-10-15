@@ -106,7 +106,6 @@
 {% endif %}
 
 {% assign current_variant = product.selected_or_first_available_variant %}
-{% assign yespo_market_domain_count = yespo_web_push_multi_domain.value | size %}
 
 
 <script id="yespo_data" type="application/json">
@@ -114,7 +113,7 @@
     "host": {{ yespo_app_host | json }},
     "pageTemplate": {{ template.name | json }},
     "domain":  {{ shop.domain | json }},
-    "marketId": {% if yespo_market_domain_count > 1 and localization.country.iso_code != blank %}{{ localization.country.iso_code | downcase | json }}{% else %}null{% endif %},
+    "marketId": {% if localization.country.iso_code != blank %}{{ localization.country.iso_code | downcase | json }}{% else %}null{% endif %},
     "product": {{ product | json }},
     "currentVariant": {{ current_variant | json }},
     "language": "{{ localization.language.iso_code }}",

@@ -4,8 +4,6 @@ import {
   orderSyncRepository,
   orderSyncLogRepository,
 } from "~/repositories/repositories.server";
-import { shouldTrackMarketId } from "~/services/market-tracking";
-import { loadStorefrontHostCount } from "~/services/resolve-tracking-market-id.server";
 import { createOrders } from "~/api/create-orders";
 import { createClient } from "../services/create-client";
 import { getOrders } from "../services/get-orders";
@@ -55,9 +53,6 @@ export const orderSyncHandler = async (
 
   const shopRecord = await shopRepository.getShop(shop);
   const logDomain = shopRecord?.domain || shop;
-  const trackMarketId = shouldTrackMarketId(
-    await loadStorefrontHostCount(shop),
-  );
 
   const client = createClient({ shop, accessToken });
   const ordersCount = await getOrdersCount({ client });
@@ -101,11 +96,7 @@ export const orderSyncHandler = async (
             const orderSyncUpdatedDate = orderSync?.updatedAt?.getTime() ?? 0;
 
             if (orderUpdatedDate > orderSyncUpdatedDate) {
-              const orderData = createOrderPayload(
-                order,
-                logDomain,
-                trackMarketId,
-              );
+              const orderData = createOrderPayload(order, logDomain);
               ordersData.push(orderData);
 
               await orderSyncRepository.createOrUpdateOrderSync({

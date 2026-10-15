@@ -1,11 +1,7 @@
 import { updateContact } from "~/api/update-contact";
 import { customerSyncRepository } from "~/repositories/repositories.server";
 import type { Contact } from "~/@types/contact";
-import {
-  contactMarketId,
-  shouldTrackMarketId,
-} from "~/services/market-tracking";
-import { loadStorefrontHostCount } from "~/services/resolve-tracking-market-id.server";
+import { resolveShopContactMarketId } from "~/services/fetch-contact-market-context.server";
 
 /**
  * Updates a contact using the provided payload and API key.
@@ -31,7 +27,7 @@ import { loadStorefrontHostCount } from "~/services/resolve-tracking-market-id.s
  * - `payload.default_address.city` → `town`
  * - `payload.default_address.address1` → `address`
  * - `payload.default_address.zip` → `postcode`
- * - `payload.default_address.country_code` → `marketId` (when the shop has more than one storefront)
+ * - `payload.default_address.country_code` → `marketId` when that country is an enabled shop market; otherwise the shop backup region. Omitted when the update has no country.
  * - `payload.admin_graphql_api_id` → `customerId` (for db sync log)
  * - `payload.created_at` → `createdAt` (for db sync log)
  * - `payload.updated_at` → `updatedAt` (for db sync log)
@@ -87,16 +83,15 @@ export const updateContactService = async (
   }
 
   const countryCode = payload.default_address?.country_code ?? null;
-  const hostCount = await loadStorefrontHostCount(myshopifyDomain || "");
-  const marketId = contactMarketId(
+  const marketId = await resolveShopContactMarketId({
+    shopUrl: myshopifyDomain || "",
     countryCode,
-    shouldTrackMarketId(hostCount),
-  );
+    whenCountryMissing: "omit",
+  });
   console.log("[contact marketId] update", {
     shop: myshopifyDomain || shopUrl,
     customerId: payload.id,
     countryCode,
-    hostCount,
     marketId: marketId ?? null,
   });
 
