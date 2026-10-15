@@ -44,3 +44,16 @@ export function readMarketId(value: unknown): string | null {
   if (!MARKET_ID_PATTERN.test(marketId)) return null;
   return marketId;
 }
+
+/**
+ * Market id for a Yespo contact, taken from the customer's default address
+ * country. Omitted when the shop has a single storefront or the country is
+ * missing, so an update does not clear a Market ID already stored in Yespo.
+ */
+export function contactMarketId(
+  countryCode: unknown,
+  trackMarketId: boolean,
+): string | undefined {
+  if (!trackMarketId) return undefined;
+  return readMarketId(countryCode) ?? undefined;
+}

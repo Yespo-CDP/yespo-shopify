@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  contactMarketId,
   countStorefrontHosts,
   readMarketId,
   shouldEnableMarketSync,
@@ -35,6 +36,13 @@ test("enables market sync only when the shop has more than one market", () => {
   assert.equal(shouldEnableMarketSync(2), true);
   assert.equal(shouldEnableMarketSync(1), false);
   assert.equal(shouldEnableMarketSync(0), false);
+});
+
+test("uses the customer country as marketId when more than one storefront exists", () => {
+  assert.equal(contactMarketId("UA", true), "ua");
+  assert.equal(contactMarketId(" ua ", true), "ua");
+  assert.equal(contactMarketId(null, true), undefined);
+  assert.equal(contactMarketId("UA", false), undefined);
 });
 
 test("keeps a lowercase market id and rejects anything else", () => {

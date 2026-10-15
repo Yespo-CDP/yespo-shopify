@@ -1,6 +1,11 @@
 import { updateContact } from "~/api/update-contact";
 import { customerSyncRepository } from "~/repositories/repositories.server";
 import type { Contact } from "~/@types/contact";
+import {
+  contactMarketId,
+  shouldTrackMarketId,
+} from "~/services/market-tracking";
+import { loadStorefrontHostCount } from "~/services/resolve-tracking-market-id.server";
 
 /**
  * Updates a contact using the provided payload and API key.
@@ -26,6 +31,7 @@ import type { Contact } from "~/@types/contact";
  * - `payload.default_address.city` → `town`
  * - `payload.default_address.address1` → `address`
  * - `payload.default_address.zip` → `postcode`
+ * - `payload.default_address.country_code` → `marketId` (when the shop has more than one storefront)
  * - `payload.admin_graphql_api_id` → `customerId` (for db sync log)
  * - `payload.created_at` → `createdAt` (for db sync log)
  * - `payload.updated_at` → `updatedAt` (for db sync log)
@@ -42,7 +48,8 @@ export const updateContactService = async (
   apiKey: string,
   shopId: number,
   shopUrl: string,
-  orgId?: number | null
+  orgId?: number | null,
+  myshopifyDomain?: string,
 ) => {
   const channels = [];
   let address = undefined;
@@ -79,12 +86,27 @@ export const updateContactService = async (
     };
   }
 
+  const countryCode = payload.default_address?.country_code ?? null;
+  const hostCount = await loadStorefrontHostCount(myshopifyDomain || "");
+  const marketId = contactMarketId(
+    countryCode,
+    shouldTrackMarketId(hostCount),
+  );
+  console.log("[contact marketId] update", {
+    shop: myshopifyDomain || shopUrl,
+    customerId: payload.id,
+    countryCode,
+    hostCount,
+    marketId: marketId ?? null,
+  });
+
   const contactData: Contact = {
     firstName: payload.first_name || "",
     lastName: payload.last_name || "",
     channels,
     externalCustomerId: payload.id.toString(),
     address: address,
+    ...(marketId ? { marketId } : {}),
   };
 
   await updateContact({

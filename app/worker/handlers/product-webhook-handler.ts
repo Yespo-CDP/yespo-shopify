@@ -44,15 +44,8 @@ export async function productWebhookHandler(
 ): Promise<void> {
   const shopData = await shopRepository.getShop(data.shop);
   if (!shopData?.apiKey || !shopData.isProductVariantSyncEnabled) {
-    console.log(
-      `[product-webhook] skip ${data.topic} ${data.productGid} for ${data.shop}: sync disabled or api key missing`,
-    );
     return;
   }
-
-  console.log(
-    `[product-webhook] ${data.topic} ${data.productGid} for ${data.shop}`,
-  );
 
   if (data.topic === "PRODUCTS_DELETE") {
     const numericProductId = data.productGid.split("/").pop();
@@ -180,25 +173,6 @@ async function syncProductFromAdmin(
         existing?.syncedTagKeys ?? [],
         isPublishedInAnyMarket,
       );
-      if (action === "create") {
-        console.log(
-          `[yespo] create payload for ${data.shop} variant ${variant.id}:`,
-          JSON.stringify(payload, null, 2),
-        );
-      }
-      if (action === "update") {
-        console.log(
-          `[yespo] update translations for ${data.shop} variant ${variant.id}:`,
-          JSON.stringify(
-            {
-              categories: payload.categories,
-              translations: payload.translations ?? null,
-            },
-            null,
-            2,
-          ),
-        );
-      }
       productVariantsData.push(payload);
 
       await productVariantSyncRepository.createOrUpdateProductVariantSync({
