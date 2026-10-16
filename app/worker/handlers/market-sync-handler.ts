@@ -5,6 +5,7 @@ import {
   shopRepository,
   tmpMarketSyncRepository,
 } from "~/repositories/repositories.server";
+import type { MarketSyncRecord } from "~/@types/marketSync";
 import type { ShopMarketsConfig } from "~/@types/shopMarketsConfig";
 import type { TmpMarketSyncRecord } from "~/@types/tmpMarketSync";
 import {
@@ -20,11 +21,16 @@ import {
 import { computeContentHash } from "../services/compute-content-hash";
 import { createClient } from "../services/create-client";
 import { fetchShopMarketsConfig } from "../services/fetch-shop-markets-config";
+import { marketsMissingActiveCatalog } from "../services/market-catalogs";
 import { selectMarketsForSync } from "../services/select-markets-for-sync";
 import { streamBulkJsonlToTmpMarketSync } from "../services/parse-bulk-jsonl";
 import { buildBulkQueryChunks } from "../services/product-sync-bulk-queries";
 
 const API_CHUNK_SIZE = 500;
+
+// One lookup of every variant × country can exceed Postgres/Prisma limits
+// (about 2,000 variants × 3 countries). Read the existing rows in pages.
+const EXISTING_SYNC_LOOKUP_CHUNK = 500;
 
 // Cleanup of removed markets is paged: read this many rows, push isInStock: 0
 // for them, then delete the accepted ones before moving to the next page.
@@ -73,7 +79,7 @@ function sumCountryStats(stats: Record<string, CountryStats>): CountryStats {
 /**
  * Maps a staged pricing row to a Yespo market product item.
  *
- * Products that are not published in the market never reach the staging table,
+ * Products that are not in the market's attached catalog never reach the staging table,
  * so `isInStock` here reflects inventory only. Returns `null` when there is no
  * market price to send (a market record needs price + currency + isInStock).
  */
@@ -194,6 +200,19 @@ export const marketSyncHandler = async (
 
   try {
     marketsConfig = await fetchShopMarketsConfig({ client });
+
+    // One market without an active catalog blocks the whole run. Leaving
+    // before cleanup and before log writes keeps every country's status and
+    // sends nothing to Yespo.
+    const missingCatalog = marketsMissingActiveCatalog(marketsConfig.markets);
+    if (missingCatalog.length > 0) {
+      const names = missingCatalog.map((market) => market.name).join(", ");
+      const verb = missingCatalog.length === 1 ? "has" : "have";
+      console.log(
+        `⚠️ Market sync skipped for ${shop}: ${names} ${verb} no active catalog. No market was synced.`,
+      );
+      return;
+    }
 
     // Markets removed/disabled in Shopify: drop their products from Yespo
     // recommendations (isInStock: 0) and prune local state. Runs even when no
@@ -345,6 +364,22 @@ export const marketSyncHandler = async (
   }
 };
 
+async function getExistingSyncRows(
+  shopId: number,
+  keys: Array<{ productId: string; variantId: string; countryCode: string }>,
+): Promise<MarketSyncRecord[]> {
+  const existing: MarketSyncRecord[] = [];
+  for (
+    let index = 0;
+    index < keys.length;
+    index += EXISTING_SYNC_LOOKUP_CHUNK
+  ) {
+    const chunk = keys.slice(index, index + EXISTING_SYNC_LOOKUP_CHUNK);
+    existing.push(...(await marketSyncRepository.getByKeys(shopId, chunk)));
+  }
+  return existing;
+}
+
 /**
  * Maps staged pricing rows for one bulk batch, skips unchanged items, and sends
  * the rest to Yespo grouped by market (country). Mutates `stats` in place.
@@ -401,8 +436,10 @@ async function processBatch({
     });
   }
 
-  // Change detection: load existing sync state for this batch in one query.
-  const existing = await marketSyncRepository.getByKeys(
+  // Change detection: load existing sync state for this batch. The lookup is
+  // chunked so a full catalog (thousands of variant × country keys) does not
+  // build one query large enough to fail the whole run.
+  const existing = await getExistingSyncRows(
     shopId,
     pending.map((entry) => ({
       productId: entry.productId,

@@ -7,6 +7,11 @@ export interface ShopMarketConfig {
   locales: string[];
   /** locale (BCP 47) → storefront root URL for that locale in this market */
   rootUrls: Record<string, string>;
+  /**
+   * Publication ids of ACTIVE catalogs attached to this market.
+   * Empty means the market has no catalog to sync from.
+   */
+  catalogPublicationIds: string[];
 }
 
 export interface ShopMarketsConfig {

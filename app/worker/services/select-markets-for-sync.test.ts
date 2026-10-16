@@ -15,6 +15,7 @@ const config: ShopMarketsConfig = {
       countries: ["UA"],
       locales: ["uk"],
       rootUrls: { uk: "https://shop.example/uk" },
+      catalogPublicationIds: ["gid://shopify/Publication/1"],
     },
     {
       id: "gid://shopify/Market/2",
@@ -24,6 +25,7 @@ const config: ShopMarketsConfig = {
       countries: ["US", "CA"],
       locales: ["en"],
       rootUrls: { en: "https://shop.example" },
+      catalogPublicationIds: ["gid://shopify/Publication/2"],
     },
   ],
   countries: ["UA", "US", "CA"],

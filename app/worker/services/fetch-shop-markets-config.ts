@@ -6,6 +6,7 @@ import type {
 } from "~/@types/shopMarketsConfig";
 
 import { dumpMarketsRootUrlsDebug } from "./debug-market-urls.server";
+import { activeCatalogPublicationIds } from "./market-catalogs";
 
 interface MarketRegionCountry {
   code?: string;
@@ -28,6 +29,12 @@ interface MarketNode {
   };
   regions?: {
     nodes?: MarketRegionCountry[];
+  };
+  catalogs?: {
+    nodes?: Array<{
+      status?: string | null;
+      publication?: { id?: string | null } | null;
+    }>;
   };
 }
 
@@ -76,6 +83,7 @@ function mapMarketNode(market: MarketNode): ShopMarketConfig {
     countries,
     locales: collectLocales(market),
     rootUrls: collectRootUrls(market),
+    catalogPublicationIds: activeCatalogPublicationIds(market.catalogs?.nodes),
   };
 }
 
@@ -108,6 +116,14 @@ export async function fetchShopMarketsConfig({
             nodes {
               ... on MarketRegionCountry {
                 code
+              }
+            }
+          }
+          catalogs(first: 50) {
+            nodes {
+              status
+              publication {
+                id
               }
             }
           }

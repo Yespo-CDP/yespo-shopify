@@ -1,8 +1,14 @@
 import type { GraphQLClient } from "@shopify/graphql-client";
 
+import type { ShopMarketsConfig } from "~/@types/shopMarketsConfig";
+
+import {
+  isPublishedOnMarketCatalog,
+  publicationIdsForCountries,
+} from "./market-catalogs";
 import {
   priceFieldAlias,
-  publishedFieldAlias,
+  publicationFieldAlias,
 } from "./product-sync-bulk-queries";
 
 export interface VariantContextualPricing {
@@ -21,40 +27,42 @@ export interface VariantContextualPricing {
 export interface ProductContextualPricingResult {
   productId: string;
   handle: string;
-  /** countryCode → is published in that market */
+  /** countryCode → product is on that market's attached catalog */
   publishedInCountry: Record<string, boolean>;
   variants: VariantContextualPricing[];
 }
 
 /**
- * Fetches per-country contextual pricing and publication state for a single
+ * Fetches per-country contextual pricing and catalog publication for a single
  * product and all its variants using regular GraphQL (not Bulk Operation).
  *
- * Uses the same alias naming convention as the bulk query
- * (`price_{CC}`, `published_{CC}`) so the downstream mapping logic is reusable.
+ * A country counts as published when the product is on an active catalog
+ * attached to that country's market. Price still comes from contextual pricing.
  *
- * Limitation: fetches up to 250 variants in a single query. Products with more
- * than 250 variants will have remaining variants silently omitted.
+ * Uses the same alias naming convention as the bulk query
+ * (`price_{CC}`, `published_pub_{publicationId}`).
  *
  * @param client - Shopify Admin GraphQL client
  * @param productGid - Product GID (e.g. "gid://shopify/Product/123")
- * @param countries - List of country codes to query (e.g. ["US", "CA", "UA"])
+ * @param config - Enabled markets, including each market's catalog publications
  */
 export async function getProductContextualPricing({
   client,
   productGid,
-  countries,
+  config,
 }: {
   client: GraphQLClient;
   productGid: string;
-  countries: string[];
+  config: ShopMarketsConfig;
 }): Promise<ProductContextualPricingResult | null> {
+  const countries = config.countries;
   if (!countries.length) return null;
 
-  const publishedFields = countries
+  const publicationIds = publicationIdsForCountries(config.markets, countries);
+  const publishedFields = publicationIds
     .map(
-      (cc) =>
-        `${publishedFieldAlias(cc)}: publishedInContext(context: { country: ${cc} })`,
+      (publicationId) =>
+        `${publicationFieldAlias(publicationId)}: publishedOnPublication(publicationId: ${JSON.stringify(publicationId)})`,
     )
     .join("\n      ");
 
@@ -107,7 +115,24 @@ export async function getProductContextualPricing({
         productId = product.id;
         handle = product.handle;
         for (const cc of countries) {
-          publishedInCountry[cc] = Boolean(product[publishedFieldAlias(cc)]);
+          publishedInCountry[cc] = false;
+        }
+        for (const market of config.markets) {
+          const publishedByPublicationId = Object.fromEntries(
+            market.catalogPublicationIds.map((publicationId) => [
+              publicationId,
+              product[publicationFieldAlias(publicationId)] === true,
+            ]),
+          );
+          const published = isPublishedOnMarketCatalog(
+            publishedByPublicationId,
+            market.catalogPublicationIds,
+          );
+          for (const country of market.countries) {
+            if (country in publishedInCountry) {
+              publishedInCountry[country] = published;
+            }
+          }
         }
       }
 
