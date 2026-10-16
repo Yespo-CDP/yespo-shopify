@@ -8,6 +8,7 @@ import { createClient } from "~/worker/services/create-client";
 import { fetchShopMarketsConfig } from "~/worker/services/fetch-shop-markets-config";
 import { getProductContextualPricing } from "~/worker/services/get-product-contextual-pricing";
 import { computeContentHash } from "~/worker/services/compute-content-hash";
+import { marketsMissingActiveCatalog } from "~/worker/services/market-catalogs";
 import { resolveMarketUrls } from "~/worker/services/resolve-market-urls";
 import type { ShopMarketConfig } from "~/@types/shopMarketsConfig";
 
@@ -40,11 +41,12 @@ function computeMarketHash(item: MarketProductItem): string {
  *
  * Flow:
  *  1. Fetch active markets config from Shopify.
- *  2. Fetch contextual pricing + publication state for all variants via GraphQL.
- *  3. Skip variants not published in a given market.
- *  4. Build market items and compute content hashes.
- *  5. Compare against stored MarketSync records — only send changed items.
- *  6. Call POST /v1/markets and update the MarketSync table.
+ *  2. Stop when any enabled market has no active catalog. Nothing is sent.
+ *  3. Fetch contextual pricing and catalog publication for all variants.
+ *  4. Skip variants that are not in a market's attached catalog.
+ *  5. Build market items and compute content hashes.
+ *  6. Compare against stored MarketSync records — only send changed items.
+ *  7. Call POST /v1/markets and update the MarketSync table.
  */
 export async function updateMarketFromWebhook({
   shopId,
@@ -74,6 +76,16 @@ export async function updateMarketFromWebhook({
   const marketsConfig = await fetchShopMarketsConfig({ client });
   if (!marketsConfig.countries.length) return;
 
+  const missingCatalog = marketsMissingActiveCatalog(marketsConfig.markets);
+  if (missingCatalog.length > 0) {
+    const names = missingCatalog.map((market) => market.name).join(", ");
+    const verb = missingCatalog.length === 1 ? "has" : "have";
+    console.log(
+      `[market-webhook] Market sync skipped for ${shopifyDomain}: ${names} ${verb} no active catalog. No market was synced.`,
+    );
+    return;
+  }
+
   const previousShopMarkets = await shopMarketRepository.getByShopId(shopId);
   const previousLocalesByMarketId = new Map(
     previousShopMarkets.map((market) => [market.marketId, market.locales]),
@@ -82,7 +94,7 @@ export async function updateMarketFromWebhook({
   const pricing = await getProductContextualPricing({
     client,
     productGid,
-    countries: marketsConfig.countries,
+    config: marketsConfig,
   });
 
   if (!pricing) return;

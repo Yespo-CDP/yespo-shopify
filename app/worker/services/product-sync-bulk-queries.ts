@@ -1,5 +1,7 @@
 import type { ShopMarketsConfig } from "~/@types/shopMarketsConfig";
 
+import { publicationIdsForCountries } from "./market-catalogs";
+
 const MAX_COUNTRIES_PER_CHUNK = 15;
 
 export function sanitizeAlias(value: string): string {
@@ -12,6 +14,11 @@ export function priceFieldAlias(countryCode: string): string {
 
 export function publishedFieldAlias(countryCode: string): string {
   return sanitizeAlias(`published_${countryCode}`);
+}
+
+export function publicationFieldAlias(publicationId: string): string {
+  const numericId = publicationId.split("/").pop() ?? publicationId;
+  return sanitizeAlias(`published_pub_${numericId}`);
 }
 
 export function splitCountriesIntoChunks(
@@ -33,10 +40,12 @@ export interface BulkQueryOptions {
 
 /**
  * Builds a Shopify Bulk Operation query that fetches, for each product/variant,
- * the per-country contextual pricing and the per-country publication state.
+ * per-country contextual pricing and whether the product is published on the
+ * catalog attached to each market.
  *
  * Country codes are `CountryCode` enum values and are emitted unquoted in the
- * `context` argument; they are sanitized only when used as a field alias.
+ * `context` argument. Publication ids are quoted GraphQL strings. Both are
+ * sanitized when used as a field alias.
  */
 export function buildBulkPricingQuery(
   config: ShopMarketsConfig,
@@ -60,10 +69,10 @@ export function buildBulkPricingQuery(
     )
     .join("\n");
 
-  const publishedFields = countries
+  const publishedFields = publicationIdsForCountries(config.markets, countries)
     .map(
-      (country) => `
-        ${publishedFieldAlias(country)}: publishedInContext(context: { country: ${country} })`,
+      (publicationId) => `
+        ${publicationFieldAlias(publicationId)}: publishedOnPublication(publicationId: ${JSON.stringify(publicationId)})`,
     )
     .join("\n");
 

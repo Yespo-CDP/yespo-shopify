@@ -15,7 +15,8 @@ import {
   createBulkJsonlOutputWriter,
   getBulkJsonlOutputPath,
 } from "./save-bulk-jsonl-output.server";
-import { priceFieldAlias, publishedFieldAlias } from "./product-sync-bulk-queries";
+import { isPublishedOnMarketCatalog } from "./market-catalogs";
+import { priceFieldAlias, publicationFieldAlias } from "./product-sync-bulk-queries";
 import { resolveMarketUrls } from "./resolve-market-urls";
 
 const TMP_INSERT_CHUNK_SIZE = 500;
@@ -39,9 +40,10 @@ type ProductInfoMap = Map<string, ProductInfo>;
 /**
  * Streams the bulk-operation JSONL result into the TmpMarketSync staging table.
  *
- * Only pricing rows are produced (one per variant × published country). Each row
- * carries the data needed to build the Yespo /v1/markets product item: raw
- * contextual pricing, inventory, and the per-locale market URLs.
+ * Only pricing rows are produced: one per variant and country, and only when
+ * the product is in that market's catalog. Each row carries the data needed
+ * to build the Yespo /v1/markets product item: raw contextual pricing,
+ * inventory, and the per-locale market URLs.
  */
 export async function streamBulkJsonlToTmpMarketSync({
   url,
@@ -91,7 +93,13 @@ export async function streamBulkJsonlToTmpMarketSync({
       const id = row.id ?? "";
 
       if (id.includes("/Product/") && !row.__parentId) {
-        recordProductInfo({ row, productId: id, countries, productInfo });
+        recordProductInfo({
+          row,
+          productId: id,
+          countries,
+          productInfo,
+          countryToMarket,
+        });
       } else if (id.includes("/ProductVariant/")) {
         buffer.push(
           ...parseVariantRow({
@@ -146,17 +154,29 @@ function recordProductInfo({
   productId,
   countries,
   productInfo,
+  countryToMarket,
 }: {
   row: BulkJsonlRow;
   productId: string;
   countries: string[];
   productInfo: ProductInfoMap;
+  countryToMarket: Map<string, ShopMarketConfig>;
 }): void {
   const publishContext = Object.fromEntries(
-    countries.map((countryCode) => [
-      countryCode,
-      row[publishedFieldAlias(countryCode)] === true,
-    ]),
+    countries.map((countryCode) => {
+      const publicationIds =
+        countryToMarket.get(countryCode)?.catalogPublicationIds ?? [];
+      const publishedByPublicationId = Object.fromEntries(
+        publicationIds.map((publicationId) => [
+          publicationId,
+          row[publicationFieldAlias(publicationId)] === true,
+        ]),
+      );
+      return [
+        countryCode,
+        isPublishedOnMarketCatalog(publishedByPublicationId, publicationIds),
+      ];
+    }),
   );
 
   productInfo.set(productId, {
@@ -189,7 +209,7 @@ function parseVariantRow({
   const rows: TmpMarketSyncCreate[] = [];
 
   for (const countryCode of countries) {
-    // Skip products not published in this market.
+    // Skip products that are not in this market's attached catalog.
     if (!publishContext[countryCode]) {
       continue;
     }
