@@ -20,6 +20,7 @@ import {
 import { computeContentHash } from "../services/compute-content-hash";
 import { createClient } from "../services/create-client";
 import { fetchShopMarketsConfig } from "../services/fetch-shop-markets-config";
+import { selectMarketsForSync } from "../services/select-markets-for-sync";
 import { streamBulkJsonlToTmpMarketSync } from "../services/parse-bulk-jsonl";
 import { buildBulkQueryChunks } from "../services/product-sync-bulk-queries";
 
@@ -137,6 +138,10 @@ function hashMarketItem(item: MarketProductItem): string {
  * contextual pricing → stream the JSONL result into TmpMarketSync → map staged
  * rows to market items, skip unchanged ones via the MarketSync content hash, and
  * send them grouped by market (marketId = country code).
+ *
+ * `marketId` limits the catalog send to that Shopify market. Cleanup of
+ * removed countries still compares the full enabled set, so a single-market
+ * run does not zero out the other markets.
  */
 export const marketSyncHandler = async (
   shop: string,
@@ -145,8 +150,13 @@ export const marketSyncHandler = async (
   shopId: number,
   orgId?: number | null,
   siteId?: string | null,
+  marketId?: string | null,
 ) => {
-  console.log(`⏳ Market sync start for ${shop}`);
+  console.log(
+    marketId
+      ? `⏳ Market sync start for ${shop} (market ${marketId})`
+      : `⏳ Market sync start for ${shop}`,
+  );
 
   const shopData = await shopRepository.getShop(shop);
   if (!shopData) {
@@ -210,7 +220,26 @@ export const marketSyncHandler = async (
       previousShopMarkets.map((market) => [market.marketId, market.locales]),
     );
 
-    await shopMarketRepository.replaceAll(shopId, marketsConfig.markets);
+    if (marketId) {
+      const selected = selectMarketsForSync(marketsConfig, marketId);
+      if (!selected) {
+        console.log(
+          `⚠️ Market ${marketId} is not enabled for ${shop}, skipping catalog sync`,
+        );
+        return;
+      }
+      const market = selected.markets[0];
+      if (!market) {
+        console.log(
+          `⚠️ Market ${marketId} is not enabled for ${shop}, skipping catalog sync`,
+        );
+        return;
+      }
+      marketsConfig = selected;
+      await shopMarketRepository.upsertMarket(shopId, market);
+    } else {
+      await shopMarketRepository.replaceAll(shopId, marketsConfig.markets);
+    }
 
     if (marketsConfig.countries.length === 0) {
       console.log(`⚠️ No enabled market countries for ${shop}`);

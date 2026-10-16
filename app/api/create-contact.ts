@@ -39,6 +39,12 @@ export const createContact = async ({
     body: JSON.stringify(contactData),
   };
 
+  console.log("[yespo] POST /contact", {
+    domain,
+    marketId: contactData.marketId ?? null,
+    requestBody: contactData,
+  });
+
   try {
     const response = await fetchWithErrorHandling(url, options);
 

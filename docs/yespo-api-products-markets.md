@@ -856,8 +856,9 @@ startup, `registerMarketSyncCron()` upserts a scheduler in Redis; BullMQ then en
 `Procfile`) and `REDIS_URL`.
 
 A daily cron tick keeps at most **10 shops** syncing their markets concurrently, always
-preferring the shops that synced longest ago. The unit is a **shop** (one
-`marketSyncHandler` run syncs all of that shop's markets/countries); the limit of 10
+preferring the shops that synced longest ago. The unit is a **shop** (a cron or
+full `marketSyncHandler` run syncs all of that shop's markets/countries; a
+`markets/create` while sync is already on syncs only the new market). The limit of 10
 counts shops, not countries.
 
 To avoid re-syncing the same shop more than once per day, the cron also skips any shop
