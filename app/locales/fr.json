@@ -157,10 +157,8 @@
       "button": {
         "configure": "Installer les scripts",
         "tryAgain": "Réessayer",
-        "activateThemeExtension": "Activer l’extension du thème",
-        "syncMarketWebPushScripts": "Enregistrer les scripts web push des marchés"
+        "activateThemeExtension": "Activer l’extension du thème"
       },
-      "marketWebPushScriptsSuccess": "Scripts web push enregistrés pour les domaines des marchés.",
       "success": "Installation réussie.",
       "errors": {
         "requestScriptError": "Erreur lors de la demande du script",
@@ -168,7 +166,6 @@
         "createWebPushDomainError": "Erreur lors de la création du domaine Web Push",
         "domainAlreadyRegisteredError": "Le domaine est déjà enregistré.",
         "domainCantBeReachedError": "Le domaine est inaccessible.",
-        "marketWebPushScriptsError": "Impossible d'enregistrer les scripts web push des domaines des marchés.",
         "support": "Veuillez contacter le support Yespo."
       }
     },

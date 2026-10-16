@@ -13,7 +13,6 @@ import { connectAccountService } from "~/services/connect-account.server";
 import { disconnectAccountService } from "~/services/disconnect-account.server";
 import { connectGeneralScriptService } from "~/services/connect-general-script.server";
 import { connectWebPushScriptService } from "~/services/connect-webpush-script.server";
-import { syncMarketWebPushScripts } from "~/services/sync-market-web-push-scripts.server";
 import checkScriptConnectionService from "~/services/check-script-connection.server";
 import checkThemeExtensionService from "~/services/check-theme-extension.server";
 import { authenticate } from "~/shopify.server";
@@ -179,7 +178,6 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
       isWebPushScriptExist?: boolean;
       isThemeExtensionActive?: boolean;
     };
-    marketWebPushScripts?: boolean;
   } = {};
 
   if (intent === "account-disconnection") {
@@ -567,32 +565,6 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     await shopRepository.updateShop(session.shop, {
       isGeneralScriptInstalled,
     });
-  }
-
-  if (intent === "sync-market-web-push-scripts") {
-    const shop = await shopRepository.getShop(session.shop);
-
-    if (!shop?.apiKey || !shop.shopId) {
-      errors.script = t("General.errors.shopNotFound");
-      return { success, errors };
-    }
-
-    try {
-      await syncMarketWebPushScripts({
-        admin,
-        apiKey: shop.apiKey,
-        shopId: shop.shopId,
-        domain: shop.domain || shop.shopUrl,
-        orgId: shop.orgId,
-      });
-      success.marketWebPushScripts = true;
-    } catch (error: any) {
-      console.error("[sync-market-web-push-scripts]", error);
-      errors.script = t(
-        "ConnectionStatusSection.errors.marketWebPushScriptsError",
-      );
-      return { success, errors };
-    }
   }
 
   if (intent === "retry-install-webpush-script") {

@@ -160,10 +160,8 @@
     "button": {
       "configure": "Zainstaluj skrypty",
       "tryAgain": "Spróbuj ponownie",
-      "activateThemeExtension": "Aktywuj rozszerzenie motywu",
-      "syncMarketWebPushScripts": "Zapisz skrypty web push dla rynków"
+      "activateThemeExtension": "Aktywuj rozszerzenie motywu"
     },
-    "marketWebPushScriptsSuccess": "Skrypty web push zapisane dla domen rynków.",
     "success": "Pomyślnie zainstalowano.",
     "errors": {
       "requestScriptError": "Błąd podczas pobierania skryptu",
@@ -171,7 +169,6 @@
       "createWebPushDomainError": "Błąd tworzenia domeny WebPush",
       "domainAlreadyRegisteredError": "Domena już zarejestrowana.",
       "domainCantBeReachedError": "Domena jest nieosiągalna.",
-      "marketWebPushScriptsError": "Nie udało się zapisać skryptów web push dla domen rynków.",
       "support": "Skontaktuj się z pomocą techniczną Yespo."
     }
   },
