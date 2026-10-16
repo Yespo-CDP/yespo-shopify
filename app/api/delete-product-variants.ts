@@ -31,6 +31,14 @@ export const deleteProductVariants = async ({
 }): Promise<void> => {
   if (externalVariantIds.length === 0) return;
 
+  const logData = (responseBody: unknown, statusCode: number) => ({
+    domain,
+    productsCount: externalVariantIds.length,
+    productIds: externalVariantIds,
+    responseBody: responseBody ?? null,
+    statusCode,
+  });
+
   try {
     await throttleApiRequest(siteId);
 
@@ -59,14 +67,7 @@ export const deleteProductVariants = async ({
     await sendLogEvent({
       orgId,
       errorMessage: "",
-      data: {
-        domain,
-        variantsCount: externalVariantIds.length,
-        variantIds: externalVariantIds,
-        requestBody,
-        responseBody: response.responseData,
-        statusCode: response.status,
-      },
+      data: logData(response.responseData, response.status),
       message: EVENT_MESSAGES.DELETE_PRODUCTS_BULK_SUCCESS,
       logLevel: "INFO",
     });
@@ -76,13 +77,8 @@ export const deleteProductVariants = async ({
     await sendLogEvent({
       orgId,
       errorMessage: `Error deleting product variants: ${error?.message}`,
-      data: JSON.stringify({
-        domain,
-        deletedCount: externalVariantIds.length,
-        responseBody: error,
-        statusCode: error?.status ?? 500,
-      }),
-      message: EVENT_MESSAGES.CUSTOM_LOG_DELETE_PRODUCT_VARIANTS_ERROR,
+      data: logData(error?.responseData, error?.status ?? 500),
+      message: EVENT_MESSAGES.DELETE_PRODUCTS_BULK_FAILED,
       logLevel: "ERROR",
     });
 
