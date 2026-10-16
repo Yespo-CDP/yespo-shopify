@@ -1,6 +1,10 @@
 import type { ActionFunctionArgs } from "react-router";
 
 import { shopRepository } from "~/repositories/repositories.server";
+import {
+  isActiveMarketStatus,
+  marketGidFromWebhook,
+} from "~/services/market-webhook-payload";
 import { reconcileMarketCatalogSync } from "~/services/reconcile-market-catalog-sync";
 import { countEnabledMarkets } from "~/services/sync-market-tracking-metafield.server";
 import { reconcileMarketWebPushScripts } from "~/services/sync-market-web-push-scripts.server";
@@ -21,16 +25,18 @@ const MARKET_WEBHOOK_TOPICS = new Set([
  * multi-domain web push metafield. Stored domains stay when a market
  * is no longer enabled.
  *
- * When product sync is on and a market is added or enabled, queues a
- * shop-wide market catalog sync for every enabled market. Dropping back
- * to a single market queues that job once more so removed countries are
+ * When product sync is on and the shop gains its second enabled market,
+ * queues a shop-wide catalog sync. A later markets/create, while sync is
+ * already on, queues a sync of only that new market. Dropping back to a
+ * single market queues a full job once more so removed countries are
  * cleared, then turns market sync off.
  *
  * Returns 500 so Shopify retries when a new host cannot be registered or
  * the catalog sync job cannot be queued yet.
  */
 export const action = async ({ request }: ActionFunctionArgs) => {
-  const { topic, shop, session, admin } = await authenticate.webhook(request);
+  const { topic, shop, session, admin, payload } =
+    await authenticate.webhook(request);
 
   console.log(`Received ${topic} webhook for ${shop}`);
 
@@ -65,21 +71,37 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     }
 
     if (shopRecord.isProductVariantSyncEnabled) {
-      const enabledMarketCount = await countEnabledMarkets(admin);
-      await reconcileMarketCatalogSync({
-        shop: {
-          isProductVariantSyncEnabled: true,
-          isMarketSyncEnabled: Boolean(shopRecord.isMarketSyncEnabled),
-        },
-        enabledMarketCount,
-        updateMarketSyncEnabled: async (enabled) => {
-          await shopRepository.updateShop(shopRecord.shopUrl, {
-            isMarketSyncEnabled: enabled,
-          });
-        },
-        enqueueMarketSync: async () =>
-          (await enqueueMarketSyncTaskForShopUrl(shopRecord.shopUrl)) > 0,
-      });
+      const syncAlreadyOn = Boolean(shopRecord.isMarketSyncEnabled);
+      const createdMarketId =
+        topic === "MARKETS_CREATE" ? marketGidFromWebhook(payload) : null;
+      // A draft market is not in the enabled set. Skip it instead of
+      // resyncing every market; an update to active still runs a full sync.
+      const skipDraftCreate =
+        topic === "MARKETS_CREATE" &&
+        syncAlreadyOn &&
+        !isActiveMarketStatus(payload);
+
+      if (!skipDraftCreate) {
+        const enabledMarketCount = await countEnabledMarkets(admin);
+        await reconcileMarketCatalogSync({
+          shop: {
+            isProductVariantSyncEnabled: true,
+            isMarketSyncEnabled: syncAlreadyOn,
+          },
+          enabledMarketCount,
+          addedMarketId: syncAlreadyOn ? createdMarketId : null,
+          updateMarketSyncEnabled: async (enabled) => {
+            await shopRepository.updateShop(shopRecord.shopUrl, {
+              isMarketSyncEnabled: enabled,
+            });
+          },
+          enqueueMarketSync: async (scope) =>
+            (await enqueueMarketSyncTaskForShopUrl(
+              shopRecord.shopUrl,
+              scope?.marketId ? { marketId: scope.marketId } : undefined,
+            )) > 0,
+        });
+      }
     }
   } catch (error) {
     console.error(`[${topic}]`, error);

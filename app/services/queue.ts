@@ -195,7 +195,10 @@ export async function enqueueDataSyncTasks({
   );
 }
 
-async function enqueueMarketSyncJobIfEligible(shop: Shop): Promise<boolean> {
+async function enqueueMarketSyncJobIfEligible(
+  shop: Shop,
+  options?: { marketId?: string },
+): Promise<boolean> {
   if (!shop.isMarketSyncEnabled) {
     return false;
   }
@@ -221,7 +224,10 @@ async function enqueueMarketSyncJobIfEligible(shop: Shop): Promise<boolean> {
   // job waits in the queue.
   await DataSyncMarketQueue.add(
     "data-sync-market",
-    { shop: shop.shopUrl },
+    {
+      shop: shop.shopUrl,
+      ...(options?.marketId ? { marketId: options.marketId } : {}),
+    },
     {
       removeOnComplete: 1000,
       removeOnFail: 5000,
@@ -234,19 +240,24 @@ async function enqueueMarketSyncJobIfEligible(shop: Shop): Promise<boolean> {
 /**
  * Enqueues a market sync job after a shop's data-sync (products) finishes,
  * and after a markets webhook when a market is added, enabled, or removed.
+ *
+ * `marketId` limits the run to that market. Omit it for a full shop sync
+ * (first enable, removal cleanup, post-product sync, daily cron).
+ *
  * No-ops when the shop is missing, market sync is disabled, or a fresh
  * IN_PROGRESS run already exists. Unlike the daily cron, this path does not
  * apply MARKET_SYNC_MIN_INTERVAL_MS.
  */
 export async function enqueueMarketSyncTaskForShopUrl(
   shopUrl: string,
+  options?: { marketId?: string },
 ): Promise<number> {
   const shop = await shopRepository.getShop(shopUrl);
   if (!shop) {
     return 0;
   }
 
-  return (await enqueueMarketSyncJobIfEligible(shop)) ? 1 : 0;
+  return (await enqueueMarketSyncJobIfEligible(shop, options)) ? 1 : 0;
 }
 
 /**

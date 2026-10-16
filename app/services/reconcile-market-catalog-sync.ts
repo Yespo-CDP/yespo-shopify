@@ -13,17 +13,21 @@ export class MarketCatalogSyncBusyError extends Error {
 }
 
 /**
- * Starts or stops shop-wide market catalog sync after a markets webhook.
+ * Starts or stops market catalog sync after a markets webhook.
  *
- * The queued job syncs every enabled market, including one that was just
- * added or turned on. Unchanged countries are skipped later by content hash.
+ * The first time a shop has more than one enabled market, the queued job
+ * syncs every enabled market. The primary market has never been sent to Yespo.
  *
- * Turning sync off queues that same job first, while the flag is still on,
+ * A later `markets/create` passes `addedMarketId` and the job syncs only that
+ * market. Updates and the daily cron still sync the whole shop.
+ *
+ * Turning sync off queues a full job first, while the flag is still on,
  * so removed countries are cleared. The flag flips only after the job is queued.
  */
 export async function reconcileMarketCatalogSync({
   shop,
   enabledMarketCount,
+  addedMarketId,
   updateMarketSyncEnabled,
   enqueueMarketSync,
 }: {
@@ -32,8 +36,10 @@ export async function reconcileMarketCatalogSync({
     isMarketSyncEnabled: boolean;
   };
   enabledMarketCount: number;
+  /** Set on markets/create when sync is already on. */
+  addedMarketId?: string | null;
   updateMarketSyncEnabled: (enabled: boolean) => Promise<void>;
-  enqueueMarketSync: () => Promise<boolean>;
+  enqueueMarketSync: (scope?: { marketId: string }) => Promise<boolean>;
 }): Promise<void> {
   if (!shop.isProductVariantSyncEnabled) {
     return;
@@ -44,8 +50,17 @@ export async function reconcileMarketCatalogSync({
   if (enable) {
     if (!shop.isMarketSyncEnabled) {
       await updateMarketSyncEnabled(true);
+      if (!(await enqueueMarketSync())) {
+        throw new MarketCatalogSyncBusyError();
+      }
+      return;
     }
-    if (!(await enqueueMarketSync())) {
+
+    if (
+      !(await enqueueMarketSync(
+        addedMarketId ? { marketId: addedMarketId } : undefined,
+      ))
+    ) {
       throw new MarketCatalogSyncBusyError();
     }
     return;

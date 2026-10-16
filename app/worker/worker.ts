@@ -30,6 +30,8 @@ interface JobData {
 
 interface MarketSyncJobData {
   shop?: string;
+  /** When set, the run syncs only this market. Omit for a full shop sync. */
+  marketId?: string;
 }
 
 interface TokenMigrationJobData {
@@ -130,7 +132,7 @@ const marketSyncWorker = new Worker<MarketSyncJobData>(
   "data-sync-market",
   async (job) => {
     try {
-      const { shop } = job?.data;
+      const { shop, marketId } = job?.data ?? {};
 
       if (!shop) return;
 
@@ -155,6 +157,7 @@ const marketSyncWorker = new Worker<MarketSyncJobData>(
         shopData.id,
         shopData.orgId,
         shopData.siteId,
+        marketId,
       );
     } catch (error: unknown) {
       console.error(`Market sync worker error:`, error);

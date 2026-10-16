@@ -52,6 +52,44 @@ test("enqueues a full shop run for every enabled market when sync is already on"
   assert.deepEqual(calls, ["enqueue"]);
 });
 
+test("syncs only the created market when market sync is already on", async () => {
+  const calls: string[] = [];
+
+  await reconcileMarketCatalogSync({
+    shop: shop({ marketSyncEnabled: true }),
+    enabledMarketCount: 3,
+    addedMarketId: "gid://shopify/Market/188558248",
+    updateMarketSyncEnabled: async (enabled) => {
+      calls.push(`flag:${enabled}`);
+    },
+    enqueueMarketSync: async (scope) => {
+      calls.push(scope?.marketId ? `enqueue:${scope.marketId}` : "enqueue");
+      return true;
+    },
+  });
+
+  assert.deepEqual(calls, ["enqueue:gid://shopify/Market/188558248"]);
+});
+
+test("full-syncs every market when the second market turns sync on", async () => {
+  const calls: string[] = [];
+
+  await reconcileMarketCatalogSync({
+    shop: shop({ marketSyncEnabled: false }),
+    enabledMarketCount: 2,
+    addedMarketId: "gid://shopify/Market/188558248",
+    updateMarketSyncEnabled: async (enabled) => {
+      calls.push(`flag:${enabled}`);
+    },
+    enqueueMarketSync: async (scope) => {
+      calls.push(scope?.marketId ? `enqueue:${scope.marketId}` : "enqueue");
+      return true;
+    },
+  });
+
+  assert.deepEqual(calls, ["flag:true", "enqueue"]);
+});
+
 test("leaves a single-market shop alone", async () => {
   const calls: string[] = [];
 

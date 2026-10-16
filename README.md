@@ -908,7 +908,7 @@ Shopify webhooks (API version: 2025-10) used by the app:
 | **products/create**        | Triggered when a new product is created.                                      | `/webhooks/app/products`      |
 | **products/update**        | Triggered when an existing product’s data is updated.                         | `/webhooks/app/products`      |
 | **products/delete**        | Triggered when a product is deleted.                                          | `/webhooks/app/products`      |
-| **markets/create**         | Triggered when a market is created. Reconciles web push hosts with the multi-domain metafield. | `/webhooks/app/markets`       |
+| **markets/create**         | Triggered when a market is created. Reconciles web push hosts. If market sync is already on, syncs only the new market to Yespo. The first extra market still syncs every enabled market. | `/webhooks/app/markets`       |
 | **markets/update**         | Triggered when a market is updated. Reconciles web push hosts with the multi-domain metafield. | `/webhooks/app/markets`       |
 | **markets/delete**         | Triggered when a market is deleted. Reconciles web push hosts with the multi-domain metafield. | `/webhooks/app/markets`       |
 | **carts/update**           | Triggered when a cart is updated in the online store.                         | `/webhooks/app/carts`         |
