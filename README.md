@@ -64,8 +64,6 @@ A shop with Shopify Markets can serve the storefront on more than one host (`sho
 - The theme block `yespo-script.liquid` reads that JSON and injects the script for `window.location.hostname`. When the multi-domain metafield is empty, it falls back to `yespo-web-push-script`.
 - The JSON value is written with `collapseWhitespace: false`, so spaces inside the stored scripts stay intact. Newlines are still removed before the write.
 
-A merchant can refresh every host from the connection status screen (`syncMarketWebPushScripts`). That re-registers each current host and replaces every stored script.
-
 #### Market webhook
 
 `markets/create`, `markets/update`, and `markets/delete` are delivered to `/webhooks/app/markets`. The handler does not trust the webhook body. It reads the current root URLs again and compares those hosts with the keys of `yespo-web-push-multi-domain` (`reconcileMarketWebPushScripts`).

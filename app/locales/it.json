@@ -157,10 +157,8 @@
       "button": {
         "configure": "Installare script",
         "tryAgain": "Prova di nuovo",
-        "activateThemeExtension": "Attiva estensione del tema",
-        "syncMarketWebPushScripts": "Salva gli script web push dei mercati"
+        "activateThemeExtension": "Attiva estensione del tema"
       },
-      "marketWebPushScriptsSuccess": "Script web push salvati per i domini dei mercati.",
       "success": "Installato con successo.",
       "errors": {
         "requestScriptError": "Errore nel richiedere script",
@@ -168,7 +166,6 @@
         "createWebPushDomainError": "Errore nella creazione del dominio webpush",
         "domainAlreadyRegisteredError": "Il dominio è già registrato.",
         "domainCantBeReachedError": "Il dominio non può essere raggiunto.",
-        "marketWebPushScriptsError": "Impossibile salvare gli script web push dei domini dei mercati.",
         "support": "Per favore, contattare il supporto Yespo."
       }
     },

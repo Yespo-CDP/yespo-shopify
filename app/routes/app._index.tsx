@@ -86,10 +86,6 @@ export default function Index() {
       shopify.toast.show(t("AccountConnectionSection.success"), {
         duration: 2000,
       });
-    } else if (actionData?.success?.marketWebPushScripts) {
-      shopify.toast.show(t("ConnectionStatusSection.marketWebPushScriptsSuccess"), {
-        duration: 2000,
-      });
     } else if (actionData?.success?.connection?.ok) {
       if (!actionData?.success?.connection?.isThemeExtensionActive) {
         open("shopify://admin/themes/current/editor?context=apps", "_top");
@@ -195,9 +191,6 @@ export default function Index() {
               !shop?.apiKey ||
               (!scriptConnectionStatus?.isGeneralScriptExist &&
                 !scriptConnectionStatus?.isWebPushScriptExist)
-            }
-            syncMarketScriptsDisabled={
-              isSubmitting || isLoading || !shop?.apiKey
             }
           />
 

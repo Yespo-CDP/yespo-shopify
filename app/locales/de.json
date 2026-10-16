@@ -157,10 +157,8 @@
       "button": {
         "configure": "Skripte installieren",
         "tryAgain": "Erneut versuchen",
-        "activateThemeExtension": "Theme-Erweiterung aktivieren",
-        "syncMarketWebPushScripts": "Web-Push-Skripte für Märkte speichern"
+        "activateThemeExtension": "Theme-Erweiterung aktivieren"
       },
-      "marketWebPushScriptsSuccess": "Web-Push-Skripte für Marktdomains gespeichert.",
       "success": "Erfolgreich installiert.",
       "errors": {
         "requestScriptError": "Fehler beim Anfordern des Skripts",
@@ -168,7 +166,6 @@
         "createWebPushDomainError": "Fehler beim Erstellen der Web-Push-Domain",
         "domainAlreadyRegisteredError": "Domain ist bereits registriert.",
         "domainCantBeReachedError": "Domain ist nicht erreichbar.",
-        "marketWebPushScriptsError": "Web-Push-Skripte für Marktdomains konnten nicht gespeichert werden.",
         "support": "Bitte wenden Sie sich an den Yespo-Support."
       }
     },
