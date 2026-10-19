@@ -30,6 +30,26 @@ export default class MarketSyncRepositoryImpl implements MarketSyncRepository {
     });
   }
 
+  async getByProductIdsAndCountries(
+    shopId: number,
+    productIds: string[],
+    countryCodes: string[],
+  ): Promise<MarketSyncRecord[]> {
+    const ids = [...new Set(productIds.filter(Boolean))];
+    const countries = [...new Set(countryCodes.filter(Boolean))];
+    if (ids.length === 0 || countries.length === 0) {
+      return [];
+    }
+
+    return this.database.marketSync.findMany({
+      where: {
+        shopId,
+        productId: { in: ids },
+        countryCode: { in: countries },
+      },
+    });
+  }
+
   async getSyncedCountryCodes(shopId: number): Promise<string[]> {
     const rows = await this.database.marketSync.findMany({
       where: { shopId },
