@@ -5,8 +5,12 @@ import type { ShopMarketConfig } from "~/@types/shopMarketsConfig";
 
 import {
   activeCatalogPublicationIds,
+  countriesToClearForMissingCatalog,
+  countryCodesForMarkets,
   isPublishedOnMarketCatalog,
   marketsMissingActiveCatalog,
+  marketsWithActiveCatalog,
+  shopMarketsConfigFromMarkets,
 } from "./market-catalogs";
 
 const UA_PUBLICATION = "gid://shopify/Publication/10";
@@ -67,6 +71,38 @@ test("names every market that has no active catalog publication", () => {
 
   assert.deepEqual(marketsMissingActiveCatalog([ukraine, germany]), [germany]);
   assert.deepEqual(marketsMissingActiveCatalog([ukraine]), []);
+});
+
+test("clears only catalog-less countries that were already synced", () => {
+  const ukraine = market({
+    id: "gid://shopify/Market/1",
+    name: "Ukraine",
+    countries: ["UA"],
+    locales: ["uk"],
+    catalogPublicationIds: [UA_PUBLICATION],
+  });
+  const germany = market({
+    id: "gid://shopify/Market/2",
+    name: "Germany",
+    countries: ["DE", "AT"],
+    locales: ["de"],
+  });
+  const markets = [ukraine, germany];
+
+  assert.deepEqual(
+    marketsWithActiveCatalog(markets).map((item) => item.name),
+    ["Ukraine"],
+  );
+  assert.deepEqual(countriesToClearForMissingCatalog(markets, ["UA", "DE"]), [
+    "DE",
+  ]);
+  assert.deepEqual(countriesToClearForMissingCatalog(markets, ["UA"]), []);
+  assert.deepEqual(shopMarketsConfigFromMarkets([ukraine]), {
+    markets: [ukraine],
+    countries: ["UA"],
+    locales: ["uk"],
+  });
+  assert.deepEqual(countryCodesForMarkets([germany]), ["DE", "AT"]);
 });
 
 test("a product is in the market when it is on any attached catalog", () => {

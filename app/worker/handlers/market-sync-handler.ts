@@ -21,7 +21,12 @@ import {
 import { computeContentHash } from "../services/compute-content-hash";
 import { createClient } from "../services/create-client";
 import { fetchShopMarketsConfig } from "../services/fetch-shop-markets-config";
-import { marketsMissingActiveCatalog } from "../services/market-catalogs";
+import {
+  countriesToClearForMissingCatalog,
+  marketsMissingActiveCatalog,
+  marketsWithActiveCatalog,
+  shopMarketsConfigFromMarkets,
+} from "../services/market-catalogs";
 import { selectMarketsForSync } from "../services/select-markets-for-sync";
 import { streamBulkJsonlToTmpMarketSync } from "../services/parse-bulk-jsonl";
 import { buildBulkQueryChunks } from "../services/product-sync-bulk-queries";
@@ -201,22 +206,11 @@ export const marketSyncHandler = async (
   try {
     marketsConfig = await fetchShopMarketsConfig({ client });
 
-    // One market without an active catalog blocks the whole run. Leaving
-    // before cleanup and before log writes keeps every country's status and
-    // sends nothing to Yespo.
-    const missingCatalog = marketsMissingActiveCatalog(marketsConfig.markets);
-    if (missingCatalog.length > 0) {
-      const names = missingCatalog.map((market) => market.name).join(", ");
-      const verb = missingCatalog.length === 1 ? "has" : "have";
-      console.log(
-        `⚠️ Market sync skipped for ${shop}: ${names} ${verb} no active catalog. No market was synced.`,
-      );
-      return;
-    }
-
     // Markets removed/disabled in Shopify: drop their products from Yespo
     // recommendations (isInStock: 0) and prune local state. Runs even when no
     // markets remain, so a fully removed market set is still cleaned up.
+    // Countries of an enabled market with no catalog stay in this list, so
+    // this pass does not treat that market as removed.
     await cleanupRemovedMarkets({
       shopId,
       apiKey,
@@ -254,14 +248,52 @@ export const marketSyncHandler = async (
         );
         return;
       }
-      marketsConfig = selected;
       await shopMarketRepository.upsertMarket(shopId, market);
+      if (market.catalogPublicationIds.length === 0) {
+        console.log(
+          `⚠️ Market ${market.name} has no active catalog for ${shop}, skipping this market. A full sync clears markets without a catalog.`,
+        );
+        return;
+      }
+      marketsConfig = selected;
     } else {
       await shopMarketRepository.replaceAll(shopId, marketsConfig.markets);
+      const missingCatalog = marketsMissingActiveCatalog(marketsConfig.markets);
+      if (missingCatalog.length > 0) {
+        const names = missingCatalog.map((market) => market.name).join(", ");
+        const syncedCountries =
+          await marketSyncRepository.getSyncedCountryCodes(shopId);
+        const countriesToClear = countriesToClearForMissingCatalog(
+          marketsConfig.markets,
+          syncedCountries,
+        );
+        if (countriesToClear.length === 0) {
+          console.log(
+            `⚠️ ${names} ${missingCatalog.length === 1 ? "has" : "have"} no active catalog for ${shop}. Nothing was synced for them before, so nothing was cleared. Markets with a catalog will still sync.`,
+          );
+        } else {
+          console.log(
+            `⚠️ Clearing ${names} from Yespo for ${shop}: no active catalog. Markets with a catalog will still sync.`,
+          );
+          await clearSyncedMarketCountries({
+            shopId,
+            apiKey,
+            shop,
+            logDomain,
+            orgId,
+            siteId,
+            countryCodes: countriesToClear,
+            reason: "missing-catalog",
+          });
+        }
+      }
+      marketsConfig = shopMarketsConfigFromMarkets(
+        marketsWithActiveCatalog(marketsConfig.markets),
+      );
     }
 
     if (marketsConfig.countries.length === 0) {
-      console.log(`⚠️ No enabled market countries for ${shop}`);
+      console.log(`⚠️ No enabled markets with an active catalog for ${shop}`);
       return;
     }
 
@@ -584,7 +616,42 @@ async function cleanupRemovedMarkets({
     `🗑️ Removing ${removedCountries.length} market(s) from Yespo for ${shop}: ${removedCountries.join(", ")}`,
   );
 
-  for (const countryCode of removedCountries) {
+  await clearSyncedMarketCountries({
+    shopId,
+    apiKey,
+    shop,
+    logDomain,
+    orgId,
+    siteId,
+    countryCodes: removedCountries,
+    reason: "removed",
+  });
+}
+
+/**
+ * Sends `isInStock: 0` for every previously synced product in the given
+ * countries and deletes the local rows Yespo accepted.
+ */
+async function clearSyncedMarketCountries({
+  shopId,
+  apiKey,
+  shop,
+  logDomain,
+  orgId,
+  siteId,
+  countryCodes,
+  reason,
+}: {
+  shopId: number;
+  apiKey: string;
+  shop: string;
+  logDomain: string;
+  orgId?: number | null;
+  siteId?: string | null;
+  countryCodes: string[];
+  reason: "removed" | "missing-catalog";
+}): Promise<void> {
+  for (const countryCode of countryCodes) {
     // Cursor on the autoincrement id: keeps the loop terminating even when some
     // rows fail and are intentionally left in place (their ids are still passed).
     let afterId = 0;
@@ -667,7 +734,9 @@ async function cleanupRemovedMarkets({
     await marketSyncLogRepository.deleteByCountry(shopId, countryCode);
 
     console.log(
-      `✅ Cleaned up ${processedCount} product(s) from removed market ${countryCode} for ${shop}`,
+      reason === "removed"
+        ? `✅ Cleaned up ${processedCount} product(s) from removed market ${countryCode} for ${shop}`
+        : `✅ Cleared ${processedCount} product(s) from market ${countryCode} for ${shop}: no active catalog`,
     );
 
     await sendLogEvent({

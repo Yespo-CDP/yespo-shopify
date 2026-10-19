@@ -1,4 +1,7 @@
-import type { ShopMarketConfig } from "~/@types/shopMarketsConfig";
+import type {
+  ShopMarketConfig,
+  ShopMarketsConfig,
+} from "~/@types/shopMarketsConfig";
 
 const CATALOG_PUBLICATION_ID = /^gid:\/\/shopify\/Publication\/\d+$/;
 
@@ -37,6 +40,41 @@ export function marketsMissingActiveCatalog(
   markets: ShopMarketConfig[],
 ): ShopMarketConfig[] {
   return markets.filter((market) => market.catalogPublicationIds.length === 0);
+}
+
+/** Enabled markets that have at least one active catalog publication. */
+export function marketsWithActiveCatalog(
+  markets: ShopMarketConfig[],
+): ShopMarketConfig[] {
+  return markets.filter((market) => market.catalogPublicationIds.length > 0);
+}
+
+export function countryCodesForMarkets(markets: ShopMarketConfig[]): string[] {
+  return [...new Set(markets.flatMap((market) => market.countries))];
+}
+
+/**
+ * Countries of catalog-less markets that already have rows in Yespo.
+ * A market that was never synced is left out: there is nothing to clear.
+ */
+export function countriesToClearForMissingCatalog(
+  markets: ShopMarketConfig[],
+  syncedCountryCodes: string[],
+): string[] {
+  const synced = new Set(syncedCountryCodes);
+  return countryCodesForMarkets(marketsMissingActiveCatalog(markets)).filter(
+    (countryCode) => synced.has(countryCode),
+  );
+}
+
+export function shopMarketsConfigFromMarkets(
+  markets: ShopMarketConfig[],
+): ShopMarketsConfig {
+  return {
+    markets,
+    countries: countryCodesForMarkets(markets),
+    locales: [...new Set(markets.flatMap((market) => market.locales))],
+  };
 }
 
 /**
