@@ -9,7 +9,8 @@ export interface ShopMarketConfig {
   rootUrls: Record<string, string>;
   /**
    * Publication ids of ACTIVE catalogs attached to this market.
-   * Empty means the market has no catalog to sync from.
+   * Empty means the market has no catalog: sync every active product
+   * published to the Online Store, priced with the country's contextual price.
    */
   catalogPublicationIds: string[];
 }

@@ -3,7 +3,8 @@ import type { GraphQLClient } from "@shopify/graphql-client";
 import type { ShopMarketsConfig } from "~/@types/shopMarketsConfig";
 
 import {
-  isPublishedOnMarketCatalog,
+  countriesNeedOnlineStorePublication,
+  isProductInMarket,
   publicationIdsForCountries,
 } from "./market-catalogs";
 import {
@@ -37,7 +38,9 @@ export interface ProductContextualPricingResult {
  * product and all its variants using regular GraphQL (not Bulk Operation).
  *
  * A country counts as published when the product is on an active catalog
- * attached to that country's market. Price still comes from contextual pricing.
+ * attached to that country's market. A market with no catalog counts every
+ * active product published to the Online Store. Price still comes from
+ * contextual pricing.
  *
  * Uses the same alias naming convention as the bulk query
  * (`price_{CC}`, `published_pub_{publicationId}`).
@@ -65,6 +68,14 @@ export async function getProductContextualPricing({
         `${publicationFieldAlias(publicationId)}: publishedOnPublication(publicationId: ${JSON.stringify(publicationId)})`,
     )
     .join("\n      ");
+  const onlineStoreFields = countriesNeedOnlineStorePublication(
+    config.markets,
+    countries,
+  )
+    ? `
+        status
+        publishedAt`
+    : "";
 
   const pricingFields = countries
     .map(
@@ -81,6 +92,7 @@ export async function getProductContextualPricing({
       product(id: $productId) {
         id
         handle
+        ${onlineStoreFields}
         ${publishedFields}
         variants(first: 250, after: $after) {
           pageInfo { hasNextPage endCursor }
@@ -124,10 +136,15 @@ export async function getProductContextualPricing({
               product[publicationFieldAlias(publicationId)] === true,
             ]),
           );
-          const published = isPublishedOnMarketCatalog(
+          const published = isProductInMarket({
+            catalogPublicationIds: market.catalogPublicationIds,
             publishedByPublicationId,
-            market.catalogPublicationIds,
-          );
+            status: typeof product.status === "string" ? product.status : null,
+            publishedAt:
+              typeof product.publishedAt === "string"
+                ? product.publishedAt
+                : null,
+          });
           for (const country of market.countries) {
             if (country in publishedInCountry) {
               publishedInCountry[country] = published;

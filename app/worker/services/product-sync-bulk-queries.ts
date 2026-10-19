@@ -1,6 +1,9 @@
 import type { ShopMarketsConfig } from "~/@types/shopMarketsConfig";
 
-import { publicationIdsForCountries } from "./market-catalogs";
+import {
+  countriesNeedOnlineStorePublication,
+  publicationIdsForCountries,
+} from "./market-catalogs";
 
 const MAX_COUNTRIES_PER_CHUNK = 15;
 
@@ -41,7 +44,8 @@ export interface BulkQueryOptions {
 /**
  * Builds a Shopify Bulk Operation query that fetches, for each product/variant,
  * per-country contextual pricing and whether the product is published on the
- * catalog attached to each market.
+ * catalog attached to each market. A market with no catalog needs `status` and
+ * `publishedAt` so the parser can keep active products published to the Online Store.
  *
  * Country codes are `CountryCode` enum values and are emitted unquoted in the
  * `context` argument. Publication ids are quoted GraphQL strings. Both are
@@ -76,6 +80,15 @@ export function buildBulkPricingQuery(
     )
     .join("\n");
 
+  const onlineStoreFields = countriesNeedOnlineStorePublication(
+    config.markets,
+    countries,
+  )
+    ? `
+        status
+        publishedAt`
+    : "";
+
   return `
 {
   products {
@@ -84,6 +97,7 @@ export function buildBulkPricingQuery(
         id
         handle
         updatedAt
+        ${onlineStoreFields}
         ${publishedFields}
         variants {
           edges {

@@ -1,7 +1,4 @@
-import type {
-  ShopMarketConfig,
-  ShopMarketsConfig,
-} from "~/@types/shopMarketsConfig";
+import type { ShopMarketConfig } from "~/@types/shopMarketsConfig";
 
 const CATALOG_PUBLICATION_ID = /^gid:\/\/shopify\/Publication\/\d+$/;
 
@@ -35,51 +32,10 @@ export function activeCatalogPublicationIds(
   return ids;
 }
 
-/** Enabled markets whose product list cannot be read from an attached catalog. */
-export function marketsMissingActiveCatalog(
-  markets: ShopMarketConfig[],
-): ShopMarketConfig[] {
-  return markets.filter((market) => market.catalogPublicationIds.length === 0);
-}
-
-/** Enabled markets that have at least one active catalog publication. */
-export function marketsWithActiveCatalog(
-  markets: ShopMarketConfig[],
-): ShopMarketConfig[] {
-  return markets.filter((market) => market.catalogPublicationIds.length > 0);
-}
-
-export function countryCodesForMarkets(markets: ShopMarketConfig[]): string[] {
-  return [...new Set(markets.flatMap((market) => market.countries))];
-}
-
-/**
- * Countries of catalog-less markets that already have rows in Yespo.
- * A market that was never synced is left out: there is nothing to clear.
- */
-export function countriesToClearForMissingCatalog(
-  markets: ShopMarketConfig[],
-  syncedCountryCodes: string[],
-): string[] {
-  const synced = new Set(syncedCountryCodes);
-  return countryCodesForMarkets(marketsMissingActiveCatalog(markets)).filter(
-    (countryCode) => synced.has(countryCode),
-  );
-}
-
-export function shopMarketsConfigFromMarkets(
-  markets: ShopMarketConfig[],
-): ShopMarketsConfig {
-  return {
-    markets,
-    countries: countryCodesForMarkets(markets),
-    locales: [...new Set(markets.flatMap((market) => market.locales))],
-  };
-}
-
 /**
  * True when the product is published on at least one catalog attached to the
- * market. Several catalogs are a union. No catalog means not published.
+ * market. Several catalogs are a union. An empty list is not a catalog match;
+ * callers use `isProductInMarket` for markets that have no catalog.
  */
 export function isPublishedOnMarketCatalog(
   publishedByPublicationId: Record<string, boolean>,
@@ -87,6 +43,52 @@ export function isPublishedOnMarketCatalog(
 ): boolean {
   return catalogPublicationIds.some(
     (publicationId) => publishedByPublicationId[publicationId] === true,
+  );
+}
+
+/** Active product published to the Online Store, the same set as the base catalog. */
+export function isPublishedOnOnlineStore(
+  status: string | null | undefined,
+  publishedAt: string | null | undefined,
+): boolean {
+  return status?.toUpperCase() === "ACTIVE" && Boolean(publishedAt);
+}
+
+/**
+ * A market with catalogs includes a product published on any of them.
+ * A market with no catalog includes every active product published to the
+ * Online Store. Its price still comes from contextual pricing for the country.
+ */
+export function isProductInMarket({
+  catalogPublicationIds,
+  publishedByPublicationId,
+  status,
+  publishedAt,
+}: {
+  catalogPublicationIds: string[];
+  publishedByPublicationId: Record<string, boolean>;
+  status?: string | null;
+  publishedAt?: string | null;
+}): boolean {
+  if (catalogPublicationIds.length === 0) {
+    return isPublishedOnOnlineStore(status, publishedAt);
+  }
+  return isPublishedOnMarketCatalog(
+    publishedByPublicationId,
+    catalogPublicationIds,
+  );
+}
+
+/** True when one of these countries belongs to a market that has no catalog. */
+export function countriesNeedOnlineStorePublication(
+  markets: ShopMarketConfig[],
+  countries: string[],
+): boolean {
+  const wanted = new Set(countries);
+  return markets.some(
+    (market) =>
+      market.catalogPublicationIds.length === 0 &&
+      market.countries.some((country) => wanted.has(country)),
   );
 }
 
