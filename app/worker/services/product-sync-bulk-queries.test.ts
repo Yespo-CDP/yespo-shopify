@@ -35,6 +35,33 @@ const config: ShopMarketsConfig = {
   locales: ["uk", "en"],
 };
 
+test("a market without a catalog asks for the online store assortment and the country price", () => {
+  const query = buildBulkPricingQuery(
+    {
+      markets: [
+        {
+          id: "gid://shopify/Market/3",
+          name: "Germany",
+          handle: "de",
+          enabled: true,
+          countries: ["DE"],
+          locales: ["de"],
+          rootUrls: {},
+          catalogPublicationIds: [],
+        },
+      ],
+      countries: ["DE"],
+      locales: ["de"],
+    },
+    { countries: ["DE"] },
+  );
+
+  assert.match(query, /\n\s*status\b/);
+  assert.match(query, /\bpublishedAt\b/);
+  assert.match(query, /contextualPricing\(context: \{ country: DE \}\)/);
+  assert.doesNotMatch(query, /publishedOnPublication/);
+});
+
 test("asks Shopify whether the product is on the market catalog", () => {
   const query = buildBulkPricingQuery(config, { countries: ["US"] });
 
@@ -48,5 +75,6 @@ test("asks Shopify whether the product is on the market catalog", () => {
   );
   assert.doesNotMatch(query, /Publication\/10/);
   assert.doesNotMatch(query, /publishedInContext/);
+  assert.doesNotMatch(query, /\bpublishedAt\b/);
   assert.match(query, /contextualPricing\(context: \{ country: US \}\)/);
 });

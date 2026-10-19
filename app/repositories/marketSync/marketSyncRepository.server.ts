@@ -13,17 +13,6 @@ export default interface MarketSyncRepository {
   /** Distinct country codes that have ever been synced for this shop. */
   getSyncedCountryCodes(shopId: number): Promise<string[]>;
 
-  /**
-   * Rows for one product in the given countries.
-   * `productIds` accepts both the numeric id and the Shopify GID: full sync
-   * stores the GID, the product webhook stores the numeric id.
-   */
-  getByProductIdsAndCountries(
-    shopId: number,
-    productIds: string[],
-    countryCodes: string[],
-  ): Promise<MarketSyncRecord[]>;
-
   getByCountry(
     shopId: number,
     countryCode: string,

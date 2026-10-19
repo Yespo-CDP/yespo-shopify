@@ -8,12 +8,6 @@ import { createClient } from "~/worker/services/create-client";
 import { fetchShopMarketsConfig } from "~/worker/services/fetch-shop-markets-config";
 import { getProductContextualPricing } from "~/worker/services/get-product-contextual-pricing";
 import { computeContentHash } from "~/worker/services/compute-content-hash";
-import {
-  countryCodesForMarkets,
-  marketsMissingActiveCatalog,
-  marketsWithActiveCatalog,
-  shopMarketsConfigFromMarkets,
-} from "~/worker/services/market-catalogs";
 import { resolveMarketUrls } from "~/worker/services/resolve-market-urls";
 import type { ShopMarketConfig } from "~/@types/shopMarketsConfig";
 
@@ -46,15 +40,13 @@ function computeMarketHash(item: MarketProductItem): string {
  *
  * Flow:
  *  1. Fetch active markets config from Shopify.
- *  2. Markets with an active catalog are updated. A market with no catalog
- *     does not stop the others: this product is set to isInStock 0 there
- *     when it was synced before.
- *  3. Fetch contextual pricing and catalog publication for markets that have
- *     an active catalog.
- *  4. Skip variants that are not in a market's attached catalog.
- *  5. Build market items and compute content hashes.
- *  6. Compare against stored MarketSync records — only send changed items.
- *  7. Call POST /v1/markets and update the MarketSync table.
+ *  2. Fetch contextual pricing. A market with catalogs includes this product
+ *     when it is published on one of them. A market with no catalog includes
+ *     it when it is an active product published to the Online Store.
+ *  3. Skip variants that are not sold in a market.
+ *  4. Build market items and compute content hashes.
+ *  5. Compare against stored MarketSync records — only send changed items.
+ *  6. Call POST /v1/markets and update the MarketSync table.
  */
 export async function updateMarketFromWebhook({
   shopId,
@@ -84,30 +76,7 @@ export async function updateMarketFromWebhook({
   const marketsConfig = await fetchShopMarketsConfig({ client });
   if (!marketsConfig.countries.length) return;
 
-  const missingCatalog = marketsMissingActiveCatalog(marketsConfig.markets);
-  const syncableConfig = shopMarketsConfigFromMarkets(
-    marketsWithActiveCatalog(marketsConfig.markets),
-  );
   const numericProductId = productGid.split("/").pop() ?? productGid;
-
-  if (missingCatalog.length > 0) {
-    const names = missingCatalog.map((market) => market.name).join(", ");
-    const verb = missingCatalog.length === 1 ? "has" : "have";
-    console.log(
-      `[market-webhook] ${names} ${verb} no active catalog for ${shopifyDomain}. This product is cleared there when it was synced before. Markets with a catalog still sync.`,
-    );
-    await clearProductInCountries({
-      shopId,
-      productIds: [numericProductId, productGid],
-      countryCodes: countryCodesForMarkets(missingCatalog),
-      apiKey,
-      siteId,
-      domain,
-      orgId,
-    });
-  }
-
-  if (!syncableConfig.countries.length) return;
 
   const previousShopMarkets = await shopMarketRepository.getByShopId(shopId);
   const previousLocalesByMarketId = new Map(
@@ -117,7 +86,7 @@ export async function updateMarketFromWebhook({
   const pricing = await getProductContextualPricing({
     client,
     productGid,
-    config: syncableConfig,
+    config: marketsConfig,
   });
 
   if (!pricing) return;
@@ -126,7 +95,7 @@ export async function updateMarketFromWebhook({
 
   // Build countryCode → ShopMarketConfig lookup
   const countryToMarket = new Map<string, ShopMarketConfig>();
-  for (const market of syncableConfig.markets) {
+  for (const market of marketsConfig.markets) {
     for (const country of market.countries) {
       countryToMarket.set(country, market);
     }
@@ -194,7 +163,7 @@ export async function updateMarketFromWebhook({
   const existingRecords = await marketSyncRepository.getByKeys(
     shopId,
     variants.flatMap((v) =>
-      syncableConfig.countries.map((cc) => ({
+      marketsConfig.countries.map((cc) => ({
         productId: numericProductId,
         variantId: v.variantId,
         countryCode: cc,
@@ -221,7 +190,7 @@ export async function updateMarketFromWebhook({
   for (const variant of variants) {
     const numericVariantId = variant.variantId.split("/").pop() ?? variant.variantId;
 
-    for (const cc of syncableConfig.countries) {
+    for (const cc of marketsConfig.countries) {
       if (!publishedInCountry[cc]) continue;
 
       const countryPricing = variant.perCountry[cc];
@@ -294,77 +263,5 @@ export async function updateMarketFromWebhook({
         shop: { connect: { id: shopId } },
       }),
     ),
-  );
-}
-
-/**
- * Sets this product to isInStock 0 in the given countries and deletes the
- * local rows Yespo accepted. Rows Yespo rejects stay for the next run.
- */
-async function clearProductInCountries({
-  shopId,
-  productIds,
-  countryCodes,
-  apiKey,
-  siteId,
-  domain,
-  orgId,
-}: {
-  shopId: number;
-  productIds: string[];
-  countryCodes: string[];
-  apiKey: string;
-  siteId: string;
-  domain: string;
-  orgId?: number | null;
-}): Promise<void> {
-  const records = await marketSyncRepository.getByProductIdsAndCountries(
-    shopId,
-    productIds,
-    countryCodes,
-  );
-  if (records.length === 0) return;
-
-  const clearedAt = new Date().toISOString();
-  const byCountry = new Map<string, MarketProductItem[]>();
-  for (const record of records) {
-    const numericVariantId =
-      record.variantId.split("/").pop() ?? record.variantId;
-    const item: MarketProductItem = {
-      productId: numericVariantId,
-      updatedDate: clearedAt,
-      isInStock: 0,
-    };
-    const items = byCountry.get(record.countryCode) ?? [];
-    items.push(item);
-    byCountry.set(record.countryCode, items);
-  }
-
-  const markets = Array.from(byCountry.entries()).map(
-    ([marketId, products]) => ({ marketId, products }),
-  );
-  writeDebug("market-missing-catalog-webhook", { siteId, markets });
-  const response = await updateMarketProducts({
-    apiKey,
-    siteId,
-    markets,
-    domain,
-    orgId,
-  });
-
-  const failed = new Set(response.failedItems);
-  await marketSyncRepository.deleteManyByKeys(
-    shopId,
-    records
-      .filter((record) => {
-        const numericVariantId =
-          record.variantId.split("/").pop() ?? record.variantId;
-        return !failed.has(numericVariantId);
-      })
-      .map((record) => ({
-        productId: record.productId,
-        variantId: record.variantId,
-        countryCode: record.countryCode,
-      })),
   );
 }

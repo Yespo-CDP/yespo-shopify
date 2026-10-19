@@ -15,7 +15,7 @@ import {
   createBulkJsonlOutputWriter,
   getBulkJsonlOutputPath,
 } from "./save-bulk-jsonl-output.server";
-import { isPublishedOnMarketCatalog } from "./market-catalogs";
+import { isProductInMarket } from "./market-catalogs";
 import { priceFieldAlias, publicationFieldAlias } from "./product-sync-bulk-queries";
 import { resolveMarketUrls } from "./resolve-market-urls";
 
@@ -41,7 +41,9 @@ type ProductInfoMap = Map<string, ProductInfo>;
  * Streams the bulk-operation JSONL result into the TmpMarketSync staging table.
  *
  * Only pricing rows are produced: one per variant and country, and only when
- * the product is in that market's catalog. Each row carries the data needed
+ * the product is in that market. A market with catalogs uses their publications.
+ * A market with no catalog uses active products published to the Online Store.
+ * Each row carries the data needed
  * to build the Yespo /v1/markets product item: raw contextual pricing,
  * inventory, and the per-locale market URLs.
  */
@@ -164,8 +166,11 @@ function recordProductInfo({
 }): void {
   const publishContext = Object.fromEntries(
     countries.map((countryCode) => {
-      const publicationIds =
-        countryToMarket.get(countryCode)?.catalogPublicationIds ?? [];
+      const market = countryToMarket.get(countryCode);
+      if (!market) {
+        return [countryCode, false];
+      }
+      const publicationIds = market.catalogPublicationIds;
       const publishedByPublicationId = Object.fromEntries(
         publicationIds.map((publicationId) => [
           publicationId,
@@ -174,7 +179,13 @@ function recordProductInfo({
       );
       return [
         countryCode,
-        isPublishedOnMarketCatalog(publishedByPublicationId, publicationIds),
+        isProductInMarket({
+          catalogPublicationIds: publicationIds,
+          publishedByPublicationId,
+          status: typeof row.status === "string" ? row.status : null,
+          publishedAt:
+            typeof row.publishedAt === "string" ? row.publishedAt : null,
+        }),
       ];
     }),
   );
@@ -209,7 +220,7 @@ function parseVariantRow({
   const rows: TmpMarketSyncCreate[] = [];
 
   for (const countryCode of countries) {
-    // Skip products that are not in this market's attached catalog.
+    // Skip products that are not sold in this market.
     if (!publishContext[countryCode]) {
       continue;
     }

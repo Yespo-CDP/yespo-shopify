@@ -21,12 +21,6 @@ import {
 import { computeContentHash } from "../services/compute-content-hash";
 import { createClient } from "../services/create-client";
 import { fetchShopMarketsConfig } from "../services/fetch-shop-markets-config";
-import {
-  countriesToClearForMissingCatalog,
-  marketsMissingActiveCatalog,
-  marketsWithActiveCatalog,
-  shopMarketsConfigFromMarkets,
-} from "../services/market-catalogs";
 import { selectMarketsForSync } from "../services/select-markets-for-sync";
 import { streamBulkJsonlToTmpMarketSync } from "../services/parse-bulk-jsonl";
 import { buildBulkQueryChunks } from "../services/product-sync-bulk-queries";
@@ -249,51 +243,24 @@ export const marketSyncHandler = async (
         return;
       }
       await shopMarketRepository.upsertMarket(shopId, market);
-      if (market.catalogPublicationIds.length === 0) {
-        console.log(
-          `⚠️ Market ${market.name} has no active catalog for ${shop}, skipping this market. A full sync clears markets without a catalog.`,
-        );
-        return;
-      }
       marketsConfig = selected;
     } else {
       await shopMarketRepository.replaceAll(shopId, marketsConfig.markets);
-      const missingCatalog = marketsMissingActiveCatalog(marketsConfig.markets);
-      if (missingCatalog.length > 0) {
-        const names = missingCatalog.map((market) => market.name).join(", ");
-        const syncedCountries =
-          await marketSyncRepository.getSyncedCountryCodes(shopId);
-        const countriesToClear = countriesToClearForMissingCatalog(
-          marketsConfig.markets,
-          syncedCountries,
-        );
-        if (countriesToClear.length === 0) {
-          console.log(
-            `⚠️ ${names} ${missingCatalog.length === 1 ? "has" : "have"} no active catalog for ${shop}. Nothing was synced for them before, so nothing was cleared. Markets with a catalog will still sync.`,
-          );
-        } else {
-          console.log(
-            `⚠️ Clearing ${names} from Yespo for ${shop}: no active catalog. Markets with a catalog will still sync.`,
-          );
-          await clearSyncedMarketCountries({
-            shopId,
-            apiKey,
-            shop,
-            logDomain,
-            orgId,
-            siteId,
-            countryCodes: countriesToClear,
-            reason: "missing-catalog",
-          });
-        }
-      }
-      marketsConfig = shopMarketsConfigFromMarkets(
-        marketsWithActiveCatalog(marketsConfig.markets),
+    }
+
+    const onlineStoreMarkets = marketsConfig.markets.filter(
+      (market) => market.catalogPublicationIds.length === 0,
+    );
+    if (onlineStoreMarkets.length > 0) {
+      const names = onlineStoreMarkets.map((market) => market.name).join(", ");
+      const verb = onlineStoreMarkets.length === 1 ? "has" : "have";
+      console.log(
+        `ℹ️ ${names} ${verb} no catalog for ${shop}. Syncing products published to the Online Store.`,
       );
     }
 
     if (marketsConfig.countries.length === 0) {
-      console.log(`⚠️ No enabled markets with an active catalog for ${shop}`);
+      console.log(`⚠️ No enabled markets for ${shop}`);
       return;
     }
 
@@ -624,7 +591,6 @@ async function cleanupRemovedMarkets({
     orgId,
     siteId,
     countryCodes: removedCountries,
-    reason: "removed",
   });
 }
 
@@ -640,7 +606,6 @@ async function clearSyncedMarketCountries({
   orgId,
   siteId,
   countryCodes,
-  reason,
 }: {
   shopId: number;
   apiKey: string;
@@ -649,7 +614,6 @@ async function clearSyncedMarketCountries({
   orgId?: number | null;
   siteId?: string | null;
   countryCodes: string[];
-  reason: "removed" | "missing-catalog";
 }): Promise<void> {
   for (const countryCode of countryCodes) {
     // Cursor on the autoincrement id: keeps the loop terminating even when some
@@ -734,9 +698,7 @@ async function clearSyncedMarketCountries({
     await marketSyncLogRepository.deleteByCountry(shopId, countryCode);
 
     console.log(
-      reason === "removed"
-        ? `✅ Cleaned up ${processedCount} product(s) from removed market ${countryCode} for ${shop}`
-        : `✅ Cleared ${processedCount} product(s) from market ${countryCode} for ${shop}: no active catalog`,
+      `✅ Cleaned up ${processedCount} product(s) from removed market ${countryCode} for ${shop}`,
     );
 
     await sendLogEvent({
