@@ -9,8 +9,9 @@ import {deleteAccessTokenService} from "~/services/delete-access-token.server";
  * Action handler for Shopify webhook events related to app uninstallation or deactivation.
  *
  * Authenticates the webhook request and logs the received topic and shop.
- * If a valid session exists, updates the shop record to mark it inactive and
- * removes all related sessions from the database.
+ * If a valid session exists, updates the shop record to mark it inactive,
+ * removes all related sessions, and clears local customer, order, product,
+ * and market sync rows. The Yespo catalog is left as-is.
  *
  * Note: Webhook events can be triggered multiple times or after the app
  * has been uninstalled, so the session may not exist.
@@ -53,6 +54,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       await db.orderSyncLog.deleteMany({ where: { shopId: shopData?.id } });
       await db.productVariantSync.deleteMany({ where: { shopId: shopData?.id } });
       await db.productVariantSyncLog.deleteMany({ where: { shopId: shopData?.id } });
+      await db.marketSync.deleteMany({ where: { shopId: shopData?.id } });
+      await db.marketSyncLog.deleteMany({ where: { shopId: shopData?.id } });
+      await db.shopMarket.deleteMany({ where: { shopId: shopData?.id } });
+      await db.tmpMarketSync.deleteMany({ where: { shopId: shopData?.id } });
     }
   }
 
