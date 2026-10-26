@@ -1,12 +1,9 @@
-import fs from "node:fs";
-import path from "node:path";
-
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
+import { getAuthHeader } from "~/utils/auth";
+import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import { normalizeYespoItems } from "~/utils/normalize-yespo-items";
 import { throttleApiRequest } from "~/utils/rate-limiter.server";
-// import { getAuthHeader } from "~/utils/auth";
-// import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 
 /**
  * A single market product item, as defined by the Yespo POST /v1/markets API.
@@ -79,10 +76,6 @@ function deriveFailedItems(response: YespoMarketsRawResponse): string[] {
  *
  * Envelope: { markets: [{ marketId, products: [...] }] }
  *
- * NOTE: The HTTP call is currently stubbed. Product POST/DELETE are live; this
- * markets client still returns a mock success and writes the payload to
- * `debug/` for inspection. Uncomment the block below once POST /v1/markets is live.
- *
  * @param params.apiKey - Basic-auth API key. The Yespo site is resolved from the key, not the body.
  * @param params.siteId - Yespo site/account identifier; used for rate limiting, not sent in the body.
  * @param params.markets - Markets to sync, already grouped by marketId.
@@ -119,98 +112,76 @@ export const updateMarketProducts = async ({
     await throttleApiRequest(siteId);
 
     const requestBody = { markets: normalizedMarkets };
-
-    // Persist the exact object that would be sent to Yespo for inspection.
-    const debugDir = path.resolve(process.cwd(), "debug");
-    fs.mkdirSync(debugDir, { recursive: true });
-    const marketIds = normalizedMarkets
-      .map((market) => market.marketId)
-      .join("-");
-    fs.writeFileSync(
-      path.join(debugDir, `market-sync-${marketIds}-${Date.now()}.json`),
-      JSON.stringify(requestBody, null, 2),
-    );
-
     const url = `${process.env.API_URL}/markets`;
-    // const response = await fetchWithErrorHandling(url, {
-    //   method: "POST",
-    //   headers: {
-    //     "content-type": "application/json",
-    //     Authorization: getAuthHeader(apiKey),
-    //   },
-    //   body: JSON.stringify(requestBody),
-    // });
-
-    // // Yespo returns { requestId, summary, items }, where each item carries a
-    // // per-item status. failedItems is derived from items with status "rejected".
-    // const responseData = response.responseData as YespoMarketsRawResponse;
-    // const failedItems = deriveFailedItems(responseData);
-
-    // await sendLogEvent({
-    //   orgId,
-    //   errorMessage: "",
-    //   data: JSON.stringify({
-    //     domain,
-    //     itemCount,
-    //     accepted: responseData.summary?.accepted,
-    //     rejected: responseData.summary?.rejected,
-    //     failedItems,
-    //     marketIds: normalizedMarkets.map((market) => market.marketId),
-    //   }),
-    //   message: EVENT_MESSAGES.CUSTOM_LOG_SEND_MARKET_PRODUCTS_SUCCESS,
-    //   logLevel: "INFO",
-    // });
-
-    // return { id: Date.now(), failedItems };
-
-    void apiKey;
-    void url;
-
-    // Emulate a Yespo response (all items accepted) and run it through the same
-    // derivation the live endpoint will use, so callers see the real shape.
-    const simulatedItems: YespoMarketResultItem[] = normalizedMarkets.flatMap(
-      (market) =>
-        market.products.map((product) => ({
-          marketId: market.marketId,
-          productId: product.productId,
-          status: "accepted" as const,
-        })),
-    );
-    const simulatedResponse: YespoMarketsRawResponse = {
-      requestId: `mock-${Date.now()}`,
-      summary: {
-        received: itemCount,
-        accepted: simulatedItems.length,
-        rejected: 0,
-      },
-      items: simulatedItems,
-    };
-    const failedItems = deriveFailedItems(simulatedResponse);
 
     console.log(
-      `[mock] updateMarketProducts: ${itemCount} items across ${markets.length} market(s), ${failedItems.length} rejected`,
+      `POST /v1/markets ${domain}: ${itemCount} item(s), markets ${normalizedMarkets.map((market) => market.marketId).join(", ")}`,
+    );
+    console.log(JSON.stringify(requestBody, null, 2));
+
+    const response = await fetchWithErrorHandling(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        Authorization: getAuthHeader(apiKey),
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    // Yespo returns { requestId, summary, items }, where each item carries a
+    // per-item status. failedItems is derived from items with status "rejected".
+    const responseData = response.responseData as YespoMarketsRawResponse;
+    const rejectedItems = normalizeYespoItems(responseData.items).filter(
+      (item) => item.status === "rejected",
+    );
+    const failedItems = deriveFailedItems(responseData);
+
+    console.log(
+      `POST /v1/markets ${domain} response:`,
+      JSON.stringify(responseData, null, 2),
     );
 
-    return {
-      id: Date.now(),
-      failedItems,
-    };
+    if (rejectedItems.length > 0) {
+      console.warn(
+        `Yespo rejected ${rejectedItems.length} market item(s):`,
+        JSON.stringify(rejectedItems, null, 2),
+      );
+    }
+
+    await sendLogEvent({
+      orgId,
+      errorMessage: "",
+      data: {
+        domain,
+        itemCount,
+        marketIds: normalizedMarkets.map((market) => market.marketId),
+        requestBody,
+        responseBody: responseData,
+        statusCode: response.status,
+      },
+      message: EVENT_MESSAGES.CUSTOM_LOG_SEND_MARKET_PRODUCTS_SUCCESS,
+      logLevel: "INFO",
+    });
+
+    return { id: Date.now(), failedItems };
   } catch (error: any) {
     console.error("Error updating market products:", error?.message);
 
     await sendLogEvent({
       orgId,
       errorMessage: `Error updating market products: ${error?.message}`,
-      data: JSON.stringify({
+      data: {
         domain,
         itemCount,
-        responseBody: error,
+        marketIds: normalizedMarkets.map((market) => market.marketId),
+        requestBody: { markets: normalizedMarkets },
+        responseBody: error?.responseData ?? error?.message,
         statusCode: error?.status ?? 500,
-      }),
+      },
       message: EVENT_MESSAGES.CUSTOM_LOG_SEND_MARKET_PRODUCTS_ERROR,
       logLevel: "ERROR",
     });
 
-    throw new Error(error.message);
+    throw error;
   }
 };

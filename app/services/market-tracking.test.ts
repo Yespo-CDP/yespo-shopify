@@ -9,9 +9,9 @@ import {
   shouldEnableMarketSync,
 } from "./market-tracking";
 
-test("enables market sync only when the shop has more than one market", () => {
+test("enables market sync when the shop has at least one market", () => {
   assert.equal(shouldEnableMarketSync(2), true);
-  assert.equal(shouldEnableMarketSync(1), false);
+  assert.equal(shouldEnableMarketSync(1), true);
   assert.equal(shouldEnableMarketSync(0), false);
 });
 

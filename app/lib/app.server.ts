@@ -21,7 +21,10 @@ import i18n from "~/i18n.server";
 import { toggleWebTrackingServer } from "~/services/toggle-web-tracking.server";
 import { createGeneralDomain } from "~/api/create-general-domain.server";
 import { getProductVariantSyncLogView } from "~/services/get-product-variant-sync-log.server";
-import { enqueueDataSyncTasks } from "~/services/queue";
+import {
+  enqueueDataSyncTasks,
+  enqueueMarketSyncTaskForShopUrl,
+} from "~/services/queue";
 import { sendAccessTokenService } from "~/services/send-access-token.server";
 import { deleteAccessTokenService } from "~/services/delete-access-token.server";
 import { sendLogEvent } from "~/api/send-log-event";
@@ -69,6 +72,20 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
       isMarketSyncEnabled: enableMarketSync,
     });
     if (rollout === "enabled") {
+      shop = await shopRepository.getShop(session.shop);
+    }
+  }
+  if (
+    shop?.isProductVariantSyncEnabled &&
+    shop.apiKey &&
+    !shop.isMarketSyncEnabled
+  ) {
+    const enableMarketSync = await readMarketSyncEnabled(admin);
+    if (enableMarketSync) {
+      await shopRepository.updateShop(session.shop, {
+        isMarketSyncEnabled: true,
+      });
+      await enqueueMarketSyncTaskForShopUrl(session.shop);
       shop = await shopRepository.getShop(session.shop);
     }
   }

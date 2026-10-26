@@ -25,11 +25,11 @@ const MARKET_WEBHOOK_TOPICS = new Set([
  * multi-domain web push metafield. Stored domains stay when a market
  * is no longer enabled.
  *
- * When product sync is on and the shop gains its second enabled market,
- * queues a shop-wide catalog sync. A later markets/create, while sync is
- * already on, queues a sync of only that new market. Dropping back to a
- * single market queues a full job once more so removed countries are
- * cleared, then turns market sync off.
+ * When product sync is on and the shop has at least one enabled market,
+ * queues a shop-wide catalog sync the first time. A later markets/create,
+ * while sync is already on, queues a sync of only that new market. Dropping
+ * to zero enabled markets queues a full job once more so removed countries
+ * are cleared, then turns market sync off.
  *
  * Returns 500 so Shopify retries when a new host cannot be registered or
  * the catalog sync job cannot be queued yet.

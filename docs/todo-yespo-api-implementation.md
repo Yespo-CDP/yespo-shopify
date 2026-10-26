@@ -9,8 +9,8 @@
 
 | # | Пункт | Статус |
 |---|-------|--------|
-| 1 | POST /v1/products та /v1/markets — реальний fetch | 🟡 Частково (`POST`/`DELETE /v1/products` live; `POST /v1/markets` ще заглушка) |
-| 2 | Парсинг відповіді Yespo (типи + derive) | ✅ Готово (products live; markets на mock) |
+| 1 | POST /v1/products та /v1/markets — реальний fetch | ✅ Готово |
+| 2 | Парсинг відповіді Yespo (типи + derive) | ✅ Готово |
 | 3 | HTTP 207 — часткова помилка | ✅ Готово (products live; rejected items логуються) |
 | 4 | HTTP 429 — retry | ❌ Відкрито |
 | 5 | HTTP 500+ — retry з backoff | ❌ Відкрито |
@@ -24,22 +24,17 @@
 | 13 | DELETE orphan variants у вебхуку | ✅ Готово |
 | 14 | Перевірка розміру тіла (10 MB) | ⏸️ Свідомо пропущено |
 | 15 | Rate limiter для кількох процесів | ✅ Готово (Redis) |
-| 16 | Прибрати/сховати debug-дампи URL | ❌ Відкрито (нове) |
+| 16 | Прибрати/сховати debug-дампи URL | ✅ Готово |
 
-**Залишилось зробити:** #1 (лише markets), #4, #5, #16 (повністю) + дозакрити #9 (метафілд-override). Пункт #14 свідомо пропущено. #6 знято: `languageChanged` більше не шлемо. #10 виконано (`Uncategorized` fallback).
+**Залишилось зробити:** #4, #5 + дозакрити #9 (метафілд-override). Пункт #14 свідомо пропущено. #6 знято: `languageChanged` більше не шлемо. #10 виконано (`Uncategorized` fallback). #1 і #16 виконано: `POST /v1/markets` викликає Yespo, debug-дампи прибрані.
 
 ---
 
-## 1. POST /v1/products live; POST /v1/markets — заглушка
+## ~~1. POST /v1/products і POST /v1/markets~~ ✅ Готово
 
 **Файли:** `app/api/update-product-variants.ts`, `app/api/delete-product-variants.ts`, `app/api/update-market-products.ts`
 
-`POST /v1/products` і `DELETE /v1/products` викликають Yespo (Basic auth, rate limit, `207` → `failedVariants`). Дампи в `debug/` для продуктів прибрані. Відхилені items логуються в консоль (`productId`, `code`, `message`).
-
-`POST /v1/markets` досі mock: payload пишеться в `debug/`, до Yespo не йде.
-
-**Що потрібно:**
-- Розкоментувати / реалізувати реальний `fetch` до `POST /v1/markets`
+`POST /v1/products`, `DELETE /v1/products` і `POST /v1/markets` викликають Yespo (Basic auth, rate limit). Відхилені items логуються в консоль (`productId`, `code`, `message`). Дампи в `debug/` прибрані.
 
 ---
 
@@ -50,7 +45,7 @@
 Типи реального формату Yespo та логіка парсингу вже реалізовані:
 - `YespoProductsRawResponse` / `YespoMarketsRawResponse` (`requestId`, `summary`, `items`)
 - `deriveFailedVariants` / `deriveFailedItems` — відбирають `items` зі `status: "rejected"`
-- Products: працює на реальній відповіді Yespo. Markets: досі на mock.
+- Products і markets працюють на реальній відповіді Yespo.
 
 ---
 
@@ -161,14 +156,9 @@ Rate limiter перенесено з in-memory на **Redis** (sliding window ч
 
 ---
 
-## 16. Прибрати/сховати debug-дампи URL (тимчасова діагностика)
+## ~~16. Прибрати debug-дампи URL~~ ✅ Готово
 
-**Файли:** `app/worker/services/debug-market-urls.server.ts`, `app/worker/services/resolve-market-urls.ts`, `app/worker/services/fetch-shop-markets-config.ts`
-
-Додано тимчасове логування для діагностики market-URL: дампи у `debug/market-rooturls-*.json` та `debug/resolved-market-urls-*.json`. На проді не потрібні.
-
-**Що потрібно:**
-- Сховати виклики `dumpMarketsRootUrlsDebug` / `appendResolvedUrlDebug` за env-флагом (напр. `DEBUG_MARKET_URLS`) або видалити після завершення діагностики
+Видалено `app/worker/services/debug-market-urls.server.ts` і виклики з `resolve-market-urls.ts`, `fetch-shop-markets-config.ts` та `update-market-from-webhook.server.ts`. `POST /v1/markets` більше не пише payload у `debug/`.
 
 ---
 
