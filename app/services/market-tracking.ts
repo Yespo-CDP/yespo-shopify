@@ -1,12 +1,12 @@
 const MARKET_ID_PATTERN = /^[a-z0-9._-]{1,128}$/;
 
 /**
- * A shop always has one primary market. Market catalog sync starts only when
- * another enabled market exists. Tracking events still send `marketId` for a
- * single market.
+ * Market catalog sync runs whenever the shop has an enabled market, including
+ * a shop whose only market is the primary one. Tracking events also send
+ * `marketId` in that case. Zero enabled markets turns catalog sync off.
  */
 export function shouldEnableMarketSync(enabledMarketCount: number): boolean {
-  return enabledMarketCount > 1;
+  return enabledMarketCount >= 1;
 }
 
 /**

@@ -5,7 +5,6 @@ import type {
   ShopMarketsConfig,
 } from "~/@types/shopMarketsConfig";
 
-import { dumpMarketsRootUrlsDebug } from "./debug-market-urls.server";
 import { activeCatalogPublicationIds } from "./market-catalogs";
 
 interface MarketRegionCountry {
@@ -138,15 +137,6 @@ export async function fetchShopMarketsConfig({
     (market) => market.enabled,
   );
   const markets = enabledNodes.map(mapMarketNode);
-
-  dumpMarketsRootUrlsDebug(
-    enabledNodes.map((node) => ({
-      marketId: node.id,
-      name: node.name,
-      rawRootUrls: node.webPresence?.rootUrls ?? [],
-      collectedRootUrls: collectRootUrls(node),
-    })),
-  );
   const countries = [...new Set(markets.flatMap((market) => market.countries))];
   const locales = [...new Set(markets.flatMap((market) => market.locales))];
 

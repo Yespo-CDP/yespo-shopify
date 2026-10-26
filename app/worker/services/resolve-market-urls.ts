@@ -1,7 +1,6 @@
 import type { ShopMarketConfig } from "~/@types/shopMarketsConfig";
 
 import { appendVariantParam } from "./append-variant-param";
-import { appendResolvedUrlDebug } from "./debug-market-urls.server";
 
 /**
  * Builds the Yespo `urls` field for POST /v1/markets.
@@ -21,17 +20,7 @@ export function resolveMarketUrls(
   previousLocales: string[] = [],
   variantId?: string,
 ): Record<string, string | null> | null {
-  const result = computeMarketUrls(market, handle, previousLocales, variantId);
-
-  appendResolvedUrlDebug({
-    marketId: market?.id,
-    marketHandle: market?.handle,
-    productHandle: handle,
-    inputRootUrls: market?.rootUrls,
-    result,
-  });
-
-  return result;
+  return computeMarketUrls(market, handle, previousLocales, variantId);
 }
 
 function computeMarketUrls(

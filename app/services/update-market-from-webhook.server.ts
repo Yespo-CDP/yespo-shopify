@@ -1,6 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
-
 import { marketSyncRepository, shopMarketRepository } from "~/repositories/repositories.server";
 import type { MarketProductItem } from "~/api/update-market-products";
 import { updateMarketProducts } from "~/api/update-market-products";
@@ -10,19 +7,6 @@ import { getProductContextualPricing } from "~/worker/services/get-product-conte
 import { computeContentHash } from "~/worker/services/compute-content-hash";
 import { resolveMarketUrls } from "~/worker/services/resolve-market-urls";
 import type { ShopMarketConfig } from "~/@types/shopMarketsConfig";
-
-function writeDebug(name: string, data: unknown): void {
-  try {
-    const debugDir = path.resolve(process.cwd(), "debug");
-    fs.mkdirSync(debugDir, { recursive: true });
-    fs.writeFileSync(
-      path.join(debugDir, `${name}-${Date.now()}.json`),
-      JSON.stringify(data, null, 2),
-    );
-  } catch {
-    // debug writes must never break the main flow
-  }
-}
 
 function computeMarketHash(item: MarketProductItem): string {
   return computeContentHash({
@@ -145,7 +129,6 @@ export async function updateMarketFromWebhook({
       const orphanMarkets = Array.from(orphansByCountry.entries()).map(
         ([marketId, products]) => ({ marketId, products }),
       );
-      writeDebug("market-removed-webhook", { siteId, markets: orphanMarkets });
       await updateMarketProducts({ apiKey, siteId, markets: orphanMarkets, domain, orgId });
 
       await marketSyncRepository.deleteManyByKeys(
@@ -250,7 +233,6 @@ export async function updateMarketFromWebhook({
     ([marketId, products]) => ({ marketId, products }),
   );
 
-  writeDebug("market-update-webhook", { siteId, markets });
   await updateMarketProducts({ apiKey, siteId, markets, domain, orgId });
 
   await Promise.all(

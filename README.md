@@ -344,7 +344,7 @@ Webhooks are triggered when orders are created or updated in Shopify:
 
 ### Product Sync (Shopify → Yespo)
 
-> **Current status:** product catalog sync is **live**. `POST /v1/products` and `DELETE /v1/products` call Yespo (`app/api/update-product-variants.ts`, `app/api/delete-product-variants.ts`). Market HTTP calls remain stubbed (see Market Sync below).
+> **Current status:** product catalog sync is **live**. `POST /v1/products` and `DELETE /v1/products` call Yespo (`app/api/update-product-variants.ts`, `app/api/delete-product-variants.ts`). `POST /v1/markets` calls Yespo as well (`app/api/update-market-products.ts`).
 
 **Purpose:** Automatically sync new, updated, and deleted products from Shopify to Yespo as catalog items.
 The process covers both historical synchronization and real-time synchronization through Shopify webhooks.
@@ -478,7 +478,7 @@ Under the row, an info banner explains the product-to-variant relationship:
 - **Shopify products** — unique Shopify products that have at least one successfully synced variant (`ProductVariantSync.syncFailed = false`). A product is omitted when every one of its variants failed. The number is not stored on `ProductVariantSyncLog`. The page loader and `/api/sync-logs` compute `COUNT(DISTINCT productId)` for the shop when the card is rendered.
 - **These products were synced to Yespo as N variants** — `N` is the same **Synchronized** count as on the Variants row. Failed and Total stay on that row: those counters are variant counts.
 
-Under that banner, when the shop has per-country market logs, a plain line reads “Market synchronization by country.” Each following row is one country, labeled **Variants (CC)** (for example **Variants (DE)**), with the same Synchronized, Failed, Total, and status columns. The section title is **Product and Markets Sync**. Market sync is turned on together with product sync when the shop has more than one enabled market.
+Under that banner, when the shop has per-country market logs, a plain line reads “Market synchronization by country.” Each following row is one country, labeled **Variants (CC)** (for example **Variants (DE)**), with the same Synchronized, Failed, Total, and status columns. The section title is **Product and Markets Sync**. Market sync is turned on together with product sync when the shop has at least one enabled market.
 
 **Historical Enable** writes job stats for that run:
 
@@ -509,7 +509,7 @@ Webhooks are triggered when products are created, updated, or deleted in Shopify
   - `products/update` → variants created or updated in Yespo; variants removed from the product are deleted.
   - `products/delete` → all tracked variants of the product removed from Yespo.
 
-The webhook route only enqueues a BullMQ job (`product-webhooks`) and returns `200`. Jobs for the same product are coalesced and delayed by 8 seconds, so a CSV import's `products/create` followed by `products/update` becomes one run. The worker (`concurrency: 1`) then loads the product from the Admin API — including image, collections, category, and translations — and sends it to Yespo. Image URLs follow the same fallback as historical sync (variant image → featured image). `updatedDate` is normalized to UTC. After Yespo responds, Data Sync counters are refreshed from `ProductVariantSync` (see Logging above). Market data for the affected product is **not** sent to Yespo yet — market HTTP calls are stubbed (see Market Sync below).
+The webhook route only enqueues a BullMQ job (`product-webhooks`) and returns `200`. Jobs for the same product are coalesced and delayed by 8 seconds, so a CSV import's `products/create` followed by `products/update` becomes one run. The worker (`concurrency: 1`) then loads the product from the Admin API — including image, collections, category, and translations — and sends it to Yespo. Image URLs follow the same fallback as historical sync (variant image → featured image). `updatedDate` is normalized to UTC. After Yespo responds, Data Sync counters are refreshed from `ProductVariantSync` (see Logging above). When market sync is on, the same job also sends that product's market prices to Yespo.
 
 ---
 
@@ -526,7 +526,7 @@ The webhook route only enqueues a BullMQ job (`product-webhooks`) and returns `2
 
 ### Market Sync (Shopify → Yespo)
 
-> **Current status:** market sync is enabled with product sync when the shop has more than one enabled market, and the Data Sync card shows one log row per country under “Market synchronization by country.” The HTTP call to `POST /v1/markets` is still commented out (`app/api/update-market-products.ts`); payloads are written to `debug/` only. Until that call is uncommented, enabling product sync does **not** send market data to Yespo.
+> **Current status:** market sync is enabled with product sync when the shop has at least one enabled market, and the Data Sync card shows one log row per country under “Market synchronization by country.” `POST /v1/markets` calls Yespo (`app/api/update-market-products.ts`).
 
 **Purpose:** Automatically sync market-specific data (per-country prices, stock and storefront URLs) from Shopify to Yespo so recommendations work correctly across markets.
 The process covers both historical synchronization and real-time synchronization through the product webhooks.
@@ -547,14 +547,13 @@ App requests access to the following scopes:
 
 - Open the Yespo app
 - Connect your Yespo account
-- Enable **Product and Markets Sync** in the **Data Sync** section. Market sync turns on with product sync only when the shop has more than one enabled market. A shop with a single market keeps market sync off.
+- Enable **Product and Markets Sync** in the **Data Sync** section. Market sync turns on with product sync when the shop has at least one enabled market. A shop with no enabled markets keeps market sync off.
 
 When sync is enabled:
 
 - Market synchronization is enqueued automatically right after historical products synchronization completes (`enqueueMarketSyncTaskForShopUrl`)
 - A daily BullMQ repeatable job also paces ongoing market synchronization across shops (see scheduling below)
-- A dedicated `data-sync-market` worker (`concurrency: 10`) processes the job
-- Until the Yespo HTTP client is uncommented, these jobs write payloads to `debug/` and do **not** call Yespo
+- A dedicated `data-sync-market` worker (`concurrency: 10`) processes the job and calls `POST /v1/markets`
 
 ---
 
