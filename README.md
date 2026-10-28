@@ -268,6 +268,8 @@ If a network error or unknown error occurs during sync, the synchronization proc
 
 ---
   
+Money fields use the buyer currency (`presentmentMoney` / `presentment_currency`), which is the market currency when the order was placed on a market other than the shop currency. If Shopify does not send presentment money, the mapper falls back to shop money (`shopMoney` / `currencyCode`, or the REST shop-currency scalars). The same rule applies to the `orders/updated` webhook (`*_set.presentment_money`) and to the historical GraphQL sync.
+
 #### Field Mapping [Shopify Order](https://shopify.dev/docs/api/admin-graphql/latest/queries/orders) →  [Yespo Order](https://docs.esputnik.com/reference/ordersbulkinsert-1):
 - `order.id` → `externalOrderId`
 - `order.customer.id` → `externalCustomerId`
@@ -275,11 +277,11 @@ If a network error or unknown error occurs during sync, the synchronization proc
 - `order.customer.lastName` → `lastName`
 - `order.customer.defaultEmailAddress.emailAddress` → `email`
 - `order.customer.defaultPhoneNumber.phoneNumber` → `phone`
-- `order.totalPriceSet.shopMoney.amount` → `totalCost`
-- `order.totalDiscountsSet.shopMoney.amount` → `discount`
-- `order.totalShippingPriceSet.shopMoney.amount` → `shipping`
-- `order.totalTaxSet.shopMoney.amount` → `taxes`
-- `order.currencyCode` → `currency`
+- `order.totalPriceSet.presentmentMoney.amount` → `totalCost`
+- `order.totalDiscountsSet.presentmentMoney.amount` → `discount`
+- `order.totalShippingPriceSet.presentmentMoney.amount` → `shipping`
+- `order.totalTaxSet.presentmentMoney.amount` → `taxes`
+- `order.presentmentCurrencyCode` → `currency`
 - `order.createdAt` (converted to UTC) → `date`
 - `order.displayFulfillmentStatus` (+ cancelledAt check) → `status`
 - `order.shippingAddress` (formatted string) → `deliveryAddress`
@@ -287,7 +289,7 @@ If a network error or unknown error occurs during sync, the synchronization proc
   - `lineItem.id` → `externalItemId`
   - `lineItem.name` → `name`
   - `lineItem.quantity` → `quantity`
-  - `lineItem.originalTotalSet.shopMoney.amount` → `cost`
+  - `lineItem.originalTotalSet.presentmentMoney.amount` → `cost`
 
 ---
 
@@ -703,9 +705,9 @@ After a `products/create` or `products/update` webhook is processed (when market
 
 #### Backend Events:
 - **StatusCart** - [StatusCart event](https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#statuscart) 
-occurs when CARTS_UPDATE webhook  is triggered and sends payload with cart data.
+occurs when CARTS_UPDATE webhook  is triggered and sends payload with cart data. `price`, per-unit `discount`, and `price_currency_code` come from `price_set.presentment_money` (buyer/market currency). If that set is missing, the event falls back to `item.price` and `price_set.shop_money`.
 - **PurchasedItems** - [PurchasedItems event](https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#purchaseditems)
-occurs when ORDERS_CREATE webhook is triggered  and sends payload with purchased products data.
+occurs when ORDERS_CREATE webhook is triggered  and sends payload with purchased products data. `unit_price` and `price_currency_code` come from each line's `price_set.presentment_money`. If that set is missing, `unit_price` falls back to `item.price` and the currency falls back to `presentment_currency`, then `currency`.
 
 Cart-to-session mappings (`EventData`: `cartToken` + Yespo cookie `sc`) expire after 14 days. A daily BullMQ repeatable job (`cron-jobs` → `db-cleaner-tick`, `DB_CLEANER_CRON_PATTERN = "0 0 * * *"` UTC) deletes rows whose `ttl` is in the past. The scheduler is registered on worker startup via `registerDbCleanerCron()`. Requires the `worker` process and Redis.
 

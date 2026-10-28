@@ -60,11 +60,16 @@ export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
     const customerData: ICartCustomer = buildCustomerData(payload.customer);
     const marketId = readMarketId(eventData.marketId) ?? undefined;
 
-    const productsData = payload.line_items.map((item: any) => ({
-      productKey: item.variant_id.toString(),
-      unit_price: item.price,
-      quantity: item.quantity,
-    }));
+    const productsData = payload.line_items.map((item: any) => {
+      const presentment = item.price_set?.presentment_money;
+      return {
+        productKey: item.variant_id.toString(),
+        unit_price: presentment?.amount ?? item.price,
+        quantity: item.quantity,
+        price_currency_code:
+          presentment?.currency_code ?? payload.presentment_currency ?? payload.currency,
+      };
+    });
 
     const purchasedItemsData: PurchasedItemsEvent = {
       GeneralInfo: {

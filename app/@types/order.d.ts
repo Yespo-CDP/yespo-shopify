@@ -41,36 +41,27 @@ export type OrderDisplayFulfillmentStatus =
   | "SCHEDULED"
   | "UNFULFILLED";
 
+export interface MoneyV2 {
+  amount: string;
+  currencyCode: string;
+}
+
+export interface MoneyBag {
+  shopMoney?: MoneyV2;
+  presentmentMoney?: MoneyV2;
+}
+
 export interface OrderData {
   id: string;
   email?: string | null;
   phone?: string | null;
   currencyCode: string;
+  presentmentCurrencyCode?: string;
   displayFulfillmentStatus: OrderDisplayFulfillmentStatus;
-  totalPriceSet?: {
-    shopMoney: {
-      amount: string;
-      currencyCode: string;
-    };
-  };
-  totalTaxSet?: {
-    shopMoney: {
-      amount: string;
-      currencyCode: string;
-    };
-  };
-  totalShippingPriceSet?: {
-    shopMoney: {
-      amount: string;
-      currencyCode: string;
-    };
-  };
-  totalDiscountsSet?: {
-    shopMoney: {
-      amount: string;
-      currencyCode: string;
-    };
-  };
+  totalPriceSet?: MoneyBag;
+  totalTaxSet?: MoneyBag;
+  totalShippingPriceSet?: MoneyBag;
+  totalDiscountsSet?: MoneyBag;
   shippingAddress?: {
     id: string;
     firstName?: string;
@@ -116,12 +107,7 @@ export interface OrderData {
       id: string;
       name: string;
       quantity: number;
-      originalTotalSet?: {
-        shopMoney: {
-          amount: string;
-          currencyCode: string;
-        };
-      };
+      originalTotalSet?: MoneyBag;
       variant?: {
         id: string;
         image?: { url?: string | null } | null;

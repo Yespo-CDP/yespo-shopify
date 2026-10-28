@@ -10,6 +10,7 @@ import {
   readOrderCartToken,
 } from "~/services/resolve-order-market-id";
 import type { Order, OrderCreatePayload } from "~/@types/order";
+import { presentmentAmount } from "~/services/presentment-money";
 
 /**
  * Updates a order using the provided payload and API key.
@@ -29,11 +30,11 @@ import type { Order, OrderCreatePayload } from "~/@types/order";
  * - `payload.customer.last_name` → `lastName`
  * - `payload.email` → `email`
  * - `payload.phone` → `phone`
- * - `payload.current_total_price` → `totalCost`
- * - `payload.total_discounts` → `discount`
- * - `payload.total_shipping_price_set.shop_money.amount` → `shipping`
- * - `payload.current_total_tax` → `taxes`
- * - `payload.currency` → `currency`
+ * - `payload.current_total_price_set.presentment_money` → `totalCost`
+ * - `payload.total_discounts_set.presentment_money` → `discount`
+ * - `payload.total_shipping_price_set.presentment_money` → `shipping`
+ * - `payload.current_total_tax_set.presentment_money` → `taxes`
+ * - `payload.presentment_currency` → `currency`
  * - visit `marketId`, else address country code → `marketId`
  * - `payload.created_at` (converted to UTC) → `date`
  * - `payload.fulfillment_status` (+ cancelled_at check) → `status`
@@ -131,13 +132,20 @@ export const updateOrderService = async (
       phone: payload?.phone ?? "",
       externalOrderId: payload.id.toString(),
       externalCustomerId: payload?.customer?.id?.toString(),
-      totalCost: parseFloat(payload?.current_total_price ?? "0"),
-      discount: parseFloat(payload?.total_discounts ?? "0"),
-      shipping: parseFloat(
-        payload?.total_shipping_price_set?.shop_money?.amount ?? "0",
+      totalCost: presentmentAmount(
+        payload?.current_total_price_set,
+        payload?.current_total_price,
       ),
-      taxes: parseFloat(payload?.current_total_tax ?? "0"),
-      currency: payload.currency,
+      discount: presentmentAmount(
+        payload?.total_discounts_set,
+        payload?.total_discounts,
+      ),
+      shipping: presentmentAmount(payload?.total_shipping_price_set, "0"),
+      taxes: presentmentAmount(
+        payload?.current_total_tax_set,
+        payload?.current_total_tax,
+      ),
+      currency: payload.presentment_currency || payload.currency,
       ...(marketId ? { marketId } : {}),
       date: convertDateToUTC(payload.created_at),
       status: statusMap(payload?.fulfillment_status),
@@ -149,7 +157,7 @@ export const updateOrderService = async (
           externalItemId: variantId || lineItem.id.toString(),
           name: lineItem.name,
           quantity: lineItem.quantity,
-          cost: parseFloat(lineItem.price),
+          cost: presentmentAmount(lineItem.price_set, lineItem.price),
           ...(link?.url ? { url: link.url } : {}),
           ...(link?.imageUrl ? { imageUrl: link.imageUrl } : {}),
         };
