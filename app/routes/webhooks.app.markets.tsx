@@ -26,10 +26,10 @@ const MARKET_WEBHOOK_TOPICS = new Set([
  * is no longer enabled.
  *
  * When product sync is on and the shop has at least one enabled market,
- * queues a shop-wide catalog sync the first time. A later markets/create,
- * while sync is already on, queues a sync of only that new market. Dropping
- * to zero enabled markets queues a full job once more so removed countries
- * are cleared, then turns market sync off.
+ * queues a shop-wide catalog sync the first time. A later markets/create or
+ * markets/update, while sync is already on, queues a sync of only that
+ * market. Dropping to zero enabled markets queues a full job once more so
+ * removed countries are cleared, then turns market sync off.
  *
  * Returns 500 so Shopify retries when a new host cannot be registered or
  * the catalog sync job cannot be queued yet.
@@ -38,7 +38,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const { topic, shop, session, admin, payload } =
     await authenticate.webhook(request);
 
-  console.log(`Received ${topic} webhook for ${shop}`);
+  console.log(`Received ${topic} webhook for ${shop}`, summarizeMarketWebhook(payload));
 
   if (!session || !admin) {
     return new Response();
@@ -72,10 +72,13 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     if (shopRecord.isProductVariantSyncEnabled) {
       const syncAlreadyOn = Boolean(shopRecord.isMarketSyncEnabled);
-      const createdMarketId =
-        topic === "MARKETS_CREATE" ? marketGidFromWebhook(payload) : null;
+      const webhookMarketId =
+        topic === "MARKETS_CREATE" || topic === "MARKETS_UPDATE"
+          ? marketGidFromWebhook(payload)
+          : null;
       // A draft market is not in the enabled set. Skip it instead of
-      // resyncing every market; an update to active still runs a full sync.
+      // syncing a market that has no catalog yet. Activating it later
+      // sends markets/update and syncs that market.
       const skipDraftCreate =
         topic === "MARKETS_CREATE" &&
         syncAlreadyOn &&
@@ -89,7 +92,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             isMarketSyncEnabled: syncAlreadyOn,
           },
           enabledMarketCount,
-          addedMarketId: syncAlreadyOn ? createdMarketId : null,
+          marketId: syncAlreadyOn ? webhookMarketId : null,
           updateMarketSyncEnabled: async (enabled) => {
             await shopRepository.updateShop(shopRecord.shopUrl, {
               isMarketSyncEnabled: enabled,
@@ -112,3 +115,22 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   return new Response();
 };
+
+/**
+ * Fields we need when checking whether a country move emits one webhook
+ * or one per affected market. Regions are usually absent from this payload.
+ */
+function summarizeMarketWebhook(payload: unknown): Record<string, unknown> {
+  if (!payload || typeof payload !== "object") {
+    return { payload: payload ?? null };
+  }
+  const record = payload as Record<string, unknown>;
+  return {
+    id: record.id ?? null,
+    adminGraphqlApiId: record.admin_graphql_api_id ?? null,
+    name: record.name ?? null,
+    handle: record.handle ?? null,
+    status: record.status ?? null,
+    keys: Object.keys(record).sort(),
+  };
+}
