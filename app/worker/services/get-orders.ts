@@ -36,30 +36,23 @@ export const getOrders = async ({
               email
               phone
               currencyCode
+              presentmentCurrencyCode
               displayFulfillmentStatus
               totalPriceSet {
-                shopMoney {
-                  amount
-                  currencyCode
-                }
+                shopMoney { amount currencyCode }
+                presentmentMoney { amount currencyCode }
               }
               totalTaxSet {
-                shopMoney {
-                  amount
-                  currencyCode
-                }
+                shopMoney { amount currencyCode }
+                presentmentMoney { amount currencyCode }
               }
               totalShippingPriceSet {
-                shopMoney {
-                  amount
-                  currencyCode
-                }
+                shopMoney { amount currencyCode }
+                presentmentMoney { amount currencyCode }
               }
               totalDiscountsSet {
-                shopMoney {
-                  amount
-                  currencyCode
-                }
+                shopMoney { amount currencyCode }
+                presentmentMoney { amount currencyCode }
               }
               shippingAddress {
                 id
@@ -107,10 +100,8 @@ export const getOrders = async ({
                   name
                   quantity
                   originalTotalSet {
-                    shopMoney {
-                      amount
-                      currencyCode
-                    }
+                    shopMoney { amount currencyCode }
+                    presentmentMoney { amount currencyCode }
                   }
                   variant {
                     id

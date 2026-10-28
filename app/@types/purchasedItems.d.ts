@@ -1,9 +1,10 @@
 import type { IGeneralInfo } from "~/@types/statusCart";
 
 interface IPurchasedItemsProduct {
-  product_id: string;
+  productKey: string;
   unit_price: string;
   quantity: number;
+  price_currency_code?: string;
 }
 interface IPurchasedItems{
   Products: IPurchasedItemsProduct[];

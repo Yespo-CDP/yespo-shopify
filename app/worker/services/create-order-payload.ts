@@ -6,6 +6,7 @@ import type {
 import { convertDateToUTC } from "~/utils/convert-date-to-utc";
 import { buildOrderItemLink } from "~/services/build-order-item-link";
 import { orderMarketIdCandidate } from "~/services/resolve-order-market-id";
+import { presentmentMoneyAmount } from "~/services/presentment-money";
 
 /**
  * Convert Shopify Order data to Yespo order data.
@@ -25,11 +26,11 @@ import { orderMarketIdCandidate } from "~/services/resolve-order-market-id";
  * - `order.customer.lastName` → `lastName`
  * - `order.customer.defaultEmailAddress.emailAddress` → `email`
  * - `order.customer.defaultPhoneNumber.phoneNumber` → `phone`
- * - `order.totalPriceSet.shopMoney.amount` → `totalCost`
- * - `order.totalDiscountsSet.shopMoney.amount` → `discount`
- * - `order.totalShippingPriceSet.shopMoney.amount` → `shipping`
- * - `order.totalTaxSet.shopMoney.amount` → `taxes`
- * - `order.currencyCode` → `currency`
+ * - `order.totalPriceSet.presentmentMoney.amount` → `totalCost`
+ * - `order.totalDiscountsSet.presentmentMoney.amount` → `discount`
+ * - `order.totalShippingPriceSet.presentmentMoney.amount` → `shipping`
+ * - `order.totalTaxSet.presentmentMoney.amount` → `taxes`
+ * - `order.presentmentCurrencyCode` → `currency`
  * - shipping, else billing, else customer country → `marketId`
  * - `order.createdAt` (converted to UTC) → `date`
  * - `order.displayFulfillmentStatus` (+ cancelledAt check) → `status`
@@ -38,7 +39,7 @@ import { orderMarketIdCandidate } from "~/services/resolve-order-market-id";
  *    - `lineItem.variant.id` → `externalItemId`
  *    - `lineItem.name` → `name`
  *    - `lineItem.quantity` → `quantity`
- *    - `lineItem.originalTotalSet.shopMoney.amount` → `cost`
+ *    - `lineItem.originalTotalSet.presentmentMoney.amount` → `cost`
  *    - variant storefront URL → `url`
  *    - variant image, else product featured image → `imageUrl`
  *
@@ -111,13 +112,11 @@ export const createOrderPayload = (
     lastName: customerLastName,
     email: customerEmail,
     phone: customerPhone,
-    totalCost: parseFloat(order?.totalPriceSet?.shopMoney?.amount ?? "0"),
-    discount: parseFloat(order?.totalDiscountsSet?.shopMoney?.amount ?? "0"),
-    shipping: parseFloat(
-      order?.totalShippingPriceSet?.shopMoney?.amount ?? "0",
-    ),
-    taxes: parseFloat(order?.totalTaxSet?.shopMoney?.amount ?? "0"),
-    currency: order.currencyCode,
+    totalCost: presentmentMoneyAmount(order?.totalPriceSet),
+    discount: presentmentMoneyAmount(order?.totalDiscountsSet),
+    shipping: presentmentMoneyAmount(order?.totalShippingPriceSet),
+    taxes: presentmentMoneyAmount(order?.totalTaxSet),
+    currency: order.presentmentCurrencyCode || order.currencyCode,
     ...(marketId ? { marketId } : {}),
     date: convertDateToUTC(order.createdAt),
     status: statusMap(order.displayFulfillmentStatus),
@@ -138,7 +137,7 @@ export const createOrderPayload = (
         externalItemId: variantId || (lineItem.id?.split("/").pop() ?? ""),
         name: lineItem.name,
         quantity: lineItem.quantity,
-        cost: parseFloat(lineItem?.originalTotalSet?.shopMoney?.amount ?? "0"),
+        cost: presentmentMoneyAmount(lineItem?.originalTotalSet),
         ...(link?.url ? { url: link.url } : {}),
         ...(link?.imageUrl ? { imageUrl: link.imageUrl } : {}),
       };

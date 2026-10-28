@@ -18,8 +18,8 @@ export class MarketCatalogSyncBusyError extends Error {
  * The first time a shop has at least one enabled market, the queued job
  * syncs every enabled market.
  *
- * A later `markets/create` passes `addedMarketId` and the job syncs only that
- * market. Updates and the daily cron still sync the whole shop.
+ * A later `markets/create` or `markets/update` passes `marketId` and the job
+ * syncs only that market. The daily cron still syncs the whole shop.
  *
  * Turning sync off (no enabled markets left) queues a full job first, while
  * the flag is still on, so removed countries are cleared. The flag flips
@@ -28,7 +28,7 @@ export class MarketCatalogSyncBusyError extends Error {
 export async function reconcileMarketCatalogSync({
   shop,
   enabledMarketCount,
-  addedMarketId,
+  marketId,
   updateMarketSyncEnabled,
   enqueueMarketSync,
 }: {
@@ -37,8 +37,11 @@ export async function reconcileMarketCatalogSync({
     isMarketSyncEnabled: boolean;
   };
   enabledMarketCount: number;
-  /** Set on markets/create when sync is already on. */
-  addedMarketId?: string | null;
+  /**
+   * Set on markets/create and markets/update when sync is already on.
+   * Omit it for a shop-wide run (first enable, delete, daily cron).
+   */
+  marketId?: string | null;
   updateMarketSyncEnabled: (enabled: boolean) => Promise<void>;
   enqueueMarketSync: (scope?: { marketId: string }) => Promise<boolean>;
 }): Promise<void> {
@@ -59,7 +62,7 @@ export async function reconcileMarketCatalogSync({
 
     if (
       !(await enqueueMarketSync(
-        addedMarketId ? { marketId: addedMarketId } : undefined,
+        marketId ? { marketId } : undefined,
       ))
     ) {
       throw new MarketCatalogSyncBusyError();

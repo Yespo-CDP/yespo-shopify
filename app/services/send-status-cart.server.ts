@@ -44,13 +44,19 @@ export const sendStatusCartService = async (payload: any, shop: Shop) => {
     const customerData: ICartCustomer = buildCustomerData(eventData.customer)
     const marketId = readMarketId(eventData.marketId) ?? undefined
 
-    const productsData = payload.line_items.map((item: any) => ({
-      productKey: item.id.toString(),
-      price: item.price,
-      discount: (Number(item.total_discount) / Number(item.quantity)).toFixed(2),
-      quantity: item.quantity,
-      price_currency_code: item.price_set.shop_money.currency_code
-    }))
+    const productsData = payload.line_items.map((item: any) => {
+      const presentment = item.price_set?.presentment_money;
+      const discountAmount =
+        item.total_discount_set?.presentment_money?.amount ?? item.total_discount;
+      return {
+        productKey: item.id.toString(),
+        price: presentment?.amount ?? item.price,
+        discount: (Number(discountAmount) / Number(item.quantity)).toFixed(2),
+        quantity: item.quantity,
+        price_currency_code:
+          presentment?.currency_code ?? item.price_set?.shop_money?.currency_code,
+      };
+    })
 
     const cartEventData: StatusCartEvent = {
       GeneralInfo: {

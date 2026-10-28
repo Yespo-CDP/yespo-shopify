@@ -3,6 +3,7 @@ import { convertDateToUTC } from "~/utils/convert-date-to-utc";
 import { orderSyncRepository } from "~/repositories/repositories.server";
 import { getOrderItemProducts } from "~/services/get-order-item-products.server";
 import type { Order, OrderCreatePayload } from "~/@types/order";
+import { presentmentAmount } from "~/services/presentment-money";
 
 /**
  * Creates a order using the provided payload and API key.
@@ -80,13 +81,20 @@ export const createOrderService = async (
       phone: payload?.phone ?? "",
       externalOrderId: payload.id.toString(),
       externalCustomerId: payload?.customer?.id?.toString(),
-      totalCost: parseFloat(payload?.current_total_price ?? "0"),
-      discount: parseFloat(payload?.total_discounts ?? "0"),
-      shipping: parseFloat(
-        payload?.total_shipping_price_set?.shop_money?.amount ?? "0",
+      totalCost: presentmentAmount(
+        payload?.current_total_price_set,
+        payload?.current_total_price,
       ),
-      taxes: parseFloat(payload?.current_total_tax ?? "0"),
-      currency: payload.currency,
+      discount: presentmentAmount(
+        payload?.total_discounts_set,
+        payload?.total_discounts,
+      ),
+      shipping: presentmentAmount(payload?.total_shipping_price_set, "0"),
+      taxes: presentmentAmount(
+        payload?.current_total_tax_set,
+        payload?.current_total_tax,
+      ),
+      currency: payload.presentment_currency || payload.currency,
       date: convertDateToUTC(payload.created_at),
       status: statusMap(payload?.fulfillment_status),
       deliveryAddress: formatAddress(payload?.shipping_address ?? {}),
@@ -97,7 +105,7 @@ export const createOrderService = async (
           externalItemId: variantId || lineItem.id.toString(),
           name: lineItem.name,
           quantity: lineItem.quantity,
-          cost: parseFloat(lineItem.price),
+          cost: presentmentAmount(lineItem.price_set, lineItem.price),
           ...(link?.url ? { url: link.url } : {}),
           ...(link?.imageUrl ? { imageUrl: link.imageUrl } : {}),
         };

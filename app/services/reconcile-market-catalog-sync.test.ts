@@ -70,13 +70,32 @@ test("enqueues a full shop run for every enabled market when sync is already on"
   assert.deepEqual(calls, ["enqueue"]);
 });
 
+test("syncs only the updated market when market sync is already on", async () => {
+  const calls: string[] = [];
+
+  await reconcileMarketCatalogSync({
+    shop: shop({ marketSyncEnabled: true }),
+    enabledMarketCount: 3,
+    marketId: "gid://shopify/Market/42859954414",
+    updateMarketSyncEnabled: async (enabled) => {
+      calls.push(`flag:${enabled}`);
+    },
+    enqueueMarketSync: async (scope) => {
+      calls.push(scope?.marketId ? `enqueue:${scope.marketId}` : "enqueue");
+      return true;
+    },
+  });
+
+  assert.deepEqual(calls, ["enqueue:gid://shopify/Market/42859954414"]);
+});
+
 test("syncs only the created market when market sync is already on", async () => {
   const calls: string[] = [];
 
   await reconcileMarketCatalogSync({
     shop: shop({ marketSyncEnabled: true }),
     enabledMarketCount: 3,
-    addedMarketId: "gid://shopify/Market/188558248",
+    marketId: "gid://shopify/Market/188558248",
     updateMarketSyncEnabled: async (enabled) => {
       calls.push(`flag:${enabled}`);
     },
@@ -95,7 +114,7 @@ test("full-syncs every market when the second market turns sync on", async () =>
   await reconcileMarketCatalogSync({
     shop: shop({ marketSyncEnabled: false }),
     enabledMarketCount: 2,
-    addedMarketId: "gid://shopify/Market/188558248",
+    marketId: "gid://shopify/Market/188558248",
     updateMarketSyncEnabled: async (enabled) => {
       calls.push(`flag:${enabled}`);
     },
