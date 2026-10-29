@@ -4,6 +4,7 @@ import {
 } from "~/api/update-product-variants";
 import { deleteProductVariants } from "~/api/delete-product-variants";
 import {
+  marketSyncRepository,
   productVariantSyncRepository,
   shopRepository,
 } from "~/repositories/repositories.server";
@@ -225,6 +226,10 @@ export const updateProductVariantService = async (
         });
 
         await productVariantSyncRepository.deleteByVariantIds(
+          shopId,
+          orphanedVariantGids,
+        );
+        await marketSyncRepository.deleteByVariantIds(
           shopId,
           orphanedVariantGids,
         );

@@ -24,6 +24,10 @@ import { fetchShopMarketsConfig } from "../services/fetch-shop-markets-config";
 import { selectMarketsForSync } from "../services/select-markets-for-sync";
 import { streamBulkJsonlToTmpMarketSync } from "../services/parse-bulk-jsonl";
 import { buildBulkQueryChunks } from "../services/product-sync-bulk-queries";
+import {
+  marketSyncRowsRemovedFromCatalog,
+  variantIdsPresentInCountry,
+} from "../services/catalog-removed-variants";
 
 const API_CHUNK_SIZE = 500;
 
@@ -299,7 +303,7 @@ export const marketSyncHandler = async (
       });
       console.log(`Bulk JSONL saved to ${outputPath}`);
 
-      await processBatch({
+      const presentByCountry = await processBatch({
         shopId,
         batchId,
         apiKey,
@@ -308,6 +312,17 @@ export const marketSyncHandler = async (
         siteId,
         countries: chunk.countries,
         stats,
+      });
+
+      await clearProductsRemovedFromCatalog({
+        shopId,
+        apiKey,
+        shop,
+        logDomain,
+        orgId,
+        siteId,
+        countries: chunk.countries,
+        presentByCountry,
       });
 
       for (const countryCode of chunk.countries) {
@@ -401,8 +416,9 @@ async function processBatch({
   siteId?: string | null;
   countries: string[];
   stats: Record<string, CountryStats>;
-}): Promise<void> {
+}): Promise<Map<string, Set<string>>> {
   const rows = await tmpMarketSyncRepository.getByBatch(shopId, batchId);
+  const presentByCountry = variantIdsPresentInCountry(rows);
   const pricingRows = rows.filter((row) => row.countryCode && row.variantId);
 
   interface PendingItem {
@@ -542,6 +558,136 @@ async function processBatch({
       });
     }
   }
+
+  return presentByCountry;
+}
+
+/**
+ * After a country's bulk succeeded, variants still stored in MarketSync but
+ * absent from that bulk are no longer in the catalog. Yespo has no market
+ * delete, so they are removed from recommendations with isInStock: 0.
+ * Runs only for countries in this successful batch, so a failed bulk never
+ * zeroes a market.
+ */
+async function clearProductsRemovedFromCatalog({
+  shopId,
+  apiKey,
+  shop,
+  logDomain,
+  orgId,
+  siteId,
+  countries,
+  presentByCountry,
+}: {
+  shopId: number;
+  apiKey: string;
+  shop: string;
+  logDomain: string;
+  orgId?: number | null;
+  siteId?: string | null;
+  countries: string[];
+  presentByCountry: Map<string, Set<string>>;
+}): Promise<void> {
+  for (const countryCode of countries) {
+    const present = presentByCountry.get(countryCode) ?? new Set<string>();
+    let afterId = 0;
+    let removedCount = 0;
+
+    while (true) {
+      const rows = await marketSyncRepository.getByCountryPage(
+        shopId,
+        countryCode,
+        afterId,
+        CLEANUP_PAGE_SIZE,
+      );
+      if (rows.length === 0) {
+        break;
+      }
+      afterId = rows[rows.length - 1].id;
+
+      const removed = marketSyncRowsRemovedFromCatalog(rows, present);
+      if (removed.length === 0) {
+        continue;
+      }
+
+      await markMarketRowsOutOfStock({
+        shopId,
+        apiKey,
+        logDomain,
+        orgId,
+        siteId,
+        countryCode,
+        rows: removed,
+      });
+      removedCount += removed.length;
+    }
+
+    if (removedCount > 0) {
+      console.log(
+        `🗑️ Marked ${removedCount} variant(s) out of stock in market ${countryCode} for ${shop}: removed from catalog`,
+      );
+    }
+  }
+}
+
+/**
+ * Sends isInStock: 0 for the given rows and deletes the ones Yespo accepted.
+ */
+async function markMarketRowsOutOfStock({
+  shopId,
+  apiKey,
+  logDomain,
+  orgId,
+  siteId,
+  countryCode,
+  rows,
+}: {
+  shopId: number;
+  apiKey: string;
+  logDomain: string;
+  orgId?: number | null;
+  siteId?: string | null;
+  countryCode: string;
+  rows: MarketSyncRecord[];
+}): Promise<string[]> {
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const items: MarketProductItem[] = rows.map((row) => ({
+    productId: row.variantId.split("/").pop() ?? row.variantId,
+    updatedDate: new Date().toISOString(),
+    isInStock: 0,
+  }));
+
+  const response = await updateMarketProducts({
+    apiKey,
+    siteId: siteId ?? "",
+    markets: [{ marketId: countryCode, products: items }],
+    domain: logDomain,
+    orgId,
+  });
+
+  const pageFailed = new Set(response.failedItems);
+  const deletableKeys = rows
+    .filter(
+      (row) => !pageFailed.has(row.variantId.split("/").pop() ?? row.variantId),
+    )
+    .map((row) => ({
+      productId: row.productId,
+      variantId: row.variantId,
+      countryCode,
+    }));
+
+  await marketSyncRepository.deleteManyByKeys(shopId, deletableKeys);
+
+  if (pageFailed.size > 0) {
+    console.warn(
+      `⚠️ ${pageFailed.size}/${rows.length} item(s) failed isInStock: 0 for market ${countryCode}, keeping their local records`,
+    );
+  }
+
+  return [...pageFailed];
 }
 
 /**
@@ -634,37 +780,18 @@ async function clearSyncedMarketCountries({
       }
       afterId = rows[rows.length - 1].id;
 
-      const items: MarketProductItem[] = rows.map((row) => ({
-        productId: row.variantId.split("/").pop() ?? row.variantId,
-        updatedDate: new Date().toISOString(),
-        isInStock: 0,
-      }));
-
-      const response = await updateMarketProducts({
+      const pageFailed = await markMarketRowsOutOfStock({
+        shopId,
         apiKey,
-        siteId: siteId ?? "",
-        markets: [{ marketId: countryCode, products: items }],
-        domain: logDomain,
+        logDomain,
         orgId,
+        siteId,
+        countryCode,
+        rows,
       });
 
       processedCount += rows.length;
-      failedItems.push(...response.failedItems);
-
-      // Only delete the rows Yespo accepted; keep failed ones for the next run.
-      const pageFailed = new Set(response.failedItems);
-      const deletableKeys = rows
-        .filter(
-          (row) =>
-            !pageFailed.has(row.variantId.split("/").pop() ?? row.variantId),
-        )
-        .map((row) => ({
-          productId: row.productId,
-          variantId: row.variantId,
-          countryCode,
-        }));
-
-      await marketSyncRepository.deleteManyByKeys(shopId, deletableKeys);
+      failedItems.push(...pageFailed);
     }
 
     if (processedCount === 0) {

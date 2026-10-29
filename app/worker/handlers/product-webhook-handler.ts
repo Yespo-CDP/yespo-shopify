@@ -10,6 +10,7 @@ import {
 import { updateMarketFromWebhook } from "~/services/update-market-from-webhook.server";
 import type { ProductWebhookJobData } from "~/services/queue";
 import {
+  marketSyncRepository,
   productVariantSyncRepository,
   shopRepository,
 } from "~/repositories/repositories.server";
@@ -226,6 +227,10 @@ async function syncProductFromAdmin(
         orgId: shopData.orgId,
       });
       await productVariantSyncRepository.deleteByVariantIds(
+        shopData.id,
+        orphanedVariantGids,
+      );
+      await marketSyncRepository.deleteByVariantIds(
         shopData.id,
         orphanedVariantGids,
       );

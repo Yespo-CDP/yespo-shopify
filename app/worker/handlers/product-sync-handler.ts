@@ -1,6 +1,7 @@
 import type { ProductVariant } from "~/@types/productVariant";
 import {
   shopRepository,
+  marketSyncRepository,
   productVariantSyncRepository,
   productVariantSyncLogRepository,
 } from "~/repositories/repositories.server";
@@ -324,6 +325,7 @@ export const productSyncHandler = async (
             orgId,
           });
           await productVariantSyncRepository.deleteByVariantIds(shopId, chunk);
+          await marketSyncRepository.deleteByVariantIds(shopId, chunk);
         }
       }
     }

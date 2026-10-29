@@ -1,5 +1,8 @@
 import { deleteProductVariants } from "~/api/delete-product-variants";
-import { productVariantSyncRepository } from "~/repositories/repositories.server";
+import {
+  marketSyncRepository,
+  productVariantSyncRepository,
+} from "~/repositories/repositories.server";
 import { refreshProductVariantSyncLog } from "./refresh-product-variant-sync-log.server";
 
 /**
@@ -65,6 +68,7 @@ export const deleteProductVariantService = async (
 
     // Remove sync records from our DB.
     await productVariantSyncRepository.deleteByProductId(shopId, productGid);
+    await marketSyncRepository.deleteByVariantIds(shopId, variantGids);
     await refreshProductVariantSyncLog(shopId);
   } catch (error: any) {
     console.error("Error occurred in Delete Product Variant Service", error);

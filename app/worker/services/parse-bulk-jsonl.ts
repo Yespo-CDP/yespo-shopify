@@ -226,7 +226,17 @@ function parseVariantRow({
     }
 
     const pricing = row[priceFieldAlias(countryCode)];
+    // Still in the catalog, but there is no price to send. Keep a staging row
+    // so the post-bulk diff does not treat the variant as removed.
     if (!pricing) {
+      rows.push({
+        batchId,
+        productId,
+        variantId,
+        countryCode,
+        payload: { type: "pricing" } as Prisma.InputJsonValue,
+        shop: { connect: { id: shopId } },
+      });
       continue;
     }
 

@@ -208,7 +208,12 @@ export async function updateMarketFromWebhook({
       const previousLocales = market
         ? (previousLocalesByMarketId.get(market.id) ?? [])
         : [];
-      item.urls = resolveMarketUrls(market, handle, previousLocales);
+      item.urls = resolveMarketUrls(
+        market,
+        handle,
+        previousLocales,
+        numericVariantId,
+      );
 
       const newHash = computeMarketHash(item);
       const existingHash = existingHashMap.get(`${variant.variantId}:${cc}`);
@@ -227,23 +232,71 @@ export async function updateMarketFromWebhook({
     }
   }
 
-  if (changedByCountry.size === 0) return;
+  if (changedByCountry.size > 0) {
+    const markets = Array.from(changedByCountry.entries()).map(
+      ([marketId, products]) => ({ marketId, products }),
+    );
 
-  const markets = Array.from(changedByCountry.entries()).map(
-    ([marketId, products]) => ({ marketId, products }),
+    await updateMarketProducts({ apiKey, siteId, markets, domain, orgId });
+
+    await Promise.all(
+      upserts.map((u) =>
+        marketSyncRepository.createOrUpdate({
+          productId: u.productId,
+          variantId: u.variantId,
+          countryCode: u.countryCode,
+          contentHash: u.contentHash,
+          shop: { connect: { id: shopId } },
+        }),
+      ),
+    );
+  }
+
+  // Enabled country, product no longer in its catalog. Same signal as a
+  // removed market: isInStock 0, then drop the local row Yespo accepted.
+  const unpublishedRecords = existingRecords.filter(
+    (record) => !publishedInCountry[record.countryCode],
+  );
+  if (unpublishedRecords.length === 0) return;
+
+  const unpublishedByCountry = new Map<string, typeof unpublishedRecords>();
+  const removedAt = new Date().toISOString();
+  for (const record of unpublishedRecords) {
+    const list = unpublishedByCountry.get(record.countryCode) ?? [];
+    list.push(record);
+    unpublishedByCountry.set(record.countryCode, list);
+  }
+
+  const unpublishedMarkets = Array.from(unpublishedByCountry.entries()).map(
+    ([marketId, records]) => ({
+      marketId,
+      products: records.map((record) => ({
+        productId: record.variantId.split("/").pop() ?? record.variantId,
+        updatedDate: removedAt,
+        isInStock: 0 as const,
+      })),
+    }),
   );
 
-  await updateMarketProducts({ apiKey, siteId, markets, domain, orgId });
-
-  await Promise.all(
-    upserts.map((u) =>
-      marketSyncRepository.createOrUpdate({
-        productId: u.productId,
-        variantId: u.variantId,
-        countryCode: u.countryCode,
-        contentHash: u.contentHash,
-        shop: { connect: { id: shopId } },
-      }),
-    ),
+  const response = await updateMarketProducts({
+    apiKey,
+    siteId,
+    markets: unpublishedMarkets,
+    domain,
+    orgId,
+  });
+  const failed = new Set(response.failedItems);
+  await marketSyncRepository.deleteManyByKeys(
+    shopId,
+    unpublishedRecords
+      .filter(
+        (record) =>
+          !failed.has(record.variantId.split("/").pop() ?? record.variantId),
+      )
+      .map((record) => ({
+        productId: record.productId,
+        variantId: record.variantId,
+        countryCode: record.countryCode,
+      })),
   );
 }

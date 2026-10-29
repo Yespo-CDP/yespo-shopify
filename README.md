@@ -574,11 +574,12 @@ When sync is enabled:
 3. **Fetching contextual pricing**
 
    * Countries are split into chunks of **≤ 15** (`buildBulkQueryChunks`). For each chunk a Shopify [Bulk Operation](https://shopify.dev/docs/api/usage/bulk-operations/queries) collects per-country `contextualPricing` (price, compareAtPrice, currency) and `publishedInContext`.
-   * The bulk operation result (JSONL) is streamed into the `TmpMarketSync` staging table. Variants not published in a market never reach staging.
+   * The bulk operation result (JSONL) is streamed into the `TmpMarketSync` staging table. Variants not published in a market never reach staging. A published variant with no price is staged without a payload so it is not treated as removed from the catalog.
 
 4. **Mapping & bulk sending to Yespo**
 
    * Staged rows are mapped to market product items (`price`, `currency`, `isInStock`, `oldPrice`, `urls`), unchanged items are skipped via a content-hash comparison, and the rest are grouped by `marketId` (country code) and sent in **chunks of 500** (`API_CHUNK_SIZE`) using [Markets](https://docs.yespo.io/reference/setmarkets) (`POST /v1/markets`). Envelope is `{ markets }` — do **not** send `siteId` (the site is resolved from the API key).
+   * After a country's bulk succeeds, `MarketSync` rows for that country whose variant was not in the staging set are marked `isInStock: 0` and the accepted local rows are deleted. This is how a product removed from the catalog leaves that market's recommendations. A failed bulk does not run this pass.
    * After each batch the staged rows are removed from `TmpMarketSync` and the per-country log is updated.
 
 ---
@@ -654,7 +655,9 @@ After a `products/create` or `products/update` webhook is processed (when market
   - Fetches the active markets config and per-country contextual pricing for the product's variants.
   - Skips variants not published in a given market.
   - Builds market items, compares hashes against stored `MarketSync` records, and sends **only changed** items via `POST /v1/markets`.
+  - For an enabled country where this product is no longer published, sends `isInStock: 0` and prunes the accepted `MarketSync` rows.
   - For countries removed since the last sync, sends `isInStock: 0` for that product's variants and prunes the local records.
+  - A full Shopify product or variant delete calls `DELETE /v1/products` and removes the local `MarketSync` rows. It does not send a market `isInStock: 0`, because deleting the base product already drops its market data.
 
 ---
 
