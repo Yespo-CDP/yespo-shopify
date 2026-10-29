@@ -1,62 +1,100 @@
 import type { ShopMarketConfig } from "~/@types/shopMarketsConfig";
+import type { MarketRemovePatch } from "~/api/update-market-products";
 
-import { appendVariantParam } from "./append-variant-param";
+/**
+ * Market URLs split into values Yespo should store and locales it should clear.
+ *
+ * `clearUrls` is set only when the market has no locale to name. Named locales
+ * without a storefront URL go to `urlsTranslations`.
+ */
+export interface ResolvedMarketUrls {
+  urls?: Record<string, string>;
+  urlsTranslations: string[];
+  clearUrls: boolean;
+}
 
 /**
  * Builds the Yespo `urls` field for POST /v1/markets.
  *
- * Always returns an explicit value (`null` or a locale map) so callers never
- * rely on omit semantics, which would preserve stale URLs in Yespo.
- *
- * - All locales cleared → `null`
- * - Some locales cleared → `{ "en": "https://...", "fr": null }`
- *
  * `previousLocales` should come from the last persisted ShopMarket record so
- * locales removed from a market since the previous sync are still nulled out.
+ * locales removed from a market since the previous sync are still cleared.
  */
 export function resolveMarketUrls(
   market: ShopMarketConfig | undefined,
   handle: string,
   previousLocales: string[] = [],
-  variantId?: string,
-): Record<string, string | null> | null {
-  return computeMarketUrls(market, handle, previousLocales, variantId);
-}
+): ResolvedMarketUrls {
+  const locales = [
+    ...new Set([...(market?.locales ?? []), ...previousLocales]),
+  ];
 
-function computeMarketUrls(
-  market: ShopMarketConfig | undefined,
-  handle: string,
-  previousLocales: string[] = [],
-  variantId?: string,
-): Record<string, string | null> | null {
-  const locales = new Set([
-    ...(market?.locales ?? []),
-    ...previousLocales,
-  ]);
-
-  if (locales.size === 0) {
-    return null;
+  if (locales.length === 0) {
+    return { urlsTranslations: [], clearUrls: true };
   }
 
-  const urls: Record<string, string | null> = {};
+  const urls: Record<string, string> = {};
+  const urlsTranslations: string[] = [];
   for (const locale of locales) {
     const rootUrl = market?.rootUrls?.[locale];
     if (handle && rootUrl) {
-      // Shopify storefront product pages live under `/products/{handle}`; the
-      // locale subfolder (if any) is already baked into the market root URL.
-      // A `?variant=<id>` query selects the exact variant (each market item is a
-      // single variant, so productId === the numeric variant id).
-      const base = `${rootUrl.replace(/\/$/, "")}/products/${handle}`;
-      urls[locale] = appendVariantParam(base, variantId);
+      urls[locale] = `${rootUrl.replace(/\/$/, "")}/products/${handle}`;
     } else {
-      urls[locale] = null;
+      urlsTranslations.push(locale);
     }
   }
 
-  const hasAnyUrl = Object.values(urls).some((value) => value !== null);
-  if (!hasAnyUrl) {
-    return null;
+  if (Object.keys(urls).length === 0) {
+    return { urlsTranslations, clearUrls: false };
   }
 
-  return urls;
+  return { urls, urlsTranslations, clearUrls: false };
+}
+
+/**
+ * Puts a missing compare-at price and cleared market URLs into `remove`.
+ * Numeric `oldPrice` and absolute URLs stay on the item. `null` is not sent.
+ */
+export function applyMarketClearing({
+  price,
+  compareAt,
+  resolved,
+}: {
+  price: number;
+  compareAt: number;
+  resolved: ResolvedMarketUrls;
+}): {
+  oldPrice?: number;
+  urls?: Record<string, string>;
+  remove?: MarketRemovePatch;
+} {
+  const fields: Array<"oldPrice" | "urls"> = [];
+  const patch: {
+    oldPrice?: number;
+    urls?: Record<string, string>;
+    remove?: MarketRemovePatch;
+  } = {};
+
+  if (Number.isFinite(compareAt) && compareAt > price) {
+    patch.oldPrice = compareAt;
+  } else {
+    fields.push("oldPrice");
+  }
+
+  if (resolved.urls) {
+    patch.urls = resolved.urls;
+  }
+  if (resolved.clearUrls) {
+    fields.push("urls");
+  }
+
+  const remove: MarketRemovePatch = {};
+  if (fields.length > 0) remove.fields = fields;
+  if (resolved.urlsTranslations.length > 0) {
+    remove.urlsTranslations = resolved.urlsTranslations;
+  }
+  if (remove.fields || remove.urlsTranslations) {
+    patch.remove = remove;
+  }
+
+  return patch;
 }

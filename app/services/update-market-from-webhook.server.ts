@@ -5,7 +5,10 @@ import { createClient } from "~/worker/services/create-client";
 import { fetchShopMarketsConfig } from "~/worker/services/fetch-shop-markets-config";
 import { getProductContextualPricing } from "~/worker/services/get-product-contextual-pricing";
 import { computeContentHash } from "~/worker/services/compute-content-hash";
-import { resolveMarketUrls } from "~/worker/services/resolve-market-urls";
+import {
+  applyMarketClearing,
+  resolveMarketUrls,
+} from "~/worker/services/resolve-market-urls";
 import type { ShopMarketConfig } from "~/@types/shopMarketsConfig";
 
 function computeMarketHash(item: MarketProductItem): string {
@@ -15,6 +18,7 @@ function computeMarketHash(item: MarketProductItem): string {
     currency: item.currency,
     isInStock: item.isInStock,
     urls: item.urls ?? null,
+    remove: item.remove ?? null,
   });
 }
 
@@ -200,19 +204,18 @@ export async function updateMarketFromWebhook({
       const compareAt = countryPricing.compareAtPrice?.amount
         ? parseFloat(countryPricing.compareAtPrice.amount)
         : 0;
-      if (compareAt > price) {
-        item.oldPrice = compareAt;
-      }
 
       const market = countryToMarket.get(cc);
       const previousLocales = market
         ? (previousLocalesByMarketId.get(market.id) ?? [])
         : [];
-      item.urls = resolveMarketUrls(
-        market,
-        handle,
-        previousLocales,
-        numericVariantId,
+      Object.assign(
+        item,
+        applyMarketClearing({
+          price,
+          compareAt,
+          resolved: resolveMarketUrls(market, handle, previousLocales),
+        }),
       );
 
       const newHash = computeMarketHash(item);

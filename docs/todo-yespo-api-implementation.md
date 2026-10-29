@@ -219,7 +219,7 @@ offline-токена/`apiKey` → тихо пропускається (слот 
 
 | Проблема | Файл |
 |----------|------|
-| Market URL: додано `/products/` + `?variant=<id>` (узгоджено bulk/market/webhook) | `resolve-market-urls.ts`, `append-variant-param.ts`, `create-product-variant-payload.ts`, `create-product-variant-payload-from-webhook.ts` |
+| Market URL: `/products/{handle}` без `?variant=<id>` (bulk, market, webhook, order) | `resolve-market-urls.ts`, `create-product-variant-payload.ts`, `create-product-variant-payload-from-webhook.ts`, `build-order-item-link.ts` |
 | POST/DELETE /v1/products live | `update-product-variants.ts`, `delete-product-variants.ts` |
 | Webhook imageUrl як у bulk (`image_id` → featured) | `create-product-variant-payload-from-webhook.ts` |
 | `updatedDate` → RFC3339 UTC (`…Z`) | `convert-date-to-utc.ts`, payload-білдери |

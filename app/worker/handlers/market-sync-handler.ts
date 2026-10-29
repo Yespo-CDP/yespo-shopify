@@ -28,6 +28,10 @@ import {
   marketSyncRowsRemovedFromCatalog,
   variantIdsPresentInCountry,
 } from "../services/catalog-removed-variants";
+import {
+  applyMarketClearing,
+  type ResolvedMarketUrls,
+} from "../services/resolve-market-urls";
 
 const API_CHUNK_SIZE = 500;
 
@@ -54,6 +58,8 @@ interface PricingPayload {
     price?: { amount?: string; currencyCode?: string } | null;
     compareAtPrice?: { amount?: string; currencyCode?: string } | null;
   } | null;
+  marketUrls?: ResolvedMarketUrls | null;
+  /** Rows staged before market URLs were split into `remove`. */
   urls?: Record<string, string | null> | null;
 }
 
@@ -118,15 +124,45 @@ function buildMarketProductItem(
   const compareAt = payload.pricing?.compareAtPrice?.amount
     ? parseFloat(payload.pricing.compareAtPrice.amount)
     : 0;
-  // Always set oldPrice explicitly: a value when valid, null otherwise.
-  // Omitting the field would tell Yespo to preserve the previous value, so we
-  // must pass null to clear a compareAtPrice that was removed on Shopify.
-  item.oldPrice = compareAt > priceValue ? compareAt : null;
+  const resolved =
+    payload.marketUrls ?? resolvedMarketUrlsFromLegacy(payload.urls);
 
-  // Always set urls explicitly (null clears all; per-locale null clears one locale).
-  item.urls = payload.urls ?? null;
+  return {
+    ...item,
+    ...applyMarketClearing({
+      price: priceValue,
+      compareAt,
+      resolved,
+    }),
+  };
+}
 
-  return item;
+/** Older staging rows stored `null` inside `urls` instead of `remove`. */
+function resolvedMarketUrlsFromLegacy(
+  urls: Record<string, string | null> | null | undefined,
+): ResolvedMarketUrls {
+  if (!urls) {
+    return { urlsTranslations: [], clearUrls: true };
+  }
+
+  const kept: Record<string, string> = {};
+  const urlsTranslations: string[] = [];
+  for (const [locale, url] of Object.entries(urls)) {
+    if (url) {
+      kept[locale] = url;
+    } else {
+      urlsTranslations.push(locale);
+    }
+  }
+
+  if (Object.keys(kept).length === 0) {
+    return {
+      urlsTranslations,
+      clearUrls: urlsTranslations.length === 0,
+    };
+  }
+
+  return { urls: kept, urlsTranslations, clearUrls: false };
 }
 
 function hashMarketItem(item: MarketProductItem): string {
@@ -136,6 +172,7 @@ function hashMarketItem(item: MarketProductItem): string {
     currency: item.currency,
     isInStock: item.isInStock,
     urls: item.urls ?? null,
+    remove: item.remove ?? null,
   });
 }
 

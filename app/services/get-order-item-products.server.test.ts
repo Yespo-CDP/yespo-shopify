@@ -75,7 +75,7 @@ test("loads product links for more than 250 variants in batches of at most 250",
     assert.equal(link?.imageUrl, `https://cdn.example/${variantId}.jpg`);
     assert.equal(
       link?.url,
-      `https://shop.example/products/item?variant=${variantId}`,
+      "https://shop.example/products/item",
     );
   }
 });

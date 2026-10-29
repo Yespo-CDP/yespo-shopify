@@ -6,21 +6,32 @@ import { normalizeYespoItems } from "~/utils/normalize-yespo-items";
 import { throttleApiRequest } from "~/utils/rate-limiter.server";
 
 /**
+ * Clears market fields that must not be sent as `null`.
+ * `fields` drops `oldPrice` or the whole `urls` map.
+ * `urlsTranslations` drops individual locale URLs.
+ */
+export interface MarketRemovePatch {
+  fields?: Array<"oldPrice" | "urls">;
+  urlsTranslations?: string[];
+}
+
+/**
  * A single market product item, as defined by the Yespo POST /v1/markets API.
  *
  * `productId` and `updatedDate` are always required; every item must also carry
- * at least one market field to change (price, currency, isInStock, oldPrice).
+ * at least one market field to change (price, currency, isInStock, oldPrice, urls, remove).
  */
 export interface MarketProductItem {
   productId: string;
   updatedDate: string;
   price?: number;
-  /** Pass `null` to explicitly clear a previously set oldPrice in Yespo. */
-  oldPrice?: number | null;
+  oldPrice?: number;
   currency?: string;
   isInStock?: 0 | 1;
-  /** Pass `null` to clear all URLs; locale keys with `null` clear that locale only. */
-  urls?: Record<string, string | null> | null;
+  /** Absolute locale URLs only. Cleared locales go to `remove`, not `null`. */
+  urls?: Record<string, string>;
+  /** Clears `oldPrice`, the whole `urls` field, or individual URL locales. */
+  remove?: MarketRemovePatch;
 }
 
 /**

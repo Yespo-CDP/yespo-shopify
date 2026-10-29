@@ -244,12 +244,10 @@ function parseVariantRow({
     const previousLocales = market
       ? (previousLocalesByMarketId.get(market.id) ?? [])
       : [];
-    const variantNumericId = variantId.split("/").pop() ?? variantId;
-    const urls = resolveMarketUrls(
+    const marketUrls = resolveMarketUrls(
       market,
       info?.handle ?? "",
       previousLocales,
-      variantNumericId,
     );
 
     rows.push({
@@ -262,7 +260,7 @@ function parseVariantRow({
         variantUpdatedAt: row.updatedAt,
         inventoryQuantity: row.inventoryQuantity ?? null,
         pricing,
-        urls,
+        marketUrls,
       } as Prisma.InputJsonValue,
       shop: { connect: { id: shopId } },
     });

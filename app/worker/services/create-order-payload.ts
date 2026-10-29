@@ -125,7 +125,6 @@ export const createOrderPayload = (
       const variantId = lineItem.variant?.id?.split("/").pop() ?? "";
       const link = variantId
         ? buildOrderItemLink({
-            variantId,
             shopDomain,
             handle: lineItem.variant?.product?.handle,
             onlineStoreUrl: lineItem.variant?.product?.onlineStoreUrl,

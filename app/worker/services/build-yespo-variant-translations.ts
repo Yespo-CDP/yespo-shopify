@@ -1,6 +1,5 @@
 import type { ProductTranslation } from "~/@types/product";
 import type { ProductVariant, YespoCategory } from "~/@types/productVariant";
-import { appendVariantParam } from "~/worker/services/append-variant-param";
 import { primaryLanguageCategoryTranslations } from "~/worker/services/map-yespo-categories";
 
 type YespoTranslations = NonNullable<ProductVariant["translations"]>;
@@ -16,14 +15,12 @@ type YespoTranslations = NonNullable<ProductVariant["translations"]>;
 export const buildYespoVariantTranslations = ({
   productTranslations,
   variantTranslationsByLocale,
-  variantId,
   variantTitle,
   primaryCategories,
 }: {
   productTranslations: Record<string, ProductTranslation> | null | undefined;
   /** locale → translated variant title for this variant */
   variantTranslationsByLocale?: Record<string, string>;
-  variantId: string;
   variantTitle: string;
   primaryCategories: YespoCategory[];
 }): YespoTranslations | undefined => {
@@ -52,7 +49,6 @@ export const buildYespoVariantTranslations = ({
     return {
       [locale]: {
         ...t,
-        url: t.url ? appendVariantParam(t.url, variantId) : t.url,
         name: t.name
           ? translatedVariantTitle
             ? `${t.name} - ${translatedVariantTitle}`

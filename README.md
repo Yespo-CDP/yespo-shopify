@@ -437,7 +437,7 @@ If a network error or unknown error occurs during sync, the synchronization proc
 - `variant.updatedAt` (webhook: `variant.updated_at`) is converted to RFC3339 UTC (`…Z`) before sending as `updatedDate`. Shopify REST offsets like `-04:00` are rejected by Yespo (`INVALID_SOURCE_UPDATED_AT`).
 - `product.title` (+ ` - {variant.title}` when not `Default Title`) → `name`
 - `variant.image.url` (fallback `product.featuredImage.url`) → `imageUrl`. Webhooks use the same order: variant `image_id` in `images[]`, then `product.image.src`, then `images[0].src`. Empty `imageUrl` is rejected by Yespo (`INVALID_URL`).
-- `product.onlineStoreUrl` (fallback `https://{domain}/products/{handle}`) + `?variant={id}` → `url`
+- `product.onlineStoreUrl` (fallback `https://{domain}/products/{handle}`) → `url`
 - `variant.inventoryQuantity` (`null` or `> 0` → `1`, else `0`) → `isInStock`
 - `variant.price` → `price`
 - `variant.contextualPricing.price.currencyCode` (fallback shop currency) → `currency`
@@ -598,18 +598,18 @@ If a network error or unknown error occurs during sync, the affected countries r
 - `contextualPricing.price.currencyCode` → `currency`
 - `variant.inventoryQuantity` (`null` or `> 0` → `1`, else `0`) → `isInStock`
 - `contextualPricing.compareAtPrice.amount` (only when `> price`) → `oldPrice`
-- `market.rootUrls[locale]` + `/products/{handle}?variant={id}` → `urls` (a `{ locale: url }` dict)
+- `market.rootUrls[locale]` + `/products/{handle}` → `urls` (a `{ locale: url }` dict)
 
 Notes:
 - A market item is only built when it has a `price` and `currency`; otherwise it is skipped (a market record needs `price` + `currency` + `isInStock`).
-- `oldPrice`: in the **historical** path it is always set explicitly — a value when valid, otherwise `null` to clear a removed `compareAtPrice`. In the **real-time** path it is set only when valid.
-- `urls`: built per market locale (locale subfolder is already baked into the market root URL). `null` clears all URLs; a per-locale `null` clears only that locale. Locales removed from a market since the last sync are explicitly nulled out.
+- `oldPrice`: sent as a number only when compare-at is greater than `price`. Otherwise `remove.fields` includes `"oldPrice"`. `null` is not sent.
+- `urls`: absolute locale URLs only (`market.rootUrls[locale]` + `/products/{handle}`). A locale with no URL goes to `remove.urlsTranslations`. A market with no locales clears the whole field via `remove.fields: ["urls"]`. `null` is not sent.
 
 ---
 
 #### Change detection (skip logic):
 
-- For every item a SHA-256 **content hash** of `{ price, oldPrice, currency, isInStock, urls }` is computed and compared against the stored `MarketSync.contentHash` for `(productId, variantId, countryCode)`.
+- For every item a SHA-256 **content hash** of `{ price, oldPrice, currency, isInStock, urls, remove }` is computed and compared against the stored `MarketSync.contentHash` for `(productId, variantId, countryCode)`.
 - **Historical path:** an item is skipped only when the hash matches **and** its `updatedDate` is not newer than the stored `MarketSync.updatedAt`.
 - **Real-time path:** an item is skipped when the hash matches.
 - Accepted items upsert their `MarketSync` record (hash + updatedAt) so subsequent runs can skip them.

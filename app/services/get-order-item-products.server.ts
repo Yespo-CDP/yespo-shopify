@@ -81,7 +81,6 @@ export async function getOrderItemProducts({
       links.set(
         variantId,
         buildOrderItemLink({
-          variantId,
           shopDomain,
           handle: node?.product?.handle,
           onlineStoreUrl: node?.product?.onlineStoreUrl,
