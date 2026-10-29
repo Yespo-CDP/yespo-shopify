@@ -36,6 +36,9 @@ export default interface MarketSyncRepository {
     keys: Array<{ productId: string; variantId: string; countryCode: string }>,
   ): Promise<void>;
 
+  /** Drops every market row for these variant GIDs. Used when the variant itself is deleted. */
+  deleteByVariantIds(shopId: number, variantIds: string[]): Promise<void>;
+
   createOrUpdate(data: MarketSyncCreate): Promise<MarketSyncRecord>;
 
   update(

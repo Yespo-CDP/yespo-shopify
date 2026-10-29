@@ -14,10 +14,8 @@ import { getProductTranslations } from "~/worker/services/get-product-translatio
 import { resolveProductSyncLanguage } from "~/worker/services/resolve-product-sync-language";
 import { laterDate } from "~/utils/convert-date-to-utc";
 import { updateMarketFromWebhook } from "./update-market-from-webhook.server";
-import {
-  collectRejectedProductIds,
-  refreshProductVariantSyncLog,
-} from "./refresh-product-variant-sync-log.server";
+import { productIdsYespoAccepted } from "./product-sync-result";
+import { refreshProductVariantSyncLog } from "./refresh-product-variant-sync-log.server";
 
 /**
  * Creates product variants in Yespo from a Shopify PRODUCTS_CREATE webhook payload.
@@ -133,8 +131,11 @@ export const createProductVariantService = async (
       });
     }
 
-    const rejectedIds = collectRejectedProductIds(
-      variantsUpdateResponse?.failedVariants,
+    const sentIds = variants.map((variant) => String(variant.id));
+    const acceptedIds = productIdsYespoAccepted(
+      sentIds,
+      variantsUpdateResponse?.items,
+      variantsUpdateResponse?.summary,
     );
 
     for (let i = 0; i < variants.length; i++) {
@@ -144,7 +145,7 @@ export const createProductVariantService = async (
         variantId: variant.admin_graphql_api_id,
         productId: payload.admin_graphql_api_id,
         syncedTagKeys: currentTagKeys,
-        syncFailed: rejectedIds.has(String(variant.id)),
+        syncFailed: !acceptedIds.has(String(variant.id)),
         createdAt: variant.created_at ?? payload.created_at,
         updatedAt: laterDate(variant.updated_at, payload.updated_at),
         shop: {

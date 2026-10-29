@@ -110,17 +110,21 @@ Send Add products **first**, then Add markets.
 
 ### Market product fields
 
-| Field         | Required | `null` behavior          |
-|---------------|----------|--------------------------|
-| `productId`   | Yes      | —                        |
-| `updatedDate` | Yes      | —                        |
-| `price`       | No       | **Invalid**              |
-| `currency`    | No       | **Invalid**              |
-| `isInStock`   | No       | **Invalid**              |
-| `oldPrice`    | No       | Clears market oldPrice   |
-| `urls`        | No       | Clears all market URLs   |
+| Field         | Required | Clearing                                      |
+|---------------|----------|-----------------------------------------------|
+| `productId`   | Yes      | —                                             |
+| `updatedDate` | Yes      | —                                             |
+| `price`       | No       | `null` is **invalid**                         |
+| `currency`    | No       | `null` is **invalid**                         |
+| `isInStock`   | No       | `null` is **invalid**                         |
+| `oldPrice`    | No       | `remove.fields: ["oldPrice"]`                 |
+| `urls`        | No       | `remove.fields: ["urls"]` clears every locale |
 
-`urls` is a dict: `{ "en": "https://...", "fr": "https://..." }`. Set locale to `null` to clear only that locale.
+`urls` is a dict of absolute URLs: `{ "en": "https://...", "fr": "https://..." }`. Do not send `null`. A locale to drop goes to `remove.urlsTranslations: ["fr"]`.
+
+```json
+{ "remove": { "fields": ["oldPrice"], "urlsTranslations": ["fr"] } }
+```
 
 Market record is active in recommendations only when base product exists **and** market has `price` + `currency` + `isInStock`.
 

@@ -54,6 +54,13 @@ export interface ProductVariant {
 
 export interface ProductVariantsResponse {
   failedVariants?: object | object[];
+  /** Every per-item result from the Yespo response, accepted and rejected. */
+  items?: object | object[];
+  summary?: {
+    received?: number;
+    accepted?: number;
+    rejected?: number;
+  };
   asyncSessionId?: string;
   id?: number;
 }

@@ -530,7 +530,7 @@ Used for stores operating in multiple markets or regions with different prices a
 - Market data may be accepted and stored before the corresponding base product exists. Market data is effective in recommendations only after the matching base product exists.
 - To remove a product from recommendations in a specific market, send `isInStock: 0`.
 - A market record is effective in recommendation resolution only when the matching base product exists **and** the effective market record has at minimum `price`, `currency`, and `isInStock`.
-- `discount` is **not** sent in Add markets. Market discount is derived from `oldPrice` and `price`. To remove market discount, send `oldPrice: null`.
+- `discount` is **not** sent in Add markets. Market discount is derived from `oldPrice` and `price`. This app clears a missing compare-at price with `remove.fields: ["oldPrice"]`.
 - Send Add products **first**, then Add markets.
 
 ### Request Envelope (markets)
@@ -583,21 +583,22 @@ Used for stores operating in multiple markets or regions with different prices a
 | `price`       | Float   | No       | Market-specific selling price. Omit to preserve. Sending `null` is **invalid**.                                                                                                                                                                                                |
 | `currency`    | String  | No       | ISO 4217 currency code. Omit to preserve. Sending `null` is **invalid**.                                                                                                                                                                                                       |
 | `isInStock`   | Integer | No       | `1` or `0`. Market-specific availability. Omit to preserve. Sending `null` is **invalid**. Use `0` to remove from recommendations in this market.                                                                                                                              |
-| `oldPrice`    | Float   | No       | Market-specific original price. Omit to preserve. Send `null` to explicitly mark no `oldPrice` in this market (base `oldPrice` must not be used for this market when explicitly cleared). If both `oldPrice` and `price` are numeric, `oldPrice` must be greater than `price`. |
-| `urls`        | Object  | No       | Dictionary of `languageCode → market-specific URL`. Omit to preserve existing URLs. Send `null` to clear all. Submit locale key to upsert only that locale. Submit `{ "en": null }` to clear only locale `en`. All submitted URL values must be valid absolute URLs.           |
+| `oldPrice`    | Float   | No       | Market-specific original price. Sent only when it is greater than `price`. Otherwise this app sends `remove.fields: ["oldPrice"]`. `null` is not sent. |
+| `urls`        | Object  | No       | Dictionary of `languageCode → absolute URL`. Only locales that have a URL are included. A locale to drop goes in `remove.urlsTranslations` (for example `["en"]`). A market with no locales clears every URL with `remove.fields: ["urls"]`. `null` is not sent. |
+| `remove`      | Object  | No       | `{ "fields": ["oldPrice", "urls"], "urlsTranslations": ["en"] }`. `fields` drops `oldPrice` or the whole `urls` map. `urlsTranslations` drops individual locale URLs. |
 
 > Each submitted market item must include at least one market field to change (`price`, `currency`, `isInStock`, `oldPrice`, or `urls`) in addition to the always-required `productId` and `updatedDate`. Otherwise the item is rejected with `EMPTY_MARKET_PATCH`.
 
 ### Add Markets Update Semantics
 
-| Field         | Omit         | `null`                         | New value |
-| ------------- | ------------ | ------------------------------ | --------- |
-| `price`       | Preserve     | **Invalid**                    | Overwrite |
-| `currency`    | Preserve     | **Invalid**                    | Overwrite |
-| `isInStock`   | Preserve     | **Invalid**                    | Overwrite |
-| `oldPrice`    | Preserve     | Clear (no oldPrice for market) | Overwrite |
-| `urls`        | Preserve all | Clear all                      | —         |
-| `urls.{lang}` | Preserve     | Clear that locale              | Upsert    |
+| Field         | Omit         | How this app clears                         | New value |
+| ------------- | ------------ | ------------------------------------------- | --------- |
+| `price`       | Preserve     | `null` is **invalid**                       | Overwrite |
+| `currency`    | Preserve     | `null` is **invalid**                       | Overwrite |
+| `isInStock`   | Preserve     | `null` is **invalid**                       | Overwrite |
+| `oldPrice`    | Preserve     | `remove.fields: ["oldPrice"]`               | Overwrite |
+| `urls`        | Preserve all | `remove.fields: ["urls"]` when the market has no locales | Upsert the locales that have a URL |
+| `urls.{lang}` | Preserve     | `remove.urlsTranslations: ["en"]`           | Upsert    |
 
 When market-specific URLs are cleared or absent, recommendation rendering falls back to translation URL or base product URL.
 
@@ -646,7 +647,7 @@ Keys in `urls` must use BCP 47 language tags and should correspond to a language
 }
 ```
 
-**Remove market old price and market discount:**
+**Remove market old price and one locale URL:**
 
 ```json
 {
@@ -657,7 +658,10 @@ Keys in `urls` must use BCP 47 language tags and should correspond to a language
         {
           "productId": "SKU123",
           "updatedDate": "2026-04-01T10:25:00Z",
-          "oldPrice": null
+          "remove": {
+            "fields": ["oldPrice"],
+            "urlsTranslations": ["en"]
+          }
         }
       ]
     }

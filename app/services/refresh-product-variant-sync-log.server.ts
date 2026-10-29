@@ -3,24 +3,7 @@ import {
   productVariantSyncLogRepository,
   productVariantSyncRepository,
 } from "~/repositories/repositories.server";
-
-export function collectRejectedProductIds(
-  failedVariants: ProductVariantsResponse["failedVariants"],
-): Set<string> {
-  if (!failedVariants) return new Set();
-  const items = Array.isArray(failedVariants)
-    ? failedVariants
-    : [failedVariants];
-  return new Set(
-    items
-      .map((item) =>
-        item && typeof item === "object" && "productId" in item
-          ? String((item as { productId?: unknown }).productId ?? "")
-          : "",
-      )
-      .filter(Boolean),
-  );
-}
+import { productIdsYespoAccepted } from "~/services/product-sync-result";
 
 export function variantGidFromNumericId(productId: string): string {
   return productId.startsWith("gid://")
@@ -29,19 +12,25 @@ export function variantGidFromNumericId(productId: string): string {
 }
 
 /**
- * Marks a sent batch as accepted or rejected in ProductVariantSync.
+ * Marks a sent batch in ProductVariantSync.
+ * `syncFailed` becomes false only for variants Yespo explicitly accepted.
+ * Rejected variants, and variants missing from `items`, stay failed.
  */
 export async function markProductVariantSyncResults(
   shopId: number,
   sentNumericIds: string[],
-  failedVariants: ProductVariantsResponse["failedVariants"],
+  result?: Pick<ProductVariantsResponse, "items" | "summary">,
 ): Promise<void> {
-  const rejected = collectRejectedProductIds(failedVariants);
-  const failedGids = sentNumericIds
-    .filter((id) => rejected.has(id))
-    .map(variantGidFromNumericId);
+  const accepted = productIdsYespoAccepted(
+    sentNumericIds,
+    result?.items,
+    result?.summary,
+  );
   const acceptedGids = sentNumericIds
-    .filter((id) => !rejected.has(id))
+    .filter((id) => accepted.has(id))
+    .map(variantGidFromNumericId);
+  const failedGids = sentNumericIds
+    .filter((id) => !accepted.has(id))
     .map(variantGidFromNumericId);
 
   await Promise.all([

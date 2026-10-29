@@ -10,6 +10,7 @@ import {
 import { updateMarketFromWebhook } from "~/services/update-market-from-webhook.server";
 import type { ProductWebhookJobData } from "~/services/queue";
 import {
+  marketSyncRepository,
   productVariantSyncRepository,
   shopRepository,
 } from "~/repositories/repositories.server";
@@ -23,6 +24,7 @@ import { getShopPrimaryLocale } from "../services/get-shop-primary-locale";
 import { getShopSecondaryLocales } from "../services/get-shop-locales";
 import { getProductTranslations } from "../services/get-product-translations";
 import { getOfflineAccessToken } from "~/services/get-offline-session.server";
+import { yespoProductAction } from "../services/yespo-product-action";
 
 export class ProductNotReadyError extends Error {
   constructor(productGid: string) {
@@ -163,7 +165,7 @@ async function syncProductFromAdmin(
 
       if (!shouldSend) continue;
 
-      const action = existing ? "update" : "create";
+      const action = yespoProductAction(existing);
       const payload = createProductVariantPayload(
         product,
         variant,
@@ -201,7 +203,7 @@ async function syncProductFromAdmin(
       await markProductVariantSyncResults(
         shopData.id,
         productVariantsData.map((variant) => variant.productId),
-        response?.failedVariants,
+        response,
       );
     }
 
@@ -226,6 +228,10 @@ async function syncProductFromAdmin(
         orgId: shopData.orgId,
       });
       await productVariantSyncRepository.deleteByVariantIds(
+        shopData.id,
+        orphanedVariantGids,
+      );
+      await marketSyncRepository.deleteByVariantIds(
         shopData.id,
         orphanedVariantGids,
       );

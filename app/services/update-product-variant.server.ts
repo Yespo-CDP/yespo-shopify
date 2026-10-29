@@ -4,6 +4,7 @@ import {
 } from "~/api/update-product-variants";
 import { deleteProductVariants } from "~/api/delete-product-variants";
 import {
+  marketSyncRepository,
   productVariantSyncRepository,
   shopRepository,
 } from "~/repositories/repositories.server";
@@ -18,11 +19,10 @@ import { getShopSecondaryLocales } from "~/worker/services/get-shop-locales";
 import { getProductTranslations } from "~/worker/services/get-product-translations";
 import { resolveProductSyncLanguage } from "~/worker/services/resolve-product-sync-language";
 import { laterDate } from "~/utils/convert-date-to-utc";
+import { yespoProductAction } from "~/worker/services/yespo-product-action";
 import { updateMarketFromWebhook } from "./update-market-from-webhook.server";
-import {
-  collectRejectedProductIds,
-  refreshProductVariantSyncLog,
-} from "./refresh-product-variant-sync-log.server";
+import { productIdsYespoAccepted } from "./product-sync-result";
+import { refreshProductVariantSyncLog } from "./refresh-product-variant-sync-log.server";
 
 /**
  * Updates product variants in Yespo from a Shopify PRODUCTS_UPDATE webhook payload.
@@ -127,7 +127,7 @@ export const updateProductVariantService = async (
 
     const productVariants = variants.map((variant) => {
       const existing = syncMap.get(variant.admin_graphql_api_id);
-      const action = existing ? "update" : "create";
+      const action = yespoProductAction(existing);
       const previousTagKeys = existing?.syncedTagKeys ?? [];
       return createProductVariantPayloadFromWebhook(
         payload,
@@ -169,8 +169,11 @@ export const updateProductVariantService = async (
       });
     }
 
-    const rejectedIds = collectRejectedProductIds(
-      variantsUpdateResponse?.failedVariants,
+    const sentIds = variants.map((variant) => String(variant.id));
+    const acceptedIds = productIdsYespoAccepted(
+      sentIds,
+      variantsUpdateResponse?.items,
+      variantsUpdateResponse?.summary,
     );
 
     for (let i = 0; i < variants.length; i++) {
@@ -180,7 +183,7 @@ export const updateProductVariantService = async (
         variantId: variant.admin_graphql_api_id,
         productId: payload.admin_graphql_api_id,
         syncedTagKeys: currentTagKeys,
-        syncFailed: rejectedIds.has(String(variant.id)),
+        syncFailed: !acceptedIds.has(String(variant.id)),
         createdAt: variant.created_at ?? payload.created_at,
         updatedAt: laterDate(variant.updated_at, payload.updated_at),
         shop: {
@@ -225,6 +228,10 @@ export const updateProductVariantService = async (
         });
 
         await productVariantSyncRepository.deleteByVariantIds(
+          shopId,
+          orphanedVariantGids,
+        );
+        await marketSyncRepository.deleteByVariantIds(
           shopId,
           orphanedVariantGids,
         );

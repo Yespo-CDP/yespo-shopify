@@ -149,7 +149,7 @@ export const updateProductVariants = async ({
       logLevel: "INFO",
     });
 
-    return { failedVariants };
+    return { failedVariants, items: responseData.items, summary: responseData.summary };
   } catch (error: any) {
     const statusCode = error?.status ?? 500;
     const responseBody = error?.responseData ?? error?.message;

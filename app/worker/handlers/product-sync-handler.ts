@@ -1,6 +1,7 @@
 import type { ProductVariant } from "~/@types/productVariant";
 import {
   shopRepository,
+  marketSyncRepository,
   productVariantSyncRepository,
   productVariantSyncLogRepository,
 } from "~/repositories/repositories.server";
@@ -11,6 +12,7 @@ import { getProducts } from "../services/get-products";
 import { getProductVariantsCount } from "../services/get-product-variants-count";
 import { fetchAllProductVariants } from "../services/get-product-variants";
 import { createProductVariantPayload } from "../services/create-product-variant-payload";
+import { yespoProductAction } from "../services/yespo-product-action";
 import { fetchShopMarketsConfig } from "../services/fetch-shop-markets-config";
 import { getPublishedInAnyMarket } from "../services/get-product-market-publication";
 import { getShopPrimaryLocale } from "../services/get-shop-primary-locale";
@@ -155,7 +157,7 @@ export const productSyncHandler = async (
                 productVariantSync?.updatedAt?.getTime() ?? 0;
 
               if (entityUpdatedDate > syncUpdatedDate) {
-                const action = productVariantSync ? "update" : "create";
+                const action = yespoProductAction(productVariantSync);
                 // Use the public custom domain for URL construction (fallback when
                 // onlineStoreUrl is null). shopData.domain is the primary domain
                 // (custom domain if set, otherwise the myshopify.com domain).
@@ -246,7 +248,7 @@ export const productSyncHandler = async (
             await markProductVariantSyncResults(
               shopId,
               variantsChunk.map((variant) => variant.productId),
-              variantsUpdateResponse?.failedVariants,
+              variantsUpdateResponse,
             );
           }
 
@@ -324,6 +326,7 @@ export const productSyncHandler = async (
             orgId,
           });
           await productVariantSyncRepository.deleteByVariantIds(shopId, chunk);
+          await marketSyncRepository.deleteByVariantIds(shopId, chunk);
         }
       }
     }
