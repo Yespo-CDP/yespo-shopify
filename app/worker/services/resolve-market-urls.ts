@@ -1,5 +1,6 @@
 import type { ShopMarketConfig } from "~/@types/shopMarketsConfig";
 import type { MarketRemovePatch } from "~/api/update-market-products";
+import { appendVariantParam } from "./append-variant-param";
 
 /**
  * Market URLs split into values Yespo should store and locales it should clear.
@@ -18,11 +19,13 @@ export interface ResolvedMarketUrls {
  *
  * `previousLocales` should come from the last persisted ShopMarket record so
  * locales removed from a market since the previous sync are still cleared.
+ * `variantId` is the numeric Shopify variant id appended as `?variant=`.
  */
 export function resolveMarketUrls(
   market: ShopMarketConfig | undefined,
   handle: string,
   previousLocales: string[] = [],
+  variantId?: string,
 ): ResolvedMarketUrls {
   const locales = [
     ...new Set([...(market?.locales ?? []), ...previousLocales]),
@@ -37,7 +40,8 @@ export function resolveMarketUrls(
   for (const locale of locales) {
     const rootUrl = market?.rootUrls?.[locale];
     if (handle && rootUrl) {
-      urls[locale] = `${rootUrl.replace(/\/$/, "")}/products/${handle}`;
+      const base = `${rootUrl.replace(/\/$/, "")}/products/${handle}`;
+      urls[locale] = appendVariantParam(base, variantId);
     } else {
       urlsTranslations.push(locale);
     }

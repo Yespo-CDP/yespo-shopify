@@ -7,6 +7,7 @@ import {
   mapShopifyCategories,
   withDefaultCategory,
 } from "~/worker/services/map-yespo-categories";
+import { appendVariantParam } from "~/worker/services/append-variant-param";
 import { buildYespoVariantTranslations } from "~/worker/services/build-yespo-variant-translations";
 import { toRfc3339Utc } from "~/utils/convert-date-to-utc";
 import { resolveVariantIsInStock } from "~/worker/services/resolve-variant-is-in-stock";
@@ -62,11 +63,12 @@ export const createProductVariantPayload = (
 
   const productId = variant.id.split("/").pop() ?? variant.id;
 
-  const url =
+  const baseUrl =
     product.onlineStoreUrl ??
     (shopDomain && product.handle
       ? `https://${shopDomain}/products/${product.handle}`
       : "");
+  const url = appendVariantParam(baseUrl, productId);
 
   const currency =
     variant.contextualPricing?.price?.currencyCode ?? shopCurrency;
@@ -125,6 +127,7 @@ export const createProductVariantPayload = (
   const translations = buildYespoVariantTranslations({
     productTranslations: product.translations,
     variantTranslationsByLocale: product.variantTranslations?.[productId],
+    variantId: productId,
     variantTitle,
     primaryCategories: categories,
   });

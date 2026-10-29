@@ -214,7 +214,12 @@ export async function updateMarketFromWebhook({
         applyMarketClearing({
           price,
           compareAt,
-          resolved: resolveMarketUrls(market, handle, previousLocales),
+          resolved: resolveMarketUrls(
+            market,
+            handle,
+            previousLocales,
+            numericVariantId,
+          ),
         }),
       );
 
