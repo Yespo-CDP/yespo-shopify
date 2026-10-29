@@ -225,6 +225,8 @@ offline-токена/`apiKey` → тихо пропускається (слот 
 | `updatedDate` → RFC3339 UTC (`…Z`) | `convert-date-to-utc.ts`, payload-білдери |
 | Persist `max(variant, product).updatedAt` для skip | `product-sync-handler.ts`, create/update webhook services |
 | Лічильники Data Sync після вебхука (`syncFailed`) | `refresh-product-variant-sync-log.server.ts` |
+| Відхилений товар лишається `syncFailed` і наступного разу йде як `create` | `product-sync-result.ts`, `yespo-product-action.ts`, `product-webhook-handler.ts` |
+| Market `oldPrice` / URL очищаються через `remove`, не через `null` | `resolve-market-urls.ts`, `update-market-from-webhook.server.ts`, `market-sync-handler.ts` |
 | Translations у вебхуках | `create/update-product-variant.server.ts`, `create-product-variant-payload-from-webhook.ts` |
 | Видалення перекладів свідомо скіпнуто | payload-білдери більше не шлють `remove.translations` |
 | Market sync у вебхуках (contextualPricing) | `app/services/update-market-from-webhook.server.ts` |

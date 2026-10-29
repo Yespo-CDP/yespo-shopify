@@ -411,7 +411,7 @@ After the merchant grants `read_products`, `read_publications`, `read_translatio
      * If new or updated → added to sync batch
      * Action is `create` when no local sync record exists or the last attempt was rejected (`syncFailed`). An accepted variant is `update`
      * The same `max(variant.updatedAt, product.updatedAt)` is stored on `ProductVariantSync` so a later Enable without Shopify changes skips the variant (Disable/Enable does **not** clear tracking rows)
-     * Variants Yespo rejects are still tracked, with `syncFailed = true`
+     * Variants Yespo rejects are still tracked, with `syncFailed = true`. The flag becomes `false` only when that variant's response item has `status: "accepted"`. A rejected item, or a response that does not include its `productId`, leaves `syncFailed` true so the next run sends `create` again
 
 4. **Bulk sending to Yespo**
 
@@ -507,11 +507,12 @@ Final synchronization status:
 
 Webhooks are triggered when products are created, updated, or deleted in Shopify:
 
-  - `products/create` → all variants of the product sent to Yespo as new products.
-  - `products/update` → variants created or updated in Yespo; variants removed from the product are deleted.
+  - `products/create` and `products/update` load the product from the Admin API and send each variant to Yespo. The action is `create` when Yespo has not accepted that variant yet (no `ProductVariantSync` row, or `syncFailed` is true). A previously accepted variant is `update`. Variants removed from the product are deleted.
+  - A variant is skipped when a row exists, `syncFailed` is false, and Shopify's `max(variant.updatedAt, product.updatedAt)` is not newer than `ProductVariantSync.updatedAt`.
+  - `syncFailed` becomes false only when the Yespo item for that `productId` has `status: "accepted"`. A rejected item, or a response that does not name the variant, leaves the flag true. The next save then sends `POST /v1/products` again with `action: "create"`. An empty `imageUrl` is a typical rejection (`INVALID_URL`).
   - `products/delete` → all tracked variants of the product removed from Yespo.
 
-The webhook route only enqueues a BullMQ job (`product-webhooks`) and returns `200`. Jobs for the same product are coalesced and delayed by 8 seconds, so a CSV import's `products/create` followed by `products/update` becomes one run. The worker (`concurrency: 1`) then loads the product from the Admin API — including image, collections, category, and translations — and sends it to Yespo. Image URLs follow the same fallback as historical sync (variant image → featured image). `updatedDate` is normalized to UTC. After Yespo responds, Data Sync counters are refreshed from `ProductVariantSync` (see Logging above). When market sync is on, the same job also sends that product's market prices to Yespo.
+The webhook route only enqueues a BullMQ job (`product-webhooks`) and returns `200`. Jobs for the same product are coalesced and delayed by 8 seconds, so a CSV import's `products/create` followed by `products/update` becomes one run. The worker (`concurrency: 1`) then loads the product from the Admin API — including image, collections, category, and translations — and sends it to Yespo. Image URLs follow the same fallback as historical sync (variant image → featured image). `updatedDate` is normalized to UTC. After Yespo responds, Data Sync counters are refreshed from `ProductVariantSync` (see Logging above). When market sync is on, the same job also sends that product's market prices to Yespo, including when every variant was skipped and `POST /v1/products` was not called. A market request does not create the base product.
 
 ---
 
@@ -654,7 +655,7 @@ After a `products/create` or `products/update` webhook is processed (when market
 
   - Fetches the active markets config and per-country contextual pricing for the product's variants.
   - Skips variants not published in a given market.
-  - Builds market items, compares hashes against stored `MarketSync` records, and sends **only changed** items via `POST /v1/markets`.
+  - Builds market items, compares hashes against stored `MarketSync` records, and sends **only changed** items via `POST /v1/markets`. Clearing follows the field mapping above: missing `oldPrice` and missing URLs go in `remove`, not `null`.
   - For an enabled country where this product is no longer published, sends `isInStock: 0` and prunes the accepted `MarketSync` rows.
   - For countries removed since the last sync, sends `isInStock: 0` for that product's variants and prunes the local records.
   - A full Shopify product or variant delete calls `DELETE /v1/products` and removes the local `MarketSync` rows. It does not send a market `isInStock: 0`, because deleting the base product already drops its market data.
