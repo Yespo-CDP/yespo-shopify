@@ -409,7 +409,7 @@ After the merchant grants `read_products`, `read_publications`, `read_translatio
 
      * If the variant is unchanged → skipped
      * If new or updated → added to sync batch
-     * Action is `create` when no local sync record exists, otherwise `update`
+     * Action is `create` when no local sync record exists or the last attempt was rejected (`syncFailed`). An accepted variant is `update`
      * The same `max(variant.updatedAt, product.updatedAt)` is stored on `ProductVariantSync` so a later Enable without Shopify changes skips the variant (Disable/Enable does **not** clear tracking rows)
      * Variants Yespo rejects are still tracked, with `syncFailed = true`
 
