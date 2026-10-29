@@ -24,6 +24,27 @@ function market(
   };
 }
 
+test("appends the variant id to every locale url", () => {
+  const resolved = resolveMarketUrls(
+    market(["en", "uk"], {
+      en: "https://shop.example",
+      uk: "https://shop.example/uk",
+    }),
+    "cool-socks",
+    [],
+    "430738",
+  );
+
+  assert.deepEqual(resolved, {
+    urls: {
+      en: "https://shop.example/products/cool-socks?variant=430738",
+      uk: "https://shop.example/uk/products/cool-socks?variant=430738",
+    },
+    urlsTranslations: [],
+    clearUrls: false,
+  });
+});
+
 test("keeps only absolute locale urls", () => {
   const resolved = resolveMarketUrls(
     market(["en", "uk"], {

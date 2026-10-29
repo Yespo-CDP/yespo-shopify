@@ -5,6 +5,7 @@ import type {
 } from "~/@types/productVariant";
 import type { ProductTranslationsResult } from "~/worker/services/get-product-translations";
 import { withDefaultCategory } from "~/worker/services/map-yespo-categories";
+import { appendVariantParam } from "~/worker/services/append-variant-param";
 import { buildYespoVariantTranslations } from "~/worker/services/build-yespo-variant-translations";
 import { toRfc3339Utc } from "~/utils/convert-date-to-utc";
 
@@ -129,9 +130,10 @@ export const createProductVariantPayloadFromWebhook = (
 
   const imageUrl = resolveWebhookImageUrl(product, variant);
   const variantId = variant.id.toString();
-  const url = shopDomain
+  const baseUrl = shopDomain
     ? `https://${shopDomain}/products/${product.handle}`
     : "";
+  const url = appendVariantParam(baseUrl, variantId);
 
   const inventoryQuantity = variant.inventory_quantity;
   const isInStock: 0 | 1 =
@@ -185,6 +187,7 @@ export const createProductVariantPayloadFromWebhook = (
   const translations = buildYespoVariantTranslations({
     productTranslations: translationsResult?.product,
     variantTranslationsByLocale: translationsResult?.variants?.[variantId],
+    variantId,
     variantTitle,
     primaryCategories: resolvedCategories,
   });
