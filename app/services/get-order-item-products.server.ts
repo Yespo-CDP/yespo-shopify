@@ -86,6 +86,7 @@ export async function getOrderItemProducts({
           onlineStoreUrl: node?.product?.onlineStoreUrl,
           variantImageUrl: node?.image?.url,
           featuredImageUrl: node?.product?.featuredImage?.url,
+          variantId,
         }),
       );
     }

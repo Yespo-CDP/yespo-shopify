@@ -120,6 +120,80 @@ test("falls back to shop money when presentment money is absent", () => {
   assert.equal(payload.totalCost, 250);
 });
 
+test("appends the variant id to the item storefront url", () => {
+  const payload = createOrderPayload(
+    order({
+      lineItems: {
+        nodes: [
+          {
+            id: "gid://shopify/LineItem/1",
+            name: "Shirt",
+            quantity: 1,
+            variant: {
+              id: "gid://shopify/ProductVariant/430738",
+              product: {
+                handle: "cool-socks",
+                onlineStoreUrl: "https://shop.example/products/cool-socks",
+              },
+            },
+          },
+          {
+            id: "gid://shopify/LineItem/2",
+            name: "Hat",
+            quantity: 1,
+            variant: {
+              id: "gid://shopify/ProductVariant/99",
+              product: {
+                handle: "wool-hat",
+                onlineStoreUrl: "https://shop.example/products/wool-hat?utm=order",
+              },
+            },
+          },
+          {
+            id: "gid://shopify/LineItem/3",
+            name: "Scarf",
+            quantity: 1,
+            variant: {
+              id: "gid://shopify/ProductVariant/7",
+              product: { handle: "silk-scarf" },
+            },
+          },
+          {
+            id: "gid://shopify/LineItem/4",
+            name: "Deleted variant",
+            quantity: 1,
+            variant: {
+              id: "gid://shopify/ProductVariant/",
+              product: {
+                handle: "plain-tee",
+                onlineStoreUrl: "https://shop.example/products/plain-tee",
+              },
+            },
+          },
+        ],
+      },
+    }),
+    "shop.example",
+  );
+
+  assert.equal(
+    payload.items[0]?.url,
+    "https://shop.example/products/cool-socks?variant=430738",
+  );
+  assert.equal(
+    payload.items[1]?.url,
+    "https://shop.example/products/wool-hat?utm=order&variant=99",
+  );
+  assert.equal(
+    payload.items[2]?.url,
+    "https://shop.example/products/silk-scarf?variant=7",
+  );
+  assert.equal(
+    payload.items[3]?.url,
+    "https://shop.example/products/plain-tee",
+  );
+});
+
 test("sets marketId from the shipping country for a single-market shop", () => {
   const payload = createOrderPayload(
     order({
