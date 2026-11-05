@@ -40,7 +40,7 @@ import { presentmentMoneyAmount } from "~/services/presentment-money";
  *    - `lineItem.name` → `name`
  *    - `lineItem.quantity` → `quantity`
  *    - `lineItem.originalTotalSet.presentmentMoney.amount` → `cost`
- *    - variant storefront URL → `url`
+ *    - variant storefront URL (`?variant=<id>`) → `url`
  *    - variant image, else product featured image → `imageUrl`
  *
  * @param {OrderData} order - Shopify order data.
@@ -122,16 +122,15 @@ export const createOrderPayload = (
     status: statusMap(order.displayFulfillmentStatus),
     deliveryAddress: formatAddress(order?.shippingAddress),
     items: order?.lineItems?.nodes?.map((lineItem) => {
-      const variantId = lineItem.variant?.id?.split("/").pop() ?? "";
-      const link = variantId
-        ? buildOrderItemLink({
-            shopDomain,
-            handle: lineItem.variant?.product?.handle,
-            onlineStoreUrl: lineItem.variant?.product?.onlineStoreUrl,
-            variantImageUrl: lineItem.variant?.image?.url,
-            featuredImageUrl: lineItem.variant?.product?.featuredImage?.url,
-          })
-        : undefined;
+      const variantId = lineItem.variant?.id?.split("/").pop() || undefined;
+      const link = buildOrderItemLink({
+        shopDomain,
+        handle: lineItem.variant?.product?.handle,
+        onlineStoreUrl: lineItem.variant?.product?.onlineStoreUrl,
+        variantImageUrl: lineItem.variant?.image?.url,
+        featuredImageUrl: lineItem.variant?.product?.featuredImage?.url,
+        variantId,
+      });
       return {
         externalItemId: variantId || (lineItem.id?.split("/").pop() ?? ""),
         name: lineItem.name,
