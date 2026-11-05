@@ -5,6 +5,8 @@ import type {ICartCustomer, StatusCartEvent} from "~/@types/statusCart";
 import {buildCustomerData} from "~/utils/buildCustomerData";
 import {sendStatusCartEvent} from "~/api/send-status-cart-event";
 import {readMarketId} from "~/services/market-tracking";
+import {buildStatusCartProducts} from "~/services/build-status-cart-products";
+import {getMarketVariantPrices} from "~/services/get-market-variant-prices.server";
 
 /**
  * Sends status cart event data to the tracking service based on the given payload and shop.
@@ -44,19 +46,16 @@ export const sendStatusCartService = async (payload: any, shop: Shop) => {
     const customerData: ICartCustomer = buildCustomerData(eventData.customer)
     const marketId = readMarketId(eventData.marketId) ?? undefined
 
-    const productsData = payload.line_items.map((item: any) => {
-      const presentment = item.price_set?.presentment_money;
-      const discountAmount =
-        item.total_discount_set?.presentment_money?.amount ?? item.total_discount;
-      return {
-        productKey: item.id.toString(),
-        price: presentment?.amount ?? item.price,
-        discount: (Number(discountAmount) / Number(item.quantity)).toFixed(2),
-        quantity: item.quantity,
-        price_currency_code:
-          presentment?.currency_code ?? item.price_set?.shop_money?.currency_code,
-      };
-    })
+    // The carts/update webhook may carry shop-currency money for a foreign
+    // market, so the buyer's market price is read from Shopify when needed.
+    const marketPrices = await getMarketVariantPrices({
+      shopUrl: shop.shopUrl,
+      variantIds: payload.line_items.map((item: any) =>
+        String(item.variant_id ?? item.id),
+      ),
+      marketId,
+    });
+    const productsData = buildStatusCartProducts(payload.line_items, marketPrices)
 
     const cartEventData: StatusCartEvent = {
       GeneralInfo: {

@@ -53,7 +53,6 @@ export const sendStatusCartEvent = async ({
 
   try {
     const response = await fetchWithErrorHandling(url, options);
-
     await sendLogEvent({
       orgId,
       errorMessage: '',
