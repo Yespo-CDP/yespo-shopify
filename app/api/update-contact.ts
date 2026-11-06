@@ -3,6 +3,7 @@ import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import type { Contact } from "~/@types/contact";
 import {sendLogEvent} from "~/api/send-log-event";
 import {EVENT_MESSAGES} from "~/config/constants";
+import { writeYespoDebugFile } from "~/utils/write-yespo-debug.server";
 
 /**
  * Sends a POST request to update a contact in the Yespo API.
@@ -38,6 +39,8 @@ export const updateContact = async ({
     },
     body: JSON.stringify(contactData),
   };
+
+  writeYespoDebugFile("contact-update", contactData);
 
   try {
     const response = await fetchWithErrorHandling(url, options);

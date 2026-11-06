@@ -3,6 +3,7 @@ import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import type { Order, OrdersCreateResponse } from "~/@types/order";
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
+import { writeYespoDebugFile } from "~/utils/write-yespo-debug.server";
 
 /**
  * Sends a POST request to create the orders in the Yespo API.
@@ -39,6 +40,8 @@ export const createOrders = async ({
     },
     body: JSON.stringify(requestBody),
   };
+
+  writeYespoDebugFile("orders", requestBody);
 
   try {
     const response = await fetchWithErrorHandling(url, options);

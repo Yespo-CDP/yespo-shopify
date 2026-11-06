@@ -8,6 +8,7 @@ import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import { normalizeYespoItems } from "~/utils/normalize-yespo-items";
 import { throttleApiRequest } from "~/utils/rate-limiter.server";
+import { writeYespoDebugFile } from "~/utils/write-yespo-debug.server";
 
 /**
  * One entry of the Yespo `items` array, as returned by POST /v1/products.
@@ -108,6 +109,8 @@ export const updateProductVariants = async ({
 
   try {
     await throttleApiRequest(siteId);
+
+    writeYespoDebugFile(`product-variants-${siteId}`, requestBody);
 
     const url = `${process.env.API_URL}/products`;
 

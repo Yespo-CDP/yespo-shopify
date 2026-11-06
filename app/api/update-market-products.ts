@@ -4,6 +4,7 @@ import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import { normalizeYespoItems } from "~/utils/normalize-yespo-items";
 import { throttleApiRequest } from "~/utils/rate-limiter.server";
+import { writeYespoDebugFile } from "~/utils/write-yespo-debug.server";
 
 /**
  * Clears market fields that must not be sent as `null`.
@@ -123,6 +124,9 @@ export const updateMarketProducts = async ({
     await throttleApiRequest(siteId);
 
     const requestBody = { markets: normalizedMarkets };
+    const marketIds = normalizedMarkets.map((market) => market.marketId).join("-");
+    writeYespoDebugFile(`market-sync-${marketIds}`, requestBody);
+
     const url = `${process.env.API_URL}/markets`;
 
     console.log(

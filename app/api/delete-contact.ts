@@ -2,6 +2,7 @@ import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import {sendLogEvent} from "~/api/send-log-event";
 import {EVENT_MESSAGES} from "~/config/constants";
+import { writeYespoDebugFile } from "~/utils/write-yespo-debug.server";
 
 /**
  * Sends a DELETE request to remove a contact by external customer ID.
@@ -40,6 +41,8 @@ export const deleteContact = async ({
       Authorization: authHeader,
     },
   };
+
+  writeYespoDebugFile("contact-delete", { externalCustomerId, erase });
 
   try {
     const response = await fetchWithErrorHandling(url, options);

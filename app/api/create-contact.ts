@@ -3,6 +3,7 @@ import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import type { Contact } from "~/@types/contact";
 import {sendLogEvent} from "~/api/send-log-event";
 import {EVENT_MESSAGES} from "~/config/constants";
+import { writeYespoDebugFile } from "~/utils/write-yespo-debug.server";
 
 /**
  * Sends a POST request to create a contact in the Yespo API.
@@ -38,6 +39,8 @@ export const createContact = async ({
     },
     body: JSON.stringify(contactData),
   };
+
+  writeYespoDebugFile("contact-create", contactData);
 
   console.log("[yespo] POST /contact", {
     domain,

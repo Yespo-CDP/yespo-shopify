@@ -3,6 +3,7 @@ import { EVENT_MESSAGES } from "~/config/constants";
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import { throttleApiRequest } from "~/utils/rate-limiter.server";
+import { writeYespoDebugFile } from "~/utils/write-yespo-debug.server";
 
 /**
  * Sends a DELETE request to Yespo DELETE /v1/products for the given variant IDs.
@@ -49,6 +50,8 @@ export const deleteProductVariants = async ({
         updatedDate: deletedAt,
       })),
     };
+
+    writeYespoDebugFile(`product-delete-${siteId}`, requestBody);
 
     const url = `${process.env.API_URL}/products`;
 

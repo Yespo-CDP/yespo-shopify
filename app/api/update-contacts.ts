@@ -3,6 +3,7 @@ import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import type { Contact, ContactsResponse } from "~/@types/contact";
 import {sendLogEvent} from "~/api/send-log-event";
 import {EVENT_MESSAGES} from "~/config/constants";
+import { writeYespoDebugFile } from "~/utils/write-yespo-debug.server";
 
 /**
  * Sends a POST request to update the contacts array in the Yespo API.
@@ -30,18 +31,21 @@ export const updateContacts = async ({
 }): Promise<ContactsResponse> => {
   const url = `${process.env.API_URL}/contacts`;
   const authHeader = getAuthHeader(apiKey);
+  const requestBody = {
+    contacts: contactsData,
+    dedupeOn: "externalCustomerId",
+    restoreDeleted: true,
+  };
   const options = {
     method: "POST",
     headers: {
       "content-type": "application/json",
       Authorization: authHeader,
     },
-    body: JSON.stringify({
-      contacts: contactsData,
-      dedupeOn: "externalCustomerId",
-      restoreDeleted: true,
-    }),
+    body: JSON.stringify(requestBody),
   };
+
+  writeYespoDebugFile("contacts", requestBody);
 
   try {
     const res = (await fetchWithErrorHandling(
