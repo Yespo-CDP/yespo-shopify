@@ -15,15 +15,15 @@ export class MarketCatalogSyncBusyError extends Error {
 /**
  * Starts or stops market catalog sync after a markets webhook.
  *
- * The first time a shop has at least two enabled markets, the queued job
+ * The first time a shop has at least one enabled market, the queued job
  * syncs every enabled market.
  *
  * A later `markets/create` or `markets/update` passes `marketId` and the job
  * syncs only that market. The daily cron still syncs the whole shop.
  *
- * Turning sync off (fewer than two enabled markets) queues a full job first,
- * while the flag is still on, so previously synced countries are cleared.
- * The flag flips only after the job is queued.
+ * Turning sync off (no enabled markets left) queues a full job first, while
+ * the flag is still on, so removed countries are cleared. The flag flips
+ * only after the job is queued.
  */
 export async function reconcileMarketCatalogSync({
   shop,
