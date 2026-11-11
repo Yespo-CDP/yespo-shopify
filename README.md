@@ -530,6 +530,8 @@ The webhook route only enqueues a BullMQ job (`product-webhooks`) and returns `2
 ### Market Sync (Shopify → Yespo)
 
 > **Current status:** market sync is enabled with product sync when the shop has at least two enabled markets, and the Data Sync card shows one log row per country under “Market synchronization by country.” `POST /v1/markets` calls Yespo (`app/api/update-market-products.ts`).
+>
+> **Temporary:** one enabled market does not turn market sync on. Two or more enabled markets do. This threshold will change soon.
 
 **Purpose:** Automatically sync market-specific data (per-country prices, stock and storefront URLs) from Shopify to Yespo so recommendations work correctly across markets.
 The process covers both historical synchronization and real-time synchronization through the product webhooks.
