@@ -14,7 +14,6 @@ import {
 } from "~/api/update-market-products";
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
-import { shouldEnableMarketSync } from "~/services/market-tracking";
 import {
   runBulkQuery,
   waitForBulkOperation,
@@ -242,16 +241,9 @@ export const marketSyncHandler = async (
   try {
     marketsConfig = await fetchShopMarketsConfig({ client });
 
-    // One enabled market stays on the base product catalog. The webhook queues
-    // this job before it clears the flag, so decide from the live market count.
-    const keepMarketCatalog = shouldEnableMarketSync(
-      marketsConfig.markets.length,
-    );
-
     // Markets removed/disabled in Shopify: drop their products from Yespo
     // recommendations (isInStock: 0) and prune local state. Runs even when no
     // markets remain, so a fully removed market set is still cleaned up.
-    // Fewer than two enabled markets clears every previously synced country.
     // Countries of an enabled market with no catalog stay in this list, so
     // this pass does not treat that market as removed.
     await cleanupRemovedMarkets({
@@ -261,22 +253,13 @@ export const marketSyncHandler = async (
       logDomain,
       orgId,
       siteId,
-      currentCountries: keepMarketCatalog ? marketsConfig.countries : [],
+      currentCountries: marketsConfig.countries,
     });
 
-    if (!keepMarketCatalog && marketSyncEnabled) {
-      await shopRepository.updateShop(shop, { isMarketSyncEnabled: false });
-    }
-
     // A markets webhook turns the flag off only after this job is queued, so
-    // cleanup above still runs. Skip the catalog bulk when sync is disabled
-    // or the shop has fewer than two enabled markets.
-    if (!marketSyncEnabled || !keepMarketCatalog) {
-      console.log(
-        keepMarketCatalog
-          ? `⚠️ Market sync disabled for ${shop}`
-          : `⚠️ Market sync skipped for ${shop}: fewer than 2 enabled markets`,
-      );
+    // cleanup above still runs. Skip the catalog bulk when sync is disabled.
+    if (!marketSyncEnabled) {
+      console.log(`⚠️ Market sync disabled for ${shop}`);
       return;
     }
 

@@ -480,7 +480,7 @@ Under the row, an info banner explains the product-to-variant relationship:
 - **Shopify products** — unique Shopify products that have at least one successfully synced variant (`ProductVariantSync.syncFailed = false`). A product is omitted when every one of its variants failed. The number is not stored on `ProductVariantSyncLog`. The page loader and `/api/sync-logs` compute `COUNT(DISTINCT productId)` for the shop when the card is rendered.
 - **These products were synced to Yespo as N variants** — `N` is the same **Synchronized** count as on the Variants row. Failed and Total stay on that row: those counters are variant counts.
 
-Under that banner, when the shop has per-country market logs, a plain line reads “Market synchronization by country.” Each following row is one country, labeled **Variants (CC)** (for example **Variants (DE)**), with the same Synchronized, Failed, Total, and status columns. The section title is **Product and Markets Sync**. Market sync is turned on together with product sync when the shop has at least two enabled markets.
+Under that banner, when the shop has per-country market logs, a plain line reads “Market synchronization by country.” Each following row is one country, labeled **Variants (CC)** (for example **Variants (DE)**), with the same Synchronized, Failed, Total, and status columns. The section title is **Product and Markets Sync**. Market sync is turned on together with product sync when the shop has at least one enabled market.
 
 **Historical Enable** writes job stats for that run:
 
@@ -529,9 +529,7 @@ The webhook route only enqueues a BullMQ job (`product-webhooks`) and returns `2
 
 ### Market Sync (Shopify → Yespo)
 
-> **Current status:** market sync is enabled with product sync when the shop has at least two enabled markets, and the Data Sync card shows one log row per country under “Market synchronization by country.” `POST /v1/markets` calls Yespo (`app/api/update-market-products.ts`).
->
-> **Temporary:** one enabled market does not turn market sync on. Two or more enabled markets do. This threshold will change soon.
+> **Current status:** market sync is enabled with product sync when the shop has at least one enabled market, and the Data Sync card shows one log row per country under “Market synchronization by country.” `POST /v1/markets` calls Yespo (`app/api/update-market-products.ts`).
 
 **Purpose:** Automatically sync market-specific data (per-country prices, stock and storefront URLs) from Shopify to Yespo so recommendations work correctly across markets.
 The process covers both historical synchronization and real-time synchronization through the product webhooks.
@@ -552,7 +550,7 @@ App requests access to the following scopes:
 
 - Open the Yespo app
 - Connect your Yespo account
-- Enable **Product and Markets Sync** in the **Data Sync** section. Market sync turns on with product sync when the shop has at least two enabled markets. A shop with one or no enabled markets keeps market sync off.
+- Enable **Product and Markets Sync** in the **Data Sync** section. Market sync turns on with product sync when the shop has at least one enabled market. A shop with no enabled markets keeps market sync off.
 
 When sync is enabled:
 
