@@ -40,7 +40,7 @@ export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
       cartToken = cartToken.split("?key=")[0];
     }
 
-    const eventData = await eventDataRepository.getEventData(cartToken);
+    const eventData = await eventDataRepository.getEventData(shop.id, cartToken);
 
     if (!eventData) {
       console.error("Event data not exist");

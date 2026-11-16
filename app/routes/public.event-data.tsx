@@ -29,13 +29,43 @@ const jsonResponse = (data: object, status: number = 200): Response =>
     headers: CORS_HEADERS,
   });
 
+const MAX_LENGTH = 255;
+
+// A string of reasonable length, else undefined (the field is not saved).
+const readString = (value: unknown): string | undefined =>
+  typeof value === "string" && value.length <= MAX_LENGTH ? value : undefined;
+
+/**
+ * Takes only the expected customer fields from the storefront body.
+ * A field that is not a short string or null is dropped, so it is not updated.
+ * Returns null when `id` is not a Shopify customer id (number or digits).
+ */
+const readCustomer = (value: unknown) => {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as Record<string, unknown>;
+  const id =
+    typeof raw.id === "number" && Number.isSafeInteger(raw.id)
+      ? String(raw.id)
+      : raw.id;
+  if (typeof id !== "string" || !/^\d{1,20}$/.test(id)) return null;
+  const field = (key: string) =>
+    raw[key] === null ? null : readString(raw[key]);
+  return {
+    customerId: id,
+    email: field("email"),
+    phone: field("phone"),
+    firstName: field("firstName"),
+    lastName: field("lastName"),
+  };
+};
+
 /**
  * Handles incoming HTTP requests to create or update event data.
  *
  * Supports CORS preflight with OPTIONS method.
  * Expects a POST request with JSON body containing at least `shop`, `sc`, and `cartToken`.
  * Silently accepts incomplete data or unknown shops without error.
- * If customer data is present, upserts the customer record.
+ * If customer data is present, upserts only its expected fields.
  * Creates or updates event data with a TTL of 14 days.
  *
  * @async
@@ -51,7 +81,7 @@ const jsonResponse = (data: object, status: number = 200): Response =>
  *   "sc": "...",
  *   "cartToken": "token123",
  *   "customer": {
- *     "id": "cust123",
+ *     "id": 123,
  *     "email": "customer@example.com",
  *     ...,
  *   }
@@ -65,44 +95,33 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   try {
     const data = await request.json();
-    console.log("Public event data", data);
-    if (!data.shop || !data.sc || !data.cartToken) {
+    const sc = readString(data.sc);
+    const cartToken = readString(data.cartToken);
+    const shopDomain = readString(data.shop);
+    if (!shopDomain || !sc || !cartToken) {
       return jsonResponse({ success: true, error: null }); // early return if data is incomplete
     }
 
-    const shop = await shopRepository.getShopByDomain(data.shop);
+    const shop = await shopRepository.getShopByDomain(shopDomain);
     if (!shop) {
       return jsonResponse({
         success: true,
-        error: `Shop ${data.shop} not found`,
+        error: `Shop ${shopDomain} not found`,
       }); // silently accept even if shop not found
     }
 
-    const { id, ...customerWithoutId } = data.customer || {};
-    const customer = data.customer
-      ? await customerRepository.upsertCustomer({
-          customerId: data.customer.id.toString(),
-          ...customerWithoutId,
-        })
+    const customerData = readCustomer(data.customer);
+    const customer = customerData
+      ? await customerRepository.upsertCustomer(customerData)
       : null;
 
     await eventDataRepository.createEventData({
-      cartToken: data.cartToken,
-      sc: data.sc,
+      cartToken,
+      sc,
       marketId: readMarketId(data.marketId),
       ttl: addDays(new Date(), 14),
-      shop: {
-        connect: { id: shop.id },
-      },
-      ...(customer
-        ? {
-            customer: {
-              connect: {
-                customerId: customer.customerId,
-              },
-            },
-          }
-        : {}),
+      shopId: shop.id,
+      customerId: customer?.customerId,
     });
 
     return jsonResponse({ success: true, error: null });

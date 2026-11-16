@@ -26,7 +26,7 @@ import {getMarketVariantPrices} from "~/services/get-market-variant-prices.serve
  */
 export const sendStatusCartService = async (payload: any, shop: Shop) => {
   try {
-    const eventData = await eventDataRepository.getEventData(payload.token)
+    const eventData = await eventDataRepository.getEventData(shop.id, payload.token)
 
     if (!eventData) {
       console.error('Event data not exist')

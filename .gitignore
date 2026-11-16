@@ -38,3 +38,6 @@ shopify.app.yespo-staging.toml
 /debug
 
 /.vscode/
+/.claude
+
+/tasks

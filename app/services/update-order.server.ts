@@ -116,7 +116,7 @@ export const updateOrderService = async (
 
     const cartToken = readOrderCartToken(payload);
     const eventData = cartToken
-      ? await eventDataRepository.getEventData(cartToken)
+      ? await eventDataRepository.getEventData(shopId, cartToken)
       : null;
     const marketId = orderMarketIdCandidate({
       storedMarketId: eventData?.marketId,
