@@ -130,8 +130,6 @@ export async function enqueueDataSyncTasks({
   shop: Shop;
   kinds: DataSyncKind[];
 }) {
-  console.log("Enqueueing data sync tasks...", session, kinds);
-
   const syncCustomers = kinds.includes("customer");
   const syncOrders = kinds.includes("order");
   const syncProducts = kinds.includes("product");

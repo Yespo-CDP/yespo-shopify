@@ -49,7 +49,6 @@ export const orderSyncHandler = async (
 ) => {
   console.log(`⏳ Synchronizing orders start for ${shop}`);
   console.log("shop", shop);
-  console.log("accessToken", accessToken);
 
   const shopRecord = await shopRepository.getShop(shop);
   const logDomain = shopRecord?.domain || shop;
