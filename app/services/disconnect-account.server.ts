@@ -1,3 +1,4 @@
+import db from "~/db.server";
 import { shopRepository } from "~/repositories/repositories.server";
 import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
 
@@ -6,6 +7,7 @@ import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
  *
  * This function updates the shop's record to remove the Yespo API key, effectively disabling the connection, remove siteId
  * and then deletes the general and web push script metafields from the Shopify store.
+ * It also clears the shop's local customer, order, product and market sync rows and logs, so the next account gets a full import.
  *
  * @param {Object} params - The parameters object.
  * @param {Object} params.session - The session object containing the shop identifier.
@@ -50,6 +52,17 @@ export const disconnectAccountService = async ({
     orgId: null
   });
   const shop = await shopRepository.getShop(session.shop);
+  if (shop) {
+    const where = { shopId: shop.id };
+    await db.customerSync.deleteMany({ where });
+    await db.customerSyncLog.deleteMany({ where });
+    await db.orderSync.deleteMany({ where });
+    await db.orderSyncLog.deleteMany({ where });
+    await db.productVariantSync.deleteMany({ where });
+    await db.productVariantSyncLog.deleteMany({ where });
+    await db.marketSync.deleteMany({ where });
+    await db.marketSyncLog.deleteMany({ where });
+  }
   if (shop?.shopId) {
     await deleteMetafields({
       admin,
