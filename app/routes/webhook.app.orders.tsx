@@ -1,24 +1,17 @@
 import type { ActionFunctionArgs } from "react-router";
 import { authenticate } from "~/shopify.server";
 import { shopRepository } from "~/repositories/repositories.server";
-import { sendPurchasedItemsService } from "~/services/send-purchased-items.server";
-import { updateOrderService } from "~/services/update-order.server";
+import { enqueueWebhookEvent } from "~/services/queue";
 
 /**
- * Handles incoming Shopify webhooks, authenticates the request, and processes events based on topic.
+ * Handles orders/create and orders/updated webhooks.
  *
- * Supports the "ORDERS_CREATE" webhook topic by forwarding the payload to the purchased items service.
+ * Authenticates the request, queues the webhook for the worker (`webhookEventHandler`,
+ * which sends PurchasedItems and/or the order to Yespo) and responds with HTTP 200
+ * right away, so Yespo requests do not run inside Shopify's 5-second limit.
  * Silently ignores requests with no valid session or shops without an API key.
- * Sends PurchasedItems event to Yespo web tracker if option `isWebTrackingEnabled` is enabled.
- * Create or update order in Yespo if option `isOrderSyncEnabled` is enabled.
- * Returns HTTP 400 for unhandled webhook topics.
- *
- * Supported webhook topics:
- * - "ORDERS_CREATE": Calls `sendPurchasedItemsService` if `isWebTrackingEnabled` is on. If the
- *   PurchasedItems event was not sent (web tracking disabled, no cart token or tracking data, or sending
- *   failed) and `isOrderSyncEnabled` is on, creates the order through `updateOrderService`
- *   (`POST /orders` upserts by `externalOrderId`).
- * - "ORDERS_UPDATED": Calls `updateOrderService` with payload and shop API key.
+ * If Redis rejects the job, the error is thrown (HTTP 500) so Shopify retries; while
+ * Redis is unreachable the request waits and Shopify retries after its 5-second timeout.
  *
  * @async
  * @function action
@@ -46,42 +39,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return new Response("Success", { status: 200 });
   }
 
-  switch (topic) {
-    case "ORDERS_CREATE": {
-      const purchasedItemsSent = shop.isWebTrackingEnabled
-        ? await sendPurchasedItemsService(payload, shop)
-        : false;
-
-      if (!purchasedItemsSent && shop.isOrderSyncEnabled) {
-        await updateOrderService(
-          payload as any,
-          shop.apiKey,
-          shop.id,
-          shop.domain || session.shop,
-          shop.orgId,
-          shop.shopUrl || session.shop,
-        );
-      }
-      break;
-    }
-
-    case "ORDERS_UPDATED":
-      if (shop?.isOrderSyncEnabled) {
-        await updateOrderService(
-          payload as any,
-          shop.apiKey,
-          shop.id,
-          shop.domain || session.shop,
-          shop.orgId,
-          shop.shopUrl || session.shop,
-        );
-      }
-      break;
-
-    default:
-      console.warn(`❌ Unhandled webhook topic: ${topic}`);
-      return new Response(`Unhandled webhook topic: ${topic}`, { status: 200 });
-  }
+  await enqueueWebhookEvent({ shop: session.shop, topic, payload }, webhookId);
 
   return new Response("Success", { status: 200 });
 };

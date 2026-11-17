@@ -26,9 +26,9 @@ const request = mock.fn(
   },
 );
 
-mock.module("~/services/get-offline-session.server", {
+mock.module("~/worker/services/offline-token-manager", {
   namedExports: {
-    getOfflineAccessToken: async () => "offline-token",
+    createOfflineTokenManager: () => ({ getAccessToken: async () => "token" }),
   },
 });
 

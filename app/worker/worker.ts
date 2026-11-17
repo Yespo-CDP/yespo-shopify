@@ -14,6 +14,7 @@ import { orderSyncHandler } from "./handlers/order-sync-handler";
 import { productSyncHandler } from "./handlers/product-sync-handler";
 import { marketSyncHandler } from "./handlers/market-sync-handler";
 import { productWebhookHandler } from "./handlers/product-webhook-handler";
+import { webhookEventHandler } from "./handlers/webhook-event-handler";
 import { createOfflineTokenManager } from "./services/offline-token-manager";
 import {
   DB_CLEANER_CRON_JOB_NAME,
@@ -24,6 +25,8 @@ import {
   type ProductWebhookJobData,
   registerDbCleanerCron,
   registerMarketSyncCron,
+  WEBHOOK_EVENT_QUEUE_NAME,
+  type WebhookEventJobData,
 } from "~/services/queue";
 
 interface JobData {
@@ -261,12 +264,35 @@ const tokenMigrationWorker = new Worker<TokenMigrationJobData>(
   },
 );
 
+// Customers, orders and carts webhooks. Failed jobs are removed (their payload
+// holds customer data), so the failure is logged here, without the payload.
+const webhookEventWorker = new Worker<WebhookEventJobData>(
+  WEBHOOK_EVENT_QUEUE_NAME,
+  async (job) => {
+    try {
+      await webhookEventHandler(job.data);
+    } catch (error: any) {
+      console.error(
+        `[webhook-event] ${job.name} for ${job.data.shop} failed ` +
+          `(attempt ${job.attemptsMade + 1}/${job.opts.attempts ?? 1}):`,
+        error?.message,
+      );
+      throw error;
+    }
+  },
+  {
+    connection: bullmqConnection,
+    concurrency: 5,
+  },
+);
+
 const workers = [
   cronWorker,
   dataSyncWorker,
   marketSyncWorker,
   productWebhookWorker,
   tokenMigrationWorker,
+  webhookEventWorker,
 ];
 
 for (const worker of workers) {

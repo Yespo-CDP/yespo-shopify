@@ -5,28 +5,26 @@ const SHOP = "demo.myshopify.com";
 const payload = { id: 1, note_attributes: [], line_items: [] };
 
 let topic = "";
-let purchasedItemsSent = false;
-let store: Record<string, unknown> = {};
+let session: { shop: string } | undefined;
+let store: Record<string, unknown> | null = {};
 
-const sendPurchasedItemsService = mock.fn(async (..._args: unknown[]) => purchasedItemsSent);
-const updateOrderService = mock.fn(async (..._args: unknown[]) => {});
+const enqueueWebhookEvent = mock.fn(async (..._args: unknown[]) => {});
 
 mock.module("../../../app/shopify.server", {
   namedExports: {
     authenticate: {
-      webhook: async () => ({ topic, session: { shop: SHOP }, payload, webhookId: "wh-1" }),
+      webhook: async () => ({ topic, session, payload, webhookId: "wh-1" }),
     },
   },
 });
 mock.module("../../../app/repositories/repositories.server", {
   namedExports: { shopRepository: { getShop: async () => store } },
 });
-mock.module("../../../app/services/send-purchased-items.server", {
-  namedExports: { sendPurchasedItemsService },
+mock.module("../../../app/services/queue", {
+  namedExports: { enqueueWebhookEvent },
 });
-mock.module("../../../app/services/update-order.server", {
-  namedExports: { updateOrderService },
-});
+
+mock.method(console, "log", () => {});
 
 const { action } = await import("../../../app/routes/webhook.app.orders");
 
@@ -38,53 +36,43 @@ const send = (webhookTopic: string) => {
 };
 
 beforeEach(() => {
-  sendPurchasedItemsService.mock.resetCalls();
-  updateOrderService.mock.resetCalls();
-  store = { id: 3, apiKey: "key", isWebTrackingEnabled: true, isOrderSyncEnabled: true, domain: "demo.com", orgId: 5, shopUrl: SHOP };
+  enqueueWebhookEvent.mock.resetCalls();
+  session = { shop: SHOP };
+  store = { id: 3, apiKey: "key", isWebTrackingEnabled: false, isOrderSyncEnabled: false };
 });
 
-test("ORDERS_CREATE does not send the order when PurchasedItems was sent", async () => {
-  purchasedItemsSent = true;
+for (const webhookTopic of ["ORDERS_CREATE", "ORDERS_UPDATED"]) {
+  test(`${webhookTopic} is queued and answered with 200`, async () => {
+    const response = await send(webhookTopic);
 
-  const response = await send("ORDERS_CREATE");
+    assert.equal(response.status, 200);
+    assert.equal(enqueueWebhookEvent.mock.callCount(), 1);
+    assert.deepEqual(enqueueWebhookEvent.mock.calls[0].arguments, [
+      { shop: SHOP, topic: webhookTopic, payload },
+      "wh-1",
+    ]);
+  });
+}
 
-  assert.equal(response.status, 200);
-  assert.equal(sendPurchasedItemsService.mock.callCount(), 1);
-  assert.equal(updateOrderService.mock.callCount(), 0);
-});
+for (const [name, setup] of [
+  ["no session", () => { session = undefined; }],
+  ["shop not found", () => { store = null; }],
+  ["no API key", () => { store = { ...store, apiKey: null }; }],
+] as const) {
+  test(`${name}: 200 without queueing`, async () => {
+    setup();
 
-test("ORDERS_CREATE sends the order like ORDERS_UPDATED when PurchasedItems was not sent", async () => {
-  purchasedItemsSent = false;
+    const response = await send("ORDERS_CREATE");
 
-  await send("ORDERS_UPDATED");
-  const updatedArgs = updateOrderService.mock.calls[0].arguments;
-  updateOrderService.mock.resetCalls();
+    assert.equal(response.status, 200);
+    assert.equal(enqueueWebhookEvent.mock.callCount(), 0);
+  });
+}
 
-  const response = await send("ORDERS_CREATE");
+test("queueing error is thrown so Shopify retries the delivery", async () => {
+  enqueueWebhookEvent.mock.mockImplementationOnce(async () => {
+    throw new Error("READONLY");
+  });
 
-  assert.equal(response.status, 200);
-  assert.equal(updateOrderService.mock.callCount(), 1);
-  assert.deepEqual(updateOrderService.mock.calls[0].arguments, updatedArgs);
-  assert.deepEqual(updatedArgs, [payload, "key", 3, "demo.com", 5, SHOP]);
-});
-
-test("ORDERS_CREATE does not send the order when order sync is disabled", async () => {
-  purchasedItemsSent = false;
-  store = { ...store, isOrderSyncEnabled: false };
-
-  await send("ORDERS_CREATE");
-
-  assert.equal(updateOrderService.mock.callCount(), 0);
-});
-
-test("ORDERS_CREATE does not send PurchasedItems but sends the order when web tracking is disabled", async () => {
-  purchasedItemsSent = true;
-  store = { ...store, isWebTrackingEnabled: false };
-
-  const response = await send("ORDERS_CREATE");
-
-  assert.equal(response.status, 200);
-  assert.equal(sendPurchasedItemsService.mock.callCount(), 0);
-  assert.equal(updateOrderService.mock.callCount(), 1);
-  assert.deepEqual(updateOrderService.mock.calls[0].arguments, [payload, "key", 3, "demo.com", 5, SHOP]);
+  await assert.rejects(send("ORDERS_CREATE"), /READONLY/);
 });

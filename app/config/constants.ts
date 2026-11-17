@@ -136,3 +136,9 @@ export const RATE_LIMIT_MAX_RETRIES = 3;
  * a full minute is the safe default.
  */
 export const RATE_LIMIT_DEFAULT_RETRY_AFTER_MS = 60 * 1000;
+
+/**
+ * Timeout for one `fetchWithErrorHandling` attempt (headers and body).
+ * Each retry after a 429 gets a new timeout; the 429 wait is not counted.
+ */
+export const YESPO_FETCH_TIMEOUT_MS = 30 * 1000;

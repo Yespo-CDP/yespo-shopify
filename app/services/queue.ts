@@ -51,6 +51,36 @@ export interface ProductWebhookJobData {
   productGid: string;
 }
 
+export const WEBHOOK_EVENT_QUEUE_NAME = "webhook-events";
+
+export const WebhookEventQueue = createQueue(WEBHOOK_EVENT_QUEUE_NAME);
+
+/** A customers, orders or carts webhook, processed by the worker. */
+export interface WebhookEventJobData {
+  shop: string;
+  topic: string;
+  payload: unknown;
+}
+
+/**
+ * Enqueues a customers/orders/carts webhook so the route can answer Shopify
+ * right away. The job id comes from X-Shopify-Webhook-Id, so a repeated
+ * delivery is skipped while the first job is still in the queue. Failed jobs
+ * are removed because the payload holds customer data; the worker logs them.
+ */
+export async function enqueueWebhookEvent(
+  data: WebhookEventJobData,
+  webhookId: string,
+): Promise<void> {
+  await WebhookEventQueue.add(data.topic, data, {
+    jobId: `webhook-${webhookId}`,
+    attempts: 5,
+    backoff: { type: "exponential", delay: 5000 },
+    removeOnComplete: true,
+    removeOnFail: true,
+  });
+}
+
 export const MARKET_SYNC_CRON_JOB_NAME = "market-sync-tick";
 export const DB_CLEANER_CRON_JOB_NAME = "db-cleaner-tick";
 export const TOKEN_MIGRATION_JOB_NAME = "migrate-token";

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { beforeEach, mock, test } from "node:test";
 
 type Kind = "customer" | "order" | "product";
-type Processor = (job: { data: unknown }) => Promise<unknown>;
+type Processor = (job: { data: unknown; [key: string]: unknown }) => Promise<unknown>;
 
 const processors = new Map<string, Processor>();
 const statuses: Partial<Record<Kind, string>> = {};
@@ -53,6 +53,7 @@ mock.module("../../../app/services/queue", {
     DB_CLEANER_CRON_JOB_NAME: "db-cleaner-tick",
     MARKET_SYNC_CRON_JOB_NAME: "market-sync-tick",
     PRODUCT_WEBHOOK_QUEUE_NAME: "product-webhook",
+    WEBHOOK_EVENT_QUEUE_NAME: "webhook-events",
     enqueueMarketSyncTaskForShopUrl: async () => 0,
     enqueueMarketSyncTasks: async () => 0,
     registerDbCleanerCron: async () => {},
@@ -105,6 +106,10 @@ mock.module("../../../app/worker/handlers/market-sync-handler", {
 });
 mock.module("../../../app/worker/handlers/product-webhook-handler", {
   namedExports: { productWebhookHandler: async () => {} },
+});
+const webhookEventHandler = mock.fn(async (_data: unknown) => {});
+mock.module("../../../app/worker/handlers/webhook-event-handler", {
+  namedExports: { webhookEventHandler },
 });
 
 mock.method(console, "log", () => {});
@@ -168,6 +173,30 @@ test("successful run writes no ERROR", async () => {
   });
 });
 
+test("webhook-events job: handler gets job.data; a failure is logged without the payload and rethrown", async () => {
+  const data = { shop: "demo.myshopify.com", topic: "CUSTOMERS_UPDATE", payload: { email: "a@example.com" } };
+  const job = { name: "CUSTOMERS_UPDATE", data, attemptsMade: 1, opts: { attempts: 5 } };
+
+  await processors.get("webhook-events")!(job);
+  assert.deepEqual(webhookEventHandler.mock.calls[0].arguments, [data]);
+
+  const errors: unknown[][] = [];
+  const consoleError = mock.method(console, "error", (...args: unknown[]) => {
+    errors.push(args);
+  });
+  webhookEventHandler.mock.mockImplementationOnce(async () => {
+    throw new Error("HTTP 503");
+  });
+
+  await assert.rejects(processors.get("webhook-events")!(job), /HTTP 503/);
+  consoleError.mock.restore();
+  mock.method(console, "error", () => {});
+
+  assert.deepEqual(errors, [
+    ["[webhook-event] CUSTOMERS_UPDATE for demo.myshopify.com failed (attempt 2/5):", "HTTP 503"],
+  ]);
+});
+
 test("SIGTERM twice: every worker closed once, exit(0) once after close resolves", async (t) => {
   const exit = t.mock.method(process, "exit", () => undefined as never);
   const flush = () => new Promise((resolve) => setImmediate(resolve));
@@ -182,6 +211,7 @@ test("SIGTERM twice: every worker closed once, exit(0) once after close resolves
     "data-sync-market",
     "product-webhook",
     "token-migration",
+    "webhook-events",
   ]);
   assert.equal(exit.mock.callCount(), 0);
 

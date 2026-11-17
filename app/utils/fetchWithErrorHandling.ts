@@ -1,6 +1,7 @@
 import {
   RATE_LIMIT_DEFAULT_RETRY_AFTER_MS,
   RATE_LIMIT_MAX_RETRIES,
+  YESPO_FETCH_TIMEOUT_MS,
 } from "~/config/constants";
 
 /**
@@ -108,6 +109,10 @@ const parseRetryAfterMs = (headerValue: string | null): number => {
  * `Retry-After` header (or `RATE_LIMIT_DEFAULT_RETRY_AFTER_MS` when absent)
  * before each retry. If every attempt is rate limited, the last `429` is thrown.
  *
+ * Each attempt is aborted after `YESPO_FETCH_TIMEOUT_MS` (headers and body),
+ * replacing any `signal` in `options`. A timeout is thrown as a `FetchError`
+ * with status 500.
+ *
  * @param {string} url - The URL to fetch.
  * @param {RequestInit} [options] - Optional fetch options.
  * @returns {Promise<any>} The parsed JSON response or raw text if JSON parsing fails.
@@ -121,7 +126,10 @@ export async function fetchWithErrorHandling(
 ) {
   for (let attempt = 0; ; attempt++) {
     try {
-      const response = await fetch(url, options);
+      const response = await fetch(url, {
+        ...options,
+        signal: AbortSignal.timeout(YESPO_FETCH_TIMEOUT_MS),
+      });
 
       const rawResponse = await response.text();
       let responseData: any = rawResponse;

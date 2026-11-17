@@ -1,4 +1,4 @@
-import { getOfflineAccessToken } from "~/services/get-offline-session.server";
+import { createOfflineTokenManager } from "~/worker/services/offline-token-manager";
 import { createClient } from "~/worker/services/create-client";
 import type { MarketVariantPrice } from "~/services/build-status-cart-products";
 
@@ -32,7 +32,8 @@ interface VariantPriceNode {
  * Loads the buyer-facing variant price in a market's currency.
  * Keyed by the numeric Shopify variant id. Returns an empty map when the
  * market id is not a country code or Shopify cannot be read, so the caller
- * keeps the webhook values.
+ * keeps the webhook values. Runs in the worker: the client refreshes a
+ * rejected token and repeats throttled requests with background-job limits.
  */
 export async function getMarketVariantPrices({
   shopUrl,
@@ -50,10 +51,11 @@ export async function getMarketVariantPrices({
   if (uniqueIds.length === 0) return prices;
 
   try {
-    const accessToken = await getOfflineAccessToken(shopUrl);
+    const tokenManager = createOfflineTokenManager(shopUrl);
+    const accessToken = await tokenManager.getAccessToken();
     if (!accessToken) return prices;
 
-    const client = createClient({ shop: shopUrl, accessToken });
+    const client = createClient({ shop: shopUrl, accessToken, tokenManager });
 
     for (
       let offset = 0;
