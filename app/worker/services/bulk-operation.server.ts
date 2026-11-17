@@ -13,8 +13,8 @@ interface BulkOperationRunResponse {
   };
 }
 
-interface CurrentBulkOperationResponse {
-  currentBulkOperation?: {
+interface BulkOperationByIdResponse {
+  bulkOperation?: {
     id: string;
     status: string;
     errorCode?: string | null;
@@ -102,26 +102,31 @@ ${query}
 
 export async function waitForBulkOperation({
   client,
+  bulkOperationId,
   orgId,
   domain,
 }: {
   client: GraphQLClient;
+  bulkOperationId: string;
   orgId?: number | null;
   domain?: string;
 }): Promise<{ url: string; objectCount: number }> {
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
-    const response = await client.request(`query currentBulkOperation {
-      currentBulkOperation {
-        id
-        status
-        errorCode
-        url
-        objectCount
-      }
-    }`);
+    const response = await client.request(
+      `query bulkOperationById($id: ID!) {
+        bulkOperation(id: $id) {
+          id
+          status
+          errorCode
+          url
+          objectCount
+        }
+      }`,
+      { variables: { id: bulkOperationId } },
+    );
 
-    const operation = (response?.data as CurrentBulkOperationResponse)
-      ?.currentBulkOperation;
+    const operation = (response?.data as BulkOperationByIdResponse)
+      ?.bulkOperation;
 
     if (!operation) {
       await sleep(POLL_INTERVAL_MS);

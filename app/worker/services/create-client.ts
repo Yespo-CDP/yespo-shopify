@@ -3,7 +3,7 @@ import {
   type GraphQLClient,
 } from "@shopify/graphql-client";
 
-import { ApiVersion } from "@shopify/shopify-app-react-router/server";
+import { apiVersion } from "~/shopify.server";
 
 /**
  * Create Shopify GraphQL API.
@@ -29,7 +29,7 @@ export const createClient = ({
   accessToken: string;
 }): GraphQLClient => {
   return createGraphQLClient({
-    url: `https://${shop}/admin/api/${ApiVersion.July25}/graphql.json`,
+    url: `https://${shop}/admin/api/${apiVersion}/graphql.json`,
     headers: {
       "Content-Type": "application/json",
       "X-Shopify-Access-Token": accessToken,

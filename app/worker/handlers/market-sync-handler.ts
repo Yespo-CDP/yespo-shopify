@@ -325,6 +325,7 @@ export const marketSyncHandler = async (
 
       const bulkResult = await waitForBulkOperation({
         client,
+        bulkOperationId: batchId,
         orgId,
         domain: logDomain,
       });
