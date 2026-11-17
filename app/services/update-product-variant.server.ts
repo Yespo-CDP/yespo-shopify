@@ -91,6 +91,7 @@ export const updateProductVariantService = async (
             })
           : Promise.resolve([] as string[]),
         productVariantSyncRepository.getProductVariantSyncByVariantIds(
+          shopId,
           variants.map((v) => v.admin_graphql_api_id),
         ),
         productGid

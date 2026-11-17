@@ -82,7 +82,7 @@ export const orderSyncHandler = async (
 
           const orderIds = orders.map((order) => order.id);
           const orderSyncs =
-            await orderSyncRepository.getOrderSyncByOrderIds(orderIds);
+            await orderSyncRepository.getOrderSyncByOrderIds(shopId, orderIds);
 
           const ordersData: Order[] = [];
           const sentOrders: typeof orders = [];

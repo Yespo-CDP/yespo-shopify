@@ -141,6 +141,7 @@ export const productSyncHandler = async (
             const variantIds = variants.map((variant) => variant.id);
             const productVariantSyncs =
               await productVariantSyncRepository.getProductVariantSyncByVariantIds(
+                shopId,
                 variantIds,
               );
 

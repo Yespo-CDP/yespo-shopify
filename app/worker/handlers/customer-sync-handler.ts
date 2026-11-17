@@ -84,6 +84,7 @@ export const customerSyncHandler = async (
           const customerIds = customers.map((customer) => customer.id);
           const customerSyncs =
             await customerSyncRepository.getCustomerSyncByCustomerIds(
+              shopId,
               customerIds,
             );
 

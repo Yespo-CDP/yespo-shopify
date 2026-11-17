@@ -28,14 +28,17 @@ export default class CustomerSyncRepositoryImpl
   /**
    * Retrieves customer sync records by the provided customer Ids.
    *
+   * @param {number} shopId - Shop.id of the shop the records belong to.
    * @param {string[]} customerIds - Shopify customer IDs array (e.g. gid://shopify/Customer/123).
    * @returns {Promise<CustomerSync[]>} A promise resolving to the customer sync records.
    */
   async getCustomerSyncByCustomerIds(
+    shopId: number,
     customerIds: string[],
   ): Promise<CustomerSync[]> {
     return this.database.customerSync.findMany({
       where: {
+        shopId,
         customerId: { in: customerIds },
       },
     });
@@ -56,7 +59,7 @@ export default class CustomerSyncRepositoryImpl
   /**
    * Creates or updates an customer sync record using the provided input.
    *
-   * If a record with the given `customerId` exists, it is updated. Otherwise, a new record is created.
+   * If a record with the given `shopId` and `customerId` exists, it is updated. Otherwise, a new record is created.
    *
    * @param {CustomerSyncCreate} data - The data to be stored.
    * @returns {Promise<CustomerSync>} A promise that resolves to the created or updated customer sync record.
@@ -64,22 +67,17 @@ export default class CustomerSyncRepositoryImpl
   async createOrUpdateCustomerSync(
     data: CustomerSyncCreate,
   ): Promise<CustomerSync> {
-    const customerSync = await this.database.customerSync.findFirst({
-      where: {
-        customerId: data?.customerId,
-      },
-    });
+    // Scalar shopId (not shop.connect) lets Prisma run INSERT ... ON CONFLICT,
+    // so concurrent calls for one key never insert a second row.
+    const { shop, ...fields } = data;
+    const shopId = shop.connect!.id!;
 
     return this.database.customerSync.upsert({
       where: {
-        id: customerSync?.id ?? -1,
+        shopId_customerId: { shopId, customerId: fields.customerId },
       },
-      create: {
-        ...data,
-      },
-      update: {
-        ...data,
-      },
+      create: { ...fields, shopId },
+      update: fields,
     });
   }
 

@@ -121,6 +121,7 @@ async function syncProductFromAdmin(
   const existingSyncs =
     variantIds.length > 0
       ? await productVariantSyncRepository.getProductVariantSyncByVariantIds(
+          shopData.id,
           variantIds,
         )
       : [];
