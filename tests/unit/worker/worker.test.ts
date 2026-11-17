@@ -1,0 +1,160 @@
+import assert from "node:assert/strict";
+import { beforeEach, mock, test } from "node:test";
+
+type Kind = "customer" | "order" | "product";
+type Processor = (job: { data: unknown }) => Promise<unknown>;
+
+const processors = new Map<string, Processor>();
+const statuses: Partial<Record<Kind, string>> = {};
+const errorWrites: Kind[] = [];
+let shopData: { id: number; apiKey: string } | null = null;
+let accessToken: string | null = null;
+let customerSyncHandler = async () => {};
+
+const syncLog = (kind: Kind) => ({
+  get: async () => (statuses[kind] ? { status: statuses[kind] } : null),
+  set: async (data: { status: string }) => {
+    statuses[kind] = data.status;
+    if (data.status === "ERROR") errorWrites.push(kind);
+    return {};
+  },
+});
+const customerLog = syncLog("customer");
+const orderLog = syncLog("order");
+const productLog = syncLog("product");
+
+mock.module("bullmq", {
+  namedExports: {
+    Worker: class {
+      constructor(
+        readonly name: string,
+        processor: Processor,
+      ) {
+        processors.set(name, processor);
+      }
+      on() {}
+    },
+  },
+});
+mock.module("../../../app/config/redis", {
+  namedExports: { bullmqConnection: {} },
+});
+mock.module("../../../app/services/queue", {
+  namedExports: {
+    DB_CLEANER_CRON_JOB_NAME: "db-cleaner-tick",
+    MARKET_SYNC_CRON_JOB_NAME: "market-sync-tick",
+    PRODUCT_WEBHOOK_QUEUE_NAME: "product-webhook",
+    enqueueMarketSyncTaskForShopUrl: async () => 0,
+    enqueueMarketSyncTasks: async () => 0,
+    registerDbCleanerCron: async () => {},
+    registerMarketSyncCron: async () => {},
+  },
+});
+mock.module("../../../app/repositories/repositories.server", {
+  namedExports: {
+    eventDataRepository: {},
+    shopRepository: { getShop: async () => shopData },
+    customerSyncLogRepository: {
+      getCustomerSyncLogByShop: customerLog.get,
+      createOrUpdateCustomerSyncLog: customerLog.set,
+    },
+    orderSyncLogRepository: {
+      getOrderSyncLogByShop: orderLog.get,
+      createOrUpdateOrderSyncLog: orderLog.set,
+    },
+    productVariantSyncLogRepository: {
+      getProductVariantSyncLogByShop: productLog.get,
+      createOrUpdateProductVariantSyncLog: productLog.set,
+    },
+  },
+});
+mock.module("../../../app/services/migrate-offline-token.server", {
+  namedExports: { migrateOfflineTokenToExpiring: async () => "skipped" },
+});
+mock.module("../../../app/worker/services/offline-token-manager", {
+  namedExports: {
+    createOfflineTokenManager: () => ({
+      getAccessToken: async () => accessToken,
+    }),
+  },
+});
+mock.module("../../../app/worker/handlers/customer-sync-handler", {
+  namedExports: { customerSyncHandler: () => customerSyncHandler() },
+});
+mock.module("../../../app/worker/handlers/order-sync-handler", {
+  namedExports: {
+    orderSyncHandler: async () => orderLog.set({ status: "COMPLETE" }),
+  },
+});
+mock.module("../../../app/worker/handlers/product-sync-handler", {
+  namedExports: {
+    productSyncHandler: async () => productLog.set({ status: "COMPLETE" }),
+  },
+});
+mock.module("../../../app/worker/handlers/market-sync-handler", {
+  namedExports: { marketSyncHandler: async () => {} },
+});
+mock.module("../../../app/worker/handlers/product-webhook-handler", {
+  namedExports: { productWebhookHandler: async () => {} },
+});
+
+mock.method(console, "log", () => {});
+mock.method(console, "error", () => {});
+
+await import("../../../app/worker/worker");
+const runDataSync = (kinds?: Kind[]) =>
+  processors.get("data-sync")!({ data: { shop: "demo.myshopify.com", kinds } });
+
+beforeEach(() => {
+  statuses.customer = "IN_PROGRESS";
+  statuses.order = "IN_PROGRESS";
+  statuses.product = "IN_PROGRESS";
+  errorWrites.length = 0;
+  shopData = { id: 1, apiKey: "key" };
+  accessToken = "token";
+  customerSyncHandler = async () => {
+    await customerLog.set({ status: "COMPLETE" });
+  };
+});
+
+test("no offline token: IN_PROGRESS logs of the job's kinds become ERROR", async () => {
+  accessToken = null;
+  statuses.order = "COMPLETE";
+
+  await runDataSync(["customer", "order", "product"]);
+
+  assert.deepEqual(errorWrites, ["customer", "product"]);
+  assert.equal(statuses.order, "COMPLETE");
+});
+
+test("no Yespo API key: default kinds (customer, order) become ERROR", async () => {
+  shopData = { id: 1, apiKey: "" };
+
+  await runDataSync();
+
+  assert.deepEqual(errorWrites, ["customer", "order"]);
+  assert.equal(statuses.product, "IN_PROGRESS");
+});
+
+test("handler throws: later kinds become ERROR, finished kind is kept", async () => {
+  customerSyncHandler = async () => {
+    await customerLog.set({ status: "ERROR" });
+    throw new Error("boom");
+  };
+
+  await runDataSync(["customer", "order", "product"]);
+
+  // customer: only the handler's own write; order/product: the worker's.
+  assert.deepEqual(errorWrites, ["customer", "order", "product"]);
+});
+
+test("successful run writes no ERROR", async () => {
+  await runDataSync(["customer", "order", "product"]);
+
+  assert.deepEqual(errorWrites, []);
+  assert.deepEqual(statuses, {
+    customer: "COMPLETE",
+    order: "COMPLETE",
+    product: "COMPLETE",
+  });
+});

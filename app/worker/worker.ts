@@ -2,7 +2,10 @@ import { Worker } from "bullmq";
 
 import { bullmqConnection } from "~/config/redis";
 import {
+  customerSyncLogRepository,
   eventDataRepository,
+  orderSyncLogRepository,
+  productVariantSyncLogRepository,
   shopRepository,
 } from "~/repositories/repositories.server";
 import { migrateOfflineTokenToExpiring } from "~/services/migrate-offline-token.server";
@@ -64,31 +67,85 @@ const cronWorker = new Worker(
   },
 );
 
+/**
+ * Sets ERROR on the job's sync logs that are still IN_PROGRESS, so the admin
+ * doesn't show an import that will never finish. Logs a handler already
+ * finished (COMPLETE/ERROR) are left as they are. Never throws.
+ */
+async function markUnfinishedSyncLogsAsError(
+  shop: string,
+  shopId: number,
+  kinds: NonNullable<JobData["kinds"]>,
+) {
+  const errorLog = {
+    status: "ERROR" as const,
+    shop: { connect: { id: shopId } },
+  };
+
+  try {
+    if (kinds.includes("customer")) {
+      const log =
+        await customerSyncLogRepository.getCustomerSyncLogByShop(shop);
+      if (log?.status === "IN_PROGRESS") {
+        await customerSyncLogRepository.createOrUpdateCustomerSyncLog(errorLog);
+      }
+    }
+    if (kinds.includes("order")) {
+      const log = await orderSyncLogRepository.getOrderSyncLogByShop(shop);
+      if (log?.status === "IN_PROGRESS") {
+        await orderSyncLogRepository.createOrUpdateOrderSyncLog(errorLog);
+      }
+    }
+    if (kinds.includes("product")) {
+      const log =
+        await productVariantSyncLogRepository.getProductVariantSyncLogByShop(
+          shop,
+        );
+      if (log?.status === "IN_PROGRESS") {
+        await productVariantSyncLogRepository.createOrUpdateProductVariantSyncLog(
+          errorLog,
+        );
+      }
+    }
+  } catch (error: unknown) {
+    console.error(
+      `Data sync: failed to mark sync logs as ERROR for ${shop}:`,
+      error,
+    );
+  }
+}
+
 const dataSyncWorker = new Worker<JobData>(
   "data-sync",
   async (job) => {
-    try {
-      const { shop } = job?.data;
+    const { shop } = job?.data ?? {};
 
-      if (!shop) return;
+    if (!shop) return;
+
+    const kinds = job.data.kinds ?? ["customer", "order"];
+    let shopId: number | undefined;
+
+    try {
+      const shopData = await shopRepository.getShop(shop);
+      shopId = shopData?.id;
 
       const tokenManager = createOfflineTokenManager(shop);
       const accessToken = await tokenManager.getAccessToken();
       if (!accessToken) {
         console.error(`Data sync: no valid offline session for ${shop}`);
+        if (shopId) await markUnfinishedSyncLogsAsError(shop, shopId, kinds);
         return;
       }
 
-      const shopData = await shopRepository.getShop(shop);
       const apiKey = shopData?.apiKey;
 
       if (!apiKey) {
         console.error(
           `Error data synchronization: Api key not found for ${shop}`,
         );
+        if (shopId) await markUnfinishedSyncLogsAsError(shop, shopId, kinds);
         return;
       }
-      const kinds = job.data.kinds ?? ["customer", "order"];
 
       if (kinds.includes("customer")) {
         await customerSyncHandler(
@@ -124,6 +181,7 @@ const dataSyncWorker = new Worker<JobData>(
       }
     } catch (error: any) {
       console.error(`Worker error:`, error);
+      if (shopId) await markUnfinishedSyncLogsAsError(shop, shopId, kinds);
     }
   },
   {
