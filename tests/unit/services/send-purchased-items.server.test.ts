@@ -64,3 +64,18 @@ test("returns true after the event is sent", async () => {
   assert.equal(await sendPurchasedItemsService(payload, shop), true);
   assert.equal(sendPurchasedItemsEvent.mock.callCount(), 1);
 });
+
+test("uses the line item id as productKey for items without a variant", async () => {
+  const lineItems = [
+    { id: 1, variant_id: 11, price: "5.00", quantity: 1 },
+    { id: 2, variant_id: null, price: "2.00", quantity: 1 },
+  ];
+
+  assert.equal(await sendPurchasedItemsService({ ...payload, line_items: lineItems }, shop), true);
+  assert.equal(sendPurchasedItemsEvent.mock.callCount(), 1);
+  const { purchasedItemsData } = sendPurchasedItemsEvent.mock.calls[0].arguments[0] as any;
+  assert.deepEqual(
+    purchasedItemsData.PurchasedItems.Products.map((p: any) => p.productKey),
+    ["11", "2"],
+  );
+});

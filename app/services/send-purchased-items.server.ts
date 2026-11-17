@@ -67,7 +67,7 @@ export const sendPurchasedItemsService = async (
     const productsData = payload.line_items.map((item: any) => {
       const presentment = item.price_set?.presentment_money;
       return {
-        productKey: item.variant_id.toString(),
+        productKey: String(item.variant_id ?? item.id),
         unit_price: presentment?.amount ?? item.price,
         quantity: item.quantity,
         price_currency_code:
