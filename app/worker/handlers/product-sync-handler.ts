@@ -156,7 +156,10 @@ export const productSyncHandler = async (
               const syncUpdatedDate =
                 productVariantSync?.updatedAt?.getTime() ?? 0;
 
-              if (entityUpdatedDate > syncUpdatedDate) {
+              if (
+                productVariantSync?.syncFailed ||
+                entityUpdatedDate > syncUpdatedDate
+              ) {
                 const action = yespoProductAction(productVariantSync);
                 // Use the public custom domain for URL construction (fallback when
                 // onlineStoreUrl is null). shopData.domain is the primary domain
@@ -180,6 +183,9 @@ export const productSyncHandler = async (
                     variantId: variant.id,
                     productId: product.id,
                     syncedTagKeys: currentTagKeys,
+                    // Stay failed until Yespo accepts. A thrown request then retries,
+                    // because a successful row with a newer updatedAt would be skipped.
+                    syncFailed: true,
                     createdAt: variant.createdAt ?? product.createdAt,
                     // Persist the same timestamp we compare on the next run
                     // (max of variant + product), otherwise Enable resends
