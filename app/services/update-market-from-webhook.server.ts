@@ -64,7 +64,10 @@ export async function updateMarketFromWebhook({
   const marketsConfig = await fetchShopMarketsConfig({ client });
   if (!marketsConfig.countries.length) return;
 
-  const numericProductId = productGid.split("/").pop() ?? productGid;
+  // Rows used to be stored with the numeric product id. Read them too, so the
+  // first webhook after the switch to the GID replaces or clears them.
+  const legacyProductId = productGid.split("/").pop() ?? productGid;
+  const productIds = [productGid, legacyProductId];
 
   const previousShopMarkets = await shopMarketRepository.getByShopId(shopId);
   const previousLocalesByMarketId = new Map(
@@ -105,11 +108,13 @@ export async function updateMarketFromWebhook({
     const orphanedRecords = await marketSyncRepository.getByKeys(
       shopId,
       variants.flatMap((v) =>
-        removedCountries.map((cc) => ({
-          productId: numericProductId,
-          variantId: v.variantId,
-          countryCode: cc,
-        })),
+        removedCountries.flatMap((cc) =>
+          productIds.map((productId) => ({
+            productId,
+            variantId: v.variantId,
+            countryCode: cc,
+          })),
+        ),
       ),
     );
 
@@ -124,10 +129,12 @@ export async function updateMarketFromWebhook({
           updatedDate: removedAt,
           isInStock: 0,
         };
-        if (!orphansByCountry.has(record.countryCode)) {
-          orphansByCountry.set(record.countryCode, []);
+        const list = orphansByCountry.get(record.countryCode) ?? [];
+        // A variant can have both a GID and a numeric row: send it once.
+        if (!list.some((i) => i.productId === numericVariantId)) {
+          list.push(item);
         }
-        orphansByCountry.get(record.countryCode)!.push(item);
+        orphansByCountry.set(record.countryCode, list);
       }
 
       const orphanMarkets = Array.from(orphansByCountry.entries()).map(
@@ -150,20 +157,24 @@ export async function updateMarketFromWebhook({
   const existingRecords = await marketSyncRepository.getByKeys(
     shopId,
     variants.flatMap((v) =>
-      marketsConfig.countries.map((cc) => ({
-        productId: numericProductId,
-        variantId: v.variantId,
-        countryCode: cc,
-      })),
+      marketsConfig.countries.flatMap((cc) =>
+        productIds.map((productId) => ({
+          productId,
+          variantId: v.variantId,
+          countryCode: cc,
+        })),
+      ),
     ),
   );
 
-  const existingHashMap = new Map(
-    existingRecords.map((r) => [
-      `${r.variantId}:${r.countryCode}`,
-      r.contentHash,
-    ]),
-  );
+  // A numeric row may hold what Yespo has now, newer than the GID row's hash.
+  // Treat the hash as unknown so the current data is sent.
+  const existingHashMap = new Map<string, string | null | undefined>();
+  for (const r of existingRecords) {
+    const key = `${r.variantId}:${r.countryCode}`;
+    const legacy = r.productId !== productGid || existingHashMap.has(key);
+    existingHashMap.set(key, legacy ? undefined : r.contentHash);
+  }
 
   // changed items to send + DB records to upsert
   const changedByCountry = new Map<string, MarketProductItem[]>();
@@ -232,7 +243,7 @@ export async function updateMarketFromWebhook({
       changedByCountry.get(cc)!.push(item);
 
       upserts.push({
-        productId: numericProductId,
+        productId: productGid,
         variantId: variant.variantId,
         countryCode: cc,
         contentHash: newHash,
@@ -254,19 +265,39 @@ export async function updateMarketFromWebhook({
     });
     // No hash for rejected variants, so the next webhook sends them again.
     const failed = new Set(failedItems);
+    const saved = upserts.filter(
+      (u) => !failed.has(u.variantId.split("/").pop() ?? u.variantId),
+    );
 
     await Promise.all(
-      upserts
-        .filter((u) => !failed.has(u.variantId.split("/").pop() ?? u.variantId))
-        .map((u) =>
-          marketSyncRepository.createOrUpdate({
-            productId: u.productId,
-            variantId: u.variantId,
-            countryCode: u.countryCode,
-            contentHash: u.contentHash,
-            shop: { connect: { id: shopId } },
-          }),
-        ),
+      saved.map((u) =>
+        marketSyncRepository.createOrUpdate({
+          productId: u.productId,
+          variantId: u.variantId,
+          countryCode: u.countryCode,
+          contentHash: u.contentHash,
+          shop: { connect: { id: shopId } },
+        }),
+      ),
+    );
+
+    // The GID row now holds the state: drop the numeric row it replaces.
+    const savedKeys = new Set(
+      saved.map((u) => `${u.variantId}:${u.countryCode}`),
+    );
+    await marketSyncRepository.deleteManyByKeys(
+      shopId,
+      existingRecords
+        .filter(
+          (r) =>
+            r.productId !== productGid &&
+            savedKeys.has(`${r.variantId}:${r.countryCode}`),
+        )
+        .map((r) => ({
+          productId: r.productId,
+          variantId: r.variantId,
+          countryCode: r.countryCode,
+        })),
     );
   }
 
@@ -288,8 +319,15 @@ export async function updateMarketFromWebhook({
   const unpublishedMarkets = Array.from(unpublishedByCountry.entries()).map(
     ([marketId, records]) => ({
       marketId,
-      products: records.map((record) => ({
-        productId: record.variantId.split("/").pop() ?? record.variantId,
+      // A variant can have both a GID and a numeric row: send it once.
+      products: [
+        ...new Set(
+          records.map(
+            (record) => record.variantId.split("/").pop() ?? record.variantId,
+          ),
+        ),
+      ].map((productId) => ({
+        productId,
         updatedDate: removedAt,
         isInStock: 0 as const,
       })),
