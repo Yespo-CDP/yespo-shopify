@@ -626,14 +626,14 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         return { success, errors };
       }
 
-      await shopRepository.updateShop(shop.domain, {
-        isAppInboxEnabled: true,
-      });
-
       await switchAppInboxScriptServer({
         enabled: true,
         admin,
         shopId: shop.shopId,
+      });
+
+      await shopRepository.updateShop(shop.domain, {
+        isAppInboxEnabled: true,
       });
     } catch (error: any) {
       errors.dataSync = t("DataSyncSection.errors.notEnabled");
@@ -659,14 +659,14 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         return { success, errors };
       }
 
-      await shopRepository.updateShop(shop.domain, {
-        isAppInboxEnabled: false,
-      });
-
       await switchAppInboxScriptServer({
         enabled: false,
         admin,
         shopId: shop.shopId,
+      });
+
+      await shopRepository.updateShop(shop.domain, {
+        isAppInboxEnabled: false,
       });
     } catch (error: any) {
       errors.dataSync = t("DataSyncSection.errors.notDisabled");
