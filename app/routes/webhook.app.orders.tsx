@@ -9,14 +9,15 @@ import { updateOrderService } from "~/services/update-order.server";
  *
  * Supports the "ORDERS_CREATE" webhook topic by forwarding the payload to the purchased items service.
  * Silently ignores requests with no valid session or shops without an API key.
- * Sends PurchasedItems event to Yespo web tracker.
+ * Sends PurchasedItems event to Yespo web tracker if option `isWebTrackingEnabled` is enabled.
  * Create or update order in Yespo if option `isOrderSyncEnabled` is enabled.
  * Returns HTTP 400 for unhandled webhook topics.
  *
  * Supported webhook topics:
- * - "ORDERS_CREATE": Calls `sendPurchasedItemsService`. If the PurchasedItems event was not sent
- *   (no cart token or tracking data, or sending failed) and `isOrderSyncEnabled` is on, creates the
- *   order through `updateOrderService` (`POST /orders` upserts by `externalOrderId`).
+ * - "ORDERS_CREATE": Calls `sendPurchasedItemsService` if `isWebTrackingEnabled` is on. If the
+ *   PurchasedItems event was not sent (web tracking disabled, no cart token or tracking data, or sending
+ *   failed) and `isOrderSyncEnabled` is on, creates the order through `updateOrderService`
+ *   (`POST /orders` upserts by `externalOrderId`).
  * - "ORDERS_UPDATED": Calls `updateOrderService` with payload and shop API key.
  *
  * @async
@@ -47,7 +48,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
   switch (topic) {
     case "ORDERS_CREATE": {
-      const purchasedItemsSent = await sendPurchasedItemsService(payload, shop);
+      const purchasedItemsSent = shop.isWebTrackingEnabled
+        ? await sendPurchasedItemsService(payload, shop)
+        : false;
 
       if (!purchasedItemsSent && shop.isOrderSyncEnabled) {
         await updateOrderService(

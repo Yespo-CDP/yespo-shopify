@@ -7,7 +7,7 @@ import {sendStatusCartService} from "~/services/send-status-cart.server";
  * Handles incoming Shopify webhook requests, authenticates them, and processes events by topic.
  *
  * Currently supports the "CARTS_UPDATE" webhook topic, forwarding the payload to the status cart service.
- * Silently ignores requests without valid sessions or shops missing an API key.
+ * Silently ignores requests without valid sessions, shops missing an API key or with web tracking disabled.
  * Sends StatusCart event to Yespo web tracker
  * Returns HTTP 400 response for unhandled webhook topics.
  *
@@ -30,7 +30,7 @@ export const action = async ({request}: ActionFunctionArgs) => {
   console.log(`Received ${topic} webhook for ${session.shop} webhookId ${webhookId}`);
 
   const shop = await shopRepository.getShop(session.shop);
-  if (!shop || !shop?.apiKey) {
+  if (!shop || !shop.apiKey || !shop.isWebTrackingEnabled) {
     return new Response("Success", {status: 200});
   }
 

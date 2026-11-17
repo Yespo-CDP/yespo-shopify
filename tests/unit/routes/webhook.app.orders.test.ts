@@ -40,7 +40,7 @@ const send = (webhookTopic: string) => {
 beforeEach(() => {
   sendPurchasedItemsService.mock.resetCalls();
   updateOrderService.mock.resetCalls();
-  store = { id: 3, apiKey: "key", isOrderSyncEnabled: true, domain: "demo.com", orgId: 5, shopUrl: SHOP };
+  store = { id: 3, apiKey: "key", isWebTrackingEnabled: true, isOrderSyncEnabled: true, domain: "demo.com", orgId: 5, shopUrl: SHOP };
 });
 
 test("ORDERS_CREATE does not send the order when PurchasedItems was sent", async () => {
@@ -75,4 +75,16 @@ test("ORDERS_CREATE does not send the order when order sync is disabled", async 
   await send("ORDERS_CREATE");
 
   assert.equal(updateOrderService.mock.callCount(), 0);
+});
+
+test("ORDERS_CREATE does not send PurchasedItems but sends the order when web tracking is disabled", async () => {
+  purchasedItemsSent = true;
+  store = { ...store, isWebTrackingEnabled: false };
+
+  const response = await send("ORDERS_CREATE");
+
+  assert.equal(response.status, 200);
+  assert.equal(sendPurchasedItemsService.mock.callCount(), 0);
+  assert.equal(updateOrderService.mock.callCount(), 1);
+  assert.deepEqual(updateOrderService.mock.calls[0].arguments, [payload, "key", 3, "demo.com", 5, SHOP]);
 });
