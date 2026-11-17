@@ -41,4 +41,14 @@ export default class CustomerRepositoryImpl implements ICustomerRepository {
       update: fields
     })
   }
+
+  /**
+   * Deletes a customer record by `customerId`. Does nothing if the record does not exist.
+   *
+   * @param {string} customerId - The Shopify customer ID.
+   * @returns {Promise<void>} A promise that resolves when the deletion is complete.
+   */
+  async deleteCustomer(customerId: string): Promise<void> {
+    await this.database.customer.deleteMany({where: {customerId}});
+  }
 }

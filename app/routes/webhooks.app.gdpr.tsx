@@ -2,6 +2,7 @@ import type { ActionFunctionArgs } from "react-router";
 import crypto from "node:crypto";
 
 import {
+  customerRepository,
   gdprCustomerDataRepository,
   shopRepository,
 } from "~/repositories/repositories.server";
@@ -15,10 +16,11 @@ import { deleteContactService } from "~/services/delete-contact.service";
  * 1. Clones the incoming request to read raw payload.
  * 2. Extracts and validates the Shopify webhook HMAC signature against the raw payload.
  * 3. Authenticates the webhook and retrieves shop info, topic, payload, and webhookId.
- * 4. If the shop or its API key is missing, responds with HTTP 200 to acknowledge.
+ * 4. If the shop is missing, responds with HTTP 200 to acknowledge.
  * 5. Handles specific webhook topics:
  *    - "CUSTOMERS_DATA_REQUEST": Creates a customer data request record.
- *    - "CUSTOMERS_REDACT": Deletes customer contact data securely.
+ *    - "CUSTOMERS_REDACT": Deletes the contact in Yespo (if an API key is set and contact sync is enabled)
+ *      and the local customer record.
  *    - "SHOP_REDACT": Deletes the entire shop data from the repository.
  * 6. Responds with HTTP 400 if the topic is unhandled.
  *
@@ -57,7 +59,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
   const store = await shopRepository.getShop(shop);
 
-  if (!store || !store?.apiKey) {
+  if (!store) {
     return new Response("Success", { status: 200 });
   }
   switch (topic) {
@@ -78,7 +80,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       break;
 
     case "CUSTOMERS_REDACT":
-      if (store?.isContactSyncEnabled) {
+      if (store.apiKey && store.isContactSyncEnabled) {
         await deleteContactService(
           payload.customer.id.toString(),
           store.apiKey,
@@ -87,6 +89,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           store.orgId
         );
       }
+      await customerRepository.deleteCustomer(payload.customer.id.toString());
       break;
 
     case "SHOP_REDACT":
