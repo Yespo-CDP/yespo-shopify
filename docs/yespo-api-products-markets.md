@@ -856,7 +856,7 @@ Every request returns a request-level envelope plus item-level results.
 
 Market sync cron jobs are driven by **BullMQ repeatable jobs** (not QStash). On worker
 startup, `registerMarketSyncCron()` upserts a scheduler in Redis; BullMQ then enqueues a
-`cron-jobs` tick once per day. Requires the `worker` process (`npm run worker` in
+`cron-jobs` tick once per day at 03:00 UTC. Requires the `worker` process (`npm run worker` in
 `Procfile`) and `REDIS_URL`.
 
 A daily cron tick keeps at most **10 shops** syncing their markets concurrently, always
@@ -865,9 +865,11 @@ full `marketSyncHandler` run syncs all of that shop's markets/countries; a
 `markets/create` while sync is already on syncs only the new market). The limit of 10
 counts shops, not countries.
 
-To avoid re-syncing the same shop more than once per day, the cron also skips any shop
+To avoid re-syncing the same shop too often, the cron also skips any shop
 whose **last successful (`COMPLETE`) sync** finished less than
-`MARKET_SYNC_MIN_INTERVAL_MS` (24 h) ago. Never-synced shops and shops whose last sync
+`MARKET_SYNC_MIN_INTERVAL_MS` (20 h) ago. The interval is shorter than a day because it
+counts from when the previous run finished, not from the tick: a shop that finished at
+03:20 is still picked up by the next day's 03:00 tick. Never-synced shops and shops whose last sync
 ended in `ERROR` are **not** throttled. This interval applies only to the cron path —
 the post data-sync chain (`enqueueMarketSyncTaskForShopUrl`) bypasses it and runs
 immediately.
@@ -883,10 +885,10 @@ worker.
 
 | Constant                           | Value                      | Purpose                                                                                                                                                |
 | ---------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `MARKET_SYNC_CRON_PATTERN`         | `"0 0 * * *"`              | BullMQ cron pattern — once per day at 00:00 UTC.                                                                                                       |
+| `MARKET_SYNC_CRON_PATTERN`         | `"0 3 * * *"`              | BullMQ cron pattern — once per day at 03:00 UTC.                                                                                                       |
 | `MARKET_SYNC_MAX_CONCURRENT_SHOPS` | `10`                        | Max shops in progress at once.                                                                                                                         |
 | `MARKET_SYNC_STALE_AFTER_MS`       | `5 * 60 * 60 * 1000` (5 h)  | `IN_PROGRESS` older than this is treated as stuck (e.g. crashed worker): it no longer counts against the budget and the shop becomes selectable again. |
-| `MARKET_SYNC_MIN_INTERVAL_MS`      | `24 * 60 * 60 * 1000` (24 h) | Cron skips a shop whose last `COMPLETE` sync finished less than this ago. Never-synced and last-`ERROR` shops are not throttled; post-data-sync triggers bypass it. |
+| `MARKET_SYNC_MIN_INTERVAL_MS`      | `20 * 60 * 60 * 1000` (20 h) | Cron skips a shop whose last `COMPLETE` sync finished less than this ago. Never-synced and last-`ERROR` shops are not throttled; post-data-sync triggers bypass it. |
 
 **Algorithm (per tick):**
 

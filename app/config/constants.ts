@@ -100,15 +100,19 @@ export const MARKET_SYNC_STALE_AFTER_MS = 5 * 60 * 60 * 1000;
 
 /**
  * Minimum time between automatic (cron) market syncs for a shop. The cron skips
- * a shop whose last successful (COMPLETE) sync finished less than this ago, so a
- * single shop is not re-synced more than once per day. Never-synced shops and shops whose
- * last sync ended in ERROR are not throttled. Post data-sync triggers bypass
- * this interval entirely.
+ * a shop whose last successful (COMPLETE) sync finished less than this ago.
+ * It is shorter than a day because it counts from when the previous run
+ * finished, not from the tick: a shop that finished at 03:20 is picked up again
+ * by the next 03:00 tick. Never-synced shops and shops whose last sync ended in
+ * ERROR are not throttled. Post data-sync triggers bypass this interval entirely.
  */
-export const MARKET_SYNC_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000;
+export const MARKET_SYNC_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
 
-/** BullMQ repeatable job pattern — runs once per day at 00:00 UTC. */
-export const MARKET_SYNC_CRON_PATTERN = "0 0 * * *";
+/**
+ * BullMQ repeatable job pattern — runs once per day at 03:00 UTC, away from
+ * the 00:00 EventData cleanup and at night for European shops.
+ */
+export const MARKET_SYNC_CRON_PATTERN = "0 3 * * *";
 
 /** BullMQ repeatable job pattern for expired EventData cleanup — once per day at 00:00 UTC. */
 export const DB_CLEANER_CRON_PATTERN = "0 0 * * *";

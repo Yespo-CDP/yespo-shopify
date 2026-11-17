@@ -112,8 +112,9 @@ export async function enqueueTokenMigration(): Promise<number> {
 }
 
 /**
- * Registers the daily market-sync scheduler in Redis. Safe to call on every
- * worker startup — BullMQ upserts the scheduler by id.
+ * Registers the daily (03:00 UTC) market-sync scheduler in Redis. Safe to call
+ * on every worker startup — BullMQ upserts the scheduler by id, replacing the
+ * pending run of the previous pattern.
  */
 export async function registerMarketSyncCron(): Promise<void> {
   await CronQueue.upsertJobScheduler(
@@ -347,8 +348,10 @@ function lastCompletedAt(shop: ShopWithMarketSyncLogs): Date | null {
  * shops first, then oldest updatedAt).
  *
  * Shops whose last successful (COMPLETE) sync finished less than
- * MARKET_SYNC_MIN_INTERVAL_MS ago are skipped so a shop is not re-synced every
- * hour. Never-synced shops and shops whose last sync ended in ERROR are not
+ * MARKET_SYNC_MIN_INTERVAL_MS (20h) ago are skipped, so a shop synced off
+ * schedule later in the day waits for the next day's tick, while a shop that
+ * finished shortly after the previous tick is still picked up by this one.
+ * Never-synced shops and shops whose last sync ended in ERROR are not
  * throttled. This interval applies only to the daily cron path; post data-sync
  * triggers (enqueueMarketSyncTaskForShopUrl) bypass it, but still require
  * isMarketSyncEnabled.

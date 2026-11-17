@@ -619,13 +619,13 @@ Notes:
 
 #### Market sync scheduling:
 
-A daily BullMQ repeatable job (`cron-jobs` queue → `enqueueMarketSyncTasks`) paces `POST /v1/markets` across shops. The schedule is registered on worker startup via `registerMarketSyncCron()` (`MARKET_SYNC_CRON_PATTERN = "0 0 * * *"` — once per day at 00:00 UTC). Requires the `worker` process and Redis.
+A daily BullMQ repeatable job (`cron-jobs` queue → `enqueueMarketSyncTasks`) paces `POST /v1/markets` across shops. The schedule is registered on worker startup via `registerMarketSyncCron()` (`MARKET_SYNC_CRON_PATTERN = "0 3 * * *"` — once per day at 03:00 UTC). Requires the `worker` process and Redis.
 
 - At most **10 shops** sync at once (`MARKET_SYNC_MAX_CONCURRENT_SHOPS`).
-- Shops whose last `COMPLETE` sync finished less than **24h** ago are skipped (`MARKET_SYNC_MIN_INTERVAL_MS`); never-synced and last-`ERROR` shops are not throttled.
+- Shops whose last `COMPLETE` sync finished less than **20h** ago are skipped (`MARKET_SYNC_MIN_INTERVAL_MS`); never-synced and last-`ERROR` shops are not throttled.
 - An `IN_PROGRESS` sync older than **5h** is treated as stuck and the shop becomes selectable again (`MARKET_SYNC_STALE_AFTER_MS`).
 - Eligible shops (`active`, `isMarketSyncEnabled`, `apiKey != null`) are ordered by oldest last sync (never-synced first).
-- The post-products-sync trigger bypasses the 24h interval.
+- The post-products-sync trigger bypasses the 20h interval.
 
 The `data-sync-market` worker `concurrency: 10` is the real parallelism cap.
 
