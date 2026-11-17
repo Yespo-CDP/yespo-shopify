@@ -13,17 +13,21 @@ import { readMarketId } from "~/services/market-tracking";
  * This function retrieves event data for the cart token, constructs the customer and product data,
  * and sends the purchase event to the external tracking API using the shop's API key.
  * If required data is missing (event data, API key, or site ID), the function returns early without sending.
+ * The webhook uses the result to send the order to Yespo when the event was not sent.
  *
  * @async
  * @function sendPurchasedItemsService
  * @param {any} payload - The webhook payload containing purchase and customer details.
  * @param {Shop} shop - The shop object containing API key and site ID.
- * @returns {Promise<void>} Resolves when the purchased items event has been sent or if an error occurs.
+ * @returns {Promise<boolean>} `true` only when the event was sent; `false` when data is missing, sending failed, or an error occurred.
  *
  * @example
  * await sendPurchasedItemsService(webhookPayload, shop);
  */
-export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
+export const sendPurchasedItemsService = async (
+  payload: any,
+  shop: Shop,
+): Promise<boolean> => {
   try {
     const cartAttribute = payload.note_attributes.find(
       (attr: { name: string; value: string }) =>
@@ -34,7 +38,7 @@ export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
 
     if (!cartToken) {
       console.error("Cart token doesn't exist");
-      return null;
+      return false;
     }
     if (cartToken.includes("?key=")) {
       cartToken = cartToken.split("?key=")[0];
@@ -44,17 +48,17 @@ export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
 
     if (!eventData) {
       console.error("Event data not exist");
-      return null;
+      return false;
     }
 
     if (!shop.apiKey) {
       console.error("Api key does not provided");
-      return null;
+      return false;
     }
 
     if (!shop.siteId) {
       console.error("Site id does not provided");
-      return null;
+      return false;
     }
 
     const customerData: ICartCustomer = buildCustomerData(payload.customer);
@@ -89,15 +93,20 @@ export const sendPurchasedItemsService = async (payload: any, shop: Shop) => {
       },
     };
 
-    await sendPurchasedItemsEvent({
+    const sent = await sendPurchasedItemsEvent({
       apiKey: shop.apiKey,
       purchasedItemsData,
       domain: shop.domain || shop.shopUrl,
       orgId: shop.orgId,
     });
+    if (!sent) {
+      return false;
+    }
 
     console.log("SUCCESSFULLY SEND PURCHASED ITEMS");
+    return true;
   } catch (error) {
     console.error("Error occurred in Send Purchased Items Service", error);
+    return false;
   }
 };

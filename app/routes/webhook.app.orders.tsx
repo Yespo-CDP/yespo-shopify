@@ -14,7 +14,9 @@ import { updateOrderService } from "~/services/update-order.server";
  * Returns HTTP 400 for unhandled webhook topics.
  *
  * Supported webhook topics:
- * - "ORDERS_CREATE": Calls `createOrderService` with payload and shop API key.
+ * - "ORDERS_CREATE": Calls `sendPurchasedItemsService`. If the PurchasedItems event was not sent
+ *   (no cart token or tracking data, or sending failed) and `isOrderSyncEnabled` is on, creates the
+ *   order through `updateOrderService` (`POST /orders` upserts by `externalOrderId`).
  * - "ORDERS_UPDATED": Calls `updateOrderService` with payload and shop API key.
  *
  * @async
@@ -44,13 +46,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   }
 
   switch (topic) {
-    case "ORDERS_CREATE":
-      await sendPurchasedItemsService(payload, shop);
+    case "ORDERS_CREATE": {
+      const purchasedItemsSent = await sendPurchasedItemsService(payload, shop);
 
-      // if (shop?.isOrderSyncEnabled) {
-      //   await createOrderService(payload as any, shop.apiKey, shop.id);
-      // }
+      if (!purchasedItemsSent && shop.isOrderSyncEnabled) {
+        await updateOrderService(
+          payload as any,
+          shop.apiKey,
+          shop.id,
+          shop.domain || session.shop,
+          shop.orgId,
+          shop.shopUrl || session.shop,
+        );
+      }
       break;
+    }
 
     case "ORDERS_UPDATED":
       if (shop?.isOrderSyncEnabled) {
