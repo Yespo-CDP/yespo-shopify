@@ -2,7 +2,6 @@ class EventTracker {
   constructor(document, scriptTagName = 'script') {
     this.document = document;
     this.scriptTagName = scriptTagName;
-    this.cookie = document.cookie;
 
     window.eS = window.eS || function () {
       (window.eS.q = window.eS.q || []).push(arguments);
@@ -22,7 +21,7 @@ class EventTracker {
   }
 
   getCookieValue(name) {
-    const match = this.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
+    const match = this.document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
     return match ? match[2] : "";
   }
 
@@ -296,10 +295,16 @@ class EventTracker {
   }
 
   async sendCartData() {
-    const sc = this.getCookieValue('sc');
     const cartTokenRaw = await this.getCartToken();
     const token = cartTokenRaw ? cartTokenRaw.split('?')[0] : null;
     const customer = this.data.customer;
+
+    // On the first visit the Yespo script may set the sc cookie after this script runs
+    let sc = this.getCookieValue('sc');
+    for (let i = 0; !sc && i < 25; i++) {
+      await this.delay(200);
+      sc = this.getCookieValue('sc');
+    }
 
    await this.sendTrackingData({
      host: this.data.host,
@@ -319,7 +324,6 @@ class EventTracker {
     const originalFetch = window.fetch;
     const self = this;
 
-    const sc = this.getCookieValue('sc');
     const customer = this.data.customer;
     const host = this.data.host;
     const domain = this.data.domain;
@@ -346,7 +350,7 @@ class EventTracker {
           await self.sendTrackingData({
             host,
             domain,
-            sc,
+            sc: self.getCookieValue('sc'),
             token: cartToken,
             customer,
             marketId
