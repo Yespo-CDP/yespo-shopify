@@ -332,16 +332,20 @@ export const marketSyncHandler = async (
         domain: logDomain,
       });
 
-      const outputPath = await streamBulkJsonlToTmpMarketSync({
-        url: bulkResult.url,
-        shop,
-        batchId,
-        shopId,
-        config: marketsConfig,
-        countries: chunk.countries,
-        previousLocalesByMarketId,
-      });
-      console.log(`Bulk JSONL saved to ${outputPath}`);
+      // No url means Shopify found no products: nothing is staged, so every
+      // synced variant of these countries is cleared as removed from catalog.
+      if (bulkResult.url) {
+        const outputPath = await streamBulkJsonlToTmpMarketSync({
+          url: bulkResult.url,
+          shop,
+          batchId,
+          shopId,
+          config: marketsConfig,
+          countries: chunk.countries,
+          previousLocalesByMarketId,
+        });
+        console.log(`Bulk JSONL saved to ${outputPath}`);
+      }
 
       const presentByCountry = await processBatch({
         shopId,

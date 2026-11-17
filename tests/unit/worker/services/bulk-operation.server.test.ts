@@ -30,3 +30,31 @@ test("polls its own bulk operation by id and returns its url", async () => {
   assert.equal(result.url, "https://a");
   assert.equal(request.mock.callCount(), 1);
 });
+
+const completedWith = (objectCount?: string | null) =>
+  mock.fn(async () => ({
+    data: {
+      bulkOperation: { id: "A", status: "COMPLETED", url: null, objectCount },
+    },
+  }));
+
+test("treats COMPLETED without url and no objects as an empty result", async () => {
+  const result = await waitForBulkOperation({
+    client: { request: completedWith("0") } as never,
+    bulkOperationId: "A",
+  });
+
+  assert.deepEqual(result, { url: null, objectCount: 0 });
+});
+
+test("fails when COMPLETED has no url but objects were processed", async () => {
+  for (const objectCount of ["5", "not-a-number", null, undefined]) {
+    await assert.rejects(
+      waitForBulkOperation({
+        client: { request: completedWith(objectCount) } as never,
+        bulkOperationId: "A",
+      }),
+      /without download url/,
+    );
+  }
+});
