@@ -15,6 +15,7 @@ import {
   shopRepository,
 } from "~/repositories/repositories.server";
 import { createClient } from "../services/create-client";
+import { createOfflineTokenManager } from "../services/offline-token-manager";
 import { createProductVariantPayload } from "../services/create-product-variant-payload";
 import { fetchShopMarketsConfig } from "../services/fetch-shop-markets-config";
 import { getPublishedInAnyMarket } from "../services/get-product-market-publication";
@@ -23,7 +24,6 @@ import { getProductById } from "../services/get-products";
 import { getShopPrimaryLocale } from "../services/get-shop-primary-locale";
 import { getShopSecondaryLocales } from "../services/get-shop-locales";
 import { getProductTranslations } from "../services/get-product-translations";
-import { getOfflineAccessToken } from "~/services/get-offline-session.server";
 import { yespoProductAction } from "../services/yespo-product-action";
 
 export class ProductNotReadyError extends Error {
@@ -69,7 +69,8 @@ async function syncProductFromAdmin(
   data: ProductWebhookJobData,
   shopData: Shop,
 ): Promise<void> {
-  const accessToken = await getOfflineAccessToken(data.shop);
+  const tokenManager = createOfflineTokenManager(data.shop);
+  const accessToken = await tokenManager.getAccessToken();
   if (!accessToken) {
     throw new Error(
       `Product webhook: no valid offline session for ${data.shop}`,
@@ -79,7 +80,7 @@ async function syncProductFromAdmin(
   const apiKey = shopData.apiKey;
   if (!apiKey) return;
 
-  const client = createClient({ shop: data.shop, accessToken });
+  const client = createClient({ shop: data.shop, accessToken, tokenManager });
   const { product, shopCurrency } = await getProductById({
     client,
     productId: data.productGid,
@@ -240,7 +241,7 @@ async function syncProductFromAdmin(
     await updateMarketFromWebhook({
       shopId: shopData.id,
       shopifyDomain: data.shop,
-      accessToken,
+      accessToken: (await tokenManager.getAccessToken()) ?? accessToken,
       productGid: product.id,
       isMarketSyncEnabled: shopData.isMarketSyncEnabled ?? false,
       apiKey,

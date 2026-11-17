@@ -20,6 +20,7 @@ import {
 } from "../services/bulk-operation.server";
 import { computeContentHash } from "../services/compute-content-hash";
 import { createClient } from "../services/create-client";
+import type { OfflineTokenManager } from "../services/offline-token-manager";
 import { fetchShopMarketsConfig } from "../services/fetch-shop-markets-config";
 import { selectMarketsForSync } from "../services/select-markets-for-sync";
 import { streamBulkJsonlToTmpMarketSync } from "../services/parse-bulk-jsonl";
@@ -197,6 +198,7 @@ export const marketSyncHandler = async (
   orgId?: number | null,
   siteId?: string | null,
   marketId?: string | null,
+  tokenManager?: OfflineTokenManager,
 ) => {
   console.log(
     marketId
@@ -212,7 +214,7 @@ export const marketSyncHandler = async (
   const logDomain = shopData.domain || shop;
   const marketSyncEnabled = Boolean(shopData.isMarketSyncEnabled);
 
-  const client = createClient({ shop, accessToken });
+  const client = createClient({ shop, accessToken, tokenManager });
   let marketsConfig: ShopMarketsConfig = {
     markets: [],
     countries: [],

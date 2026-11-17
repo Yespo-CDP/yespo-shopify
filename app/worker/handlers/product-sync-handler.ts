@@ -8,6 +8,7 @@ import {
 import { updateProductVariants } from "~/api/update-product-variants";
 import { deleteProductVariants } from "~/api/delete-product-variants";
 import { createClient } from "../services/create-client";
+import type { OfflineTokenManager } from "../services/offline-token-manager";
 import { getProducts } from "../services/get-products";
 import { getProductVariantsCount } from "../services/get-product-variants-count";
 import { fetchAllProductVariants } from "../services/get-product-variants";
@@ -41,10 +42,11 @@ export const productSyncHandler = async (
   shopId: number,
   orgId?: number | null,
   siteId?: string | null,
+  tokenManager?: OfflineTokenManager,
 ) => {
   console.log(`⏳ Synchronizing products start for ${shop}`);
 
-  const client = createClient({ shop, accessToken });
+  const client = createClient({ shop, accessToken, tokenManager });
   const variantsCount = await getProductVariantsCount({ client });
 
   console.log("Total product variants count", variantsCount, "\n");

@@ -6,6 +6,7 @@ import {
 } from "~/repositories/repositories.server";
 import { createOrders } from "~/api/create-orders";
 import { createClient } from "../services/create-client";
+import type { OfflineTokenManager } from "../services/offline-token-manager";
 import { getOrders } from "../services/get-orders";
 import { getOrdersCount } from "../services/get-orders-count";
 import { createOrderPayload } from "../services/create-order-payload";
@@ -47,6 +48,7 @@ export const orderSyncHandler = async (
   apiKey: string,
   shopId: number,
   orgId?: number | null,
+  tokenManager?: OfflineTokenManager,
 ) => {
   console.log(`⏳ Synchronizing orders start for ${shop}`);
   console.log("shop", shop);
@@ -54,7 +56,7 @@ export const orderSyncHandler = async (
   const shopRecord = await shopRepository.getShop(shop);
   const logDomain = shopRecord?.domain || shop;
 
-  const client = createClient({ shop, accessToken });
+  const client = createClient({ shop, accessToken, tokenManager });
   const ordersCount = await getOrdersCount({ client });
   console.log("Total orders count", ordersCount, "\n");
 

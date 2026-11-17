@@ -5,13 +5,13 @@ import {
   eventDataRepository,
   shopRepository,
 } from "~/repositories/repositories.server";
-import { getOfflineAccessToken } from "~/services/get-offline-session.server";
 import { migrateOfflineTokenToExpiring } from "~/services/migrate-offline-token.server";
 import { customerSyncHandler } from "./handlers/customer-sync-handler";
 import { orderSyncHandler } from "./handlers/order-sync-handler";
 import { productSyncHandler } from "./handlers/product-sync-handler";
 import { marketSyncHandler } from "./handlers/market-sync-handler";
 import { productWebhookHandler } from "./handlers/product-webhook-handler";
+import { createOfflineTokenManager } from "./services/offline-token-manager";
 import {
   DB_CLEANER_CRON_JOB_NAME,
   enqueueMarketSyncTaskForShopUrl,
@@ -72,7 +72,8 @@ const dataSyncWorker = new Worker<JobData>(
 
       if (!shop) return;
 
-      const accessToken = await getOfflineAccessToken(shop);
+      const tokenManager = createOfflineTokenManager(shop);
+      const accessToken = await tokenManager.getAccessToken();
       if (!accessToken) {
         console.error(`Data sync: no valid offline session for ${shop}`);
         return;
@@ -96,6 +97,7 @@ const dataSyncWorker = new Worker<JobData>(
           apiKey,
           shopData.id,
           shopData.orgId,
+          tokenManager,
         );
       }
       if (kinds.includes("order")) {
@@ -105,6 +107,7 @@ const dataSyncWorker = new Worker<JobData>(
           apiKey,
           shopData.id,
           shopData.orgId,
+          tokenManager,
         );
       }
       if (kinds.includes("product")) {
@@ -115,6 +118,7 @@ const dataSyncWorker = new Worker<JobData>(
           shopData.id,
           shopData.orgId,
           shopData.siteId,
+          tokenManager,
         );
         await enqueueMarketSyncTaskForShopUrl(shop);
       }
@@ -136,7 +140,8 @@ const marketSyncWorker = new Worker<MarketSyncJobData>(
 
       if (!shop) return;
 
-      const accessToken = await getOfflineAccessToken(shop);
+      const tokenManager = createOfflineTokenManager(shop);
+      const accessToken = await tokenManager.getAccessToken();
       if (!accessToken) {
         console.error(`Market sync: no valid offline session for ${shop}`);
         return;
@@ -158,6 +163,7 @@ const marketSyncWorker = new Worker<MarketSyncJobData>(
         shopData.orgId,
         shopData.siteId,
         marketId,
+        tokenManager,
       );
     } catch (error: unknown) {
       console.error(`Market sync worker error:`, error);

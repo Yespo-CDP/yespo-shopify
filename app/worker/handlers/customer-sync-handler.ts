@@ -6,6 +6,7 @@ import {
 } from "~/repositories/repositories.server";
 import { updateContacts } from "~/api/update-contacts";
 import { createClient } from "../services/create-client";
+import type { OfflineTokenManager } from "../services/offline-token-manager";
 import { getCustomers } from "../services/get-customers";
 import { getCustomersCount } from "../services/get-customers-count";
 import { createContactPayload } from "../services/create-contact-payload";
@@ -46,7 +47,8 @@ export const customerSyncHandler = async (
   accessToken: string,
   apiKey: string,
   shopId: number,
-  orgId?: number | null
+  orgId?: number | null,
+  tokenManager?: OfflineTokenManager,
 ) => {
   console.log(`⏳ Synchronizing customers start for ${shop}`);
   console.log("shop", shop);
@@ -55,7 +57,7 @@ export const customerSyncHandler = async (
   const logDomain = shopRecord?.domain || shop;
   const marketContext = await fetchContactMarketContext(shop);
 
-  const client = createClient({ shop, accessToken });
+  const client = createClient({ shop, accessToken, tokenManager });
   const customersCount = await getCustomersCount({ client });
   console.log("Total customers count", customersCount, "\n");
 
