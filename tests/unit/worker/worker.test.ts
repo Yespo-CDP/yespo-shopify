@@ -10,6 +10,11 @@ const errorWrites: Kind[] = [];
 let shopData: { id: number; apiKey: string } | null = null;
 let accessToken: string | null = null;
 let customerSyncHandler = async () => {};
+const closedQueues: string[] = [];
+let finishClose = () => {};
+const closeDone = new Promise<void>((resolve) => {
+  finishClose = resolve;
+});
 
 const syncLog = (kind: Kind) => ({
   get: async () => (statuses[kind] ? { status: statuses[kind] } : null),
@@ -33,6 +38,10 @@ mock.module("bullmq", {
         processors.set(name, processor);
       }
       on() {}
+      close() {
+        closedQueues.push(this.name);
+        return closeDone;
+      }
     },
   },
 });
@@ -157,4 +166,28 @@ test("successful run writes no ERROR", async () => {
     order: "COMPLETE",
     product: "COMPLETE",
   });
+});
+
+test("SIGTERM twice: every worker closed once, exit(0) once after close resolves", async (t) => {
+  const exit = t.mock.method(process, "exit", () => undefined as never);
+  const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+  process.emit("SIGTERM");
+  process.emit("SIGTERM");
+  await flush();
+
+  assert.deepEqual(closedQueues.sort(), [
+    "cron-jobs",
+    "data-sync",
+    "data-sync-market",
+    "product-webhook",
+    "token-migration",
+  ]);
+  assert.equal(exit.mock.callCount(), 0);
+
+  finishClose();
+  await flush();
+
+  assert.equal(exit.mock.callCount(), 1);
+  assert.deepEqual(exit.mock.calls[0].arguments, [0]);
 });

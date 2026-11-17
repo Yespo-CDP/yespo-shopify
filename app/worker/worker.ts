@@ -261,14 +261,29 @@ const tokenMigrationWorker = new Worker<TokenMigrationJobData>(
   },
 );
 
-for (const worker of [
+const workers = [
   cronWorker,
   dataSyncWorker,
   marketSyncWorker,
   productWebhookWorker,
   tokenMigrationWorker,
-]) {
+];
+
+for (const worker of workers) {
   worker.on("error", (error) => {
     console.error(`[worker:${worker.name}] Redis error:`, error?.message);
   });
 }
+
+// close() stops taking new jobs and waits for active ones. It leaves the shared
+// Redis client open, so the process has to exit explicitly.
+let shuttingDown = false;
+const shutdown = async (signal: string) => {
+  if (shuttingDown) return; // Heroku may send SIGTERM more than once
+  shuttingDown = true;
+  console.log(`[worker] ${signal}: closing workers`);
+  await Promise.allSettled(workers.map((w) => w.close()));
+  process.exit(0);
+};
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));
