@@ -58,17 +58,23 @@ export const deleteProductVariantService = async (
       (gid) => gid.split("/").pop() ?? gid,
     );
 
-    await deleteProductVariants({
-      apiKey,
-      siteId: siteId ?? "",
-      externalVariantIds: numericVariantIds,
-      domain,
-      orgId,
-    });
+    const acceptedIds = new Set(
+      await deleteProductVariants({
+        apiKey,
+        siteId: siteId ?? "",
+        externalVariantIds: numericVariantIds,
+        domain,
+        orgId,
+      }),
+    );
 
-    // Remove sync records from our DB.
-    await productVariantSyncRepository.deleteByProductId(shopId, productGid);
-    await marketSyncRepository.deleteByVariantIds(shopId, variantGids);
+    // Remove sync records only for variants Yespo accepted. Rejected ones
+    // stay, so the next full sync retries the delete.
+    const acceptedGids = variantGids.filter((gid) =>
+      acceptedIds.has(gid.split("/").pop() ?? gid),
+    );
+    await productVariantSyncRepository.deleteByVariantIds(shopId, acceptedGids);
+    await marketSyncRepository.deleteByVariantIds(shopId, acceptedGids);
     await refreshProductVariantSyncLog(shopId);
   } catch (error: any) {
     console.error("Error occurred in Delete Product Variant Service", error);

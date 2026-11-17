@@ -219,23 +219,26 @@ async function syncProductFromAdmin(
     );
 
     if (orphanedVariantGids.length > 0 && shopData.siteId) {
-      await deleteProductVariants({
-        apiKey,
-        siteId: shopData.siteId,
-        externalVariantIds: orphanedVariantGids.map(
-          (gid) => gid.split("/").pop() ?? gid,
-        ),
-        domain: shopData.domain || data.shop,
-        orgId: shopData.orgId,
-      });
+      const acceptedIds = new Set(
+        await deleteProductVariants({
+          apiKey,
+          siteId: shopData.siteId,
+          externalVariantIds: orphanedVariantGids.map(
+            (gid) => gid.split("/").pop() ?? gid,
+          ),
+          domain: shopData.domain || data.shop,
+          orgId: shopData.orgId,
+        }),
+      );
+      // Rejected variants keep their rows, so the next webhook retries them.
+      const acceptedGids = orphanedVariantGids.filter((gid) =>
+        acceptedIds.has(gid.split("/").pop() ?? gid),
+      );
       await productVariantSyncRepository.deleteByVariantIds(
         shopData.id,
-        orphanedVariantGids,
+        acceptedGids,
       );
-      await marketSyncRepository.deleteByVariantIds(
-        shopData.id,
-        orphanedVariantGids,
-      );
+      await marketSyncRepository.deleteByVariantIds(shopData.id, acceptedGids);
     }
 
     await updateMarketFromWebhook({

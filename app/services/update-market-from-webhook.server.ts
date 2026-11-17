@@ -245,18 +245,28 @@ export async function updateMarketFromWebhook({
       ([marketId, products]) => ({ marketId, products }),
     );
 
-    await updateMarketProducts({ apiKey, siteId, markets, domain, orgId });
+    const { failedItems } = await updateMarketProducts({
+      apiKey,
+      siteId,
+      markets,
+      domain,
+      orgId,
+    });
+    // No hash for rejected variants, so the next webhook sends them again.
+    const failed = new Set(failedItems);
 
     await Promise.all(
-      upserts.map((u) =>
-        marketSyncRepository.createOrUpdate({
-          productId: u.productId,
-          variantId: u.variantId,
-          countryCode: u.countryCode,
-          contentHash: u.contentHash,
-          shop: { connect: { id: shopId } },
-        }),
-      ),
+      upserts
+        .filter((u) => !failed.has(u.variantId.split("/").pop() ?? u.variantId))
+        .map((u) =>
+          marketSyncRepository.createOrUpdate({
+            productId: u.productId,
+            variantId: u.variantId,
+            countryCode: u.countryCode,
+            contentHash: u.contentHash,
+            shop: { connect: { id: shopId } },
+          }),
+        ),
     );
   }
 

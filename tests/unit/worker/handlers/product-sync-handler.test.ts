@@ -18,6 +18,10 @@ const createOrUpdateProductVariantSync = mock.fn(async (_data: unknown) => ({}))
 let updateProductVariants = mock.fn(
   async (_args: unknown): Promise<unknown> => ({}),
 );
+let trackedVariantIds: string[] = [];
+let acceptedDeleteIds: string[] = [];
+const deleteVariantSyncs = mock.fn(async (_shopId: number, _ids: string[]) => {});
+const deleteMarketSyncs = mock.fn(async (_shopId: number, _ids: string[]) => {});
 
 mock.module("../../../../app/repositories/repositories.server", {
   namedExports: {
@@ -29,12 +33,12 @@ mock.module("../../../../app/repositories/repositories.server", {
       }),
       updateShop: async () => ({}),
     },
-    marketSyncRepository: { deleteByVariantIds: async () => {} },
+    marketSyncRepository: { deleteByVariantIds: deleteMarketSyncs },
     productVariantSyncRepository: {
       getProductVariantSyncByVariantIds: async () => syncRows,
       createOrUpdateProductVariantSync,
-      getVariantIdsByShop: async () => [],
-      deleteByVariantIds: async () => {},
+      getVariantIdsByShop: async () => trackedVariantIds,
+      deleteByVariantIds: deleteVariantSyncs,
     },
     productVariantSyncLogRepository: {
       createOrUpdateProductVariantSyncLog: async () => ({}),
@@ -47,7 +51,7 @@ mock.module("../../../../app/api/update-product-variants", {
   },
 });
 mock.module("../../../../app/api/delete-product-variants", {
-  namedExports: { deleteProductVariants: async () => ({}) },
+  namedExports: { deleteProductVariants: async () => acceptedDeleteIds },
 });
 mock.module("../../../../app/worker/services/create-client", {
   namedExports: { createClient: () => ({}) },
@@ -105,7 +109,11 @@ const run = () =>
 
 beforeEach(() => {
   syncRows = [];
+  trackedVariantIds = [];
+  acceptedDeleteIds = [];
   createOrUpdateProductVariantSync.mock.resetCalls();
+  deleteVariantSyncs.mock.resetCalls();
+  deleteMarketSyncs.mock.resetCalls();
   updateProductVariants = mock.fn(async () => ({}));
 });
 
@@ -144,4 +152,22 @@ test("row stays failed when Yespo request throws", async () => {
     syncFailed?: boolean;
   };
   assert.equal(data.syncFailed, true);
+});
+
+test("keeps local rows of orphaned variants Yespo did not delete", async () => {
+  trackedVariantIds = [
+    variant.id,
+    "gid://shopify/ProductVariant/2",
+    "gid://shopify/ProductVariant/3",
+  ];
+  acceptedDeleteIds = ["3"];
+
+  await run();
+
+  for (const deleteRows of [deleteVariantSyncs, deleteMarketSyncs]) {
+    assert.equal(deleteRows.mock.callCount(), 1);
+    assert.deepEqual(deleteRows.mock.calls[0].arguments[1], [
+      "gid://shopify/ProductVariant/3",
+    ]);
+  }
 });

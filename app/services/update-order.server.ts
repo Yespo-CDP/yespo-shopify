@@ -1,5 +1,6 @@
 import { createOrders } from "~/api/create-orders";
 import { convertDateToUTC } from "~/utils/convert-date-to-utc";
+import { normalizeYespoItems } from "~/utils/normalize-yespo-items";
 import {
   eventDataRepository,
   orderSyncRepository,
@@ -164,12 +165,19 @@ export const updateOrderService = async (
       }),
     };
 
-    await createOrders({
+    const response = await createOrders({
       apiKey,
       orders: [order],
       domain,
       orgId
     });
+
+    // One order per request, so any failedOrders entry is this order.
+    // Skip OrderSync so the historical import sends it again.
+    if (normalizeYespoItems(response?.failedOrders).length > 0) {
+      console.error(`Yespo rejected order ${order.externalOrderId}`);
+      return;
+    }
 
     await orderSyncRepository.createOrUpdateOrderSync({
       orderId: payload.admin_graphql_api_id,

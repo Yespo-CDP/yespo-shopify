@@ -1,5 +1,6 @@
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
+import { productIdsYespoAccepted } from "~/services/product-sync-result";
 import { getAuthHeader } from "~/utils/auth";
 import { fetchWithErrorHandling } from "~/utils/fetchWithErrorHandling";
 import { throttleApiRequest } from "~/utils/rate-limiter.server";
@@ -15,6 +16,8 @@ import { throttleApiRequest } from "~/utils/rate-limiter.server";
  * @param params.externalVariantIds - Shopify variant IDs to delete (max 500 per call).
  * @param params.domain - Shop domain used for logging.
  * @param params.orgId - Yespo organisation id used for logging.
+ * @returns Variant IDs Yespo explicitly accepted. A 207 response rejects some
+ *   items; callers keep local records for the rest so the delete is retried.
  */
 export const deleteProductVariants = async ({
   apiKey,
@@ -28,8 +31,8 @@ export const deleteProductVariants = async ({
   externalVariantIds: string[];
   domain: string;
   orgId?: number | null;
-}): Promise<void> => {
-  if (externalVariantIds.length === 0) return;
+}): Promise<string[]> => {
+  if (externalVariantIds.length === 0) return [];
 
   const logData = (responseBody: unknown, statusCode: number) => ({
     domain,
@@ -71,6 +74,13 @@ export const deleteProductVariants = async ({
       message: EVENT_MESSAGES.DELETE_PRODUCTS_BULK_SUCCESS,
       logLevel: "INFO",
     });
+
+    const accepted = productIdsYespoAccepted(
+      externalVariantIds,
+      response.responseData?.items,
+      response.responseData?.summary,
+    );
+    return externalVariantIds.filter((id) => accepted.has(id));
   } catch (error: any) {
     console.error("Error deleting product variants:", error?.message);
 

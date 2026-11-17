@@ -326,15 +326,24 @@ export const productSyncHandler = async (
           const chunk = deletedIds.slice(i, i + VARIANTS_API_CHUNK_SIZE);
           // Yespo stores products by numeric ID; extract it from the GID.
           const numericChunk = chunk.map((gid) => gid.split("/").pop() ?? gid);
-          await deleteProductVariants({
-            apiKey,
-            siteId: siteId ?? "",
-            externalVariantIds: numericChunk,
-            domain: logDomain,
-            orgId,
-          });
-          await productVariantSyncRepository.deleteByVariantIds(shopId, chunk);
-          await marketSyncRepository.deleteByVariantIds(shopId, chunk);
+          const acceptedIds = new Set(
+            await deleteProductVariants({
+              apiKey,
+              siteId: siteId ?? "",
+              externalVariantIds: numericChunk,
+              domain: logDomain,
+              orgId,
+            }),
+          );
+          // Rejected variants keep their rows, so the next sync retries them.
+          const acceptedGids = chunk.filter((gid) =>
+            acceptedIds.has(gid.split("/").pop() ?? gid),
+          );
+          await productVariantSyncRepository.deleteByVariantIds(
+            shopId,
+            acceptedGids,
+          );
+          await marketSyncRepository.deleteByVariantIds(shopId, acceptedGids);
         }
       }
     }
