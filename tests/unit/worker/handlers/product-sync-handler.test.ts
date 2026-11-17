@@ -22,6 +22,9 @@ let trackedVariantIds: string[] = [];
 let acceptedDeleteIds: string[] = [];
 const deleteVariantSyncs = mock.fn(async (_shopId: number, _ids: string[]) => {});
 const deleteMarketSyncs = mock.fn(async (_shopId: number, _ids: string[]) => {});
+const writeSyncLog = mock.fn(async (_data: { status: string }) => ({}));
+const sendLogEvent = mock.fn(async (_event: { logLevel: string }) => {});
+let fetchShopMarketsConfig = async (): Promise<unknown> => ({ countries: [] });
 
 mock.module("../../../../app/repositories/repositories.server", {
   namedExports: {
@@ -41,7 +44,7 @@ mock.module("../../../../app/repositories/repositories.server", {
       deleteByVariantIds: deleteVariantSyncs,
     },
     productVariantSyncLogRepository: {
-      createOrUpdateProductVariantSyncLog: async () => ({}),
+      createOrUpdateProductVariantSyncLog: writeSyncLog,
     },
   },
 });
@@ -79,7 +82,9 @@ mock.module("../../../../app/worker/services/create-product-variant-payload", {
   },
 });
 mock.module("../../../../app/worker/services/fetch-shop-markets-config", {
-  namedExports: { fetchShopMarketsConfig: async () => ({ countries: [] }) },
+  namedExports: {
+    fetchShopMarketsConfig: () => fetchShopMarketsConfig(),
+  },
 });
 mock.module("../../../../app/worker/services/get-product-market-publication", {
   namedExports: { getPublishedInAnyMarket: async () => new Map() },
@@ -94,7 +99,7 @@ mock.module("../../../../app/worker/services/get-product-translations", {
   namedExports: { getProductTranslations: async () => ({ product: {}, variants: {} }) },
 });
 mock.module("../../../../app/api/send-log-event", {
-  namedExports: { sendLogEvent: async () => {} },
+  namedExports: { sendLogEvent },
 });
 mock.module("../../../../app/services/refresh-product-variant-sync-log.server", {
   namedExports: { markProductVariantSyncResults: async () => {} },
@@ -114,6 +119,9 @@ beforeEach(() => {
   createOrUpdateProductVariantSync.mock.resetCalls();
   deleteVariantSyncs.mock.resetCalls();
   deleteMarketSyncs.mock.resetCalls();
+  writeSyncLog.mock.resetCalls();
+  sendLogEvent.mock.resetCalls();
+  fetchShopMarketsConfig = async () => ({ countries: [] });
   updateProductVariants = mock.fn(async () => ({}));
 });
 
@@ -170,4 +178,27 @@ test("keeps local rows of orphaned variants Yespo did not delete", async () => {
       "gid://shopify/ProductVariant/3",
     ]);
   }
+});
+
+test("a failed markets config read ends the sync with ERROR and a log event", async () => {
+  trackedVariantIds = [variant.id, "gid://shopify/ProductVariant/2"];
+  acceptedDeleteIds = ["2"];
+  fetchShopMarketsConfig = async () => {
+    throw new Error("Failed to fetch countries of market");
+  };
+
+  // The handler's own catch handles it: nothing is thrown to the worker.
+  await run();
+
+  assert.deepEqual(
+    writeSyncLog.mock.calls.map((call) => call.arguments[0].status),
+    ["ERROR"],
+  );
+  assert.deepEqual(
+    sendLogEvent.mock.calls.map((call) => call.arguments[0].logLevel),
+    ["ERROR"],
+  );
+  assert.equal(updateProductVariants.mock.callCount(), 0);
+  assert.equal(deleteVariantSyncs.mock.callCount(), 0);
+  assert.equal(deleteMarketSyncs.mock.callCount(), 0);
 });

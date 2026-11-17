@@ -27,8 +27,9 @@ export const getOrders = async ({
   count?: number;
   cursor?: string | null;
 }): Promise<{ orders: OrderData[]; cursor?: string | null }> => {
+  let response;
   try {
-    const response = await client.request(
+    response = await client.request(
       `query getOrders($count: Int, $cursor: String) {
           orders(first: $count, after: $cursor) {
             nodes {
@@ -113,6 +114,10 @@ export const getOrders = async ({
                     }
                   }
                 }
+                pageInfo {
+                  endCursor
+                  hasNextPage
+                }
               }
               createdAt
               updatedAt
@@ -132,18 +137,87 @@ export const getOrders = async ({
         },
       },
     );
-
-    const ordersData = response?.data as OrdersResponse;
-    const orders = ordersData?.orders?.nodes;
-    const endCursor = ordersData?.orders?.pageInfo?.endCursor;
-    const hasNextPage = ordersData?.orders?.pageInfo?.hasNextPage;
-
-    return {
-      orders: orders ?? [],
-      cursor: hasNextPage ? endCursor : null,
-    };
   } catch (error) {
     console.error(error);
     return { orders: [], cursor: null };
+  }
+
+  const ordersData = response?.data as OrdersResponse;
+  const orders = ordersData?.orders?.nodes ?? [];
+  const endCursor = ordersData?.orders?.pageInfo?.endCursor;
+  const hasNextPage = ordersData?.orders?.pageInfo?.hasNextPage;
+
+  // Outside the try: a failed read must fail the chunk, not look like the end.
+  for (const order of orders) {
+    await fetchRemainingLineItems({ client, order });
+  }
+
+  return {
+    orders,
+    cursor: hasNextPage ? endCursor : null,
+  };
+};
+
+/**
+ * Appends to `order.lineItems.nodes` the line items beyond the first page.
+ * Throws on request errors so the order is not sent with part of its items.
+ */
+const fetchRemainingLineItems = async ({
+  client,
+  order,
+}: {
+  client: GraphQLClient;
+  order: OrderData;
+}): Promise<void> => {
+  let cursor = order.lineItems?.pageInfo?.hasNextPage
+    ? order.lineItems.pageInfo.endCursor
+    : null;
+
+  while (cursor) {
+    const response = await client.request(
+      `query getOrderLineItems($id: ID!, $cursor: String) {
+        order(id: $id) {
+          lineItems(first: 100, after: $cursor) {
+            nodes {
+              id
+              name
+              quantity
+              originalTotalSet {
+                shopMoney { amount currencyCode }
+                presentmentMoney { amount currencyCode }
+              }
+              variant {
+                id
+                image { url }
+                product {
+                  handle
+                  onlineStoreUrl
+                  featuredImage { url }
+                }
+              }
+            }
+            pageInfo {
+              endCursor
+              hasNextPage
+            }
+          }
+        }
+      }`,
+      { variables: { id: order.id, cursor } },
+    );
+
+    if (response.errors) {
+      throw new Error(
+        `Failed to fetch line items of order ${order.id}: ${JSON.stringify(response.errors)}`,
+      );
+    }
+
+    const lineItems = (
+      response.data as { order?: { lineItems?: OrderData["lineItems"] } | null }
+    )?.order?.lineItems;
+    order.lineItems.nodes.push(...(lineItems?.nodes ?? []));
+    cursor = lineItems?.pageInfo?.hasNextPage
+      ? lineItems.pageInfo.endCursor
+      : null;
   }
 };

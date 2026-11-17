@@ -1,4 +1,5 @@
 import type { ProductVariant } from "~/@types/productVariant";
+import type { ShopMarketsConfig } from "~/@types/shopMarketsConfig";
 import {
   shopRepository,
   marketSyncRepository,
@@ -66,7 +67,7 @@ export const productSyncHandler = async (
     primaryLocale: languageCode,
   });
   const hasTranslations = secondaryLocales.length > 0;
-  const marketsConfig = await fetchShopMarketsConfig({ client });
+  let marketsConfig: ShopMarketsConfig | undefined;
 
   // Persist defaultLanguageCode after the first batch when it differs from DB.
   let needsLanguageCodePersist = languageCode !== storedLanguageCode;
@@ -83,6 +84,9 @@ export const productSyncHandler = async (
   try {
     do {
       try {
+        // Read once, inside the chunk try: a failure is logged to Yespo and
+        // ends the sync with ERROR like any other chunk error.
+        marketsConfig ??= await fetchShopMarketsConfig({ client });
         console.log("\n", "Chunk start:");
 
         if (shopData?.isProductVariantSyncEnabled) {

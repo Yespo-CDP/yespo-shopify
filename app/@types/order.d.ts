@@ -118,6 +118,10 @@ export interface OrderData {
         } | null;
       } | null;
     }[];
+    pageInfo?: {
+      endCursor?: string | null;
+      hasNextPage: boolean;
+    };
   };
   createdAt: string;
   updatedAt: string;
