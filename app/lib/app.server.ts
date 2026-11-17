@@ -44,7 +44,7 @@ import { countEnabledMarkets } from "~/services/sync-market-tracking-metafield.s
  *
  * @param {LoaderFunctionArgs} args - The arguments containing the request.
  * @returns {Promise<{
- *   shop: Shop | null,
+ *   shop: { apiKey (masked: "*" except last 4), isAppInboxEnabled, isWebTrackingEnabled, productSyncNoticePending, isContactSyncEnabled, isOrderSyncEnabled, isProductVariantSyncEnabled } | null,
  *   account: Account | null,
  *   scriptConnectionStatus: any,
  *   customersSyncLog: CustomerSyncLog[],
@@ -126,7 +126,15 @@ export const loaderHandler = async ({ request }: LoaderFunctionArgs) => {
     }
   }
   return {
-    shop,
+    shop: shop && {
+      apiKey: maskApiKey(shop.apiKey ?? ""),
+      isAppInboxEnabled: shop.isAppInboxEnabled,
+      isWebTrackingEnabled: shop.isWebTrackingEnabled,
+      productSyncNoticePending: shop.productSyncNoticePending,
+      isContactSyncEnabled: shop.isContactSyncEnabled,
+      isOrderSyncEnabled: shop.isOrderSyncEnabled,
+      isProductVariantSyncEnabled: shop.isProductVariantSyncEnabled,
+    },
     account,
     scriptConnectionStatus: {
       isThemeExtensionActive: scriptConnectionStatus.isThemeExtensionActive,
@@ -233,6 +241,12 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
     const apiKey = formData.get("apiKey")?.toString();
     if (!apiKey) {
       errors.apiKey = t("AccountConnectionSection.errors.emptyApiKey");
+      return { success, errors };
+    }
+
+    // The field holds the masked stored key: nothing to connect.
+    const storedApiKey = (await shopRepository.getShop(session.shop))?.apiKey;
+    if (storedApiKey && maskApiKey(storedApiKey) === apiKey) {
       return { success, errors };
     }
 
@@ -673,6 +687,13 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
   return { success, errors };
 };
+
+// Same length as the key; only the last 4 characters stay visible, and none for keys of 4 or fewer.
+function maskApiKey(apiKey: string): string {
+  return apiKey.length > 4
+    ? "*".repeat(apiKey.length - 4) + apiKey.slice(-4)
+    : "*".repeat(apiKey.length);
+}
 
 async function readMarketSyncEnabled(admin: any): Promise<boolean> {
   try {
