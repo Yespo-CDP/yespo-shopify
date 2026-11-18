@@ -187,6 +187,12 @@ export async function fetchShopMarketsConfig({
     { variables: { count: 250 } },
   );
 
+  if (response.errors) {
+    throw new Error(
+      `Failed to fetch markets: ${JSON.stringify(response.errors)}`,
+    );
+  }
+
   const marketsData = response?.data as MarketsDetailedResponse;
   const enabledNodes = (marketsData?.markets?.nodes ?? []).filter(
     (market) => market.enabled,

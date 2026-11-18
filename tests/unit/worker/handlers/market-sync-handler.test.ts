@@ -60,6 +60,7 @@ let bulkCount = 0;
 let streamImpl = async () => "/tmp/bulk.jsonl";
 let updateImpl = async (_args: MarketsCall, _call: number) => ({ failedItems: [] as string[] });
 let deleteByBatchImpl = async () => {};
+let marketsConfigError: Error | null = null;
 
 const writeLog = mock.fn(async (_data: { countryCode: string; status: string }) => ({}));
 const sendLogEvent = mock.fn(async (_event: { data: unknown; message: string }) => {});
@@ -108,7 +109,7 @@ mock.module("../../../../app/worker/services/create-client", {
 });
 mock.module("../../../../app/worker/services/fetch-shop-markets-config", {
   namedExports: {
-    fetchShopMarketsConfig: async () => ({
+    fetchShopMarketsConfig: async () => marketsConfigError ? Promise.reject(marketsConfigError) : ({
       markets: [
         {
           id: "gid://shopify/Market/1",
@@ -173,6 +174,7 @@ beforeEach(() => {
   streamImpl = async () => "/tmp/bulk.jsonl";
   updateImpl = async () => ({ failedItems: [] });
   deleteByBatchImpl = async () => {};
+  marketsConfigError = null;
   writeLog.mock.resetCalls();
   sendLogEvent.mock.resetCalls();
   updateMarketProducts.mock.resetCalls();
@@ -356,5 +358,19 @@ test("a failed staging cleanup is logged and does not fail a successful sync", a
   );
   assert.ok(
     !consoleError.mock.calls.some((call) => call.arguments[0] === "Market sync error"),
+  );
+});
+
+test("a failed markets read removes no market and sends nothing to Yespo", async () => {
+  syncedRows = [synced(1, 1, "DE")];
+  marketsConfigError = new Error("Failed to fetch markets");
+
+  await runSync();
+
+  assert.equal(updateMarketProducts.mock.callCount(), 0);
+  assert.equal(writeLog.mock.callCount(), 0);
+  assert.deepEqual(
+    sendLogEvent.mock.calls.map((call) => call.arguments[0].message),
+    ["CUSTOM_LOG_SEND_MARKET_PRODUCTS_ERROR"],
   );
 });

@@ -66,3 +66,26 @@ test("rejects when reading the remaining countries fails", async () => {
 
   await assert.rejects(fetchShopMarketsConfig({ client }), /countries/);
 });
+
+test("rejects when the markets query fails", async () => {
+  const { client, request } = fakeClient([
+    { errors: { networkStatusCode: 502, message: "GraphQL Client: Bad Gateway" } },
+  ]);
+
+  await assert.rejects(fetchShopMarketsConfig({ client }), /markets/);
+  assert.equal(request.mock.callCount(), 1);
+});
+
+test("rejects a partial markets response", async () => {
+  const { client } = fakeClient([
+    {
+      ...firstPage(),
+      errors: {
+        message: "GraphQL Client: An error occurred",
+        graphQLErrors: [{ message: "Internal error", path: ["markets"] }],
+      },
+    },
+  ]);
+
+  await assert.rejects(fetchShopMarketsConfig({ client }), /markets/);
+});
