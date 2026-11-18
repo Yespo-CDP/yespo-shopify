@@ -41,3 +41,6 @@ shopify.app.yespo-staging.toml
 /.claude
 
 /tasks
+
+.DS_Store
+/docs/typedoc-html
