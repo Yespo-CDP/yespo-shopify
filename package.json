@@ -21,9 +21,9 @@
     "docs:html": "typedoc --options typedoc.html.json",
     "docs:md": "typedoc --options typedoc.md.json",
     "docs": "npm run docs:html && npm run docs:md",
-    "worker": "npx tsx ./app/worker/worker.ts",
-    "migrate:tokens": "npx tsx ./app/scripts/migrate-tokens.ts",
-    "encrypt:api-keys": "npx tsx ./app/scripts/encrypt-api-keys.ts"
+    "worker": "tsx ./app/worker/worker.ts",
+    "migrate:tokens": "tsx ./app/scripts/migrate-tokens.ts",
+    "encrypt:api-keys": "tsx ./app/scripts/encrypt-api-keys.ts"
   },
   "type": "module",
   "engines": {
@@ -54,6 +54,7 @@
     "react-i18next": "^14.1.3",
     "react-router": "^7.18.2",
     "string-strip-html": "^13.5.3",
+    "tsx": "4.20.3",
     "uuid": "^11.1.0",
     "vite-tsconfig-paths": "^5.0.1"
   },
