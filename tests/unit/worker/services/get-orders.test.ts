@@ -84,3 +84,26 @@ test("rejects when reading the remaining line items fails", async () => {
 
   await assert.rejects(getOrders({ client, count: 150 }), /line items/);
 });
+
+test("rejects when the orders query fails", async () => {
+  const { client, request } = fakeClient([
+    { errors: { networkStatusCode: 502, message: "Bad Gateway" } },
+  ]);
+
+  await assert.rejects(getOrders({ client, count: 150 }), /orders/);
+  assert.equal(request.mock.callCount(), 1);
+});
+
+test("rejects a partial orders response", async () => {
+  const { client } = fakeClient([
+    {
+      ...firstPage(),
+      errors: {
+        message: "GraphQL Client: An error occurred",
+        graphQLErrors: [{ message: "Internal error", path: ["orders"] }],
+      },
+    },
+  ]);
+
+  await assert.rejects(getOrders({ client, count: 150 }), /orders/);
+});

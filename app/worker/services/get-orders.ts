@@ -12,7 +12,7 @@ import type { OrdersResponse, OrderData } from "~/@types/order";
  * @param {number} [params.count=1] - The number of orders to fetch.
  * @param {string} [params.cursor=null] - Cursor to request a specific page
  *
- * @returns {Promise<OrderData[]>} A promise that resolves to an array of `OrderData` objects, or an empty array if the query fails.
+ * @returns {Promise<OrderData[]>} A promise that resolves to an array of `OrderData` objects. Throws on request errors.
  *
  * @example
  * const orders = await getOrders({ client, count: 5 });
@@ -27,10 +27,8 @@ export const getOrders = async ({
   count?: number;
   cursor?: string | null;
 }): Promise<{ orders: OrderData[]; cursor?: string | null }> => {
-  let response;
-  try {
-    response = await client.request(
-      `query getOrders($count: Int, $cursor: String) {
+  const response = await client.request(
+    `query getOrders($count: Int, $cursor: String) {
           orders(first: $count, after: $cursor) {
             nodes {
               id
@@ -130,16 +128,18 @@ export const getOrders = async ({
           }
         }
       `,
-      {
-        variables: {
-          count,
-          cursor,
-        },
+    {
+      variables: {
+        count,
+        cursor,
       },
+    },
+  );
+
+  if (response.errors) {
+    throw new Error(
+      `Failed to fetch orders: ${JSON.stringify(response.errors)}`,
     );
-  } catch (error) {
-    console.error(error);
-    return { orders: [], cursor: null };
   }
 
   const ordersData = response?.data as OrdersResponse;
@@ -147,7 +147,6 @@ export const getOrders = async ({
   const endCursor = ordersData?.orders?.pageInfo?.endCursor;
   const hasNextPage = ordersData?.orders?.pageInfo?.hasNextPage;
 
-  // Outside the try: a failed read must fail the chunk, not look like the end.
   for (const order of orders) {
     await fetchRemainingLineItems({ client, order });
   }
