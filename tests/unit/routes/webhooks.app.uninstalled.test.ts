@@ -106,6 +106,7 @@ test("without a session: revokes the key, cleans up in one transaction, then del
           isMarketSyncEnabled: false,
           siteId: null,
           orgId: null,
+          domain: SHOP,
         },
       },
     },
