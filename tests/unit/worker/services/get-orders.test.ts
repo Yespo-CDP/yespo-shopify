@@ -69,6 +69,11 @@ test("reads the remaining line items of an order", async () => {
       { variables: { id: ORDER_ID, cursor: "c2" } },
     ],
   );
+  // Both the orders query and the line-item follow-up ask for the unit price.
+  for (const call of request.mock.calls) {
+    assert.match(call.arguments[0], /originalUnitPriceSet/);
+    assert.doesNotMatch(call.arguments[0], /originalTotalSet/);
+  }
 });
 
 test("rejects when reading the remaining line items fails", async () => {

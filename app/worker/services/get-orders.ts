@@ -100,7 +100,7 @@ export const getOrders = async ({
                   id
                   name
                   quantity
-                  originalTotalSet {
+                  originalUnitPriceSet {
                     shopMoney { amount currencyCode }
                     presentmentMoney { amount currencyCode }
                   }
@@ -182,7 +182,7 @@ const fetchRemainingLineItems = async ({
               id
               name
               quantity
-              originalTotalSet {
+              originalUnitPriceSet {
                 shopMoney { amount currencyCode }
                 presentmentMoney { amount currencyCode }
               }

@@ -107,7 +107,7 @@ export interface OrderData {
       id: string;
       name: string;
       quantity: number;
-      originalTotalSet?: MoneyBag;
+      originalUnitPriceSet?: MoneyBag;
       variant?: {
         id: string;
         image?: { url?: string | null } | null;

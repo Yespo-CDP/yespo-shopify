@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { OrderData } from "~/@types/order";
-import { createOrderPayload } from "./create-order-payload";
+import type { OrderData } from "../../../../app/@types/order";
+import { createOrderPayload } from "../../../../app/worker/services/create-order-payload";
 
 function order(overrides: Partial<OrderData> = {}): OrderData {
   return {
@@ -88,7 +88,7 @@ test("uses presentment money and currency when the buyer market differs", () => 
             id: "gid://shopify/LineItem/1",
             name: "Shirt",
             quantity: 1,
-            originalTotalSet: {
+            originalUnitPriceSet: {
               shopMoney: { amount: "4000.00", currencyCode: "UAH" },
               presentmentMoney: { amount: "100.00", currencyCode: "USD" },
             },
@@ -104,6 +104,32 @@ test("uses presentment money and currency when the buyer market differs", () => 
   assert.equal(payload.shipping, 5);
   assert.equal(payload.taxes, 2);
   assert.equal(payload.items[0]?.cost, 100);
+});
+
+test("sends the unit price, not the line total, as item cost", () => {
+  const payload = createOrderPayload(
+    order({
+      currencyCode: "UAH",
+      presentmentCurrencyCode: "USD",
+      lineItems: {
+        nodes: [
+          {
+            id: "gid://shopify/LineItem/1",
+            name: "Shirt",
+            quantity: 3,
+            originalUnitPriceSet: {
+              shopMoney: { amount: "400.00", currencyCode: "UAH" },
+              presentmentMoney: { amount: "10.00", currencyCode: "USD" },
+            },
+          },
+        ],
+      },
+    }),
+  );
+
+  assert.equal(payload.currency, "USD");
+  assert.equal(payload.items[0]?.quantity, 3);
+  assert.equal(payload.items[0]?.cost, 10);
 });
 
 test("falls back to shop money when presentment money is absent", () => {

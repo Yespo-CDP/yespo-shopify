@@ -289,7 +289,7 @@ Money fields use the buyer currency (`presentmentMoney` / `presentment_currency`
   - `lineItem.id` → `externalItemId`
   - `lineItem.name` → `name`
   - `lineItem.quantity` → `quantity`
-  - `lineItem.originalTotalSet.presentmentMoney.amount` → `cost`
+  - `lineItem.originalUnitPriceSet.presentmentMoney.amount` → `cost`
 
 ---
 
