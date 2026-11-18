@@ -63,7 +63,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return new Response("Success", { status: 200 });
   }
   switch (topic) {
-    case "CUSTOMERS_DATA_REQUEST":
+    case "CUSTOMERS_DATA_REQUEST": {
       const customerDataRequest = {
         webhookId,
         topic,
@@ -78,6 +78,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         customerDataRequest,
       );
       break;
+    }
 
     case "CUSTOMERS_REDACT":
       if (store.apiKey && store.isContactSyncEnabled) {
@@ -92,7 +93,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       await customerRepository.deleteCustomer(payload.customer.id.toString());
       break;
 
-    case "SHOP_REDACT":
+    case "SHOP_REDACT": {
       const shopData = await shopRepository.getShop(shop);
       if (shopData) {
         await shopRepository.deleteShop(shop);
@@ -102,6 +103,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         );
       }
       break;
+    }
     default:
       console.warn(`❌ Unhandled webhook topic: ${topic}`);
       return new Response(`Unhandled webhook topic: ${topic}`, { status: 200 });

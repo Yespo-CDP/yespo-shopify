@@ -277,7 +277,7 @@ class EventTracker {
     }
 
     try {
-      const res = await fetch(`${data.host}/public/event-data`, {
+      await fetch(`${data.host}/public/event-data`, {
         method: 'POST',
         body: JSON.stringify({
           shop: data.domain,

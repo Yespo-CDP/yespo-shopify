@@ -136,7 +136,9 @@ export async function fetchWithErrorHandling(
 
       try {
         responseData = JSON.parse(rawResponse);
-      } catch (e) {}
+      } catch {
+        // Not JSON: keep the raw text.
+      }
 
       if (response.status === 429 && attempt < RATE_LIMIT_MAX_RETRIES) {
         const waitMs = parseRetryAfterMs(response.headers.get("retry-after"));
