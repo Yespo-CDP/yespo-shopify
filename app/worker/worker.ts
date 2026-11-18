@@ -1,5 +1,6 @@
 import { Worker } from "bullmq";
 
+import { TMP_MARKET_SYNC_TTL_MS } from "~/config/constants";
 import { bullmqConnection } from "~/config/redis";
 import {
   customerSyncLogRepository,
@@ -7,6 +8,7 @@ import {
   orderSyncLogRepository,
   productVariantSyncLogRepository,
   shopRepository,
+  tmpMarketSyncRepository,
 } from "~/repositories/repositories.server";
 import { migrateOfflineTokenToExpiring } from "~/services/migrate-offline-token.server";
 import { customerSyncHandler } from "./handlers/customer-sync-handler";
@@ -62,6 +64,11 @@ const cronWorker = new Worker(
     if (job.name === DB_CLEANER_CRON_JOB_NAME) {
       await eventDataRepository.bulkDeleteEventsData();
       console.log("Expired EventData cleaned");
+
+      const staleTmpRows = await tmpMarketSyncRepository.deleteOlderThan(
+        new Date(Date.now() - TMP_MARKET_SYNC_TTL_MS),
+      );
+      console.log(`Stale TmpMarketSync rows cleaned: ${staleTmpRows}`);
     }
   },
   {

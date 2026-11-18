@@ -132,8 +132,9 @@ export async function registerMarketSyncCron(): Promise<void> {
 }
 
 /**
- * Registers the daily EventData TTL cleanup scheduler in Redis. Safe to call
- * on every worker startup — BullMQ upserts the scheduler by id.
+ * Registers the daily EventData TTL cleanup scheduler in Redis. The same job
+ * also deletes TmpMarketSync rows older than TMP_MARKET_SYNC_TTL_MS (24 h).
+ * Safe to call on every worker startup — BullMQ upserts the scheduler by id.
  */
 export async function registerDbCleanerCron(): Promise<void> {
   await CronQueue.upsertJobScheduler(

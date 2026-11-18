@@ -114,8 +114,23 @@ export const MARKET_SYNC_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
  */
 export const MARKET_SYNC_CRON_PATTERN = "0 3 * * *";
 
-/** BullMQ repeatable job pattern for expired EventData cleanup — once per day at 00:00 UTC. */
+/**
+ * BullMQ repeatable job pattern for expired EventData cleanup — once per day at 00:00 UTC.
+ * The same job also deletes TmpMarketSync rows older than TMP_MARKET_SYNC_TTL_MS (24 h).
+ */
 export const DB_CLEANER_CRON_PATTERN = "0 0 * * *";
+
+/**
+ * The DB cleaner cron deletes TmpMarketSync rows older than this. A market
+ * sync deletes its own staging rows when a batch ends, so older rows are left
+ * by a process that crashed or was killed. A batch's rows live for hours at
+ * most, well below this, and a run restarted after MARKET_SYNC_STALE_AFTER_MS
+ * stages its rows under a new batch id. Keep this value far above the longest
+ * processing of one batch: processBatch reads the rows page by page, and
+ * deleting them mid-run would leave presentByCountry incomplete, so variants
+ * still in the catalog would be marked out of stock.
+ */
+export const TMP_MARKET_SYNC_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * How long a product webhook job waits before it runs.

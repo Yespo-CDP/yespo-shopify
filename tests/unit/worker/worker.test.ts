@@ -60,9 +60,12 @@ mock.module("../../../app/services/queue", {
     registerMarketSyncCron: async () => {},
   },
 });
+const bulkDeleteEventsData = mock.fn(async () => {});
+const deleteOlderThan = mock.fn(async (_date: Date) => 0);
 mock.module("../../../app/repositories/repositories.server", {
   namedExports: {
-    eventDataRepository: {},
+    eventDataRepository: { bulkDeleteEventsData },
+    tmpMarketSyncRepository: { deleteOlderThan },
     shopRepository: { getShop: async () => shopData },
     customerSyncLogRepository: {
       getCustomerSyncLogByShop: customerLog.get,
@@ -171,6 +174,18 @@ test("successful run writes no ERROR", async () => {
     order: "COMPLETE",
     product: "COMPLETE",
   });
+});
+
+test("db-cleaner-tick deletes expired EventData and TmpMarketSync rows older than 24 hours", async () => {
+  const before = Date.now();
+  await processors.get("cron-jobs")!({ name: "db-cleaner-tick", data: {} });
+  const after = Date.now();
+
+  assert.equal(bulkDeleteEventsData.mock.callCount(), 1);
+  assert.equal(deleteOlderThan.mock.callCount(), 1);
+  const cutoff = deleteOlderThan.mock.calls[0].arguments[0].getTime();
+  const day = 24 * 60 * 60 * 1000;
+  assert.ok(cutoff >= before - day && cutoff <= after - day);
 });
 
 test("webhook-events job: handler gets job.data; a failure is logged without the payload and rethrown", async () => {
