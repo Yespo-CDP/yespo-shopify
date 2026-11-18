@@ -8,7 +8,7 @@ import type {
 const VARIANTS_PAGE_SIZE = 100;
 
 /**
- * Fetches the next page of variants for a product.
+ * Fetches the next page of variants for a product. Throws on request errors.
  */
 export const getProductVariants = async ({
   client,
@@ -19,9 +19,8 @@ export const getProductVariants = async ({
   productId: string;
   cursor?: string | null;
 }): Promise<{ variants: ProductVariantData[]; cursor?: string | null }> => {
-  try {
-    const response = await client.request(
-      `query getProductVariants($productId: ID!, $count: Int, $cursor: String) {
+  const response = await client.request(
+    `query getProductVariants($productId: ID!, $count: Int, $cursor: String) {
         product(id: $productId) {
           variants(first: $count, after: $cursor) {
             nodes {
@@ -48,29 +47,31 @@ export const getProductVariants = async ({
           }
         }
       }`,
-      {
-        variables: {
-          productId,
-          count: VARIANTS_PAGE_SIZE,
-          cursor,
-        },
+    {
+      variables: {
+        productId,
+        count: VARIANTS_PAGE_SIZE,
+        cursor,
       },
+    },
+  );
+
+  if (response.errors) {
+    throw new Error(
+      `Failed to fetch variants of product ${productId}: ${JSON.stringify(response.errors)}`,
     );
-
-    const variantsData = response?.data as ProductVariantsResponse;
-    const variants = variantsData?.product?.variants?.nodes ?? [];
-    const endCursor = variantsData?.product?.variants?.pageInfo?.endCursor;
-    const hasNextPage =
-      variantsData?.product?.variants?.pageInfo?.hasNextPage ?? false;
-
-    return {
-      variants,
-      cursor: hasNextPage ? endCursor : null,
-    };
-  } catch (error) {
-    console.error(error);
-    return { variants: [], cursor: null };
   }
+
+  const variantsData = response?.data as ProductVariantsResponse;
+  const variants = variantsData?.product?.variants?.nodes ?? [];
+  const endCursor = variantsData?.product?.variants?.pageInfo?.endCursor;
+  const hasNextPage =
+    variantsData?.product?.variants?.pageInfo?.hasNextPage ?? false;
+
+  return {
+    variants,
+    cursor: hasNextPage ? endCursor : null,
+  };
 };
 
 /**

@@ -23,10 +23,8 @@ export const getProducts = async ({
   cursor?: string | null;
   shopCurrency?: string;
 }> => {
-  let response;
-  try {
-    response = await client.request(
-      `query getProducts($count: Int, $cursor: String, $variantsCount: Int, $query: String) {
+  const response = await client.request(
+    `query getProducts($count: Int, $cursor: String, $variantsCount: Int, $query: String) {
         shop {
           currencyCode
         }
@@ -81,18 +79,20 @@ export const getProducts = async ({
           }
         }
       }`,
-      {
-        variables: {
-          count,
-          cursor,
-          variantsCount: VARIANTS_PAGE_SIZE,
-          query: PRODUCT_SYNC_SEARCH_QUERY,
-        },
+    {
+      variables: {
+        count,
+        cursor,
+        variantsCount: VARIANTS_PAGE_SIZE,
+        query: PRODUCT_SYNC_SEARCH_QUERY,
       },
+    },
+  );
+
+  if (response.errors) {
+    throw new Error(
+      `Failed to fetch products: ${JSON.stringify(response.errors)}`,
     );
-  } catch (error) {
-    console.error(error);
-    return { products: [], cursor: null };
   }
 
   const productsData = response?.data as ProductsResponse;
@@ -101,7 +101,6 @@ export const getProducts = async ({
   const hasNextPage = productsData?.products?.pageInfo?.hasNextPage;
   const shopCurrency = productsData?.shop?.currencyCode;
 
-  // Outside the try: a failed read must fail the chunk, not look like the end.
   for (const product of products) {
     await fetchRemainingCollections({ client, product });
   }

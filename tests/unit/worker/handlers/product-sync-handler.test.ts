@@ -25,6 +25,11 @@ const deleteMarketSyncs = mock.fn(async (_shopId: number, _ids: string[]) => {})
 const writeSyncLog = mock.fn(async (_data: { status: string }) => ({}));
 const sendLogEvent = mock.fn(async (_event: { logLevel: string }) => {});
 let fetchShopMarketsConfig = async (): Promise<unknown> => ({ countries: [] });
+let getProducts = async (): Promise<unknown> => ({
+  products: [product],
+  cursor: null,
+  shopCurrency: "USD",
+});
 
 mock.module("../../../../app/repositories/repositories.server", {
   namedExports: {
@@ -61,11 +66,7 @@ mock.module("../../../../app/worker/services/create-client", {
 });
 mock.module("../../../../app/worker/services/get-products", {
   namedExports: {
-    getProducts: async () => ({
-      products: [product],
-      cursor: null,
-      shopCurrency: "USD",
-    }),
+    getProducts: () => getProducts(),
   },
 });
 mock.module("../../../../app/worker/services/get-product-variants-count", {
@@ -122,6 +123,11 @@ beforeEach(() => {
   writeSyncLog.mock.resetCalls();
   sendLogEvent.mock.resetCalls();
   fetchShopMarketsConfig = async () => ({ countries: [] });
+  getProducts = async () => ({
+    products: [product],
+    cursor: null,
+    shopCurrency: "USD",
+  });
   updateProductVariants = mock.fn(async () => ({}));
 });
 
@@ -199,6 +205,32 @@ test("a failed markets config read ends the sync with ERROR and a log event", as
     ["ERROR"],
   );
   assert.equal(updateProductVariants.mock.callCount(), 0);
+  assert.equal(deleteVariantSyncs.mock.callCount(), 0);
+  assert.equal(deleteMarketSyncs.mock.callCount(), 0);
+});
+
+test("a failed products page ends the sync with ERROR and deletes nothing", async () => {
+  trackedVariantIds = [variant.id, "gid://shopify/ProductVariant/2"];
+  acceptedDeleteIds = ["2"];
+  let page = 0;
+  getProducts = async () => {
+    page += 1;
+    if (page === 1) {
+      return { products: [product], cursor: "p1", shopCurrency: "USD" };
+    }
+    throw new Error("Failed to fetch products");
+  };
+
+  await run();
+
+  assert.deepEqual(
+    writeSyncLog.mock.calls.map((call) => call.arguments[0].status),
+    ["IN_PROGRESS", "ERROR"],
+  );
+  assert.deepEqual(
+    sendLogEvent.mock.calls.map((call) => call.arguments[0].logLevel),
+    ["ERROR"],
+  );
   assert.equal(deleteVariantSyncs.mock.callCount(), 0);
   assert.equal(deleteMarketSyncs.mock.callCount(), 0);
 });

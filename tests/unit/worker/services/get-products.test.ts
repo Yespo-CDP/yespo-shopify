@@ -91,3 +91,24 @@ test("getProductById rejects when reading the remaining collections fails", asyn
     /collections/,
   );
 });
+
+test("getProducts rejects when the products query fails", async () => {
+  const { client, request } = fakeClient([failure]);
+
+  await assert.rejects(getProducts({ client, count: 50 }), /products/);
+  assert.equal(request.mock.callCount(), 1);
+});
+
+test("getProducts rejects a partial products response", async () => {
+  const { client } = fakeClient([
+    {
+      ...productsPage(),
+      errors: {
+        message: "GraphQL Client: An error occurred",
+        graphQLErrors: [{ message: "Internal error" }],
+      },
+    },
+  ]);
+
+  await assert.rejects(getProducts({ client, count: 50 }), /products/);
+});
