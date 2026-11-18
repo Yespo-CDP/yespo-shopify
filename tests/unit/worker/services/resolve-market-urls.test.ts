@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { ShopMarketConfig } from "~/@types/shopMarketsConfig";
+import type { ShopMarketConfig } from "../../../../app/@types/shopMarketsConfig";
 
 import {
   applyMarketClearing,
   resolveMarketUrls,
-} from "./resolve-market-urls";
+} from "../../../../app/worker/services/resolve-market-urls";
 
 function market(
   locales: string[],

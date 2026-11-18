@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   isActiveMarketStatus,
   marketGidFromWebhook,
-} from "./market-webhook-payload";
+} from "../../../app/services/market-webhook-payload";
 
 test("reads a numeric markets/create id as a Market gid", () => {
   assert.equal(

@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { ShopMarketsConfig } from "~/@types/shopMarketsConfig";
+import type { ShopMarketsConfig } from "../../../../app/@types/shopMarketsConfig";
 
-import { selectMarketsForSync } from "./select-markets-for-sync";
+import { selectMarketsForSync } from "../../../../app/worker/services/select-markets-for-sync";
 
 const config: ShopMarketsConfig = {
   markets: [

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { hasProductSyncScopes } from "./product-sync-scopes";
+import { hasProductSyncScopes } from "../../../app/services/product-sync-scopes";
 
 const granted =
   "read_customers,read_products,read_publications,read_translations,read_locales,unauthenticated_read_product_listings";

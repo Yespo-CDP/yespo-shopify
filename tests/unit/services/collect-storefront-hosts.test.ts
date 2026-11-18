@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   collectStorefrontHosts,
   diffStorefrontHosts,
-} from "./collect-storefront-hosts";
+} from "../../../app/services/collect-storefront-hosts";
 
 test("keeps the primary domain and each distinct market host", () => {
   assert.deepEqual(

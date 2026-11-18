@@ -5,7 +5,7 @@ import {
   activeCatalogPublicationIds,
   isProductInMarket,
   isPublishedOnMarketCatalog,
-} from "./market-catalogs";
+} from "../../../../app/worker/services/market-catalogs";
 
 const UA_PUBLICATION = "gid://shopify/Publication/10";
 const US_PUBLICATION = "gid://shopify/Publication/20";

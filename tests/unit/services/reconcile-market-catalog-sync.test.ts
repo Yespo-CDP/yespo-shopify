@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   MarketCatalogSyncBusyError,
   reconcileMarketCatalogSync,
-} from "./reconcile-market-catalog-sync";
+} from "../../../app/services/reconcile-market-catalog-sync";
 
 function shop(overrides: {
   productSyncEnabled?: boolean;

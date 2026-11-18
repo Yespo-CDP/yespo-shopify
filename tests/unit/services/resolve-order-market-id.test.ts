@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   orderMarketIdCandidate,
   readOrderCartToken,
-} from "./resolve-order-market-id";
+} from "../../../app/services/resolve-order-market-id";
 
 test("prefers the stored visit market over the shipping country", () => {
   assert.equal(

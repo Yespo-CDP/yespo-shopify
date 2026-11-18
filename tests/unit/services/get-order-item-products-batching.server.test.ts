@@ -26,20 +26,20 @@ const request = mock.fn(
   },
 );
 
-mock.module("~/worker/services/offline-token-manager", {
+mock.module("../../../app/worker/services/offline-token-manager", {
   namedExports: {
     createOfflineTokenManager: () => ({ getAccessToken: async () => "token" }),
   },
 });
 
-mock.module("~/worker/services/create-client", {
+mock.module("../../../app/worker/services/create-client", {
   namedExports: {
     createClient: () => ({ request }),
   },
 });
 
 const { getOrderItemProducts } =
-  await import("./get-order-item-products.server.ts");
+  await import("../../../app/services/get-order-item-products.server");
 
 test("loads product links for more than 250 variants in batches of at most 250", async () => {
   const variantIds = Array.from(

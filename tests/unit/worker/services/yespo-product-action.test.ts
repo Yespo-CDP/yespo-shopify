@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { yespoProductAction } from "./yespo-product-action";
+import { yespoProductAction } from "../../../../app/worker/services/yespo-product-action";
 
 test("a variant Yespo has not accepted yet is created", () => {
   assert.equal(yespoProductAction(null), "create");

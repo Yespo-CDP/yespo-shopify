@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildStatusCartProducts } from "./build-status-cart-products";
+import { buildStatusCartProducts } from "../../../app/services/build-status-cart-products";
 
 const line = (overrides: Record<string, unknown> = {}) => ({
   id: 111,

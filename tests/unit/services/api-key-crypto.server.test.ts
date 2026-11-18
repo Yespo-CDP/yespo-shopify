@@ -8,7 +8,7 @@ import {
   revealShopApiKey,
   sealApiKey,
   sealShopApiKeyWrite,
-} from "./api-key-crypto.server";
+} from "../../../app/services/api-key-crypto.server";
 
 const TEST_KEY = randomBytes(32).toString("base64");
 

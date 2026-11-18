@@ -18,6 +18,7 @@
     "graphql-codegen": "graphql-codegen",
     "vite": "vite",
     "typecheck": "react-router typegen && tsc --noEmit",
+    "test": "tsx --experimental-test-module-mocks --test \"tests/**/*.test.ts\"",
     "docs:html": "typedoc --options typedoc.html.json",
     "docs:md": "typedoc --options typedoc.md.json",
     "docs": "npm run docs:html && npm run docs:md",

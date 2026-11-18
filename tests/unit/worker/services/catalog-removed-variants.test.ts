@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   marketSyncRowsRemovedFromCatalog,
   variantIdsPresentInCountry,
-} from "./catalog-removed-variants";
+} from "../../../../app/worker/services/catalog-removed-variants";
 
 test("staged rows mark a variant present even without a sendable price", () => {
   const present = variantIdsPresentInCountry([

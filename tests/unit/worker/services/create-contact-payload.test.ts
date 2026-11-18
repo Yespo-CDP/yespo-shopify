@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { CustomerData } from "~/@types/customer";
-import { createContactPayload } from "./create-contact-payload";
+import type { CustomerData } from "../../../../app/@types/customer";
+import { createContactPayload } from "../../../../app/worker/services/create-contact-payload";
 
 function customer(countryCode?: string): CustomerData {
   return {

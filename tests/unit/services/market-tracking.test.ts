@@ -7,7 +7,7 @@ import {
   readMarketId,
   resolveContactMarketId,
   shouldEnableMarketSync,
-} from "./market-tracking";
+} from "../../../app/services/market-tracking";
 
 test("enables market sync when the shop has at least one market", () => {
   assert.equal(shouldEnableMarketSync(2), true);

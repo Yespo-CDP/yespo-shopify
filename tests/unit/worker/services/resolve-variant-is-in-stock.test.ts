@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   isPublishedInAnyMarket,
   resolveVariantIsInStock,
-} from "./resolve-variant-is-in-stock";
+} from "../../../../app/worker/services/resolve-variant-is-in-stock";
 
 test("one market: in stock and published is 1", () => {
   assert.equal(isPublishedInAnyMarket({ CA: true }), true);

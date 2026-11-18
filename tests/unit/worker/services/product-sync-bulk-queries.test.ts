@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { ShopMarketsConfig } from "~/@types/shopMarketsConfig";
+import type { ShopMarketsConfig } from "../../../../app/@types/shopMarketsConfig";
 
-import { buildBulkPricingQuery } from "./product-sync-bulk-queries";
+import { buildBulkPricingQuery } from "../../../../app/worker/services/product-sync-bulk-queries";
 
 const config: ShopMarketsConfig = {
   markets: [

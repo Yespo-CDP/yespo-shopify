@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { hasReadMarketsScope } from "./market-scopes";
+import { hasReadMarketsScope } from "../../../app/services/market-scopes";
 
 test("accepts a comma-separated session scope string", () => {
   assert.equal(

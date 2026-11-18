@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { productIdsYespoAccepted } from "./product-sync-result";
+import { productIdsYespoAccepted } from "../../../app/services/product-sync-result";
 
 const sent = ["50528684867758"];
 
