@@ -170,11 +170,19 @@ export default class ShopRepositoryImpl implements IShopRepository {
         },
       },
     });
-    return shops.map(revealShopApiKey);
+    return shops.flatMap((shop) => {
+      try {
+        return [revealShopApiKey(shop)];
+      } catch (error) {
+        console.error(
+          `Market sync: skipping ${shop.shopUrl}: ${(error as Error).message}`,
+        );
+        return [];
+      }
+    });
   }
 
-  async getAllShops(): Promise<Shop[]> {
-    const shops = await this.database.shop.findMany();
-    return shops.map(revealShopApiKey);
+  async getAllShops(): Promise<{ shopUrl: string }[]> {
+    return this.database.shop.findMany({ select: { shopUrl: true } });
   }
 }
