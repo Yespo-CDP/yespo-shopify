@@ -4,11 +4,12 @@ import { shopRepository } from "~/repositories/repositories.server";
 import { enqueueWebhookEvent } from "~/services/queue";
 
 /**
- * Handles orders/create and orders/updated webhooks.
+ * Handles orders/create, orders/updated and orders/delete webhooks.
  *
  * Authenticates the request, queues the webhook for the worker (`webhookEventHandler`,
- * which sends PurchasedItems and/or the order to Yespo) and responds with HTTP 200
- * right away, so Yespo requests do not run inside Shopify's 5-second limit.
+ * which sends PurchasedItems and/or the order to Yespo, or deletes the order there)
+ * and responds with HTTP 200 right away, so Yespo requests do not run inside
+ * Shopify's 5-second limit.
  * Silently ignores requests with no valid session or shops without an API key.
  * If Redis rejects the job, the error is thrown (HTTP 500) so Shopify retries; while
  * Redis is unreachable the request waits and Shopify retries after its 5-second timeout.

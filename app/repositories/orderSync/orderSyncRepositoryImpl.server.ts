@@ -103,4 +103,21 @@ export default class OrderSyncRepositoryImpl implements IOrderSyncRepository {
       data,
     });
   }
+
+  /**
+   * Deletes the order sync record of an order, if there is one.
+   *
+   * `deleteMany` is used because the record may be missing (e.g. the order was
+   * only sent as a PurchasedItems event), and `delete` would throw then.
+   *
+   * @param {number} shopId - Shop.id of the shop the record belongs to.
+   * @param {string} orderId - Shopify order ID (e.g. gid://shopify/Order/123).
+   * @returns {Promise<number>} A promise resolving to the number of deleted records.
+   */
+  async deleteOrderSync(shopId: number, orderId: string): Promise<number> {
+    const { count } = await this.database.orderSync.deleteMany({
+      where: { shopId, orderId },
+    });
+    return count;
+  }
 }

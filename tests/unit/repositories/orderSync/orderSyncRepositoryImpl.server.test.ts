@@ -9,6 +9,7 @@ const createRepository = () => {
     findFirst: mock.fn(async () => null),
     findMany: mock.fn(async () => []),
     upsert: mock.fn(async () => ({})),
+    deleteMany: mock.fn(async () => ({ count: 1 })),
   };
   const repository = new OrderSyncRepositoryImpl({
     orderSync,
@@ -55,5 +56,16 @@ test("looks up order syncs of one shop only", async () => {
 
   assert.deepEqual(orderSync.findMany.mock.calls[0].arguments, [
     { where: { shopId: 7, orderId: { in: ["a", "b"] } } },
+  ]);
+});
+
+test("deletes the order sync of one shop only and returns the count", async () => {
+  const { repository, orderSync } = createRepository();
+
+  const count = await repository.deleteOrderSync(7, "gid://shopify/Order/1");
+
+  assert.equal(count, 1);
+  assert.deepEqual(orderSync.deleteMany.mock.calls[0].arguments, [
+    { where: { shopId: 7, orderId: "gid://shopify/Order/1" } },
   ]);
 });

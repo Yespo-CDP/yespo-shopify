@@ -148,7 +148,7 @@ export const updateOrderService = async (
       ),
       currency: payload.presentment_currency || payload.currency,
       ...(marketId ? { marketId } : {}),
-      date: convertDateToUTC(payload.created_at),
+      date: convertDateToUTC(payload.processed_at || payload.created_at),
       status: statusMap(payload?.fulfillment_status),
       deliveryAddress: formatAddress(payload?.shipping_address ?? {}),
       items: payload?.line_items?.map((lineItem) => {

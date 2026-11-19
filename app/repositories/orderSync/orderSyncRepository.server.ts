@@ -48,4 +48,13 @@ export default interface OrderSyncRepository {
    * @returns {Promise<OrderSync>} A promise that resolves to the updated order sync record.
    */
   updateOrderSync(orderId: string, data: OrderSyncUpdate): Promise<OrderSync>;
+
+  /**
+   * Deletes the order sync record of an order, if there is one.
+   *
+   * @param {number} shopId - Shop.id of the shop the record belongs to.
+   * @param {string} orderId - Shopify order ID (e.g. gid://shopify/Order/123).
+   * @returns {Promise<number>} A promise that resolves to the number of deleted records.
+   */
+  deleteOrderSync(shopId: number, orderId: string): Promise<number>;
 }
