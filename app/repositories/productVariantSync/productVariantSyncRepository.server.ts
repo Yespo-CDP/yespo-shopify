@@ -15,10 +15,12 @@ export default interface ProductVariantSyncRepository {
   /**
    * Retrieves synced product variants by Shopify variant ids.
    *
+   * @param {number} shopId - Shop.id of the shop the records belong to.
    * @param {string[]} variantIds - Shopify variant IDs array (e.g. gid://shopify/ProductVariant/123).
    * @returns {Promise<ProductVariantSync[]>} A promise that resolves to the product variant sync records.
    */
   getProductVariantSyncByVariantIds(
+    shopId: number,
     variantIds: string[],
   ): Promise<ProductVariantSync[]>;
 

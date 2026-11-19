@@ -8,7 +8,8 @@ import { authenticate } from "../shopify.server";
  *
  * Overwrites the stored shop email, name, and primary domain.
  * The webhook `domain` is the shop's primary domain host, matching
- * `primaryDomain.host` saved during install.
+ * `primaryDomain.host` saved during install. If another shop row holds
+ * that domain, it is freed first (that row gets its own shopUrl as `domain`).
  *
  * Returns HTTP 200 when the session or shop record is missing so Shopify
  * does not retry a store that is no longer installed.
@@ -30,6 +31,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
   const email = typeof payload.email === "string" ? payload.email : undefined;
   const name = typeof payload.name === "string" ? payload.name : undefined;
   const domain = typeof payload.domain === "string" ? payload.domain : undefined;
+
+  // A domain moved from another shop: give that row its own shopUrl back.
+  const holder = domain ? await shopRepository.getShopByDomain(domain) : null;
+  if (holder && holder.shopUrl !== shop) {
+    await shopRepository.updateShop(holder.shopUrl, { domain: holder.shopUrl });
+  }
 
   await shopRepository.updateShop(shop, {
     ...(email !== undefined ? { email } : {}),

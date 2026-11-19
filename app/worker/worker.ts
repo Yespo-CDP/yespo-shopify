@@ -1,17 +1,23 @@
 import { Worker } from "bullmq";
 
+import { TMP_MARKET_SYNC_TTL_MS } from "~/config/constants";
 import { bullmqConnection } from "~/config/redis";
 import {
+  customerSyncLogRepository,
   eventDataRepository,
+  orderSyncLogRepository,
+  productVariantSyncLogRepository,
   shopRepository,
+  tmpMarketSyncRepository,
 } from "~/repositories/repositories.server";
-import { getOfflineAccessToken } from "~/services/get-offline-session.server";
 import { migrateOfflineTokenToExpiring } from "~/services/migrate-offline-token.server";
 import { customerSyncHandler } from "./handlers/customer-sync-handler";
 import { orderSyncHandler } from "./handlers/order-sync-handler";
 import { productSyncHandler } from "./handlers/product-sync-handler";
 import { marketSyncHandler } from "./handlers/market-sync-handler";
 import { productWebhookHandler } from "./handlers/product-webhook-handler";
+import { webhookEventHandler } from "./handlers/webhook-event-handler";
+import { createOfflineTokenManager } from "./services/offline-token-manager";
 import {
   DB_CLEANER_CRON_JOB_NAME,
   enqueueMarketSyncTaskForShopUrl,
@@ -21,6 +27,8 @@ import {
   type ProductWebhookJobData,
   registerDbCleanerCron,
   registerMarketSyncCron,
+  WEBHOOK_EVENT_QUEUE_NAME,
+  type WebhookEventJobData,
 } from "~/services/queue";
 
 interface JobData {
@@ -56,6 +64,11 @@ const cronWorker = new Worker(
     if (job.name === DB_CLEANER_CRON_JOB_NAME) {
       await eventDataRepository.bulkDeleteEventsData();
       console.log("Expired EventData cleaned");
+
+      const staleTmpRows = await tmpMarketSyncRepository.deleteOlderThan(
+        new Date(Date.now() - TMP_MARKET_SYNC_TTL_MS),
+      );
+      console.log(`Stale TmpMarketSync rows cleaned: ${staleTmpRows}`);
     }
   },
   {
@@ -64,30 +77,85 @@ const cronWorker = new Worker(
   },
 );
 
+/**
+ * Sets ERROR on the job's sync logs that are still IN_PROGRESS, so the admin
+ * doesn't show an import that will never finish. Logs a handler already
+ * finished (COMPLETE/ERROR) are left as they are. Never throws.
+ */
+async function markUnfinishedSyncLogsAsError(
+  shop: string,
+  shopId: number,
+  kinds: NonNullable<JobData["kinds"]>,
+) {
+  const errorLog = {
+    status: "ERROR" as const,
+    shop: { connect: { id: shopId } },
+  };
+
+  try {
+    if (kinds.includes("customer")) {
+      const log =
+        await customerSyncLogRepository.getCustomerSyncLogByShop(shop);
+      if (log?.status === "IN_PROGRESS") {
+        await customerSyncLogRepository.createOrUpdateCustomerSyncLog(errorLog);
+      }
+    }
+    if (kinds.includes("order")) {
+      const log = await orderSyncLogRepository.getOrderSyncLogByShop(shop);
+      if (log?.status === "IN_PROGRESS") {
+        await orderSyncLogRepository.createOrUpdateOrderSyncLog(errorLog);
+      }
+    }
+    if (kinds.includes("product")) {
+      const log =
+        await productVariantSyncLogRepository.getProductVariantSyncLogByShop(
+          shop,
+        );
+      if (log?.status === "IN_PROGRESS") {
+        await productVariantSyncLogRepository.createOrUpdateProductVariantSyncLog(
+          errorLog,
+        );
+      }
+    }
+  } catch (error: unknown) {
+    console.error(
+      `Data sync: failed to mark sync logs as ERROR for ${shop}:`,
+      error,
+    );
+  }
+}
+
 const dataSyncWorker = new Worker<JobData>(
   "data-sync",
   async (job) => {
+    const { shop } = job?.data ?? {};
+
+    if (!shop) return;
+
+    const kinds = job.data.kinds ?? ["customer", "order"];
+    let shopId: number | undefined;
+
     try {
-      const { shop } = job?.data;
+      const shopData = await shopRepository.getShop(shop);
+      shopId = shopData?.id;
 
-      if (!shop) return;
-
-      const accessToken = await getOfflineAccessToken(shop);
+      const tokenManager = createOfflineTokenManager(shop);
+      const accessToken = await tokenManager.getAccessToken();
       if (!accessToken) {
         console.error(`Data sync: no valid offline session for ${shop}`);
+        if (shopId) await markUnfinishedSyncLogsAsError(shop, shopId, kinds);
         return;
       }
 
-      const shopData = await shopRepository.getShop(shop);
       const apiKey = shopData?.apiKey;
 
       if (!apiKey) {
         console.error(
           `Error data synchronization: Api key not found for ${shop}`,
         );
+        if (shopId) await markUnfinishedSyncLogsAsError(shop, shopId, kinds);
         return;
       }
-      const kinds = job.data.kinds ?? ["customer", "order"];
 
       if (kinds.includes("customer")) {
         await customerSyncHandler(
@@ -96,6 +164,7 @@ const dataSyncWorker = new Worker<JobData>(
           apiKey,
           shopData.id,
           shopData.orgId,
+          tokenManager,
         );
       }
       if (kinds.includes("order")) {
@@ -105,6 +174,7 @@ const dataSyncWorker = new Worker<JobData>(
           apiKey,
           shopData.id,
           shopData.orgId,
+          tokenManager,
         );
       }
       if (kinds.includes("product")) {
@@ -115,11 +185,13 @@ const dataSyncWorker = new Worker<JobData>(
           shopData.id,
           shopData.orgId,
           shopData.siteId,
+          tokenManager,
         );
         await enqueueMarketSyncTaskForShopUrl(shop);
       }
     } catch (error: any) {
       console.error(`Worker error:`, error);
+      if (shopId) await markUnfinishedSyncLogsAsError(shop, shopId, kinds);
     }
   },
   {
@@ -136,7 +208,8 @@ const marketSyncWorker = new Worker<MarketSyncJobData>(
 
       if (!shop) return;
 
-      const accessToken = await getOfflineAccessToken(shop);
+      const tokenManager = createOfflineTokenManager(shop);
+      const accessToken = await tokenManager.getAccessToken();
       if (!accessToken) {
         console.error(`Market sync: no valid offline session for ${shop}`);
         return;
@@ -158,6 +231,7 @@ const marketSyncWorker = new Worker<MarketSyncJobData>(
         shopData.orgId,
         shopData.siteId,
         marketId,
+        tokenManager,
       );
     } catch (error: unknown) {
       console.error(`Market sync worker error:`, error);
@@ -197,14 +271,52 @@ const tokenMigrationWorker = new Worker<TokenMigrationJobData>(
   },
 );
 
-for (const worker of [
+// Customers, orders and carts webhooks. Failed jobs are removed (their payload
+// holds customer data), so the failure is logged here, without the payload.
+const webhookEventWorker = new Worker<WebhookEventJobData>(
+  WEBHOOK_EVENT_QUEUE_NAME,
+  async (job) => {
+    try {
+      await webhookEventHandler(job.data);
+    } catch (error: any) {
+      console.error(
+        `[webhook-event] ${job.name} for ${job.data.shop} failed ` +
+          `(attempt ${job.attemptsMade + 1}/${job.opts.attempts ?? 1}):`,
+        error?.message,
+      );
+      throw error;
+    }
+  },
+  {
+    connection: bullmqConnection,
+    concurrency: 5,
+  },
+);
+
+const workers = [
   cronWorker,
   dataSyncWorker,
   marketSyncWorker,
   productWebhookWorker,
   tokenMigrationWorker,
-]) {
+  webhookEventWorker,
+];
+
+for (const worker of workers) {
   worker.on("error", (error) => {
     console.error(`[worker:${worker.name}] Redis error:`, error?.message);
   });
 }
+
+// close() stops taking new jobs and waits for active ones. It leaves the shared
+// Redis client open, so the process has to exit explicitly.
+let shuttingDown = false;
+const shutdown = async (signal: string) => {
+  if (shuttingDown) return; // Heroku may send SIGTERM more than once
+  shuttingDown = true;
+  console.log(`[worker] ${signal}: closing workers`);
+  await Promise.allSettled(workers.map((w) => w.close()));
+  process.exit(0);
+};
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+process.on("SIGINT", () => void shutdown("SIGINT"));

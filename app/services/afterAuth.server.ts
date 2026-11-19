@@ -24,6 +24,7 @@ const HOST_URL =
 /**
  * Handles post-authentication logic for a Shopify session.
  *
+ * - Frees the primary domain if another shop row holds it (that row gets its own shopUrl as `domain`)
  * - Updates or creates the shop in your database
  * - Registers metafield definitions for Yespo scripts if they do not exist
  * - Deletes Yespo-related metafields if the shop has no API key
@@ -51,6 +52,13 @@ admin,
   }
 
   const shopObject = await shopRepository.getShop(session?.shop);
+
+  // A domain moved from another shop: give that row its own shopUrl back.
+  const domain = shop.primaryDomain?.host;
+  const holder = domain ? await shopRepository.getShopByDomain(domain) : null;
+  if (holder && holder.shopUrl !== shop.myshopifyDomain) {
+    await shopRepository.updateShop(holder.shopUrl, { domain: holder.shopUrl });
+  }
 
   if (shopObject) {
     await shopRepository.updateShop(session.shop, {

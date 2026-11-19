@@ -18,4 +18,12 @@ export default interface CustomerRepository {
    * @returns {Promise<Customer>} A promise that resolves to the created or updated customer.
    */
   upsertCustomer(data: CustomerCreate): Promise<Customer>;
+
+  /**
+   * Deletes a customer record if it exists.
+   *
+   * @param {string} customerId - The Shopify customer ID.
+   * @returns {Promise<void>} A promise that resolves when the deletion is complete.
+   */
+  deleteCustomer(customerId: string): Promise<void>;
 }

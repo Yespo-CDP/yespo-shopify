@@ -28,16 +28,27 @@ export default class CustomerRepositoryImpl implements ICustomerRepository {
    * @returns {Promise<Customer>} A promise that resolves to the upserted customer.
    */
   async upsertCustomer(data: CustomerCreate): Promise<Customer> {
+    const {customerId, email, phone, firstName, lastName} = data;
+    const fields = {email, phone, firstName, lastName};
     return this.database.customer.upsert({
       where: {
-        customerId: data.customerId
+        customerId
       },
       create: {
-        ...data
+        customerId,
+        ...fields
       },
-      update: {
-        ...data
-      }
+      update: fields
     })
+  }
+
+  /**
+   * Deletes a customer record by `customerId`. Does nothing if the record does not exist.
+   *
+   * @param {string} customerId - The Shopify customer ID.
+   * @returns {Promise<void>} A promise that resolves when the deletion is complete.
+   */
+  async deleteCustomer(customerId: string): Promise<void> {
+    await this.database.customer.deleteMany({where: {customerId}});
   }
 }

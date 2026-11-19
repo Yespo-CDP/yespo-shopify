@@ -75,8 +75,8 @@ export default interface ShopRepository {
   getShopsForMarketSync(): Promise<ShopWithMarketSyncLogs[]>;
 
   /**
-   * Returns every shop in the database. Used by the one-time offline token
-   * migration to enqueue a job per shop.
+   * Returns the URL of every shop in the database. Used by the one-time offline
+   * token migration to enqueue a job per shop.
    */
-  getAllShops(): Promise<Shop[]>;
+  getAllShops(): Promise<{ shopUrl: string }[]>;
 }

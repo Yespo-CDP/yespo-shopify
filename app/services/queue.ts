@@ -51,6 +51,36 @@ export interface ProductWebhookJobData {
   productGid: string;
 }
 
+export const WEBHOOK_EVENT_QUEUE_NAME = "webhook-events";
+
+export const WebhookEventQueue = createQueue(WEBHOOK_EVENT_QUEUE_NAME);
+
+/** A customers, orders or carts webhook, processed by the worker. */
+export interface WebhookEventJobData {
+  shop: string;
+  topic: string;
+  payload: unknown;
+}
+
+/**
+ * Enqueues a customers/orders/carts webhook so the route can answer Shopify
+ * right away. The job id comes from X-Shopify-Webhook-Id, so a repeated
+ * delivery is skipped while the first job is still in the queue. Failed jobs
+ * are removed because the payload holds customer data; the worker logs them.
+ */
+export async function enqueueWebhookEvent(
+  data: WebhookEventJobData,
+  webhookId: string,
+): Promise<void> {
+  await WebhookEventQueue.add(data.topic, data, {
+    jobId: `webhook-${webhookId}`,
+    attempts: 5,
+    backoff: { type: "exponential", delay: 5000 },
+    removeOnComplete: true,
+    removeOnFail: true,
+  });
+}
+
 export const MARKET_SYNC_CRON_JOB_NAME = "market-sync-tick";
 export const DB_CLEANER_CRON_JOB_NAME = "db-cleaner-tick";
 export const TOKEN_MIGRATION_JOB_NAME = "migrate-token";
@@ -82,8 +112,9 @@ export async function enqueueTokenMigration(): Promise<number> {
 }
 
 /**
- * Registers the daily market-sync scheduler in Redis. Safe to call on every
- * worker startup — BullMQ upserts the scheduler by id.
+ * Registers the daily (03:00 UTC) market-sync scheduler in Redis. Safe to call
+ * on every worker startup — BullMQ upserts the scheduler by id, replacing the
+ * pending run of the previous pattern.
  */
 export async function registerMarketSyncCron(): Promise<void> {
   await CronQueue.upsertJobScheduler(
@@ -101,8 +132,9 @@ export async function registerMarketSyncCron(): Promise<void> {
 }
 
 /**
- * Registers the daily EventData TTL cleanup scheduler in Redis. Safe to call
- * on every worker startup — BullMQ upserts the scheduler by id.
+ * Registers the daily EventData TTL cleanup scheduler in Redis. The same job
+ * also deletes TmpMarketSync rows older than TMP_MARKET_SYNC_TTL_MS (24 h).
+ * Safe to call on every worker startup — BullMQ upserts the scheduler by id.
  */
 export async function registerDbCleanerCron(): Promise<void> {
   await CronQueue.upsertJobScheduler(
@@ -130,8 +162,6 @@ export async function enqueueDataSyncTasks({
   shop: Shop;
   kinds: DataSyncKind[];
 }) {
-  console.log("Enqueueing data sync tasks...", session, kinds);
-
   const syncCustomers = kinds.includes("customer");
   const syncOrders = kinds.includes("order");
   const syncProducts = kinds.includes("product");
@@ -319,8 +349,10 @@ function lastCompletedAt(shop: ShopWithMarketSyncLogs): Date | null {
  * shops first, then oldest updatedAt).
  *
  * Shops whose last successful (COMPLETE) sync finished less than
- * MARKET_SYNC_MIN_INTERVAL_MS ago are skipped so a shop is not re-synced every
- * hour. Never-synced shops and shops whose last sync ended in ERROR are not
+ * MARKET_SYNC_MIN_INTERVAL_MS (20h) ago are skipped, so a shop synced off
+ * schedule later in the day waits for the next day's tick, while a shop that
+ * finished shortly after the previous tick is still picked up by this one.
+ * Never-synced shops and shops whose last sync ended in ERROR are not
  * throttled. This interval applies only to the daily cron path; post data-sync
  * triggers (enqueueMarketSyncTaskForShopUrl) bypass it, but still require
  * isMarketSyncEnabled.

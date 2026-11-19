@@ -6,12 +6,14 @@ import {
 } from "~/repositories/repositories.server";
 import { updateContacts } from "~/api/update-contacts";
 import { createClient } from "../services/create-client";
+import type { OfflineTokenManager } from "../services/offline-token-manager";
 import { getCustomers } from "../services/get-customers";
 import { getCustomersCount } from "../services/get-customers-count";
 import { createContactPayload } from "../services/create-contact-payload";
 import { fetchContactMarketContext } from "~/services/fetch-contact-market-context.server";
 import {sendLogEvent} from "~/api/send-log-event";
 import {EVENT_MESSAGES} from "~/config/constants";
+import { normalizeYespoItems } from "~/utils/normalize-yespo-items";
 
 const CUSTOMERS_CHUNK_SIZE = 200; // Shopify max limit 250
 
@@ -45,17 +47,17 @@ export const customerSyncHandler = async (
   accessToken: string,
   apiKey: string,
   shopId: number,
-  orgId?: number | null
+  orgId?: number | null,
+  tokenManager?: OfflineTokenManager,
 ) => {
   console.log(`⏳ Synchronizing customers start for ${shop}`);
   console.log("shop", shop);
-  console.log("accessToken", accessToken);
 
   const shopRecord = await shopRepository.getShop(shop);
   const logDomain = shopRecord?.domain || shop;
   const marketContext = await fetchContactMarketContext(shop);
 
-  const client = createClient({ shop, accessToken });
+  const client = createClient({ shop, accessToken, tokenManager });
   const customersCount = await getCustomersCount({ client });
   console.log("Total customers count", customersCount, "\n");
 
@@ -82,10 +84,12 @@ export const customerSyncHandler = async (
           const customerIds = customers.map((customer) => customer.id);
           const customerSyncs =
             await customerSyncRepository.getCustomerSyncByCustomerIds(
+              shopId,
               customerIds,
             );
 
           const contactsData: Contact[] = [];
+          const sentCustomers: typeof customers = [];
 
           let chunkSkippedCount = 0;
           let chunkFailedCount = 0;
@@ -103,17 +107,7 @@ export const customerSyncHandler = async (
             if (customerUpdatedDate > customerSyncUpdatedDate) {
               const contact = createContactPayload(customer, marketContext);
               contactsData.push(contact);
-
-              await customerSyncRepository.createOrUpdateCustomerSync({
-                customerId: customer.id,
-                createdAt: customer.createdAt,
-                updatedAt: customer.updatedAt,
-                shop: {
-                  connect: {
-                    id: shopId,
-                  },
-                },
-              });
+              sentCustomers.push(customer);
             } else {
               chunkSkippedCount++;
             }
@@ -144,6 +138,42 @@ export const customerSyncHandler = async (
               } else {
                 chunkFailedCount = 1;
               }
+            }
+
+            // Yespo returns rejected contacts without externalCustomerId,
+            // so match them by email. A contact without email is marked.
+            const failedEmails = new Set(
+              normalizeYespoItems(
+                contactsUpdateResponse?.failedContacts as
+                  | Partial<Contact>
+                  | Partial<Contact>[]
+                  | undefined,
+              )
+                .flatMap((failed) => normalizeYespoItems(failed?.channels))
+                .filter((channel) => channel?.type === "email")
+                .map((channel) => String(channel.value).trim().toLowerCase()),
+            );
+
+            for (const [index, customer] of sentCustomers.entries()) {
+              const email = contactsData[index].channels
+                .find((channel) => channel.type === "email")
+                ?.value.trim()
+                .toLowerCase();
+
+              if (email && failedEmails.has(email)) {
+                continue;
+              }
+
+              await customerSyncRepository.createOrUpdateCustomerSync({
+                customerId: customer.id,
+                createdAt: customer.createdAt,
+                updatedAt: customer.updatedAt,
+                shop: {
+                  connect: {
+                    id: shopId,
+                  },
+                },
+              });
             }
           }
 

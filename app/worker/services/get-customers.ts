@@ -12,7 +12,7 @@ import type { CustomersResponse, CustomerData } from "~/@types/customer";
  * @param {number} [params.count=1] - The number of customers to fetch.
  * @param {string} [params.cursor=null] - Cursor to request a specific page
  *
- * @returns {Promise<CustomerData[]>} A promise that resolves to an array of `CustomerData` objects, or an empty array if the query fails.
+ * @returns {Promise<CustomerData[]>} A promise that resolves to an array of `CustomerData` objects. Throws on request errors.
  *
  * @example
  * const customers = await getCustomers({ client, count: 5 });
@@ -27,9 +27,8 @@ export const getCustomers = async ({
   count?: number;
   cursor?: string | null;
 }): Promise<{ customers: CustomerData[]; cursor?: string | null }> => {
-  try {
-    const response = await client.request(
-      `query getCustomers($count: Int, $cursor: String) {
+  const response = await client.request(
+    `query getCustomers($count: Int, $cursor: String) {
           customers(first: $count, after: $cursor) {
             nodes {
               id
@@ -63,25 +62,27 @@ export const getCustomers = async ({
           }
         }
       `,
-      {
-        variables: {
-          count,
-          cursor,
-        },
+    {
+      variables: {
+        count,
+        cursor,
       },
+    },
+  );
+
+  if (response.errors) {
+    throw new Error(
+      `Failed to fetch customers: ${JSON.stringify(response.errors)}`,
     );
-
-    const customersData = response?.data as CustomersResponse;
-    const customers = customersData?.customers?.nodes;
-    const endCursor = customersData?.customers?.pageInfo?.endCursor;
-    const hasNextPage = customersData?.customers?.pageInfo?.hasNextPage;
-
-    return {
-      customers: customers ?? [],
-      cursor: hasNextPage ? endCursor : null,
-    };
-  } catch (error) {
-    console.error(error);
-    return { customers: [], cursor: null };
   }
+
+  const customersData = response?.data as CustomersResponse;
+  const customers = customersData?.customers?.nodes;
+  const endCursor = customersData?.customers?.pageInfo?.endCursor;
+  const hasNextPage = customersData?.customers?.pageInfo?.hasNextPage;
+
+  return {
+    customers: customers ?? [],
+    cursor: hasNextPage ? endCursor : null,
+  };
 };

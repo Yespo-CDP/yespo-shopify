@@ -8,7 +8,6 @@ import * as i18n from "~/i18n";
 
 async function main() {
   const detectedLng = document.documentElement.lang || i18n.fallbackLng;
-  // eslint-disable-next-line import/no-named-as-default-member
   await i18next
     .use(initReactI18next) // Tell i18next to use the react-i18next plugin
     .init({

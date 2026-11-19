@@ -15,10 +15,14 @@ export default interface CustomerSyncRepository {
   /**
    * Retrieves synced customers by shopify customer ids.
    *
+   * @param {number} shopId - Shop.id of the shop the records belong to.
    * @param {string[]} customerIds - Shopify customer IDs array (e.g. gid://shopify/Customer/123).
    * @returns {Promise<CustomerSync[]>} A promise that resolves to the customer syncs records.
    */
-  getCustomerSyncByCustomerIds(customerIds: string[]): Promise<CustomerSync[]>;
+  getCustomerSyncByCustomerIds(
+    shopId: number,
+    customerIds: string[],
+  ): Promise<CustomerSync[]>;
 
   /**
    * Creates a new customer sync record.

@@ -1,23 +1,20 @@
 import type { ActionFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
 import { shopRepository } from "~/repositories/repositories.server";
-import { createContactService } from "~/services/create-contact.server";
-import { updateContactService } from "~/services/update-contact.service";
+import { enqueueWebhookEvent } from "~/services/queue";
 
 /**
- * Action handler for processing incoming Shopify webhooks.
+ * Action handler for customers/create and customers/update webhooks.
  *
- * Authenticates the webhook request, retrieves the associated shop,
- * and processes the webhook payload based on the webhook topic.
- *
- * Supported webhook topics:
- * - "CUSTOMERS_CREATE": Calls `createContactService` with payload and shop API key.
- * - "CUSTOMERS_UPDATE": Calls `updateContactService` with payload and shop API key.
+ * Authenticates the webhook request, retrieves the associated shop, queues the
+ * webhook for the worker (`webhookEventHandler`) and responds with HTTP 200 right
+ * away, so Yespo requests do not run inside Shopify's 5-second limit.
  *
  * If the session is not exist responds with HTTP 200.
  * If the shop is not found or does not have an API key, responds with HTTP 200.
  * If sync contacts disabled responds with HTTP 200.
- * If the webhook topic is unhandled, responds with HTTP 400 and logs a warning.
+ * If Redis rejects the job, the error is thrown (HTTP 500) so Shopify retries; while
+ * Redis is unreachable the request waits and Shopify retries after its 5-second timeout.
  *
  * @param {ActionFunctionArgs} args - The arguments containing the request.
  * @returns {Promise<Response>} An HTTP response indicating success or failure.
@@ -40,33 +37,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     return new Response("Success", { status: 200 });
   }
 
-  switch (topic) {
-    case "CUSTOMERS_CREATE":
-      await createContactService(
-        payload,
-        shop.apiKey,
-        shop.id,
-        shop.domain || shop.shopUrl,
-        shop.orgId,
-        shop.shopUrl || session.shop,
-      );
-      break;
-
-    case "CUSTOMERS_UPDATE":
-      await updateContactService(
-        payload,
-        shop.apiKey,
-        shop.id,
-        shop.domain || shop.shopUrl,
-        shop.orgId,
-        shop.shopUrl || session.shop,
-      );
-      break;
-
-    default:
-      console.warn(`❌ Unhandled webhook topic: ${topic}`);
-      return new Response(`Unhandled webhook topic: ${topic}`, { status: 200 });
-  }
+  await enqueueWebhookEvent({ shop: session.shop, topic, payload }, webhookId);
 
   return new Response("Success", { status: 200 });
 };

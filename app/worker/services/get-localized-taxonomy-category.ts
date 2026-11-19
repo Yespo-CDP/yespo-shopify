@@ -2,8 +2,8 @@ import {
   createGraphQLClient,
   type GraphQLClient,
 } from "@shopify/graphql-client";
-import { ApiVersion } from "@shopify/shopify-app-react-router/server";
 import type { ProductTranslationCategory } from "~/@types/product";
+import { apiVersion } from "~/shopify.server";
 
 const STOREFRONT_TOKEN_TITLE = "Yespo taxonomy translations";
 
@@ -91,7 +91,7 @@ const getStorefrontAccessToken = async (
 
 const storefrontClientFor = (shop: string, accessToken: string): GraphQLClient =>
   createGraphQLClient({
-    url: `https://${shop}/api/${ApiVersion.April26}/graphql.json`,
+    url: `https://${shop}/api/${apiVersion}/graphql.json`,
     headers: {
       "Content-Type": "application/json",
       "X-Shopify-Storefront-Access-Token": accessToken,

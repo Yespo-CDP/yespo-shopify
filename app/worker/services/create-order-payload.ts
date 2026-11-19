@@ -39,7 +39,7 @@ import { presentmentMoneyAmount } from "~/services/presentment-money";
  *    - `lineItem.variant.id` → `externalItemId`
  *    - `lineItem.name` → `name`
  *    - `lineItem.quantity` → `quantity`
- *    - `lineItem.originalTotalSet.presentmentMoney.amount` → `cost`
+ *    - `lineItem.originalUnitPriceSet.presentmentMoney.amount` → `cost`
  *    - variant storefront URL (`?variant=<id>`) → `url`
  *    - variant image, else product featured image → `imageUrl`
  *
@@ -135,7 +135,7 @@ export const createOrderPayload = (
         externalItemId: variantId || (lineItem.id?.split("/").pop() ?? ""),
         name: lineItem.name,
         quantity: lineItem.quantity,
-        cost: presentmentMoneyAmount(lineItem?.originalTotalSet),
+        cost: presentmentMoneyAmount(lineItem?.originalUnitPriceSet),
         ...(link?.url ? { url: link.url } : {}),
         ...(link?.imageUrl ? { imageUrl: link.imageUrl } : {}),
       };

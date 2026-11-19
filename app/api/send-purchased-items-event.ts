@@ -15,8 +15,7 @@ import {EVENT_MESSAGES} from "~/config/constants";
  * @param {Object} params - Parameters for sending the purchased items event.
  * @param {string} params.apiKey - The API key used to generate the authorization header.
  * @param {PurchasedItemsEvent} params.purchasedItemsData - The data representing the purchased items event.
- * @returns {Promise<void>} A promise that resolves when the event is successfully sent.
- * @throws Will log an error to the console if the request fails.
+ * @returns {Promise<boolean>} `true` when the tracker accepted the event, `false` when the request failed (the error is logged).
  *
  * @example
  * await sendPurchasedItemsEvent({
@@ -41,7 +40,7 @@ export const sendPurchasedItemsEvent = async ({
   purchasedItemsData: PurchasedItemsEvent;
   domain: string;
   orgId?: number | null;
-}): Promise<void> => {
+}): Promise<boolean> => {
   const url = `${process.env.WEB_TRACKER_URL}`;
   const authHeader = getAuthHeader(apiKey);
   const options = {
@@ -68,6 +67,8 @@ export const sendPurchasedItemsEvent = async ({
       message: EVENT_MESSAGES.WEB_TRACKING_PURCHASED_ITEMS_SUCCESS,
       logLevel: 'INFO'
     })
+
+    return true;
   } catch (error: any) {
     console.error("Error sending purchased items:", error?.message);
 
@@ -84,5 +85,6 @@ export const sendPurchasedItemsEvent = async ({
       logLevel: 'ERROR'
     })
 
+    return false;
   }
 };

@@ -39,5 +39,9 @@ export interface CustomersResponse {
 }
 
 export type Customer = Customer;
-export type CustomerCreate = Prisma.CustomerCreateInput;
+// Only scalar fields: nested relation writes (eventsData) must not be accepted.
+export type CustomerCreate = Pick<
+  Prisma.CustomerCreateInput,
+  "customerId" | "email" | "phone" | "firstName" | "lastName"
+>;
 export type CustomerUpdate = Prisma.CustomerUpdateInput;

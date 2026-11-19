@@ -1,4 +1,5 @@
 import type { ProductVariant } from "~/@types/productVariant";
+import type { ShopMarketsConfig } from "~/@types/shopMarketsConfig";
 import {
   shopRepository,
   marketSyncRepository,
@@ -8,6 +9,7 @@ import {
 import { updateProductVariants } from "~/api/update-product-variants";
 import { deleteProductVariants } from "~/api/delete-product-variants";
 import { createClient } from "../services/create-client";
+import type { OfflineTokenManager } from "../services/offline-token-manager";
 import { getProducts } from "../services/get-products";
 import { getProductVariantsCount } from "../services/get-product-variants-count";
 import { fetchAllProductVariants } from "../services/get-product-variants";
@@ -41,10 +43,11 @@ export const productSyncHandler = async (
   shopId: number,
   orgId?: number | null,
   siteId?: string | null,
+  tokenManager?: OfflineTokenManager,
 ) => {
   console.log(`⏳ Synchronizing products start for ${shop}`);
 
-  const client = createClient({ shop, accessToken });
+  const client = createClient({ shop, accessToken, tokenManager });
   const variantsCount = await getProductVariantsCount({ client });
 
   console.log("Total product variants count", variantsCount, "\n");
@@ -64,7 +67,7 @@ export const productSyncHandler = async (
     primaryLocale: languageCode,
   });
   const hasTranslations = secondaryLocales.length > 0;
-  const marketsConfig = await fetchShopMarketsConfig({ client });
+  let marketsConfig: ShopMarketsConfig | undefined;
 
   // Persist defaultLanguageCode after the first batch when it differs from DB.
   let needsLanguageCodePersist = languageCode !== storedLanguageCode;
@@ -81,6 +84,9 @@ export const productSyncHandler = async (
   try {
     do {
       try {
+        // Read once, inside the chunk try: a failure is logged to Yespo and
+        // ends the sync with ERROR like any other chunk error.
+        marketsConfig ??= await fetchShopMarketsConfig({ client });
         console.log("\n", "Chunk start:");
 
         if (shopData?.isProductVariantSyncEnabled) {
@@ -135,6 +141,7 @@ export const productSyncHandler = async (
             const variantIds = variants.map((variant) => variant.id);
             const productVariantSyncs =
               await productVariantSyncRepository.getProductVariantSyncByVariantIds(
+                shopId,
                 variantIds,
               );
 
@@ -156,7 +163,10 @@ export const productSyncHandler = async (
               const syncUpdatedDate =
                 productVariantSync?.updatedAt?.getTime() ?? 0;
 
-              if (entityUpdatedDate > syncUpdatedDate) {
+              if (
+                productVariantSync?.syncFailed ||
+                entityUpdatedDate > syncUpdatedDate
+              ) {
                 const action = yespoProductAction(productVariantSync);
                 // Use the public custom domain for URL construction (fallback when
                 // onlineStoreUrl is null). shopData.domain is the primary domain
@@ -180,6 +190,9 @@ export const productSyncHandler = async (
                     variantId: variant.id,
                     productId: product.id,
                     syncedTagKeys: currentTagKeys,
+                    // Stay failed until Yespo accepts. A thrown request then retries,
+                    // because a successful row with a newer updatedAt would be skipped.
+                    syncFailed: true,
                     createdAt: variant.createdAt ?? product.createdAt,
                     // Persist the same timestamp we compare on the next run
                     // (max of variant + product), otherwise Enable resends
@@ -318,15 +331,24 @@ export const productSyncHandler = async (
           const chunk = deletedIds.slice(i, i + VARIANTS_API_CHUNK_SIZE);
           // Yespo stores products by numeric ID; extract it from the GID.
           const numericChunk = chunk.map((gid) => gid.split("/").pop() ?? gid);
-          await deleteProductVariants({
-            apiKey,
-            siteId: siteId ?? "",
-            externalVariantIds: numericChunk,
-            domain: logDomain,
-            orgId,
-          });
-          await productVariantSyncRepository.deleteByVariantIds(shopId, chunk);
-          await marketSyncRepository.deleteByVariantIds(shopId, chunk);
+          const acceptedIds = new Set(
+            await deleteProductVariants({
+              apiKey,
+              siteId: siteId ?? "",
+              externalVariantIds: numericChunk,
+              domain: logDomain,
+              orgId,
+            }),
+          );
+          // Rejected variants keep their rows, so the next sync retries them.
+          const acceptedGids = chunk.filter((gid) =>
+            acceptedIds.has(gid.split("/").pop() ?? gid),
+          );
+          await productVariantSyncRepository.deleteByVariantIds(
+            shopId,
+            acceptedGids,
+          );
+          await marketSyncRepository.deleteByVariantIds(shopId, acceptedGids);
         }
       }
     }

@@ -23,9 +23,8 @@ export const getProducts = async ({
   cursor?: string | null;
   shopCurrency?: string;
 }> => {
-  try {
-    const response = await client.request(
-      `query getProducts($count: Int, $cursor: String, $variantsCount: Int, $query: String) {
+  const response = await client.request(
+    `query getProducts($count: Int, $cursor: String, $variantsCount: Int, $query: String) {
         shop {
           currencyCode
         }
@@ -41,6 +40,7 @@ export const getProducts = async ({
             featuredImage { url }
             collections(first: 10) {
               nodes { id title handle }
+              pageInfo { endCursor hasNextPage }
             }
             category {
               id
@@ -79,31 +79,37 @@ export const getProducts = async ({
           }
         }
       }`,
-      {
-        variables: {
-          count,
-          cursor,
-          variantsCount: VARIANTS_PAGE_SIZE,
-          query: PRODUCT_SYNC_SEARCH_QUERY,
-        },
+    {
+      variables: {
+        count,
+        cursor,
+        variantsCount: VARIANTS_PAGE_SIZE,
+        query: PRODUCT_SYNC_SEARCH_QUERY,
       },
+    },
+  );
+
+  if (response.errors) {
+    throw new Error(
+      `Failed to fetch products: ${JSON.stringify(response.errors)}`,
     );
-
-    const productsData = response?.data as ProductsResponse;
-    const products = productsData?.products?.nodes;
-    const endCursor = productsData?.products?.pageInfo?.endCursor;
-    const hasNextPage = productsData?.products?.pageInfo?.hasNextPage;
-    const shopCurrency = productsData?.shop?.currencyCode;
-
-    return {
-      products: products ?? [],
-      cursor: hasNextPage ? endCursor : null,
-      shopCurrency,
-    };
-  } catch (error) {
-    console.error(error);
-    return { products: [], cursor: null };
   }
+
+  const productsData = response?.data as ProductsResponse;
+  const products = productsData?.products?.nodes ?? [];
+  const endCursor = productsData?.products?.pageInfo?.endCursor;
+  const hasNextPage = productsData?.products?.pageInfo?.hasNextPage;
+  const shopCurrency = productsData?.shop?.currencyCode;
+
+  for (const product of products) {
+    await fetchRemainingCollections({ client, product });
+  }
+
+  return {
+    products,
+    cursor: hasNextPage ? endCursor : null,
+    shopCurrency,
+  };
 };
 
 /**
@@ -134,6 +140,7 @@ export const getProductById = async ({
         featuredImage { url }
         collections(first: 10) {
           nodes { id title handle }
+          pageInfo { endCursor hasNextPage }
         }
         category {
           id
@@ -190,8 +197,57 @@ export const getProductById = async ({
     product?: ProductData | null;
   };
 
+  if (data?.product) {
+    await fetchRemainingCollections({ client, product: data.product });
+  }
+
   return {
     product: data?.product ?? null,
     shopCurrency: data?.shop?.currencyCode,
   };
+};
+
+/**
+ * Appends to `product.collections.nodes` the collections beyond the first
+ * page. Throws on request errors: Yespo replaces the categories on update, so
+ * part of the list would drop the rest.
+ */
+const fetchRemainingCollections = async ({
+  client,
+  product,
+}: {
+  client: GraphQLClient;
+  product: ProductData;
+}): Promise<void> => {
+  let cursor = product.collections?.pageInfo?.hasNextPage
+    ? product.collections.pageInfo.endCursor
+    : null;
+
+  while (cursor) {
+    const response = await client.request(
+      `query getProductCollections($id: ID!, $cursor: String) {
+        product(id: $id) {
+          collections(first: 250, after: $cursor) {
+            nodes { id title handle }
+            pageInfo { endCursor hasNextPage }
+          }
+        }
+      }`,
+      { variables: { id: product.id, cursor } },
+    );
+
+    if (response.errors) {
+      throw new Error(
+        `Failed to fetch collections of product ${product.id}: ${JSON.stringify(response.errors)}`,
+      );
+    }
+
+    const collections = (
+      response.data as { product?: Pick<ProductData, "collections"> | null }
+    )?.product?.collections;
+    product.collections?.nodes.push(...(collections?.nodes ?? []));
+    cursor = collections?.pageInfo?.hasNextPage
+      ? collections.pageInfo.endCursor
+      : null;
+  }
 };

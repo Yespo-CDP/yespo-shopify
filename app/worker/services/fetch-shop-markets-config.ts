@@ -28,6 +28,7 @@ interface MarketNode {
   };
   regions?: {
     nodes?: MarketRegionCountry[];
+    pageInfo?: { endCursor?: string | null; hasNextPage: boolean };
   };
   catalogs?: {
     nodes?: Array<{
@@ -86,6 +87,56 @@ function mapMarketNode(market: MarketNode): ShopMarketConfig {
   };
 }
 
+/**
+ * Appends to `market.regions.nodes` the countries beyond the first page.
+ * Throws on request errors so the market is not synced with part of its
+ * countries.
+ */
+async function fetchRemainingRegions({
+  client,
+  market,
+}: {
+  client: GraphQLClient;
+  market: MarketNode;
+}): Promise<void> {
+  let cursor = market.regions?.pageInfo?.hasNextPage
+    ? market.regions.pageInfo.endCursor
+    : null;
+
+  while (cursor) {
+    const response = await client.request(
+      `query getMarketRegions($id: ID!, $cursor: String) {
+        market(id: $id) {
+          regions(first: 250, after: $cursor) {
+            nodes {
+              ... on MarketRegionCountry {
+                code
+              }
+            }
+            pageInfo {
+              endCursor
+              hasNextPage
+            }
+          }
+        }
+      }`,
+      { variables: { id: market.id, cursor } },
+    );
+
+    if (response.errors) {
+      throw new Error(
+        `Failed to fetch countries of market ${market.id}: ${JSON.stringify(response.errors)}`,
+      );
+    }
+
+    const regions = (
+      response.data as { market?: Pick<MarketNode, "regions"> | null }
+    )?.market?.regions;
+    market.regions?.nodes?.push(...(regions?.nodes ?? []));
+    cursor = regions?.pageInfo?.hasNextPage ? regions.pageInfo.endCursor : null;
+  }
+}
+
 export async function fetchShopMarketsConfig({
   client,
 }: {
@@ -117,6 +168,10 @@ export async function fetchShopMarketsConfig({
                 code
               }
             }
+            pageInfo {
+              endCursor
+              hasNextPage
+            }
           }
           catalogs(first: 50) {
             nodes {
@@ -132,10 +187,19 @@ export async function fetchShopMarketsConfig({
     { variables: { count: 250 } },
   );
 
+  if (response.errors) {
+    throw new Error(
+      `Failed to fetch markets: ${JSON.stringify(response.errors)}`,
+    );
+  }
+
   const marketsData = response?.data as MarketsDetailedResponse;
   const enabledNodes = (marketsData?.markets?.nodes ?? []).filter(
     (market) => market.enabled,
   );
+  for (const market of enabledNodes) {
+    await fetchRemainingRegions({ client, market });
+  }
   const markets = enabledNodes.map(mapMarketNode);
   const countries = [...new Set(markets.flatMap((market) => market.countries))];
   const locales = [...new Set(markets.flatMap((market) => market.locales))];
