@@ -118,7 +118,7 @@ export const createOrderPayload = (
     taxes: presentmentMoneyAmount(order?.totalTaxSet),
     currency: order.presentmentCurrencyCode || order.currencyCode,
     ...(marketId ? { marketId } : {}),
-    date: convertDateToUTC(order.createdAt),
+    date: convertDateToUTC(order.processedAt || order.createdAt),
     status: statusMap(order.displayFulfillmentStatus),
     deliveryAddress: formatAddress(order?.shippingAddress),
     items: order?.lineItems?.nodes?.map((lineItem) => {

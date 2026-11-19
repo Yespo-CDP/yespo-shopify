@@ -120,6 +120,7 @@ export const getOrders = async ({
               createdAt
               updatedAt
               cancelledAt
+              processedAt
             }
             pageInfo {
               endCursor
