@@ -41,7 +41,7 @@ beforeEach(() => {
   store = { id: 3, apiKey: "key", isWebTrackingEnabled: false, isOrderSyncEnabled: false };
 });
 
-for (const webhookTopic of ["ORDERS_CREATE", "ORDERS_UPDATED"]) {
+for (const webhookTopic of ["ORDERS_CREATE", "ORDERS_UPDATED", "ORDERS_DELETE"]) {
   test(`${webhookTopic} is queued and answered with 200`, async () => {
     const response = await send(webhookTopic);
 

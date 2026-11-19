@@ -217,7 +217,9 @@ App requests access to the following scopes:
   - `read_all_orders`
 
 Shopify webhooks used:
+  - `orders/create` → creates order data
   - `orders/updated` → creates or updates existing order data
+  - `orders/delete` → deletes the order in Yespo
 
 ---
 
@@ -327,10 +329,11 @@ Final synchronization status:
 
 #### Real-time orders sync:
 
-Webhooks are triggered when orders are created or updated in Shopify:
+Webhooks are triggered when orders are created, updated or deleted in Shopify:
 
   - `orders/create` → new order sent to Yespo.
   - `orders/updated` → existing order updated in Yespo.
+  - `orders/delete` → order deleted in Yespo (`DELETE /orders?externalOrderId=…`), only when order sync is enabled. Yespo deletes the order asynchronously. The order's `OrderSync` record is deleted as well.
 
 ---
 
@@ -342,6 +345,7 @@ Webhooks are triggered when orders are created or updated in Shopify:
 #### Yespo API methods:
 
 - [POST /orders](https://docs.esputnik.com/reference/ordersbulkinsert-1) – creates or updates orders.
+- [DELETE /orders](https://docs.esputnik.com/reference/removehistoryorders) – deletes an order by externalOrderId (asynchronous).
 
 ### Product Sync (Shopify → Yespo)
 
@@ -906,6 +910,7 @@ Shopify webhooks (API version: 2025-10) used by the app:
 | **app/uninstalled**        | Triggered when a merchant uninstalls the app.                                 | `/webhooks/app/uninstalled`   |
 | **orders/create**          | Triggered when an order is created.                                           | `/webhook/app/orders`         |
 | **orders/updated**         | Triggered when an existing order’s data is updated.                           | `/webhook/app/orders`         |
+| **orders/delete**          | Triggered when an order is deleted. Deletes the order in Yespo if order sync is enabled. | `/webhook/app/orders`         |
 | **products/create**        | Triggered when a new product is created.                                      | `/webhooks/app/products`      |
 | **products/update**        | Triggered when an existing product’s data is updated.                         | `/webhooks/app/products`      |
 | **products/delete**        | Triggered when a product is deleted.                                          | `/webhooks/app/products`      |

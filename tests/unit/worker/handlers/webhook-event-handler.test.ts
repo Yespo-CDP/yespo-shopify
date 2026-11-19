@@ -14,12 +14,14 @@ const updateOrderService = mock.fn(async (..._args: unknown[]) => {});
 const sendStatusCartService = mock.fn(async (..._args: unknown[]) => {});
 const createContactService = mock.fn(async (..._args: unknown[]) => {});
 const updateContactService = mock.fn(async (..._args: unknown[]) => {});
+const deleteOrderService = mock.fn<(...args: unknown[]) => Promise<void>>(async () => {});
 const services = [
   sendPurchasedItemsService,
   updateOrderService,
   sendStatusCartService,
   createContactService,
   updateContactService,
+  deleteOrderService,
 ];
 
 mock.module("../../../../app/repositories/repositories.server", {
@@ -39,6 +41,9 @@ mock.module("../../../../app/services/create-contact.server", {
 });
 mock.module("../../../../app/services/update-contact.service", {
   namedExports: { updateContactService },
+});
+mock.module("../../../../app/services/delete-order.server", {
+  namedExports: { deleteOrderService },
 });
 
 const { webhookEventHandler } = await import(
@@ -116,6 +121,23 @@ test("ORDERS_UPDATED does not send the order when order sync is disabled", async
   assert.equal(updateOrderService.mock.callCount(), 0);
 });
 
+// Order deletion (task 44).
+
+test("ORDERS_DELETE deletes the order when order sync is enabled", async () => {
+  await run("ORDERS_DELETE", { id: 1 });
+
+  assert.equal(deleteOrderService.mock.callCount(), 1);
+  assert.deepEqual(deleteOrderService.mock.calls[0].arguments, ["1", store]);
+});
+
+test("ORDERS_DELETE does nothing when order sync is disabled", async () => {
+  store = { ...store, isOrderSyncEnabled: false };
+
+  await run("ORDERS_DELETE", { id: 1 });
+
+  assert.equal(deleteOrderService.mock.callCount(), 0);
+});
+
 // Carts (task 20): moved from tests/unit/routes/webhooks.app.carts.test.ts.
 
 for (const isWebTrackingEnabled of [false, null]) {
@@ -173,7 +195,7 @@ for (const [name, shop] of [
   test(`shop ${name}: nothing is sent`, async () => {
     store = shop ? { ...store, ...shop } : null;
 
-    for (const topic of ["CUSTOMERS_CREATE", "CUSTOMERS_UPDATE", "ORDERS_CREATE", "ORDERS_UPDATED", "CARTS_UPDATE"]) {
+    for (const topic of ["CUSTOMERS_CREATE", "CUSTOMERS_UPDATE", "ORDERS_CREATE", "ORDERS_UPDATED", "ORDERS_DELETE", "CARTS_UPDATE"]) {
       await run(topic);
     }
 

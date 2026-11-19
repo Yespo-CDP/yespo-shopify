@@ -126,6 +126,7 @@ export interface OrderData {
   createdAt: string;
   updatedAt: string;
   cancelledAt?: string | null;
+  processedAt?: string | null;
 }
 
 export interface OrdersResponse {
@@ -146,6 +147,11 @@ export interface OrdersCreateResponse {
   id?: number;
 }
 
+/** Payload of the orders/delete webhook. */
+export interface OrderDeletePayload {
+  id: number;
+}
+
 export interface OrderCreatePayload {
   id: number;
   admin_graphql_api_id: string;
@@ -156,6 +162,7 @@ export interface OrderCreatePayload {
   confirmed: boolean;
   contact_email: string;
   created_at: string;
+  processed_at: string | null;
   cart_token?: string | null;
   currency: string;
   current_shipping_price_set?: {
