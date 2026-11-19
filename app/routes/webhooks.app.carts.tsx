@@ -1,15 +1,17 @@
 import type {ActionFunctionArgs} from "react-router";
 import {authenticate} from "~/shopify.server";
 import {shopRepository} from "~/repositories/repositories.server";
-import {sendStatusCartService} from "~/services/send-status-cart.server";
+import {enqueueWebhookEvent} from "~/services/queue";
 
 /**
- * Handles incoming Shopify webhook requests, authenticates them, and processes events by topic.
+ * Handles carts/update webhooks.
  *
- * Currently supports the "CARTS_UPDATE" webhook topic, forwarding the payload to the status cart service.
- * Silently ignores requests without valid sessions or shops missing an API key.
- * Sends StatusCart event to Yespo web tracker
- * Returns HTTP 400 response for unhandled webhook topics.
+ * Authenticates the request, queues the webhook for the worker (`webhookEventHandler`,
+ * which sends the StatusCart event to the Yespo web tracker) and responds with HTTP 200
+ * right away, so Yespo requests do not run inside Shopify's 5-second limit.
+ * Silently ignores requests without valid sessions, shops missing an API key or with web tracking disabled.
+ * If Redis rejects the job, the error is thrown (HTTP 500) so Shopify retries; while
+ * Redis is unreachable the request waits and Shopify retries after its 5-second timeout.
  *
  * @async
  * @function action
@@ -30,19 +32,11 @@ export const action = async ({request}: ActionFunctionArgs) => {
   console.log(`Received ${topic} webhook for ${session.shop} webhookId ${webhookId}`);
 
   const shop = await shopRepository.getShop(session.shop);
-  if (!shop || !shop?.apiKey) {
+  if (!shop || !shop.apiKey || !shop.isWebTrackingEnabled) {
     return new Response("Success", {status: 200});
   }
 
-  switch (topic) {
-    case "CARTS_UPDATE":
-      await sendStatusCartService(payload, shop)
-      break;
-
-    default:
-      console.warn(`❌ Unhandled webhook topic: ${topic}`);
-      return new Response(`Unhandled webhook topic: ${topic}`, {status: 200});
-  }
+  await enqueueWebhookEvent({shop: session.shop, topic, payload}, webhookId);
 
   return new Response("Success", {status: 200});
 };

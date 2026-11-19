@@ -29,8 +29,7 @@ database.sqlite
 .shopify/*
 .shopify.lock
 
-shopify.app.*
-shopify.app.yespo-staging.toml
+shopify.app.*-dev.toml
 
 /docs/typedoc-md
 
@@ -38,3 +37,9 @@ shopify.app.yespo-staging.toml
 /debug
 
 /.vscode/
+/.claude
+
+/tasks
+
+.DS_Store
+/docs/typedoc-html

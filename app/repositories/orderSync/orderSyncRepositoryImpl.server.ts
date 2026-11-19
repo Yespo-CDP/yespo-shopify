@@ -26,12 +26,17 @@ export default class OrderSyncRepositoryImpl implements IOrderSyncRepository {
   /**
    * Retrieves order sync records by the provided order Ids.
    *
+   * @param {number} shopId - Shop.id of the shop the records belong to.
    * @param {string[]} orderIds - Shopify order IDs array (e.g. gid://shopify/Order/123).
    * @returns {Promise<OrderSync[]>} A promise resolving to the order sync records.
    */
-  async getOrderSyncByOrderIds(orderIds: string[]): Promise<OrderSync[]> {
+  async getOrderSyncByOrderIds(
+    shopId: number,
+    orderIds: string[],
+  ): Promise<OrderSync[]> {
     return this.database.orderSync.findMany({
       where: {
+        shopId,
         orderId: { in: orderIds },
       },
     });
@@ -52,28 +57,23 @@ export default class OrderSyncRepositoryImpl implements IOrderSyncRepository {
   /**
    * Creates or updates an order sync record using the provided input.
    *
-   * If a record with the given `orderId` exists, it is updated. Otherwise, a new record is created.
+   * If a record with the given `shopId` and `orderId` exists, it is updated. Otherwise, a new record is created.
    *
    * @param {OrderSyncCreate} data - The data to be stored.
    * @returns {Promise<OrderSync>} A promise that resolves to the created or updated order sync record.
    */
   async createOrUpdateOrderSync(data: OrderSyncCreate): Promise<OrderSync> {
-    const orderSync = await this.database.orderSync.findFirst({
-      where: {
-        orderId: data?.orderId,
-      },
-    });
+    // Scalar shopId (not shop.connect) lets Prisma run INSERT ... ON CONFLICT,
+    // so concurrent calls for one key never insert a second row.
+    const { shop, ...fields } = data;
+    const shopId = shop.connect!.id!;
 
     return this.database.orderSync.upsert({
       where: {
-        id: orderSync?.id ?? -1,
+        shopId_orderId: { shopId, orderId: fields.orderId },
       },
-      create: {
-        ...data,
-      },
-      update: {
-        ...data,
-      },
+      create: { ...fields, shopId },
+      update: fields,
     });
   }
 

@@ -32,12 +32,16 @@ export default class TmpMarketSyncRepositoryImpl
     return result.count;
   }
 
-  async getByBatch(
+  async getPage(
     shopId: number,
     batchId: string,
+    afterId: number,
+    take: number,
   ): Promise<TmpMarketSyncRecord[]> {
     return this.database.tmpMarketSync.findMany({
-      where: { shopId, batchId },
+      where: { shopId, batchId, id: { gt: afterId } },
+      orderBy: { id: "asc" },
+      take,
     });
   }
 
@@ -45,5 +49,14 @@ export default class TmpMarketSyncRepositoryImpl
     await this.database.tmpMarketSync.deleteMany({
       where: { shopId, batchId },
     });
+  }
+
+  /** Staging rows left behind by a run that crashed before its own cleanup. */
+  async deleteOlderThan(date: Date): Promise<number> {
+    const result = await this.database.tmpMarketSync.deleteMany({
+      where: { createdAt: { lt: date } },
+    });
+
+    return result.count;
   }
 }

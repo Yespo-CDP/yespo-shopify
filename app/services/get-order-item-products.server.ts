@@ -1,4 +1,4 @@
-import { getOfflineAccessToken } from "~/services/get-offline-session.server";
+import { createOfflineTokenManager } from "~/worker/services/offline-token-manager";
 import { createClient } from "~/worker/services/create-client";
 import { buildOrderItemLink } from "~/services/build-order-item-link";
 
@@ -40,6 +40,8 @@ export interface OrderItemProductLink {
 /**
  * Loads storefront URL and image for order line-item variants.
  * Keyed by the numeric Shopify variant id.
+ * Runs in the worker: the client refreshes a rejected token and repeats
+ * throttled requests with background-job limits.
  */
 export async function getOrderItemProducts({
   shopUrl,
@@ -54,10 +56,11 @@ export async function getOrderItemProducts({
   const uniqueIds = [...new Set(variantIds.filter(Boolean))];
   if (!shopUrl || uniqueIds.length === 0) return links;
 
-  const accessToken = await getOfflineAccessToken(shopUrl);
+  const tokenManager = createOfflineTokenManager(shopUrl);
+  const accessToken = await tokenManager.getAccessToken();
   if (!accessToken) return links;
 
-  const client = createClient({ shop: shopUrl, accessToken });
+  const client = createClient({ shop: shopUrl, accessToken, tokenManager });
 
   for (
     let offset = 0;

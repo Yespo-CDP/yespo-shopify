@@ -3,7 +3,14 @@ import type { TmpMarketSyncCreate, TmpMarketSyncRecord } from "~/@types/tmpMarke
 export default interface TmpMarketSyncRepository {
   createMany(data: TmpMarketSyncCreate[]): Promise<number>;
 
-  getByBatch(shopId: number, batchId: string): Promise<TmpMarketSyncRecord[]>;
+  getPage(
+    shopId: number,
+    batchId: string,
+    afterId: number,
+    take: number,
+  ): Promise<TmpMarketSyncRecord[]>;
 
   deleteByBatch(shopId: number, batchId: string): Promise<void>;
+
+  deleteOlderThan(date: Date): Promise<number>;
 }

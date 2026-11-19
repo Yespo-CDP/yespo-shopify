@@ -143,6 +143,8 @@ model CustomerSync {
 
   shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   shopId Int
+
+  @@unique([shopId, customerId])
 }
 
 enum SyncLogStatus {
@@ -188,6 +190,8 @@ model OrderSync {
 
   shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   shopId Int
+
+  @@unique([shopId, orderId])
 }
 
 model ProductVariantSyncLog {
@@ -215,6 +219,8 @@ model ProductVariantSync {
 
   shop   Shop @relation(fields: [shopId], references: [id], onDelete: Cascade)
   shopId Int
+
+  @@unique([shopId, variantId])
 }
 
 model MarketSyncLog {

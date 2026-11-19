@@ -13,8 +13,8 @@ interface BulkOperationRunResponse {
   };
 }
 
-interface CurrentBulkOperationResponse {
-  currentBulkOperation?: {
+interface BulkOperationByIdResponse {
+  bulkOperation?: {
     id: string;
     status: string;
     errorCode?: string | null;
@@ -102,26 +102,31 @@ ${query}
 
 export async function waitForBulkOperation({
   client,
+  bulkOperationId,
   orgId,
   domain,
 }: {
   client: GraphQLClient;
+  bulkOperationId: string;
   orgId?: number | null;
   domain?: string;
-}): Promise<{ url: string; objectCount: number }> {
+}): Promise<{ url: string | null; objectCount: number }> {
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
-    const response = await client.request(`query currentBulkOperation {
-      currentBulkOperation {
-        id
-        status
-        errorCode
-        url
-        objectCount
-      }
-    }`);
+    const response = await client.request(
+      `query bulkOperationById($id: ID!) {
+        bulkOperation(id: $id) {
+          id
+          status
+          errorCode
+          url
+          objectCount
+        }
+      }`,
+      { variables: { id: bulkOperationId } },
+    );
 
-    const operation = (response?.data as CurrentBulkOperationResponse)
-      ?.currentBulkOperation;
+    const operation = (response?.data as BulkOperationByIdResponse)
+      ?.bulkOperation;
 
     if (!operation) {
       await sleep(POLL_INTERVAL_MS);
@@ -129,16 +134,20 @@ export async function waitForBulkOperation({
     }
 
     if (operation.status === "COMPLETED") {
-      if (!operation.url) {
+      const objectCount = Number(operation.objectCount ?? 0);
+      // Shopify returns `url: null` when the query produced no results. Only
+      // an explicit zero count is an empty result; anything else (including a
+      // missing count) stays an error instead of clearing the whole catalog.
+      if (
+        !operation.url &&
+        (operation.objectCount == null || objectCount !== 0)
+      ) {
         const message = "Bulk operation completed without download url";
         await logBulkFailure({ orgId, domain, stage: "poll", message });
         throw new Error(message);
       }
 
-      return {
-        url: operation.url,
-        objectCount: Number(operation.objectCount ?? 0),
-      };
+      return { url: operation.url ?? null, objectCount };
     }
 
     if (operation.status === "FAILED" || operation.status === "CANCELED") {

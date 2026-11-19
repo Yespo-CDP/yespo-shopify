@@ -28,14 +28,17 @@ export default class ProductVariantSyncRepositoryImpl
   /**
    * Retrieves product variant sync records by the provided variant ids.
    *
+   * @param {number} shopId - Shop.id of the shop the records belong to.
    * @param {string[]} variantIds - Shopify variant IDs array (e.g. gid://shopify/ProductVariant/123).
    * @returns {Promise<ProductVariantSync[]>} A promise resolving to the product variant sync records.
    */
   async getProductVariantSyncByVariantIds(
+    shopId: number,
     variantIds: string[],
   ): Promise<ProductVariantSync[]> {
     return this.database.productVariantSync.findMany({
       where: {
+        shopId,
         variantId: { in: variantIds },
       },
     });
@@ -58,7 +61,7 @@ export default class ProductVariantSyncRepositoryImpl
   /**
    * Creates or updates a product variant sync record using the provided input.
    *
-   * If a record with the given `variantId` exists, it is updated. Otherwise, a new record is created.
+   * If a record with the given `shopId` and `variantId` exists, it is updated. Otherwise, a new record is created.
    *
    * @param {ProductVariantSyncCreate} data - The data to be stored.
    * @returns {Promise<ProductVariantSync>} A promise that resolves to the created or updated product variant sync record.
@@ -66,22 +69,17 @@ export default class ProductVariantSyncRepositoryImpl
   async createOrUpdateProductVariantSync(
     data: ProductVariantSyncCreate,
   ): Promise<ProductVariantSync> {
-    const productVariantSync = await this.database.productVariantSync.findFirst({
-      where: {
-        variantId: data?.variantId,
-      },
-    });
+    // Scalar shopId (not shop.connect) lets Prisma run INSERT ... ON CONFLICT,
+    // so concurrent calls for one key never insert a second row.
+    const { shop, ...fields } = data;
+    const shopId = shop.connect!.id!;
 
     return this.database.productVariantSync.upsert({
       where: {
-        id: productVariantSync?.id ?? -1,
+        shopId_variantId: { shopId, variantId: fields.variantId },
       },
-      create: {
-        ...data,
-      },
-      update: {
-        ...data,
-      },
+      create: { ...fields, shopId },
+      update: fields,
     });
   }
 

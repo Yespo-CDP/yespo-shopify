@@ -100,18 +100,37 @@ export const MARKET_SYNC_STALE_AFTER_MS = 5 * 60 * 60 * 1000;
 
 /**
  * Minimum time between automatic (cron) market syncs for a shop. The cron skips
- * a shop whose last successful (COMPLETE) sync finished less than this ago, so a
- * single shop is not re-synced more than once per day. Never-synced shops and shops whose
- * last sync ended in ERROR are not throttled. Post data-sync triggers bypass
- * this interval entirely.
+ * a shop whose last successful (COMPLETE) sync finished less than this ago.
+ * It is shorter than a day because it counts from when the previous run
+ * finished, not from the tick: a shop that finished at 03:20 is picked up again
+ * by the next 03:00 tick. Never-synced shops and shops whose last sync ended in
+ * ERROR are not throttled. Post data-sync triggers bypass this interval entirely.
  */
-export const MARKET_SYNC_MIN_INTERVAL_MS = 24 * 60 * 60 * 1000;
+export const MARKET_SYNC_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
 
-/** BullMQ repeatable job pattern — runs once per day at 00:00 UTC. */
-export const MARKET_SYNC_CRON_PATTERN = "0 0 * * *";
+/**
+ * BullMQ repeatable job pattern — runs once per day at 03:00 UTC, away from
+ * the 00:00 EventData cleanup and at night for European shops.
+ */
+export const MARKET_SYNC_CRON_PATTERN = "0 3 * * *";
 
-/** BullMQ repeatable job pattern for expired EventData cleanup — once per day at 00:00 UTC. */
+/**
+ * BullMQ repeatable job pattern for expired EventData cleanup — once per day at 00:00 UTC.
+ * The same job also deletes TmpMarketSync rows older than TMP_MARKET_SYNC_TTL_MS (24 h).
+ */
 export const DB_CLEANER_CRON_PATTERN = "0 0 * * *";
+
+/**
+ * The DB cleaner cron deletes TmpMarketSync rows older than this. A market
+ * sync deletes its own staging rows when a batch ends, so older rows are left
+ * by a process that crashed or was killed. A batch's rows live for hours at
+ * most, well below this, and a run restarted after MARKET_SYNC_STALE_AFTER_MS
+ * stages its rows under a new batch id. Keep this value far above the longest
+ * processing of one batch: processBatch reads the rows page by page, and
+ * deleting them mid-run would leave presentByCountry incomplete, so variants
+ * still in the catalog would be marked out of stock.
+ */
+export const TMP_MARKET_SYNC_TTL_MS = 24 * 60 * 60 * 1000;
 
 /**
  * How long a product webhook job waits before it runs.
@@ -136,3 +155,9 @@ export const RATE_LIMIT_MAX_RETRIES = 3;
  * a full minute is the safe default.
  */
 export const RATE_LIMIT_DEFAULT_RETRY_AFTER_MS = 60 * 1000;
+
+/**
+ * Timeout for one `fetchWithErrorHandling` attempt (headers and body).
+ * Each retry after a 429 gets a new timeout; the 429 wait is not counted.
+ */
+export const YESPO_FETCH_TIMEOUT_MS = 30 * 1000;

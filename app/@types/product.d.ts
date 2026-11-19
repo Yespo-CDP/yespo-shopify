@@ -41,6 +41,7 @@ export interface ProductData {
   featuredImage?: { url: string } | null;
   collections?: {
     nodes: Array<{ id: string; title: string; handle: string }>;
+    pageInfo?: { endCursor?: string | null; hasNextPage: boolean };
   };
   /** Shopify standard taxonomy category; `fullName` is the breadcrumb path. */
   category?: { id: string; name: string; fullName: string } | null;

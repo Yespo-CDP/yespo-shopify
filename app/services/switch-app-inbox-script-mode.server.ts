@@ -70,6 +70,7 @@ const toggleAppInboxScriptInit = (
  * @param {any} params.admin - Shopify Admin API client instance.
  * @param {string} params.shopId - The Shopify store ID.
  * @returns {Promise<void>} Resolves when the metafield is updated.
+ * @throws {Error} "Failed to update Yespo script metafield" when Shopify does not save the script metafield.
  *
  * @example
  * await switchAppInboxScriptServer({
@@ -100,7 +101,9 @@ const switchAppInboxScriptServer = async ({enabled, admin, shopId}: {
     key: GENERAL_SCRIPT_HANDLE,
   });
 
-  console.log('updatedMetafield', updatedMetafield)
+  if (!updatedMetafield) {
+    throw new Error("Failed to update Yespo script metafield");
+  }
 
   const hostUrl = await getMetafield({
     admin,

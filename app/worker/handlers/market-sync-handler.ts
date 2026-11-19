@@ -20,6 +20,7 @@ import {
 } from "../services/bulk-operation.server";
 import { computeContentHash } from "../services/compute-content-hash";
 import { createClient } from "../services/create-client";
+import type { OfflineTokenManager } from "../services/offline-token-manager";
 import { fetchShopMarketsConfig } from "../services/fetch-shop-markets-config";
 import { selectMarketsForSync } from "../services/select-markets-for-sync";
 import { streamBulkJsonlToTmpMarketSync } from "../services/parse-bulk-jsonl";
@@ -34,6 +35,10 @@ import {
 } from "../services/resolve-market-urls";
 
 const API_CHUNK_SIZE = 500;
+
+// Staged rows of one bulk batch are read in pages of this size, so a large
+// catalog × countries batch is never held in memory at once.
+const STAGING_PAGE_SIZE = 1000;
 
 // One lookup of every variant × country can exceed Postgres/Prisma limits
 // (about 2,000 variants × 3 countries). Read the existing rows in pages.
@@ -197,6 +202,7 @@ export const marketSyncHandler = async (
   orgId?: number | null,
   siteId?: string | null,
   marketId?: string | null,
+  tokenManager?: OfflineTokenManager,
 ) => {
   console.log(
     marketId
@@ -212,7 +218,7 @@ export const marketSyncHandler = async (
   const logDomain = shopData.domain || shop;
   const marketSyncEnabled = Boolean(shopData.isMarketSyncEnabled);
 
-  const client = createClient({ shop, accessToken });
+  const client = createClient({ shop, accessToken, tokenManager });
   let marketsConfig: ShopMarketsConfig = {
     markets: [],
     countries: [],
@@ -319,54 +325,71 @@ export const marketSyncHandler = async (
         orgId,
         domain: logDomain,
       });
-      for (const countryCode of chunk.countries) {
-        await writeLog(countryCode, "IN_PROGRESS", batchId);
+
+      // Staged rows of this batch are deleted on every exit, including errors.
+      // Rows of a crashed process are removed by the DB cleaner cron.
+      try {
+        for (const countryCode of chunk.countries) {
+          await writeLog(countryCode, "IN_PROGRESS", batchId);
+        }
+
+        const bulkResult = await waitForBulkOperation({
+          client,
+          bulkOperationId: batchId,
+          orgId,
+          domain: logDomain,
+        });
+
+        // No url means Shopify found no products: nothing is staged, so every
+        // synced variant of these countries is cleared as removed from catalog.
+        if (bulkResult.url) {
+          const outputPath = await streamBulkJsonlToTmpMarketSync({
+            url: bulkResult.url,
+            shop,
+            batchId,
+            shopId,
+            config: marketsConfig,
+            countries: chunk.countries,
+            previousLocalesByMarketId,
+          });
+          console.log(`Bulk JSONL saved to ${outputPath}`);
+        }
+
+        const presentByCountry = await processBatch({
+          shopId,
+          batchId,
+          apiKey,
+          logDomain,
+          orgId,
+          siteId,
+          countries: chunk.countries,
+          stats,
+        });
+
+        await clearProductsRemovedFromCatalog({
+          shopId,
+          apiKey,
+          shop,
+          logDomain,
+          orgId,
+          siteId,
+          countries: chunk.countries,
+          presentByCountry,
+        });
+
+        for (const countryCode of chunk.countries) {
+          await writeLog(countryCode, "IN_PROGRESS", batchId);
+        }
+      } finally {
+        await tmpMarketSyncRepository
+          .deleteByBatch(shopId, batchId)
+          .catch((error: unknown) => {
+            console.error(
+              `Market sync: failed to delete staging rows of ${batchId} for ${shop}`,
+              error,
+            );
+          });
       }
-
-      const bulkResult = await waitForBulkOperation({
-        client,
-        orgId,
-        domain: logDomain,
-      });
-
-      const outputPath = await streamBulkJsonlToTmpMarketSync({
-        url: bulkResult.url,
-        shop,
-        batchId,
-        shopId,
-        config: marketsConfig,
-        countries: chunk.countries,
-        previousLocalesByMarketId,
-      });
-      console.log(`Bulk JSONL saved to ${outputPath}`);
-
-      const presentByCountry = await processBatch({
-        shopId,
-        batchId,
-        apiKey,
-        logDomain,
-        orgId,
-        siteId,
-        countries: chunk.countries,
-        stats,
-      });
-
-      await clearProductsRemovedFromCatalog({
-        shopId,
-        apiKey,
-        shop,
-        logDomain,
-        orgId,
-        siteId,
-        countries: chunk.countries,
-        presentByCountry,
-      });
-
-      for (const countryCode of chunk.countries) {
-        await writeLog(countryCode, "IN_PROGRESS", batchId);
-      }
-
-      await tmpMarketSyncRepository.deleteByBatch(shopId, batchId);
     }
 
     for (const countryCode of marketsConfig.countries) {
@@ -434,6 +457,12 @@ async function getExistingSyncRows(
 /**
  * Maps staged pricing rows for one bulk batch, skips unchanged items, and sends
  * the rest to Yespo grouped by market (country). Mutates `stats` in place.
+ *
+ * Rows are read in pages. Items to send are buffered per country across pages
+ * and sent in chunks of API_CHUNK_SIZE, so each market gets the same request
+ * bodies as with a single read (the order of requests across markets may
+ * differ). Returns the variants present in each country, collected
+ * from every page.
  */
 async function processBatch({
   shopId,
@@ -454,10 +483,6 @@ async function processBatch({
   countries: string[];
   stats: Record<string, CountryStats>;
 }): Promise<Map<string, Set<string>>> {
-  const rows = await tmpMarketSyncRepository.getByBatch(shopId, batchId);
-  const presentByCountry = variantIdsPresentInCountry(rows);
-  const pricingRows = rows.filter((row) => row.countryCode && row.variantId);
-
   interface PendingItem {
     productId: string;
     variantId: string;
@@ -465,118 +490,154 @@ async function processBatch({
     item: MarketProductItem;
     hash: string;
   }
-  const pending: PendingItem[] = [];
 
-  for (const row of pricingRows) {
-    const countryCode = row.countryCode as string;
-    if (!stats[countryCode]) {
-      continue;
-    }
-
-    const item = buildMarketProductItem(row);
-    if (!item) {
-      continue;
-    }
-
-    stats[countryCode].total += 1;
-    pending.push({
-      productId: row.productId,
-      variantId: row.variantId as string,
-      countryCode,
-      item,
-      hash: hashMarketItem(item),
-    });
-  }
-
-  // Change detection: load existing sync state for this batch. The lookup is
-  // chunked so a full catalog (thousands of variant × country keys) does not
-  // build one query large enough to fail the whole run.
-  const existing = await getExistingSyncRows(
-    shopId,
-    pending.map((entry) => ({
-      productId: entry.productId,
-      variantId: entry.variantId,
-      countryCode: entry.countryCode,
-    })),
-  );
-  const existingMap = new Map(
-    existing.map((existingRow) => [
-      `${existingRow.productId}|${existingRow.variantId}|${existingRow.countryCode}`,
-      existingRow,
-    ]),
-  );
-
+  const presentByCountry = new Map<string, Set<string>>();
   const toSyncByCountry: Record<string, PendingItem[]> = {};
-  for (const entry of pending) {
-    const previous = existingMap.get(
-      `${entry.productId}|${entry.variantId}|${entry.countryCode}`,
-    );
-    const entityUpdatedAt = new Date(entry.item.updatedDate).getTime();
-    const syncUpdatedAt = previous?.updatedAt?.getTime() ?? 0;
+  const sentByCountry: Record<
+    string,
+    { synced: number; failedItems: string[] }
+  > = {};
 
-    if (
-      previous?.contentHash === entry.hash &&
-      entityUpdatedAt <= syncUpdatedAt
-    ) {
-      stats[entry.countryCode].skipped += 1;
-      continue;
+  const sendChunk = async (countryCode: string, chunk: PendingItem[]) => {
+    const sent = (sentByCountry[countryCode] ??= {
+      synced: 0,
+      failedItems: [],
+    });
+
+    const response = await updateMarketProducts({
+      apiKey,
+      siteId: siteId ?? "",
+      markets: [{ marketId: countryCode, products: chunk.map((c) => c.item) }],
+      domain: logDomain,
+      orgId,
+    });
+
+    for (const entry of chunk) {
+      if (response.failedItems.includes(entry.item.productId)) {
+        stats[countryCode].failed += 1;
+        sent.failedItems.push(entry.item.productId);
+        continue;
+      }
+
+      stats[countryCode].synced += 1;
+      sent.synced += 1;
+      await marketSyncRepository.createOrUpdate({
+        productId: entry.productId,
+        variantId: entry.variantId,
+        countryCode,
+        contentHash: entry.hash,
+        updatedAt: new Date(entry.item.updatedDate),
+        shop: { connect: { id: shopId } },
+      });
+    }
+  };
+
+  let afterId = 0;
+  while (true) {
+    const rows = await tmpMarketSyncRepository.getPage(
+      shopId,
+      batchId,
+      afterId,
+      STAGING_PAGE_SIZE,
+    );
+    if (rows.length === 0) {
+      break;
+    }
+    afterId = rows[rows.length - 1].id;
+
+    variantIdsPresentInCountry(rows, presentByCountry);
+    const pricingRows = rows.filter((row) => row.countryCode && row.variantId);
+
+    const pending: PendingItem[] = [];
+
+    for (const row of pricingRows) {
+      const countryCode = row.countryCode as string;
+      if (!stats[countryCode]) {
+        continue;
+      }
+
+      const item = buildMarketProductItem(row);
+      if (!item) {
+        continue;
+      }
+
+      stats[countryCode].total += 1;
+      pending.push({
+        productId: row.productId,
+        variantId: row.variantId as string,
+        countryCode,
+        item,
+        hash: hashMarketItem(item),
+      });
     }
 
-    (toSyncByCountry[entry.countryCode] ??= []).push(entry);
+    // Change detection: load existing sync state for this page. The lookup is
+    // chunked so a page of variant × country keys does not build one query
+    // large enough to fail the whole run.
+    const existing = await getExistingSyncRows(
+      shopId,
+      pending.map((entry) => ({
+        productId: entry.productId,
+        variantId: entry.variantId,
+        countryCode: entry.countryCode,
+      })),
+    );
+    const existingMap = new Map(
+      existing.map((existingRow) => [
+        `${existingRow.productId}|${existingRow.variantId}|${existingRow.countryCode}`,
+        existingRow,
+      ]),
+    );
+
+    for (const entry of pending) {
+      const previous = existingMap.get(
+        `${entry.productId}|${entry.variantId}|${entry.countryCode}`,
+      );
+      const entityUpdatedAt = new Date(entry.item.updatedDate).getTime();
+      const syncUpdatedAt = previous?.updatedAt?.getTime() ?? 0;
+
+      if (
+        previous?.contentHash === entry.hash &&
+        entityUpdatedAt <= syncUpdatedAt
+      ) {
+        stats[entry.countryCode].skipped += 1;
+        continue;
+      }
+
+      (toSyncByCountry[entry.countryCode] ??= []).push(entry);
+    }
+
+    for (const countryCode of countries) {
+      const buffer = toSyncByCountry[countryCode];
+      while (buffer && buffer.length >= API_CHUNK_SIZE) {
+        await sendChunk(countryCode, buffer.splice(0, API_CHUNK_SIZE));
+      }
+    }
   }
 
   for (const countryCode of countries) {
-    const entries = toSyncByCountry[countryCode] ?? [];
-    if (entries.length === 0) {
+    const rest = toSyncByCountry[countryCode] ?? [];
+    if (rest.length > 0) {
+      await sendChunk(countryCode, rest.splice(0));
+    }
+  }
+
+  for (const countryCode of countries) {
+    const sent = sentByCountry[countryCode];
+    if (!sent) {
       continue;
     }
 
-    let countrySynced = 0;
-    const countryFailedItems: string[] = [];
-
-    for (let index = 0; index < entries.length; index += API_CHUNK_SIZE) {
-      const chunk = entries.slice(index, index + API_CHUNK_SIZE);
-
-      const response = await updateMarketProducts({
-        apiKey,
-        siteId: siteId ?? "",
-        markets: [
-          { marketId: countryCode, products: chunk.map((c) => c.item) },
-        ],
-        domain: logDomain,
-        orgId,
-      });
-
-      for (const entry of chunk) {
-        if (response.failedItems.includes(entry.item.productId)) {
-          stats[countryCode].failed += 1;
-          countryFailedItems.push(entry.item.productId);
-          continue;
-        }
-
-        stats[countryCode].synced += 1;
-        countrySynced += 1;
-        await marketSyncRepository.createOrUpdate({
-          productId: entry.productId,
-          variantId: entry.variantId,
-          countryCode,
-          contentHash: entry.hash,
-          updatedAt: new Date(entry.item.updatedDate),
-          shop: { connect: { id: shopId } },
-        });
-      }
-    }
-
-    if (countryFailedItems.length > 0) {
+    if (sent.failedItems.length > 0) {
       await sendLogEvent({
         orgId,
-        errorMessage: `Market sync rejected ${countryFailedItems.length} item(s) for market ${countryCode}`,
+        errorMessage: `Market sync rejected ${sent.failedItems.length} item(s) for market ${countryCode}`,
         data: JSON.stringify({
           domain: logDomain,
           countryCode,
-          synced: countrySynced,
-          failedCount: countryFailedItems.length,
-          failedItems: countryFailedItems,
+          synced: sent.synced,
+          failedCount: sent.failedItems.length,
+          failedItems: sent.failedItems,
         }),
         message: EVENT_MESSAGES.CUSTOM_LOG_SEND_MARKET_PRODUCTS_ERROR,
         logLevel: "ERROR",
@@ -588,7 +649,7 @@ async function processBatch({
         data: JSON.stringify({
           domain: logDomain,
           countryCode,
-          synced: countrySynced,
+          synced: sent.synced,
         }),
         message: EVENT_MESSAGES.CUSTOM_LOG_SEND_MARKET_PRODUCTS_SUCCESS,
         logLevel: "INFO",

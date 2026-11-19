@@ -8,11 +8,11 @@ import { appendVariantParam } from "./append-variant-param";
  * `clearUrls` is set only when the market has no locale to name. Named locales
  * without a storefront URL go to `urlsTranslations`.
  */
-export interface ResolvedMarketUrls {
+export type ResolvedMarketUrls = {
   urls?: Record<string, string>;
   urlsTranslations: string[];
   clearUrls: boolean;
-}
+};
 
 /**
  * Builds the Yespo `urls` field for POST /v1/markets.

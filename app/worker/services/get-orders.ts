@@ -12,7 +12,7 @@ import type { OrdersResponse, OrderData } from "~/@types/order";
  * @param {number} [params.count=1] - The number of orders to fetch.
  * @param {string} [params.cursor=null] - Cursor to request a specific page
  *
- * @returns {Promise<OrderData[]>} A promise that resolves to an array of `OrderData` objects, or an empty array if the query fails.
+ * @returns {Promise<OrderData[]>} A promise that resolves to an array of `OrderData` objects. Throws on request errors.
  *
  * @example
  * const orders = await getOrders({ client, count: 5 });
@@ -27,9 +27,8 @@ export const getOrders = async ({
   count?: number;
   cursor?: string | null;
 }): Promise<{ orders: OrderData[]; cursor?: string | null }> => {
-  try {
-    const response = await client.request(
-      `query getOrders($count: Int, $cursor: String) {
+  const response = await client.request(
+    `query getOrders($count: Int, $cursor: String) {
           orders(first: $count, after: $cursor) {
             nodes {
               id
@@ -99,7 +98,7 @@ export const getOrders = async ({
                   id
                   name
                   quantity
-                  originalTotalSet {
+                  originalUnitPriceSet {
                     shopMoney { amount currencyCode }
                     presentmentMoney { amount currencyCode }
                   }
@@ -113,6 +112,10 @@ export const getOrders = async ({
                     }
                   }
                 }
+                pageInfo {
+                  endCursor
+                  hasNextPage
+                }
               }
               createdAt
               updatedAt
@@ -125,25 +128,95 @@ export const getOrders = async ({
           }
         }
       `,
-      {
-        variables: {
-          count,
-          cursor,
-        },
+    {
+      variables: {
+        count,
+        cursor,
       },
+    },
+  );
+
+  if (response.errors) {
+    throw new Error(
+      `Failed to fetch orders: ${JSON.stringify(response.errors)}`,
+    );
+  }
+
+  const ordersData = response?.data as OrdersResponse;
+  const orders = ordersData?.orders?.nodes ?? [];
+  const endCursor = ordersData?.orders?.pageInfo?.endCursor;
+  const hasNextPage = ordersData?.orders?.pageInfo?.hasNextPage;
+
+  for (const order of orders) {
+    await fetchRemainingLineItems({ client, order });
+  }
+
+  return {
+    orders,
+    cursor: hasNextPage ? endCursor : null,
+  };
+};
+
+/**
+ * Appends to `order.lineItems.nodes` the line items beyond the first page.
+ * Throws on request errors so the order is not sent with part of its items.
+ */
+const fetchRemainingLineItems = async ({
+  client,
+  order,
+}: {
+  client: GraphQLClient;
+  order: OrderData;
+}): Promise<void> => {
+  let cursor = order.lineItems?.pageInfo?.hasNextPage
+    ? order.lineItems.pageInfo.endCursor
+    : null;
+
+  while (cursor) {
+    const response = await client.request(
+      `query getOrderLineItems($id: ID!, $cursor: String) {
+        order(id: $id) {
+          lineItems(first: 100, after: $cursor) {
+            nodes {
+              id
+              name
+              quantity
+              originalUnitPriceSet {
+                shopMoney { amount currencyCode }
+                presentmentMoney { amount currencyCode }
+              }
+              variant {
+                id
+                image { url }
+                product {
+                  handle
+                  onlineStoreUrl
+                  featuredImage { url }
+                }
+              }
+            }
+            pageInfo {
+              endCursor
+              hasNextPage
+            }
+          }
+        }
+      }`,
+      { variables: { id: order.id, cursor } },
     );
 
-    const ordersData = response?.data as OrdersResponse;
-    const orders = ordersData?.orders?.nodes;
-    const endCursor = ordersData?.orders?.pageInfo?.endCursor;
-    const hasNextPage = ordersData?.orders?.pageInfo?.hasNextPage;
+    if (response.errors) {
+      throw new Error(
+        `Failed to fetch line items of order ${order.id}: ${JSON.stringify(response.errors)}`,
+      );
+    }
 
-    return {
-      orders: orders ?? [],
-      cursor: hasNextPage ? endCursor : null,
-    };
-  } catch (error) {
-    console.error(error);
-    return { orders: [], cursor: null };
+    const lineItems = (
+      response.data as { order?: { lineItems?: OrderData["lineItems"] } | null }
+    )?.order?.lineItems;
+    order.lineItems.nodes.push(...(lineItems?.nodes ?? []));
+    cursor = lineItems?.pageInfo?.hasNextPage
+      ? lineItems.pageInfo.endCursor
+      : null;
   }
 };

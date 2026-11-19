@@ -288,7 +288,7 @@ Money fields use the buyer currency (`presentmentMoney` / `presentment_currency`
   - `lineItem.id` → `externalItemId`
   - `lineItem.name` → `name`
   - `lineItem.quantity` → `quantity`
-  - `lineItem.originalTotalSet.presentmentMoney.amount` → `cost`
+  - `lineItem.originalUnitPriceSet.presentmentMoney.amount` → `cost`
 
 ---
 
@@ -578,9 +578,9 @@ When sync is enabled:
 
 4. **Mapping & bulk sending to Yespo**
 
-   * Staged rows are mapped to market product items (`price`, `currency`, `isInStock`, `oldPrice`, `urls`), unchanged items are skipped via a content-hash comparison, and the rest are grouped by `marketId` (country code) and sent in **chunks of 500** (`API_CHUNK_SIZE`) using [Markets](https://docs.yespo.io/reference/setmarkets) (`POST /v1/markets`). Envelope is `{ markets }` — do **not** send `siteId` (the site is resolved from the API key).
+   * Staged rows are read in pages of **1,000** (`STAGING_PAGE_SIZE`), so a batch is never loaded into memory at once. They are mapped to market product items (`price`, `currency`, `isInStock`, `oldPrice`, `urls`), unchanged items are skipped via a content-hash comparison, and the rest are grouped by `marketId` (country code) and sent in **chunks of 500** (`API_CHUNK_SIZE`) using [Markets](https://docs.yespo.io/reference/setmarkets) (`POST /v1/markets`). Items are buffered per country across pages, so each market gets the same request bodies as with a single read (the order of requests across markets may differ). Envelope is `{ markets }` — do **not** send `siteId` (the site is resolved from the API key).
    * After a country's bulk succeeds, `MarketSync` rows for that country whose variant was not in the staging set are marked `isInStock: 0` and the accepted local rows are deleted. This is how a product removed from the catalog leaves that market's recommendations. A failed bulk does not run this pass.
-   * After each batch the staged rows are removed from `TmpMarketSync` and the per-country log is updated.
+   * After each batch the per-country log is updated and the batch's staged rows are removed from `TmpMarketSync`, also when the batch fails. Rows left by a crashed or killed worker are deleted by the daily DB cleaner (see below).
 
 ---
 
@@ -618,13 +618,13 @@ Notes:
 
 #### Market sync scheduling:
 
-A daily BullMQ repeatable job (`cron-jobs` queue → `enqueueMarketSyncTasks`) paces `POST /v1/markets` across shops. The schedule is registered on worker startup via `registerMarketSyncCron()` (`MARKET_SYNC_CRON_PATTERN = "0 0 * * *"` — once per day at 00:00 UTC). Requires the `worker` process and Redis.
+A daily BullMQ repeatable job (`cron-jobs` queue → `enqueueMarketSyncTasks`) paces `POST /v1/markets` across shops. The schedule is registered on worker startup via `registerMarketSyncCron()` (`MARKET_SYNC_CRON_PATTERN = "0 3 * * *"` — once per day at 03:00 UTC). Requires the `worker` process and Redis.
 
 - At most **10 shops** sync at once (`MARKET_SYNC_MAX_CONCURRENT_SHOPS`).
-- Shops whose last `COMPLETE` sync finished less than **24h** ago are skipped (`MARKET_SYNC_MIN_INTERVAL_MS`); never-synced and last-`ERROR` shops are not throttled.
+- Shops whose last `COMPLETE` sync finished less than **20h** ago are skipped (`MARKET_SYNC_MIN_INTERVAL_MS`); never-synced and last-`ERROR` shops are not throttled.
 - An `IN_PROGRESS` sync older than **5h** is treated as stuck and the shop becomes selectable again (`MARKET_SYNC_STALE_AFTER_MS`).
 - Eligible shops (`active`, `isMarketSyncEnabled`, `apiKey != null`) are ordered by oldest last sync (never-synced first).
-- The post-products-sync trigger bypasses the 24h interval.
+- The post-products-sync trigger bypasses the 20h interval.
 
 The `data-sync-market` worker `concurrency: 10` is the real parallelism cap.
 
@@ -711,7 +711,7 @@ After a `products/create` or `products/update` webhook is processed (when market
 occurs when CARTS_UPDATE webhook  is triggered and sends payload with cart data. The `carts/update` webhook is not market-aware: `price_set.presentment_money` can arrive in the shop currency even when the buyer sees another market currency. So `price` and `price_currency_code` are the variant's market price from the Admin API (`contextualPricing(context: { country })`, country = the cart's `marketId`, see `getMarketVariantPrices`) whenever its currency differs from the webhook's `presentment_money`. The per-unit `discount` is then the webhook's shop-currency discount scaled by market price / shop price (an approximation: it does not reflect per-market discount rules). When the webhook already carries the market currency, or the market price cannot be read (`marketId` is not a country code, Shopify API error), the values come from `price_set.presentment_money`, falling back to `item.price` and `price_set.shop_money`. Line building lives in `buildStatusCartProducts` (`app/services/build-status-cart-products.ts`).- **PurchasedItems** - [PurchasedItems event](https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#purchaseditems)
 occurs when ORDERS_CREATE webhook is triggered  and sends payload with purchased products data. `unit_price` and `price_currency_code` come from each line's `price_set.presentment_money`. If that set is missing, `unit_price` falls back to `item.price` and the currency falls back to `presentment_currency`, then `currency`.
 
-Cart-to-session mappings (`EventData`: `cartToken` + Yespo cookie `sc`) expire after 14 days. A daily BullMQ repeatable job (`cron-jobs` → `db-cleaner-tick`, `DB_CLEANER_CRON_PATTERN = "0 0 * * *"` UTC) deletes rows whose `ttl` is in the past. The scheduler is registered on worker startup via `registerDbCleanerCron()`. Requires the `worker` process and Redis.
+Cart-to-session mappings (`EventData`: `cartToken` + Yespo cookie `sc`) expire after 14 days. A daily BullMQ repeatable job (`cron-jobs` → `db-cleaner-tick`, `DB_CLEANER_CRON_PATTERN = "0 0 * * *"` UTC) deletes rows whose `ttl` is in the past. The same job also deletes `TmpMarketSync` staging rows older than `TMP_MARKET_SYNC_TTL_MS` (24 h), left by a market sync whose worker crashed or was killed. The scheduler is registered on worker startup via `registerDbCleanerCron()`. Requires the `worker` process and Redis.
 
 ### APP Inbox
 **Purpose:** Allows you to change the script initialization mode from or to [App Inbox](https://docs.esputnik.com/docs/app-inbox-setting-up)

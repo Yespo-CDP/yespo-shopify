@@ -6,11 +6,13 @@ import {
 } from "~/repositories/repositories.server";
 import { createOrders } from "~/api/create-orders";
 import { createClient } from "../services/create-client";
+import type { OfflineTokenManager } from "../services/offline-token-manager";
 import { getOrders } from "../services/get-orders";
 import { getOrdersCount } from "../services/get-orders-count";
 import { createOrderPayload } from "../services/create-order-payload";
 import { sendLogEvent } from "~/api/send-log-event";
 import { EVENT_MESSAGES } from "~/config/constants";
+import { normalizeYespoItems } from "~/utils/normalize-yespo-items";
 
 const ORDERS_CHUNK_SIZE = 150; // Shopify max limit 250 (this does not include 100 lineItems in each orders)
 
@@ -46,15 +48,15 @@ export const orderSyncHandler = async (
   apiKey: string,
   shopId: number,
   orgId?: number | null,
+  tokenManager?: OfflineTokenManager,
 ) => {
   console.log(`⏳ Synchronizing orders start for ${shop}`);
   console.log("shop", shop);
-  console.log("accessToken", accessToken);
 
   const shopRecord = await shopRepository.getShop(shop);
   const logDomain = shopRecord?.domain || shop;
 
-  const client = createClient({ shop, accessToken });
+  const client = createClient({ shop, accessToken, tokenManager });
   const ordersCount = await getOrdersCount({ client });
   console.log("Total orders count", ordersCount, "\n");
 
@@ -80,9 +82,10 @@ export const orderSyncHandler = async (
 
           const orderIds = orders.map((order) => order.id);
           const orderSyncs =
-            await orderSyncRepository.getOrderSyncByOrderIds(orderIds);
+            await orderSyncRepository.getOrderSyncByOrderIds(shopId, orderIds);
 
           const ordersData: Order[] = [];
+          const sentOrders: typeof orders = [];
 
           let chunkSkippedCount = 0;
           let chunkFailedCount = 0;
@@ -98,17 +101,7 @@ export const orderSyncHandler = async (
             if (orderUpdatedDate > orderSyncUpdatedDate) {
               const orderData = createOrderPayload(order, logDomain);
               ordersData.push(orderData);
-
-              await orderSyncRepository.createOrUpdateOrderSync({
-                orderId: order.id,
-                createdAt: order.createdAt,
-                updatedAt: order.updatedAt,
-                shop: {
-                  connect: {
-                    id: shopId,
-                  },
-                },
-              });
+              sentOrders.push(order);
             } else {
               chunkSkippedCount++;
             }
@@ -128,6 +121,32 @@ export const orderSyncHandler = async (
               } else {
                 chunkFailedCount = 1;
               }
+            }
+
+            const failedOrderIds = new Set(
+              normalizeYespoItems(
+                contactsUpdateResponse?.failedOrders as
+                  | { order?: Partial<Order> }
+                  | { order?: Partial<Order> }[]
+                  | undefined,
+              ).map((failed) => String(failed?.order?.externalOrderId)),
+            );
+
+            for (const [index, order] of sentOrders.entries()) {
+              if (failedOrderIds.has(ordersData[index].externalOrderId)) {
+                continue;
+              }
+
+              await orderSyncRepository.createOrUpdateOrderSync({
+                orderId: order.id,
+                createdAt: order.createdAt,
+                updatedAt: order.updatedAt,
+                shop: {
+                  connect: {
+                    id: shopId,
+                  },
+                },
+              });
             }
           }
 

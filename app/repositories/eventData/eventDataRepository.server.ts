@@ -9,20 +9,21 @@ import type {EventDataCreate, EventDataRequest} from "~/@types/eventData";
  */
 export default interface EventDataRepository {
   /**
-   * Retrieves event data by cart token.
+   * Retrieves event data of a shop by cart token.
    *
+   * @param {number} shopId - The shop that owns the cart.
    * @param {string} cartToken - The token identifying the cart.
    * @returns {Promise<EventDataRequest|null>} A promise that resolves to the event data, or null if not found.
    */
-  getEventData(cartToken: string): Promise<EventDataRequest | null>;
+  getEventData(shopId: number, cartToken: string): Promise<EventDataRequest | null>;
 
   /**
-   * Creates a new event data record.
+   * Creates or updates an event data record.
    *
    * @param {EventDataCreate} data - The data to be stored.
-   * @returns {Promise<EventDataRequest>} A promise that resolves to the created event data record.
+   * @returns {Promise<void>} Resolves when the record is saved or left unchanged.
    */
-  createEventData(data: EventDataCreate): Promise<EventDataRequest>;
+  createEventData(data: EventDataCreate): Promise<void>;
 
   /**
    * Deletes all expired or old event data in bulk.

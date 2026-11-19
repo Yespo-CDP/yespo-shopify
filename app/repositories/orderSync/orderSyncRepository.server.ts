@@ -15,10 +15,14 @@ export default interface OrderSyncRepository {
   /**
    * Retrieves synced orders by shopify order ids.
    *
+   * @param {number} shopId - Shop.id of the shop the records belong to.
    * @param {string[]} orderIds - Shopify order IDs array (e.g. gid://shopify/Order/123).
    * @returns {Promise<OrderSync[]>} A promise that resolves to the order syncs records.
    */
-  getOrderSyncByOrderIds(orderIds: string[]): Promise<OrderSync[]>;
+  getOrderSyncByOrderIds(
+    shopId: number,
+    orderIds: string[],
+  ): Promise<OrderSync[]>;
 
   /**
    * Creates a new order sync record.
