@@ -4,6 +4,8 @@ import { updateContactService } from "~/services/update-contact.service";
 import { sendPurchasedItemsService } from "~/services/send-purchased-items.server";
 import { updateOrderService } from "~/services/update-order.server";
 import { sendStatusCartService } from "~/services/send-status-cart.server";
+import { deleteOrderService } from "~/services/delete-order.server";
+import type { OrderDeletePayload } from "~/@types/order";
 import type { WebhookEventJobData } from "~/services/queue";
 
 /**
@@ -18,6 +20,8 @@ import type { WebhookEventJobData } from "~/services/queue";
  *   or sending failed) and `isOrderSyncEnabled` is on, creates the order through
  *   `updateOrderService` (`POST /orders` upserts by `externalOrderId`).
  * - "ORDERS_UPDATED": updates the order if `isOrderSyncEnabled` is on.
+ * - "ORDERS_DELETE": deletes the order in Yespo and its `OrderSync` record if
+ *   `isOrderSyncEnabled` is on.
  * - "CARTS_UPDATE": sends StatusCart if `isWebTrackingEnabled` is on.
  */
 export async function webhookEventHandler(
@@ -83,6 +87,11 @@ export async function webhookEventHandler(
           shop.shopUrl || data.shop,
         );
       }
+      break;
+
+    case "ORDERS_DELETE":
+      if (!shop.isOrderSyncEnabled) return;
+      await deleteOrderService(String((payload as OrderDeletePayload).id), shop);
       break;
 
     case "CARTS_UPDATE":
