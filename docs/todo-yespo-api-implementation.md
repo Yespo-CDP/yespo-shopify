@@ -12,7 +12,7 @@
 | 1 | POST /v1/products та /v1/markets — реальний fetch | ✅ Готово |
 | 2 | Парсинг відповіді Yespo (типи + derive) | ✅ Готово |
 | 3 | HTTP 207 — часткова помилка | ✅ Готово (products live; rejected items логуються) |
-| 4 | HTTP 429 — retry | ❌ Відкрито |
+| 4 | HTTP 429 — retry | ✅ Готово |
 | 5 | HTTP 500+ — retry з backoff | ❌ Відкрито |
 | 6 | HTTP 409 — LANGUAGE_CODE_MISMATCH | ✅ Не актуально (`languageChanged` / `409` прибрані з контракту `final_new`) |
 | 7 | Translations у вебхуках | ✅ Готово |
@@ -26,7 +26,7 @@
 | 15 | Rate limiter для кількох процесів | ✅ Готово (Redis) |
 | 16 | Прибрати/сховати debug-дампи URL | ✅ Готово |
 
-**Залишилось зробити:** #4, #5 + дозакрити #9 (метафілд-override). Пункт #14 свідомо пропущено. #6 знято: `languageChanged` більше не шлемо. #10 виконано (`Uncategorized` fallback). #1 і #16 виконано: `POST /v1/markets` викликає Yespo, debug-дампи прибрані.
+**Залишилось зробити:** #5 + дозакрити #9 (метафілд-override). Пункт #14 свідомо пропущено. #6 знято: `languageChanged` більше не шлемо. #10 виконано (`Uncategorized` fallback). #1 і #16 виконано: `POST /v1/markets` викликає Yespo, debug-дампи прибрані.
 
 ---
 
@@ -87,10 +87,10 @@
 
 ## ~~7. Translations у вебхуках~~ ✅ Виконано
 
-Реалізовано в `create-product-variant.server.ts` та `update-product-variant.server.ts`:
+Реалізовано в `app/worker/handlers/product-webhook-handler.ts` (вебхуки товарів обробляє воркер):
 - `getShopSecondaryLocales` — поточні published secondary locales
 - `getProductTranslations` — переклади продукту і варіантів
-- `createProductVariantPayloadFromWebhook` приймає `translationsResult`
+- payload будує той самий `createProductVariantPayload` (`app/worker/services/create-product-variant-payload.ts`), що й bulk sync
 - Зняті в Shopify локалі **не** чистимо в Yespo (`remove.translations` не шлемо)
 
 ---
@@ -118,25 +118,25 @@
 
 ## ~~10. Продукти без колекцій~~ ✅ Виконано
 
-Якщо продукт не має жодної колекції та таксономічної категорії, обидва білдери payload (`create-product-variant-payload.ts` та `create-product-variant-payload-from-webhook.ts`) тепер підставляють fallback-категорію `DEFAULT_YESPO_CATEGORY` (`{ name: "Uncategorized", type: "category" }`, без `id`) через спільний хелпер `withDefaultCategory` із `map-yespo-categories.ts`. Порожній `categories` логуюється через `console.warn` перед підстановкою.
+Якщо продукт не має жодної колекції та таксономічної категорії, білдер payload `create-product-variant-payload.ts` (його використовують і bulk sync, і вебхуки) тепер підставляє fallback-категорію `DEFAULT_YESPO_CATEGORY` (`{ name: "Uncategorized", type: "category" }`, без `id`) через спільний хелпер `withDefaultCategory` із `map-yespo-categories.ts`. Порожній `categories` логуюється через `console.warn` перед підстановкою.
 
 ---
 
 ## ~~11. Market oldPrice — явне очищення~~ ✅ Виконано
 
-`buildMarketProductItem` завжди встановлює `oldPrice` явно: значення, якщо `compareAtPrice > price`, інакше `null` (щоб очистити попереднє значення в Yespo).
+`buildMarketProductItem` через `applyMarketClearing` (`resolve-market-urls.ts`) надсилає `oldPrice` числом, якщо `compareAtPrice > price`, інакше додає `"oldPrice"` у `remove.fields` (щоб очистити попереднє значення в Yespo). `null` не надсилається.
 
 ---
 
 ## ~~12. Market urls — очищення~~ ✅ Виконано
 
-`resolveMarketUrls` + `previousLocalesByMarketId` у bulk sync: `urls: null` коли всі URL зникли; `{ "en": null }` для окремих локалей, що прибрали з ринку.
+`resolveMarketUrls` + `previousLocalesByMarketId` у bulk sync, очищення через `applyMarketClearing`: ринок без локалей → `remove.fields: ["urls"]`; локалі без URL (зокрема прибрані з ринку) → `remove.urlsTranslations`. `null` не надсилається.
 
 ---
 
 ## ~~13. Закоментований DELETE orphan variants у вебхуку~~ ✅ Виконано
 
-`deleteProductVariants` розкоментований в `update-product-variant.server.ts`. При `PRODUCTS_UPDATE` сирітські варіанти видаляються і з Yespo, і з БД.
+`deleteProductVariants` викликається в `app/worker/handlers/product-webhook-handler.ts`. При `PRODUCTS_UPDATE` сирітські варіанти видаляються з Yespo; локальні рядки `ProductVariantSync` / `MarketSync` видаляються лише для варіантів, які Yespo прийняв.
 
 ---
 
@@ -164,7 +164,7 @@ Rate limiter перенесено з in-memory на **Redis** (sliding window ч
 
 ## Щоденний крон синхронізації маркетів (ліміт 10 магазинів) ✅ Реалізовано
 
-Крон запускається **раз на добу** (`MARKET_SYNC_CRON_PATTERN = "0 0 * * *"`, 00:00 UTC) через
+Крон запускається **раз на добу** (`MARKET_SYNC_CRON_PATTERN = "0 3 * * *"`, 03:00 UTC) через
 **BullMQ repeatable job** (не QStash) і тримає **максимум 10 магазинів** у синхронізації
 одночасно, віддаючи перевагу магазинам, які синхронізувались найдавніше.
 
@@ -180,6 +180,9 @@ Rate limiter перенесено з in-memory на **Redis** (sliding window ч
 - `MARKET_SYNC_STALE_AFTER_MS = 5 * 60 * 60 * 1000` — 5 годин; `IN_PROGRESS` старіший за це
   вважається «застряглим» (напр. перезапущений воркер), не рахується в бюджеті й дозволяє
   магазину знову потрапити у вибірку.
+- `MARKET_SYNC_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000` — 20 годин; крон пропускає магазин, чий
+  останній `COMPLETE`-синк завершився менш ніж 20 год тому. Магазини без синків і з останнім
+  `ERROR` не обмежуються. Інші тригери (`enqueueMarketSyncTaskForShopUrl`) цей інтервал не застосовують.
 
 **Поняття:**
 - Одиниця синхронізації — **магазин** (усі його країни синхронізуються одним проходом
@@ -195,7 +198,8 @@ Rate limiter перенесено з in-memory на **Redis** (sliding window ч
    `apiKey != null`) разом з їхніми `marketSyncLogs` (`status`, `updatedAt`).
 3. `inProgressCount` = к-ть магазинів зі свіжим `IN_PROGRESS`.
 4. `budget = 10 - inProgressCount`; якщо `budget <= 0` — нічого не ставимо, повертаємо `0`.
-5. Кандидати = магазини без свіжого `IN_PROGRESS`; сортуємо: спершу `lastSyncedAt = null`,
+5. Кандидати = магазини без свіжого `IN_PROGRESS`, чий останній `COMPLETE` старший за
+   `MARKET_SYNC_MIN_INTERVAL_MS` (або його немає); сортуємо: спершу `lastSyncedAt = null`,
    далі за `lastSyncedAt` за зростанням (найдавніші — першими); беремо перші `budget`.
 6. Для кожного кандидата — `enqueueMarketSyncJobIfEligible(shop)`.
 
@@ -219,18 +223,18 @@ offline-токена/`apiKey` → тихо пропускається (слот 
 
 | Проблема | Файл |
 |----------|------|
-| Market URL: `/products/{handle}` без `?variant=<id>` (bulk, market, webhook, order) | `resolve-market-urls.ts`, `create-product-variant-payload.ts`, `create-product-variant-payload-from-webhook.ts`, `build-order-item-link.ts` |
+| Market URL: `/products/{handle}` без `?variant=<id>` (bulk, market, webhook, order) | `resolve-market-urls.ts`, `create-product-variant-payload.ts`, `build-order-item-link.ts` |
 | POST/DELETE /v1/products live | `update-product-variants.ts`, `delete-product-variants.ts` |
-| Webhook imageUrl як у bulk (`image_id` → featured) | `create-product-variant-payload-from-webhook.ts` |
+| Webhook imageUrl як у bulk (variant image → featured) | `product-webhook-handler.ts` (товар читається з Admin API), `create-product-variant-payload.ts` |
 | `updatedDate` → RFC3339 UTC (`…Z`) | `convert-date-to-utc.ts`, payload-білдери |
-| Persist `max(variant, product).updatedAt` для skip | `product-sync-handler.ts`, create/update webhook services |
+| Persist `max(variant, product).updatedAt` для skip | `product-sync-handler.ts`, `product-webhook-handler.ts` |
 | Лічильники Data Sync після вебхука (`syncFailed`) | `refresh-product-variant-sync-log.server.ts` |
 | Відхилений товар лишається `syncFailed` і наступного разу йде як `create` | `product-sync-result.ts`, `yespo-product-action.ts`, `product-webhook-handler.ts` |
 | Market `oldPrice` / URL очищаються через `remove`, не через `null` | `resolve-market-urls.ts`, `update-market-from-webhook.server.ts`, `market-sync-handler.ts` |
-| Translations у вебхуках | `create/update-product-variant.server.ts`, `create-product-variant-payload-from-webhook.ts` |
+| Translations у вебхуках | `product-webhook-handler.ts`, `create-product-variant-payload.ts` |
 | Видалення перекладів свідомо скіпнуто | payload-білдери більше не шлють `remove.translations` |
 | Market sync у вебхуках (contextualPricing) | `app/services/update-market-from-webhook.server.ts` |
 | Видалені маркети у вебхуках | `update-market-from-webhook.server.ts` + `MarketSyncRepositoryImpl.deleteManyByKeys` |
 | Пагінація варіантів у contextual pricing | `get-product-contextual-pricing.ts` |
 | Translation categories (#8) | `get-product-translations.ts` |
-| DELETE orphan variants у вебхуку (#13) | `update-product-variant.server.ts` |
+| DELETE orphan variants у вебхуку (#13) | `product-webhook-handler.ts` |
