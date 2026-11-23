@@ -870,9 +870,10 @@ whose **last successful (`COMPLETE`) sync** finished less than
 `MARKET_SYNC_MIN_INTERVAL_MS` (20 h) ago. The interval is shorter than a day because it
 counts from when the previous run finished, not from the tick: a shop that finished at
 03:20 is still picked up by the next day's 03:00 tick. Never-synced shops and shops whose last sync
-ended in `ERROR` are **not** throttled. This interval applies only to the cron path —
-the post data-sync chain (`enqueueMarketSyncTaskForShopUrl`) bypasses it and runs
-immediately.
+ended in `ERROR` are **not** throttled. This interval applies only to the cron path.
+Every `enqueueMarketSyncTaskForShopUrl` trigger bypasses it and runs immediately: the post
+data-sync chain (after historical products sync), the `markets/*` webhook, and the app home
+page when it turns market sync on.
 
 **Scheduler:** `app/worker/worker.ts` calls `registerMarketSyncCron()` on startup →
 `CronQueue.upsertJobScheduler()` in `app/services/queue.ts`.
