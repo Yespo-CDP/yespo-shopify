@@ -32,6 +32,7 @@ The app reads plaintext rows when `apiKeyIv` and `apiKeyAuthTag` are both `null`
 
 - `sealShopApiKeyWrite` encrypts `apiKey` on create and update. Writes that do not include `apiKey` leave the stored key untouched.
 - `revealShopApiKey` decrypts on read. A failed auth tag throws `Failed to decrypt apiKey` and does not return the ciphertext.
+- The daily market sync cron reads shops with `getShopsForMarketSync`. A shop whose key cannot be decrypted is logged (`Market sync: skipping <shopUrl>: …`) and skipped, so one bad row does not stop the tick for the other shops.
 
 `ShopRepositoryImpl` applies both helpers, so callers keep working with the plaintext Yespo key.
 

@@ -5,7 +5,7 @@ Shopify app for integration Yespo with Shopify.
 ### Purpose
 The app allows merchants to:
 - Sync customer data (create, update, delete) from Shopify to Yespo.
-- Sync order data (create, update) from Shopify to Yespo.
+- Sync order data (create, update, delete) from Shopify to Yespo.
 - Sync product data (create, update, delete) from Shopify to Yespo .
 - Sync market-specific data (create, update, delete) from Shopify to Yespo.
 - Automatically register their store domain in Yespo (to get site and web push scripts).
@@ -22,7 +22,7 @@ Each shop stores two domains:
 - `shopUrl` — the permanent `*.myshopify.com` host (`myshopifyDomain`). Shopify sessions, webhooks, the Admin API, and background jobs use this host to identify the shop.
 - `domain` — the public storefront host (`primaryDomain.host`), the address a customer sees in the browser. For a shop with a custom domain this is that domain (for example `micronutrition.com.ua`). When no custom domain is set, it is the same `*.myshopify.com` host.
 
-`domain` is written when the app is installed or the merchant signs in again (`afterAuth`). A custom domain changed later in Shopify admin stays at the previous value until the next sign-in.
+`domain` is written when the app is installed or the merchant signs in again (`afterAuth`), and on every `shop/update` webhook (`/webhooks/app/shop_update`, the payload `domain`). If another shop row already holds that host, that row's `domain` is reset to its own `shopUrl` first. `app/uninstalled` resets `domain` to the shop's `*.myshopify.com` host.
 
 Where each host is sent:
 
@@ -78,7 +78,7 @@ Disabling a market and enabling it again removes that host from the metafield, t
 #### Service Worker Installation:
 
 - A Shopify App Proxy is used to serve the service worker content dynamically from Yespo.
-- The worker file is exposed at a predefined path (/apps/yespo/sw.js) to comply with browser requirements.
+- The worker file is exposed at a predefined path (`/apps/yespo-proxy/service-worker.js`, `SERVICE_WORKER_PATH` + `SERVICE_WORKER_NAME`) to comply with browser requirements.
 
 ### Contact Sync (Shopify → Yespo)
 
@@ -91,11 +91,10 @@ The process covers both historical synchronization and real-time synchronization
 
 - App requests access to the following scopes:
   - `read_customers`
-  - `write_customers`
 - Shopify webhooks used:
   - `customers/create` → creates a new contact in Yespo
   - `customers/update` → updates existing contact data
-  - `customers/redact` → removes contact in Yespo
+  - `customers/redact` → removes contact in Yespo when an API key is set and contact sync is enabled; the local `Customer` record is always deleted
 
 ---
 
@@ -154,6 +153,8 @@ When sync is enabled:
 
 If a network error or unknown error occurs during sync, the synchronization process will receive status ERROR. This status is displayed in the UI. Sync can be re-enabled in the **Data Sync** section. Data that was successfully synchronized will not be re-synchronized after an error
 
+A Shopify error on any page (GraphQL `errors`, a partial response, or `THROTTLED` after the retries) also ends the sync with ERROR. ERROR is set as well when the worker finds no valid offline session or no API key for the shop.
+
 ---
  
 #### Field Mapping [Shopify Customers](https://shopify.dev/docs/api/admin-graphql/latest/queries/customers) →  [Yespo Contacts](https://docs.esputnik.com/reference/contactsbulkupdate-1):
@@ -188,7 +189,9 @@ Webhooks are triggered immediately when events occur in Shopify:
 
   - `customers/create` → new contact sent to Yespo.
   - `customers/update` → existing contact updated in Yespo.
-  - `customers/redact` → contact removed from Yespo.
+  - `customers/redact` → contact removed from Yespo when an API key is set and contact sync is enabled. The local `Customer` record is deleted in any case. This GDPR webhook is handled in the request, not in the queue.
+
+`customers/*`, `orders/*` and `carts/update` webhooks are processed asynchronously. The route only adds a job to the `webhook-events` BullMQ queue and answers `200`. The `worker` process runs the job: up to 5 attempts, exponential backoff starting at 5 s. A job is retried only when it throws: `customers/update` and `orders/delete` rethrow Yespo errors, while `customers/create`, `orders/create`, `orders/updated` and `carts/update` log them and finish. An error outside those services, such as a failed shop lookup, is retried as well. The job id is the `X-Shopify-Webhook-Id`, so a repeated delivery is ignored while the first job still exists (until it completes or fails for the last time). The worker reads the shop again, so sync and tracking flags changed after the webhook arrived apply. Failed jobs are removed because the payload holds customer data; the worker logs the failure.
 
 ---
 #### Shopify API methods:
@@ -217,7 +220,7 @@ App requests access to the following scopes:
   - `read_all_orders`
 
 Shopify webhooks used:
-  - `orders/create` → creates order data
+  - `orders/create` → sends the PurchasedItems event when web tracking is enabled; otherwise (or when the event was not sent) creates the order data if order sync is enabled
   - `orders/updated` → creates or updates existing order data
   - `orders/delete` → deletes the order in Yespo
 
@@ -267,6 +270,8 @@ When sync is enabled:
 
 If a network error or unknown error occurs during sync, the synchronization process will receive status ERROR. This status is displayed in the UI. Sync can be re-enabled in the **Data Sync** section. Data that was successfully synchronized will not be re-synchronized after an error.
 
+A Shopify error on any page of orders or line items (GraphQL `errors`, a partial response, or `THROTTLED` after the retries) also ends the sync with ERROR. ERROR is set as well when the worker finds no valid offline session or no API key for the shop.
+
 ---
   
 Money fields use the buyer currency (`presentmentMoney` / `presentment_currency`), which is the market currency when the order was placed on a market other than the shop currency. If Shopify does not send presentment money, the mapper falls back to shop money (`shopMoney` / `currencyCode`, or the REST shop-currency scalars). The same rule applies to the `orders/updated` webhook (`*_set.presentment_money`) and to the historical GraphQL sync.
@@ -283,14 +288,17 @@ Money fields use the buyer currency (`presentmentMoney` / `presentment_currency`
 - `order.totalShippingPriceSet.presentmentMoney.amount` → `shipping`
 - `order.totalTaxSet.presentmentMoney.amount` → `taxes`
 - `order.presentmentCurrencyCode` → `currency`
-- `order.createdAt` (converted to UTC) → `date`
+- `order.processedAt`, falling back to `order.createdAt` (converted to UTC) → `date`. The webhook uses `processed_at`, then `created_at`.
 - `order.displayFulfillmentStatus` (+ cancelledAt check) → `status`
 - `order.shippingAddress` (formatted string) → `deliveryAddress`
+- country code of the shipping address, then the billing address, then the customer's default address (lowercase; omitted when none is set) → `marketId`. The webhook first uses the market of the storefront visit stored in `EventData` for the order's cart token.
 - `order.lineItems.nodes[]`:
-  - `lineItem.id` → `externalItemId`
+  - `lineItem.variant.id` (numeric), or the numeric `lineItem.id` when the line has no variant → `externalItemId`
   - `lineItem.name` → `name`
   - `lineItem.quantity` → `quantity`
   - `lineItem.originalUnitPriceSet.presentmentMoney.amount` → `cost`
+  - product `onlineStoreUrl` (fallback `https://{domain}/products/{handle}`) with `?variant=<id>` → `url` (sent only when known)
+  - `variant.image.url` (fallback `product.featuredImage.url`) → `imageUrl` (sent only when known)
 
 ---
 
@@ -331,7 +339,7 @@ Final synchronization status:
 
 Webhooks are triggered when orders are created, updated or deleted in Shopify:
 
-  - `orders/create` → new order sent to Yespo.
+  - `orders/create` → when web tracking is enabled, the PurchasedItems event is sent (see [Backend Events](#backend-events)). If web tracking is off or the event was not sent (no cart token or tracking data, no `siteId`, request failed) and order sync is enabled, the order is sent with `POST /orders`.
   - `orders/updated` → existing order updated in Yespo.
   - `orders/delete` → order deleted in Yespo (`DELETE /orders?externalOrderId=…`), only when order sync is enabled. Yespo deletes the order asynchronously. The order's `OrderSync` record is deleted as well.
 
@@ -410,10 +418,10 @@ After the merchant grants `read_products`, `read_publications`, `read_translatio
 
    * For every variant, the most recent of `variant.updatedAt` and `product.updatedAt` is compared with `ProductVariantSync.updatedAt`:
 
-     * If the variant is unchanged → skipped
-     * If new or updated → added to sync batch
+     * If the last attempt was accepted (`syncFailed = false`) and the variant is unchanged → skipped
+     * If new, updated, or last rejected (`syncFailed = true`) → added to sync batch. Its `ProductVariantSync` row is written with `syncFailed = true` before the request, so a request that throws is retried on the next run
      * Action is `create` when no local sync record exists or the last attempt was rejected (`syncFailed`). An accepted variant is `update`
-     * The same `max(variant.updatedAt, product.updatedAt)` is stored on `ProductVariantSync` so a later Enable without Shopify changes skips the variant (Disable/Enable does **not** clear tracking rows)
+     * The same `max(variant.updatedAt, product.updatedAt)` is stored on `ProductVariantSync` so a later Enable without Shopify changes skips the variant (Disable/Enable does **not** clear tracking rows; disconnecting the Yespo account or uninstalling the app does, see [Using the App](#using-the-app))
      * Variants Yespo rejects are still tracked, with `syncFailed = true`. The flag becomes `false` only when that variant's response item has `status: "accepted"`. A rejected item, or a response that does not include its `productId`, leaves `syncFailed` true so the next run sends `create` again
 
 4. **Bulk sending to Yespo**
@@ -424,13 +432,17 @@ After the merchant grants `read_products`, `read_publications`, `read_translatio
 
 5. **Deleting orphaned variants**
 
-   * Every variant seen during the run is tracked. After processing, any locally tracked variant that no longer exists in Shopify is removed in Yespo using [Products](https://docs.yespo.io/reference/deleteproducts) (`DELETE /v1/products`) and cleaned up locally. Envelope is `{ products }` — do **not** send `siteId`.
+   * Every variant seen during the run is tracked. After processing, any locally tracked variant that no longer exists in Shopify is removed in Yespo using [Products](https://docs.yespo.io/reference/deleteproducts) (`DELETE /v1/products`). Envelope is `{ products }` — do **not** send `siteId`.
+   * Local `ProductVariantSync` and `MarketSync` rows are deleted only for variants Yespo accepted. Rejected variants keep their rows, so the next run retries the delete.
+   * This step runs only after every page was read. A failed page ends the run before it, so unread products are never treated as deleted.
 
 ---
 
 #### Sync failures:
 
 If a network error or unknown error occurs during sync, the synchronization process will receive status ERROR. This status is displayed in the UI. Sync can be re-enabled in the **Data Sync** section. Data that was successfully synchronized will not be re-synchronized after an error.
+
+A Shopify error on any page of products or variants (GraphQL `errors`, a partial response, or `THROTTLED` after the retries) also ends the sync with ERROR, and orphaned variants are not deleted in that run. ERROR is set as well when the worker finds no valid offline session or no API key for the shop.
 
 ---
 
@@ -510,10 +522,10 @@ Final synchronization status:
 
 Webhooks are triggered when products are created, updated, or deleted in Shopify:
 
-  - `products/create` and `products/update` load the product from the Admin API and send each variant to Yespo. The action is `create` when Yespo has not accepted that variant yet (no `ProductVariantSync` row, or `syncFailed` is true). A previously accepted variant is `update`. Variants removed from the product are deleted.
+  - `products/create` and `products/update` load the product from the Admin API and send each variant to Yespo. The action is `create` when Yespo has not accepted that variant yet (no `ProductVariantSync` row, or `syncFailed` is true). A previously accepted variant is `update`. Variants removed from the product are deleted in Yespo; their local `ProductVariantSync` and `MarketSync` rows are deleted only when Yespo accepted the delete, otherwise the next webhook for the product or the next historical sync retries it.
   - A variant is skipped when a row exists, `syncFailed` is false, and Shopify's `max(variant.updatedAt, product.updatedAt)` is not newer than `ProductVariantSync.updatedAt`.
   - `syncFailed` becomes false only when the Yespo item for that `productId` has `status: "accepted"`. A rejected item, or a response that does not name the variant, leaves the flag true. The next save then sends `POST /v1/products` again with `action: "create"`. An empty `imageUrl` is a typical rejection (`INVALID_URL`).
-  - `products/delete` → all tracked variants of the product removed from Yespo.
+  - `products/delete` → all tracked variants of the product removed from Yespo. Local rows are deleted only for variants Yespo accepted; the rest are retried by the next historical sync.
 
 The webhook route only enqueues a BullMQ job (`product-webhooks`) and returns `200`. Jobs for the same product are coalesced and delayed by 8 seconds, so a CSV import's `products/create` followed by `products/update` becomes one run. The worker (`concurrency: 1`) then loads the product from the Admin API — including image, collections, category, and translations — and sends it to Yespo. Image URLs follow the same fallback as historical sync (variant image → featured image). `updatedDate` is normalized to UTC. After Yespo responds, Data Sync counters are refreshed from `ProductVariantSync` (see Logging above). When market sync is on, the same job also sends that product's market prices to Yespo, including when every variant was skipped and `POST /v1/products` was not called. A market request does not create the base product.
 
@@ -592,6 +604,8 @@ When sync is enabled:
 
 If a network error or unknown error occurs during sync, the affected countries receive status ERROR (per-country `MarketSyncLog`). Items that were successfully synchronized are not re-sent on the next run, because change detection skips unchanged items. During cleanup, items Yespo rejected keep their local records so they are retried next time.
 
+If the market configuration cannot be read from Shopify (GraphQL `errors`), the run stops before cleanup and sends nothing. No per-country status is written in that case, because the country list is unknown.
+
 ---
 
 #### Field Mapping [Shopify Product / ProductVariant](https://shopify.dev/docs/api/admin-graphql/latest/queries/products) →  [Yespo Market Product](https://docs.yespo.io/reference/setmarkets):
@@ -613,7 +627,8 @@ Notes:
 
 #### Change detection (skip logic):
 
-- For every item a SHA-256 **content hash** of `{ price, oldPrice, currency, isInStock, urls, remove }` is computed and compared against the stored `MarketSync.contentHash` for `(productId, variantId, countryCode)`.
+- For every item a SHA-256 **content hash** of `{ price, oldPrice, currency, isInStock, urls, remove }` is computed and compared against the stored `MarketSync.contentHash` for `(productId, variantId, countryCode)`. `MarketSync.productId` is the product GID in both paths.
+- Older real-time rows keyed by the numeric product id are still read by the real-time path. Their hash counts as unknown, so the item is sent again, and the numeric row is deleted once Yespo accepts the item.
 - **Historical path:** an item is skipped only when the hash matches **and** its `updatedDate` is not newer than the stored `MarketSync.updatedAt`.
 - **Real-time path:** an item is skipped when the hash matches.
 - Accepted items upsert their `MarketSync` record (hash + updatedAt) so subsequent runs can skip them.
@@ -627,8 +642,8 @@ A daily BullMQ repeatable job (`cron-jobs` queue → `enqueueMarketSyncTasks`) p
 - At most **10 shops** sync at once (`MARKET_SYNC_MAX_CONCURRENT_SHOPS`).
 - Shops whose last `COMPLETE` sync finished less than **20h** ago are skipped (`MARKET_SYNC_MIN_INTERVAL_MS`); never-synced and last-`ERROR` shops are not throttled.
 - An `IN_PROGRESS` sync older than **5h** is treated as stuck and the shop becomes selectable again (`MARKET_SYNC_STALE_AFTER_MS`).
-- Eligible shops (`active`, `isMarketSyncEnabled`, `apiKey != null`) are ordered by oldest last sync (never-synced first).
-- The post-products-sync trigger bypasses the 20h interval.
+- Eligible shops (`active`, `isMarketSyncEnabled`, `apiKey != null`) are ordered by oldest last sync (never-synced first). A shop whose API key cannot be decrypted is logged and skipped, so it does not stop the tick for other shops.
+- Only the daily cron applies the 20h interval. Market sync enqueued after historical products sync, by the `markets/*` webhook, or when the app home turns market sync on bypasses it.
 
 The `data-sync-market` worker `concurrency: 10` is the real parallelism cap.
 
@@ -661,7 +676,7 @@ After a `products/create` or `products/update` webhook is processed (when market
   - Builds market items, compares hashes against stored `MarketSync` records, and sends **only changed** items via `POST /v1/markets`. Clearing follows the field mapping above: missing `oldPrice` and missing URLs go in `remove`, not `null`.
   - For an enabled country where this product is no longer published, sends `isInStock: 0` and prunes the accepted `MarketSync` rows.
   - For countries removed since the last sync, sends `isInStock: 0` for that product's variants and prunes the local records.
-  - A full Shopify product or variant delete calls `DELETE /v1/products` and removes the local `MarketSync` rows. It does not send a market `isInStock: 0`, because deleting the base product already drops its market data.
+  - A full Shopify product or variant delete calls `DELETE /v1/products` and removes the local `MarketSync` rows of the variants Yespo accepted (rejected ones stay and are retried). It does not send a market `isInStock: 0`, because deleting the base product already drops its market data.
 
 ---
 
@@ -681,8 +696,9 @@ After a `products/create` or `products/update` webhook is processed (when market
 
 #### Implementation:
 
-- Stores the enable flag in the web-tracking-enabled metafield
+- Stores the enable flag in the database (`isWebTrackingEnabled`) and in the web-tracking-enabled metafield
 - Sends tracking events from the site to Yespo through Theme Extension.
+- Sends the backend events (StatusCart, PurchasedItems) only while `isWebTrackingEnabled` is on.
 
 ---
 
@@ -701,7 +717,7 @@ After a `products/create` or `products/update` webhook is processed (when market
 - **Status Cart Page** – [StatusCartPage event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#additional-events-required-for-recommendations-on-the-site) occurs when user visited /cart page of the site
 - **Category Page** – [CategoryPage event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#category) occurs when user visited products collection page of the site
 - **ProductPage** – [ProductPage event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#product-card) occurs when user visited product page of the site and sends payload with product data:
-  - productKey – product id
+  - productKey – id of the current product variant
   - price – product price
   - isInStock – indicates if product is in stock
 - **CustomerData** – [CustomerData event](https://docs.yespo.io/docs/how-set-web-tracking-sending-events-java-scipt-request#customer) occurs when there is a logged in user on the site and sends payload with customer data:
@@ -711,9 +727,13 @@ After a `products/create` or `products/update` webhook is processed (when market
   - phone – customer phone
 
 #### Backend Events:
+
+Backend events are sent only while web tracking is enabled (`isWebTrackingEnabled`). The `carts/update` and `orders/create` webhooks are processed by the `worker` through the `webhook-events` queue (see [Real-time customers sync](#real-time-customers-sync)).
+
 - **StatusCart** - [StatusCart event](https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#statuscart) 
-occurs when CARTS_UPDATE webhook  is triggered and sends payload with cart data. The `carts/update` webhook is not market-aware: `price_set.presentment_money` can arrive in the shop currency even when the buyer sees another market currency. So `price` and `price_currency_code` are the variant's market price from the Admin API (`contextualPricing(context: { country })`, country = the cart's `marketId`, see `getMarketVariantPrices`) whenever its currency differs from the webhook's `presentment_money`. The per-unit `discount` is then the webhook's shop-currency discount scaled by market price / shop price (an approximation: it does not reflect per-market discount rules). When the webhook already carries the market currency, or the market price cannot be read (`marketId` is not a country code, Shopify API error), the values come from `price_set.presentment_money`, falling back to `item.price` and `price_set.shop_money`. Line building lives in `buildStatusCartProducts` (`app/services/build-status-cart-products.ts`).- **PurchasedItems** - [PurchasedItems event](https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#purchaseditems)
-occurs when ORDERS_CREATE webhook is triggered  and sends payload with purchased products data. `unit_price` and `price_currency_code` come from each line's `price_set.presentment_money`. If that set is missing, `unit_price` falls back to `item.price` and the currency falls back to `presentment_currency`, then `currency`.
+occurs when CARTS_UPDATE webhook  is triggered and sends payload with cart data. The `carts/update` webhook is not market-aware: `price_set.presentment_money` can arrive in the shop currency even when the buyer sees another market currency. So `price` and `price_currency_code` are the variant's market price from the Admin API (`contextualPricing(context: { country })`, country = the cart's `marketId`, see `getMarketVariantPrices`) whenever its currency differs from the webhook's `presentment_money`. The per-unit `discount` is then the webhook's shop-currency discount scaled by market price / shop price (an approximation: it does not reflect per-market discount rules). When the webhook already carries the market currency, or the market price cannot be read (`marketId` is not a country code, Shopify API error), the values come from `price_set.presentment_money`, falling back to `item.price` and `price_set.shop_money`. Line building lives in `buildStatusCartProducts` (`app/services/build-status-cart-products.ts`).
+- **PurchasedItems** - [PurchasedItems event](https://docs.yespo.io/docs/how-transfer-website-behavior-data-through-rest-api#purchaseditems)
+occurs when ORDERS_CREATE webhook is triggered  and sends payload with purchased products data. `productKey` is the line's `variant_id`, or the line item `id` when the line has no variant. `unit_price` and `price_currency_code` come from each line's `price_set.presentment_money`. If that set is missing, `unit_price` falls back to `item.price` and the currency falls back to `presentment_currency`, then `currency`.
 
 Cart-to-session mappings (`EventData`: `cartToken` + Yespo cookie `sc`) expire after 14 days. A daily BullMQ repeatable job (`cron-jobs` → `db-cleaner-tick`, `DB_CLEANER_CRON_PATTERN = "0 0 * * *"` UTC) deletes rows whose `ttl` is in the past. The same job also deletes `TmpMarketSync` staging rows older than `TMP_MARKET_SYNC_TTL_MS` (24 h), left by a market sync whose worker crashed or was killed. The scheduler is registered on worker startup via `registerDbCleanerCron()`. Requires the `worker` process and Redis.
 
@@ -724,8 +744,8 @@ Cart-to-session mappings (`EventData`: `cartToken` + Yespo cookie `sc`) expire a
 
 #### Implementation:
 
-- Stores the enable flag to the database isAppInboxEnabled.
-- Change the script initialization mode to enable or disable App Inbox mode.
+- Changes the script initialization mode in the `yespo-script` metafield to enable or disable App Inbox mode.
+- Then stores the enable flag in the database (`isAppInboxEnabled`). If the metafield update fails, the flag is not changed.
 
 #### Enabling App Inbox mode:
 
@@ -797,6 +817,13 @@ This function:
 - Attempts to parse the response as JSON; if parsing fails, it returns the raw text.
 - Throws a FetchError if the response status is not OK (i.e., not in the 2xx range).
 - Wraps unexpected errors into a FetchError with a status code of 500.
+- Aborts each attempt after 30 s (`YESPO_FETCH_TIMEOUT_MS`, headers and body). A timeout is thrown as a FetchError with status 500.
+- Retries HTTP `429` up to 3 times (`RATE_LIMIT_MAX_RETRIES`), waiting for the `Retry-After` header (seconds or HTTP date) or 60 s when it is missing (`RATE_LIMIT_DEFAULT_RETRY_AFTER_MS`). After the last retry the `429` is thrown. `5xx` responses are not retried.
+
+Shopify Admin GraphQL requests from the worker use `createClient` (`app/worker/services/create-client.ts`):
+- A `THROTTLED` response is repeated after a pause based on the query cost: up to 3 times with pauses up to 10 s in background jobs, once with a pause up to 2 s for requests made without a token manager.
+- In background jobs every request takes the shop's current offline token (the Shopify library refreshes it before it expires). On HTTP `401` the token is refreshed and the request is repeated once.
+- When more than 10 requests of one job still fail with a rejected token (`MAX_FAILED_TOKEN_REQUESTS`), the job stops with an error. Customer, order, product and market sync then end with ERROR.
 
 Each specific API call (e.g., createGeneralDomain, createWebPushDomain, getGeneralScript etc.) includes its own error-handling logic to provide meaningful, domain-specific error messages to the user interface.
 
@@ -813,7 +840,9 @@ seamlessly inject scripts into a merchant’s Theme without manual code edits.
   You can find the extension code in the `./extensions/yespo-extension` directory.
   This extension includes:
   - `blocks/` – contains Liquid files that act as entry points for injecting Yespo scripts into the Theme. These blocks can be enabled via the Shopify Theme editor.
-  - `assests/` – contains JavaScript script that sends events using eS.JS.
+  - `assets/` – contains JavaScript script that sends events using eS.JS.
+  - `snippets/` – `yespo-storefront-sync.liquid`, rendered by the block. It passes shop, page, market, customer, product, collection and cart data to the Yespo script (`eS('addVariables', …)`) and emits cart change events.
+  - `locales/en.default.json` – the extension's default locale file.
 - [Polaris web components](https://shopify.dev/docs/api/app-home/polaris-web-components) – design system that enables apps to create Shopify-like experiences.
 - [Webhooks](https://shopify.dev/docs/api/webhooks?reference=toml) – allows to receive notifications about particular events in a shop such as customer-related changes.
 - [Metafields](https://shopify.dev/docs/apps/build/online-store/theme-app-extensions/configuration#metafield-namespaces) – 
@@ -841,7 +870,7 @@ Full API documentation: https://docs.yespo.io/docs/integration-with-api
 
 Before you begin, you'll need the following:
 
-1. **Node.js**: version 20 [Download and install](https://nodejs.org/en/download/) it if you haven't already.
+1. **Node.js**: version 22 or newer (`engines` in `package.json`) [Download and install](https://nodejs.org/en/download/) it if you haven't already.
 2. **Shopify Partner Account**: [Create an account](https://partners.shopify.com/signup) if you don't have one.
 3. **Test Store**: Set up either a [development store](https://help.shopify.com/en/partners/dashboard/development-stores#create-a-development-store) or a [Shopify Plus sandbox store](https://help.shopify.com/en/partners/dashboard/managing-stores/plus-sandbox-store) for testing your app.
 
@@ -858,7 +887,7 @@ Create a `.env` file with the following:
 | **SHOPIFY_APP_URL**            | **Required.** Your shopify app url                                                                      | `https://your-domain.com`                          |
 | **SHOPIFY_YESPO_EXTENSION_ID** | **Required.** Extension ID (Auto generated after run `deploy` command)                                  | `c10***ff-****-48cc-****-f882b***fa8e`             |
 | **DATABASE_URL**               | **Required.** Database connect url                                                                      | `postgresql://admin:admin@localhost:5432/database` |
-| **SCOPES**                     | **Required.** Required access scopes                                                                    | **Must be** `read_markets,read_themes,unauthenticated_read_product_listings` |
+| **SCOPES**                     | **Required.** Comma-separated access scopes passed to `shopifyApp({ scopes })`. **Must match** `scopes` in `[access_scopes]` of the app TOML config | `read_all_orders,read_customers,read_orders,read_products,read_themes,write_app_proxy,write_products,read_translations,read_locales,read_publications,read_markets,unauthenticated_read_product_listings` (see [Required Shopify Scopes](#required-shopify-scopes)) |
 | **API_URL**                    | **Required.** Yespo api url                                                                             | **Must be** `https://yespo.io/api/v1`              |
 | **GENERAL_SCRIPT_HANDLE**      | **Required.** Handle for general metafield and extension name                                           | **Must be** `yespo-script`                         |
 | **WEB_PUSH_SCRIPT_HANDLE**     | **Required.** Handle for webpush metafield and extension name                                           | **Must be** `yespo-web-push-script`                |
@@ -872,6 +901,11 @@ Create a `.env` file with the following:
 | **HOST_URL**                   | **Required.** App host url metafield name  for the extension to work correctly                          | **Must be** `yespo-app-host`                       |
 | **REDIS_URL**                  | **Required.** Redis url for connecting and configuring the data synchronization worker                  | `redis://localhost:6379`                           |
 | **API_KEY_ENCRYPTION_KEY**     | **Required.** AES-256 key for `Shop.apiKey`, 32 bytes encoded as base64. One value per environment; do not rotate it after keys are encrypted. | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
+| **ESPUTNIK_URL**               | **Required** in production. Yespo API base URL for the App Inbox contact token; the app appends `/auth/contact/token` | — |
+| **LOGGING_URL**                | **Required** in production. Remote log endpoint that receives the app's Yespo log events               | — |
+| **CATEGORY_TYPE_HANDLE**       | Collection metafield key for the Category Settings mapping                                              | `yespo_category_type`                              |
+| **MARKET_TRACKING_ENABLED**    | Key of the market tracking metafield that the app deletes on account disconnect and on sign-in without an API key | `market-tracking-enabled`                |
+| **SHOP_CUSTOM_DOMAIN**         | Optional. Extra shop domain passed to `shopifyApp({ customShopDomains })`                               | —                                                  |
 
 
 #### Required Shopify Scopes:
@@ -882,12 +916,20 @@ re-link upstream Shopify apps if your configuration file gets deleted, corrupted
 have a shopify.app.toml in your root directory, then you’ll be prompted to give your configuration file a name, and a
 file shopify.app.{your-config-name}.toml is generated in your root directory.
 
-The app requires the following access scopes:
+Configuration files in this repository:
+- `shopify.app.toml` – production app.
+- `shopify.app.yespo-staging.toml` – staging app.
+- `shopify.app.*-dev.toml` – local development apps. Only this name pattern is ignored by git (`.gitignore`); create your own with `npm run config:link` and give it a name ending in `-dev`.
+
+`npm run config:use -- <config-name>` (`shopify app config use`) makes a file the default for Shopify CLI commands, for example `npm run config:use -- yespo-staging`. `npm run dev` and `npm run deploy` use that default; to use another file for one command, pass it explicitly, for example `npm run deploy -- --config <config-name>`. Keep `[webhooks]` (including `api_version`) and `[access_scopes]` identical in every file. Only the app identity, URLs and dev settings (`[build]`) differ between them.
+
+The app requires the following access scopes (`scopes` in `[access_scopes]`; the `SCOPES` environment variable must have the same value):
 - `read_customers`
 - `read_markets`
 - `read_orders`
 - `read_all_orders`
 - `read_products`
+- `write_products`
 - `read_translations`
 - `read_locales`
 - `read_publications`
@@ -896,18 +938,19 @@ The app requires the following access scopes:
 - `write_app_proxy`
 
 #### Webhooks:
-Shopify webhooks (API version: 2025-10) used by the app:
+Shopify webhooks (API version: 2026-04, `api_version` in `[webhooks]`) used by the app:
 
 | Event Topic                | Description                                                                   | Endpoint                      |
 |----------------------------|-------------------------------------------------------------------------------|-------------------------------|
 | **customers/data_request** | Triggered when a customer requests their personal data under GDPR compliance. | `/webhooks/app/gdpr`          |
-| **customers/redact**       | Triggered when a customer requests deletion of their personal data (GDPR).    | `/webhooks/app/gdpr`          |
+| **customers/redact**       | Triggered when a customer requests deletion of their personal data (GDPR). Deletes the contact in Yespo if contact sync is enabled, and always deletes the local `Customer` record. | `/webhooks/app/gdpr`          |
 | **shop/redact**            | Triggered when a store uninstalls the app and requests data erasure.          | `/webhooks/app/gdpr`          |
 | **carts/update**           | Triggered whenever a customer updates a cart (e.g. adding/removing items).    | `/webhooks/app/carts`         |
 | **customers/create**       | Triggered when a new customer account is created in the store.                | `/webhooks/app/customers`     |
 | **customers/update**       | Triggered when an existing customer’s data is updated.                        | `/webhooks/app/customers`     |
 | **app/scopes_update**      | Triggered when the app's permission scopes are updated by the merchant.       | `/webhooks/app/scopes_update` |
-| **app/uninstalled**        | Triggered when a merchant uninstalls the app.                                 | `/webhooks/app/uninstalled`   |
+| **app/uninstalled**        | Triggered when a merchant uninstalls the app. Revokes the Yespo access token, marks the shop inactive, clears its API key, sync flags, web tracking flag, `siteId` and `orgId`, resets `domain` to the `*.myshopify.com` host, and deletes local sync rows, sync logs and sessions. Data in Yespo is kept. | `/webhooks/app/uninstalled`   |
+| **shop/update**            | Triggered when shop details change. Updates the stored shop email, name and `domain` (see [Store domains](#store-domains)). | `/webhooks/app/shop_update`   |
 | **orders/create**          | Triggered when an order is created.                                           | `/webhook/app/orders`         |
 | **orders/updated**         | Triggered when an existing order’s data is updated.                           | `/webhook/app/orders`         |
 | **orders/delete**          | Triggered when an order is deleted. Deletes the order in Yespo if order sync is enabled. | `/webhook/app/orders`         |
@@ -917,7 +960,6 @@ Shopify webhooks (API version: 2025-10) used by the app:
 | **markets/create**         | Triggered when a market is created. Reconciles web push hosts. If market sync is already on, syncs only the new market to Yespo. The first extra market still syncs every enabled market. | `/webhooks/app/markets`       |
 | **markets/update**         | Triggered when a market is updated. Reconciles web push hosts with the multi-domain metafield. | `/webhooks/app/markets`       |
 | **markets/delete**         | Triggered when a market is deleted. Reconciles web push hosts with the multi-domain metafield. | `/webhooks/app/markets`       |
-| **carts/update**           | Triggered when a cart is updated in the online store.                         | `/webhooks/app/carts`         |
 
 
 #### Setup App Proxy:
@@ -960,10 +1002,16 @@ npx prisma migrate dev
 npm run dev
 ```
 
+#### Run the worker
+Webhooks for customers, orders, carts and products, data sync, market sync and the daily cron jobs are processed by a separate BullMQ worker process. Without it these jobs stay in Redis. Run it in a second terminal (needs `DATABASE_URL` and `REDIS_URL`):
+```shell
+npm run worker
+```
+
 ### Production:
 #### Install dependencies
 ```shell
-npm install
+npm ci
 ```
 
 #### Database development & migration
@@ -977,9 +1025,14 @@ npm run build
 ```
 
 #### Run
+Run the web process and the worker as two separate long-running processes:
 ```shell
-npm run start
+npm run start   # web
+npm run worker  # BullMQ worker
 ```
+
+### Docker:
+The `Dockerfile` builds a Node 22 image: `npm ci --omit=dev`, removes `@shopify/cli`, then `npm run build`. `.env` and `.git` are excluded by `.dockerignore`, so pass the environment variables to the container. The container command is `npm run docker-start` (`npm run setup` + `npm run start`): it runs the web process on port 3000 only and is the only step that runs `prisma generate` and the migrations. The image itself has no generated Prisma client (`npm ci` runs before the schema is copied, and `npm run build` does not generate it), so a worker container from the same image must generate it first, with the same environment: `sh -c "npx prisma generate && npm run worker"`. Migrations are applied by the web container only. `docker-start` does not run `migrate:tokens`.
 
 ### App Deployment:
 
@@ -997,7 +1050,9 @@ heroku create your-app-name
 3. Add [PostgreSQL](https://devcenter.heroku.com/articles/heroku-postgresql):
   - Use the Heroku Postgres add-on
   - Recommended: A plan with at least 10 GB storage
-4. Ensure the Procfile is present. The repository already includes one, so no action should be needed here.
+4. Ensure the Procfile is present. The repository already includes one, so no action should be needed here. It defines two processes:
+   - `web: npm run build && npm run setup && npm run migrate:tokens && npm run start`. On every start the web process applies database migrations and runs `migrate:tokens`, which enqueues a token-migration job per shop. The worker then exchanges a non-expiring offline token for an expiring one; shops already migrated are skipped.
+   - `worker: npm run worker` – the BullMQ worker. Make sure a worker dyno is running, for example `heroku ps:scale worker=1`.
 5. Commit your changes and push to Heroku:
 ```shell
 git add .
@@ -1016,15 +1071,19 @@ This command will:
 - Sync the .toml configuration file to Shopify
 - Link and register app blocks automatically
 
+It deploys the active configuration file (see [Required Shopify Scopes](#required-shopify-scopes)). To deploy a specific app, pass the file explicitly, for example `npm run deploy -- --config yespo-staging` for staging.
+
 Make sure you're authenticated via Shopify CLI and connected to the correct Partner organization and store.
 
 ### Using the App:
 
 - 📥 Install the app in your Shopify store.
 - 🔑 [Generate an API key](https://docs.yespo.io/reference/api-keys) and add it in the `Account connection` section.
+  After connecting, the field shows the key masked (only the last 4 characters are visible). Saving the masked value unchanged does not reconnect the account.
 - 📜 Connect the general and web push scripts in the `Scripts integration` section.
 - 👀 Enable or disable web tracking on your site in the `Web tracking` section.
 - 🔄 Enable or disable customers, orders, products and markets synchronization in the `Data sync` section.
+- Disconnecting the Yespo account turns off sync and tracking, deletes the script metafields and clears the local customer, order, product and market sync rows and logs, so the next connected account gets a full import. Data already sent to Yespo is not deleted. Uninstalling the app clears this local data as well (see `app/uninstalled` in [Webhooks](#webhooks)).
 
 ## Contributing
 
@@ -1086,8 +1145,11 @@ docs(readme): update installation instructions
 3. **Validate Your Changes**
    ```bash
    npm run lint        # Check code style
+   npm run typecheck   # React Router typegen + tsc --noEmit
+   npm test            # Unit tests in tests/ (node:test via tsx)
    npm run build       # Ensure project builds correctly
    ```
+   Tests live in `tests/unit/`, mirroring the `app/` paths. CI (`.github/workflows/ci.yml`) runs `npm ci`, `npx prisma generate`, `npm run typecheck` and `npm test` on pull requests to `dev` and `main`, with placeholder `DATABASE_URL` and `REDIS_URL` values that point to no running service.
 
 4. **Submit Pull Request to `dev`**
    - Push to your fork: `git push origin feature/your-feature-name`
@@ -1124,7 +1186,10 @@ app/
 │   └── customerData/   # Customer data repository
 ├── @types/             # TypeScript type definitions
 ├── utils/              # Helper functions
+├── worker/             # BullMQ worker (npm run worker): worker.ts, job handlers and services
 └── routes/             # React Router routes
+tests/
+└── unit/               # Tests, mirroring the app/ paths
 ```
 
 #### Repository Pattern
