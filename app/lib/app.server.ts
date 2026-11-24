@@ -44,7 +44,7 @@ import { countEnabledMarkets } from "~/services/sync-market-tracking-metafield.s
  *
  * @param {LoaderFunctionArgs} args - The arguments containing the request.
  * @returns {Promise<{
- *   shop: { apiKey (masked: "*" except last 4), isAppInboxEnabled, isWebTrackingEnabled, productSyncNoticePending, isContactSyncEnabled, isOrderSyncEnabled, isProductVariantSyncEnabled } | null,
+ *   shop: { apiKey (fully masked with "*"), isAppInboxEnabled, isWebTrackingEnabled, productSyncNoticePending, isContactSyncEnabled, isOrderSyncEnabled, isProductVariantSyncEnabled } | null,
  *   account: Account | null,
  *   scriptConnectionStatus: any,
  *   customersSyncLog: CustomerSyncLog[],
@@ -238,7 +238,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
   }
 
   if (intent === "account-connection") {
-    const apiKey = formData.get("apiKey")?.toString();
+    const apiKey = formData.get("apiKey")?.toString().trim();
     if (!apiKey) {
       errors.apiKey = t("AccountConnectionSection.errors.emptyApiKey");
       return { success, errors };
@@ -246,7 +246,7 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
 
     // The field holds the masked stored key: nothing to connect.
     const storedApiKey = (await shopRepository.getShop(session.shop))?.apiKey;
-    if (storedApiKey && maskApiKey(storedApiKey) === apiKey) {
+    if (storedApiKey && /^\*+$/.test(apiKey)) {
       return { success, errors };
     }
 
@@ -294,7 +294,10 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
         });
       }
     } catch (error: any) {
-      errors.apiKey = t(`AccountConnectionSection.errors.${error.message}`);
+      errors.apiKey = t([
+        `AccountConnectionSection.errors.${error.message}`,
+        "AccountConnectionSection.errors.unknownError",
+      ]);
       return { success, errors };
     }
   }
@@ -688,11 +691,9 @@ export const actionHandler = async ({ request }: ActionFunctionArgs) => {
   return { success, errors };
 };
 
-// Same length as the key; only the last 4 characters stay visible, and none for keys of 4 or fewer.
+// Same length as the key, no character of it stays visible.
 function maskApiKey(apiKey: string): string {
-  return apiKey.length > 4
-    ? "*".repeat(apiKey.length - 4) + apiKey.slice(-4)
-    : "*".repeat(apiKey.length);
+  return "*".repeat(apiKey.length);
 }
 
 async function readMarketSyncEnabled(admin: any): Promise<boolean> {
