@@ -1079,7 +1079,7 @@ Make sure you're authenticated via Shopify CLI and connected to the correct Part
 
 - 📥 Install the app in your Shopify store.
 - 🔑 [Generate an API key](https://docs.yespo.io/reference/api-keys) and add it in the `Account connection` section.
-  After connecting, the field shows the key masked (only the last 4 characters are visible). Saving the masked value unchanged does not reconnect the account.
+  After connecting, the field shows the key fully masked. Saving the masked value unchanged does not reconnect the account.
 - 📜 Connect the general and web push scripts in the `Scripts integration` section.
 - 👀 Enable or disable web tracking on your site in the `Web tracking` section.
 - 🔄 Enable or disable customers, orders, products and markets synchronization in the `Data sync` section.
