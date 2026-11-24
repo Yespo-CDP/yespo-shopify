@@ -23,7 +23,7 @@ export interface AccountConnectionSectionProps {
 /**
  * AccountConnectionSection component allows users to connect or disconnect their account via Yespo API key.
  *
- * Displays the connection status, account details (if connected), an API key input with show/hide toggle,
+ * Displays the connection status, account details (if connected), an API key input,
  * and buttons to connect or disconnect the account. Includes a confirmation modal before disconnecting.
  *
  * @param {AccountConnectionSectionProps} props - Component props.
@@ -96,15 +96,18 @@ const AccountConnectionSection: FC<AccountConnectionSectionProps> = ({
             <s-stack gap="base">
               <s-grid gridTemplateColumns="1fr auto" gap="base" alignItems="end">
                 <s-grid-item>
-                  <s-password-field
-                    value={value}
-                    name="apiKey"
-                    label="Api Key"
-                    autocomplete="off"
-                    onChange={(e) => handleValueChange(e.currentTarget.value)}
-                    error={errors?.apiKey}
-                    disabled={disabled}
-                  />
+                  {/* Inter's contextual alternates replace the "*" next to digits and capitals */}
+                  <div style={{fontFeatureSettings: "'calt' 0"}}>
+                    <s-text-field
+                      value={value}
+                      name="apiKey"
+                      label="Api Key"
+                      autocomplete="off"
+                      onChange={(e) => handleValueChange(e.currentTarget.value)}
+                      error={errors?.apiKey}
+                      disabled={disabled}
+                    />
+                  </div>
                 </s-grid-item>
                 <s-grid-item>
                   <s-box paddingBlockEnd="small-500">
