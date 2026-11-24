@@ -32,7 +32,6 @@ export const action = async ({request}: ActionFunctionArgs) => {
 
   try {
     const data = await request.json();
-    console.log('PUBLIC APP INBOX GET TOKEN', data)
 
     if (!data.shop) {
       return jsonResponse({ success: true }); // early return if data is incomplete
