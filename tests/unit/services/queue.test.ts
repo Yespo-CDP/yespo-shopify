@@ -84,14 +84,17 @@ beforeEach(() => {
   shop = { shopUrl: SHOP, isMarketSyncEnabled: true, apiKey: "key" };
 });
 
-const shopCompletedAgo = (shopUrl: string, ms: number) => ({
+const shopWithLogs = (shopUrl: string, logs: [status: string, agoMs: number | null][]) => ({
   shopUrl,
   isMarketSyncEnabled: true,
   apiKey: "key",
-  marketSyncLogs: [
-    { status: "COMPLETE", updatedAt: new Date(Date.now() - ms) },
-  ],
+  marketSyncLogs: logs.map(([status, agoMs]) => ({
+    status,
+    updatedAt: agoMs === null ? null : new Date(Date.now() - agoMs),
+  })),
 });
+const shopCompletedAgo = (shopUrl: string, ms: number) =>
+  shopWithLogs(shopUrl, [["COMPLETE", ms]]);
 
 test("cron re-syncs a shop finished 23h40m ago and skips one finished 1h ago", async () => {
   shops = [
@@ -110,6 +113,67 @@ test("cron re-syncs a shop finished 23h40m ago and skips one finished 1h ago", a
     ["sadd", "market-sync:scope:yesterday.myshopify.com", "all"],
   ]);
 });
+
+test("cron enqueues all 50 shops that are due", async () => {
+  shops = Array.from({ length: 50 }, (_, i) =>
+    shopCompletedAgo(`shop-${i}.myshopify.com`, 24 * HOUR),
+  );
+
+  assert.equal(await enqueueMarketSyncTasks(), 50);
+  assert.equal(new Set(added.map((job) => job.data.shop)).size, 50);
+});
+
+test("cron: shops without logs go first and do not push out the rest, oldest sync next", async () => {
+  // The due shops are listed from the newest sync to the oldest one.
+  const due = Array.from({ length: 20 }, (_, i) =>
+    shopCompletedAgo(`due-${i}.myshopify.com`, (24 + i) * HOUR),
+  );
+  const withoutLogs = Array.from({ length: 10 }, (_, i) =>
+    shopWithLogs(`no-logs-${i}.myshopify.com`, []),
+  );
+  shops = [...due, ...withoutLogs];
+
+  assert.equal(await enqueueMarketSyncTasks(), 30);
+  assert.deepEqual(
+    added.map((job) => job.data.shop),
+    [...withoutLogs, ...[...due].reverse()].map((s) => s.shopUrl),
+  );
+});
+
+test("cron: shops in progress are skipped and do not limit the others", async () => {
+  const busy = Array.from({ length: 10 }, (_, i) =>
+    shopWithLogs(`busy-${i}.myshopify.com`, [["IN_PROGRESS", HOUR]]),
+  );
+  shops = [...busy, shopCompletedAgo("due.myshopify.com", 24 * HOUR)];
+
+  assert.equal(await enqueueMarketSyncTasks(), 1);
+  assert.deepEqual(
+    added.map((job) => job.data.shop),
+    ["due.myshopify.com"],
+  );
+});
+
+// Each case is one shop; a log is one country.
+for (const [label, logs, expected] of [
+  ["no logs", [], 1],
+  ["every country COMPLETE 1h ago", [["COMPLETE", HOUR], ["COMPLETE", HOUR]], 0],
+  ["COMPLETE exactly 20h ago", [["COMPLETE", 20 * HOUR]], 0],
+  ["COMPLETE 20h and 1ms ago", [["COMPLETE", 20 * HOUR + 1]], 1],
+  ["one country COMPLETE 9h ago, the other COMPLETE 33h ago", [["COMPLETE", 9 * HOUR], ["COMPLETE", 33 * HOUR]], 1],
+  ["one country COMPLETE 9h ago, the other ERROR 33h ago", [["COMPLETE", 9 * HOUR], ["ERROR", 33 * HOUR]], 1],
+  ["one country COMPLETE 1h ago, the other ERROR 1h ago", [["COMPLETE", HOUR], ["ERROR", HOUR]], 1],
+  ["COMPLETE without updatedAt", [["COMPLETE", null]], 1],
+  ["IN_PROGRESS exactly 5h ago", [["COMPLETE", 33 * HOUR], ["IN_PROGRESS", 5 * HOUR]], 0],
+  ["IN_PROGRESS 5h and 1ms ago, the other country COMPLETE 6h ago", [["COMPLETE", 6 * HOUR], ["IN_PROGRESS", 5 * HOUR + 1]], 1],
+] as [string, [string, number | null][], number][]) {
+  test(`cron: ${label} -> ${expected ? "enqueued" : "skipped"}`, async (t) => {
+    t.mock.timers.enable({ apis: ["Date"], now: Date.now() });
+    shops = [shopWithLogs(SHOP, logs)];
+
+    assert.equal(await enqueueMarketSyncTasks(), expected);
+    assert.equal(added.length, expected);
+  });
+}
 
 for (const [label, options, member] of [
   ["one market", { marketId: EUROPE }, EUROPE],

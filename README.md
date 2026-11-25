@@ -650,13 +650,12 @@ Notes:
 
 A daily BullMQ repeatable job (`cron-jobs` queue → `enqueueMarketSyncTasks`) paces `POST /v1/markets` across shops. The schedule is registered on worker startup via `registerMarketSyncCron()` (`MARKET_SYNC_CRON_PATTERN = "0 3 * * *"` — once per day at 03:00 UTC). Requires the `worker` process and Redis.
 
-- At most **10 shops** sync at once (`MARKET_SYNC_MAX_CONCURRENT_SHOPS`).
-- Shops whose last `COMPLETE` sync finished less than **20h** ago are skipped (`MARKET_SYNC_MIN_INTERVAL_MS`); never-synced and last-`ERROR` shops are not throttled.
+- Each tick enqueues every shop that is due. At most **10 shops** sync at once: the concurrency of the `data-sync-market` worker (`MARKET_SYNC_MAX_CONCURRENT_SHOPS`); the rest wait in the queue.
+- A shop is skipped when every country is `COMPLETE` and finished less than **20h** ago (`MARKET_SYNC_MIN_INTERVAL_MS`); never-synced shops and shops with a country in `ERROR` are not throttled.
+- A shop with an `IN_PROGRESS` sync is skipped.
 - An `IN_PROGRESS` sync older than **5h** is treated as stuck and the shop becomes selectable again (`MARKET_SYNC_STALE_AFTER_MS`).
 - Eligible shops (`active`, `isMarketSyncEnabled`, `apiKey != null`) are ordered by oldest last sync (never-synced first). A shop whose API key cannot be decrypted is logged and skipped, so it does not stop the tick for other shops.
 - Only the daily cron applies the 20h interval. Market sync enqueued after historical products sync, by the `markets/*` webhook, or when the app home turns market sync on bypasses it.
-
-The `data-sync-market` worker `concurrency: 10` is the real parallelism cap.
 
 ---
 

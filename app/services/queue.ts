@@ -4,7 +4,6 @@ import { bullmqConnection, redisConnection } from "~/config/redis";
 import {
   DB_CLEANER_CRON_PATTERN,
   MARKET_SYNC_CRON_PATTERN,
-  MARKET_SYNC_MAX_CONCURRENT_SHOPS,
   MARKET_SYNC_MIN_INTERVAL_MS,
   MARKET_SYNC_STALE_AFTER_MS,
   PRODUCT_WEBHOOK_DEBOUNCE_MS,
@@ -365,62 +364,48 @@ function lastSyncedAt(shop: ShopWithMarketSyncLogs): Date | null {
 }
 
 /**
- * The shop's most recent successful market sync time = max(updatedAt) across its
- * COMPLETE logs, or null when it has never completed one. Used to throttle the
- * cron so a shop is not re-synced more than once per MARKET_SYNC_MIN_INTERVAL_MS.
- * Logs ending in ERROR are intentionally ignored so failures can retry sooner.
+ * Whether the cron can skip the shop: it has MarketSyncLog rows and every one
+ * is COMPLETE and fresh (updatedAt >= minIntervalBefore). A run of one market
+ * refreshes only that market's countries, so one fresh row is not enough.
  */
-function lastCompletedAt(shop: ShopWithMarketSyncLogs): Date | null {
-  let latest: Date | null = null;
-  for (const log of shop.marketSyncLogs) {
-    if (
-      log.status === "COMPLETE" &&
-      log.updatedAt &&
-      (latest === null || log.updatedAt > latest)
-    ) {
-      latest = log.updatedAt;
-    }
-  }
-  return latest;
+function syncedRecently(
+  shop: ShopWithMarketSyncLogs,
+  minIntervalBefore: Date,
+): boolean {
+  return (
+    shop.marketSyncLogs.length > 0 &&
+    shop.marketSyncLogs.every(
+      (log) =>
+        log.status === "COMPLETE" &&
+        log.updatedAt != null &&
+        log.updatedAt >= minIntervalBefore,
+    )
+  );
 }
 
 /**
- * Daily cron entrypoint: enqueues market sync jobs while keeping at most
- * MARKET_SYNC_MAX_CONCURRENT_SHOPS shops in progress at once.
+ * Daily cron entrypoint: enqueues a market sync job for every shop that is due,
+ * shops that synced longest ago first (never-synced shops, then oldest
+ * updatedAt). How many of them run at once is limited by the data-sync-market
+ * worker (MARKET_SYNC_MAX_CONCURRENT_SHOPS), not here.
  *
- * Counts shops already syncing (fresh IN_PROGRESS), then enqueues up to the
- * remaining budget, preferring shops that synced longest ago (never-synced
- * shops first, then oldest updatedAt).
- *
- * Shops whose last successful (COMPLETE) sync finished less than
- * MARKET_SYNC_MIN_INTERVAL_MS (20h) ago are skipped, so a shop synced off
- * schedule later in the day waits for the next day's tick, while a shop that
- * finished shortly after the previous tick is still picked up by this one.
- * Never-synced shops and shops whose last sync ended in ERROR are not
- * throttled. This interval applies only to the daily cron path; post data-sync
- * triggers (enqueueMarketSyncTaskForShopUrl) bypass it, but still require
- * isMarketSyncEnabled.
+ * Shops with a fresh IN_PROGRESS log are skipped. Shops where every country
+ * finished (COMPLETE) less than MARKET_SYNC_MIN_INTERVAL_MS (20h) ago are
+ * skipped too, so a shop synced off schedule later in the day waits for the
+ * next day's tick, while a shop that finished shortly after the previous tick
+ * is still picked up by this one. Never-synced shops and shops with a country
+ * in ERROR are not throttled. This interval applies only to the daily cron
+ * path; post data-sync triggers (enqueueMarketSyncTaskForShopUrl) bypass it,
+ * but still require isMarketSyncEnabled.
  */
 export async function enqueueMarketSyncTasks(): Promise<number> {
   const staleBefore = new Date(Date.now() - MARKET_SYNC_STALE_AFTER_MS);
   const minIntervalBefore = new Date(Date.now() - MARKET_SYNC_MIN_INTERVAL_MS);
   const shops = await shopRepository.getShopsForMarketSync();
 
-  const inProgressCount = shops.filter((shop) =>
-    isFreshInProgress(shop, staleBefore),
-  ).length;
-
-  const budget = MARKET_SYNC_MAX_CONCURRENT_SHOPS - inProgressCount;
-  if (budget <= 0) {
-    return 0;
-  }
-
   const candidates = shops
     .filter((shop) => !isFreshInProgress(shop, staleBefore))
-    .filter((shop) => {
-      const completedAt = lastCompletedAt(shop);
-      return completedAt === null || completedAt < minIntervalBefore;
-    })
+    .filter((shop) => !syncedRecently(shop, minIntervalBefore))
     .map((shop) => ({ shop, lastSyncedAt: lastSyncedAt(shop) }))
     .sort((a, b) => {
       // Never-synced shops (null) come first, then oldest updatedAt first.
@@ -428,8 +413,7 @@ export async function enqueueMarketSyncTasks(): Promise<number> {
       if (a.lastSyncedAt === null) return -1;
       if (b.lastSyncedAt === null) return 1;
       return a.lastSyncedAt.getTime() - b.lastSyncedAt.getTime();
-    })
-    .slice(0, budget);
+    });
 
   let enqueued = 0;
   for (const { shop } of candidates) {

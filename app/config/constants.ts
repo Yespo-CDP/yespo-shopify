@@ -87,27 +87,27 @@ export type EventMessage = (typeof EVENT_MESSAGES)[keyof typeof EVENT_MESSAGES];
 export const LOG_ORG_ID = 23948;
 
 /**
- * Maximum number of shops the market-sync cron keeps in progress at once.
- * Each cron tick only enqueues up to `MARKET_SYNC_MAX_CONCURRENT_SHOPS` minus
- * the shops already syncing.
+ * Maximum number of market sync runs at once: the concurrency of the
+ * data-sync-market worker. The cron enqueues every shop that is due, the rest
+ * wait in the queue.
  */
 export const MARKET_SYNC_MAX_CONCURRENT_SHOPS = 10;
 
 /**
  * A shop's market sync is treated as "in progress" only while its newest
  * IN_PROGRESS MarketSyncLog is fresher than this. Older IN_PROGRESS rows are
- * considered stuck (e.g. a crashed/restarted worker), no longer count against
- * the concurrency budget, and let the shop be picked up again.
+ * considered stuck (e.g. a crashed/restarted worker) and let the cron pick the
+ * shop up again.
  */
 export const MARKET_SYNC_STALE_AFTER_MS = 5 * 60 * 60 * 1000;
 
 /**
  * Minimum time between automatic (cron) market syncs for a shop. The cron skips
- * a shop whose last successful (COMPLETE) sync finished less than this ago.
+ * a shop where every country finished (COMPLETE) less than this ago.
  * It is shorter than a day because it counts from when the previous run
  * finished, not from the tick: a shop that finished at 03:20 is picked up again
- * by the next 03:00 tick. Never-synced shops and shops whose last sync ended in
- * ERROR are not throttled. Post data-sync triggers bypass this interval entirely.
+ * by the next 03:00 tick. Never-synced shops and shops with a country in ERROR
+ * are not throttled. Post data-sync triggers bypass this interval entirely.
  */
 export const MARKET_SYNC_MIN_INTERVAL_MS = 20 * 60 * 60 * 1000;
 

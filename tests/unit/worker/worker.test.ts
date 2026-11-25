@@ -5,6 +5,7 @@ type Kind = "customer" | "order" | "product";
 type Processor = (job: { data: unknown; [key: string]: unknown }) => Promise<unknown>;
 
 const processors = new Map<string, Processor>();
+const concurrencies = new Map<string, number | undefined>();
 const statuses: Partial<Record<Kind, string>> = {};
 const errorWrites: Kind[] = [];
 let shopData: { id: number; apiKey: string } | null = null;
@@ -34,8 +35,10 @@ mock.module("bullmq", {
       constructor(
         readonly name: string,
         processor: Processor,
+        opts: { concurrency?: number },
       ) {
         processors.set(name, processor);
+        concurrencies.set(name, opts.concurrency);
       }
       on() {}
       close() {
@@ -44,6 +47,11 @@ mock.module("bullmq", {
       }
     },
   },
+});
+const constants = await import("../../../app/config/constants");
+mock.module("../../../app/config/constants", {
+  // Differs from the real value (10), so the worker has to read the constant.
+  namedExports: { ...constants, MARKET_SYNC_MAX_CONCURRENT_SHOPS: 7 },
 });
 mock.module("../../../app/config/redis", {
   namedExports: { bullmqConnection: {} },
@@ -191,6 +199,18 @@ test("db-cleaner-tick deletes expired EventData and TmpMarketSync rows older tha
   const cutoff = deleteOlderThan.mock.calls[0].arguments[0].getTime();
   const day = 24 * 60 * 60 * 1000;
   assert.ok(cutoff >= before - day && cutoff <= after - day);
+});
+
+test("MARKET_SYNC_MAX_CONCURRENT_SHOPS (10) limits only the data-sync-market worker", () => {
+  assert.equal(constants.MARKET_SYNC_MAX_CONCURRENT_SHOPS, 10);
+  assert.deepEqual(Object.fromEntries(concurrencies), {
+    "cron-jobs": 1,
+    "data-sync": 10,
+    "data-sync-market": 7,
+    "product-webhook": 1,
+    "token-migration": 5,
+    "webhook-events": 5,
+  });
 });
 
 const runMarketSync = (job: { data: unknown; [key: string]: unknown }) =>

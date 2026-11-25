@@ -1,6 +1,9 @@
 import { Worker } from "bullmq";
 
-import { TMP_MARKET_SYNC_TTL_MS } from "~/config/constants";
+import {
+  MARKET_SYNC_MAX_CONCURRENT_SHOPS,
+  TMP_MARKET_SYNC_TTL_MS,
+} from "~/config/constants";
 import { bullmqConnection } from "~/config/redis";
 import {
   customerSyncLogRepository,
@@ -243,7 +246,7 @@ const marketSyncWorker = new Worker<MarketSyncJobData>(
   },
   {
     connection: bullmqConnection,
-    concurrency: 10,
+    concurrency: MARKET_SYNC_MAX_CONCURRENT_SHOPS,
   },
 );
 
