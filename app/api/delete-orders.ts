@@ -31,10 +31,25 @@ export const deleteYespoOrder = async ({
   const url = `${process.env.API_URL}/orders?${new URLSearchParams({ externalOrderId })}`;
 
   try {
-    await fetchWithErrorHandling(url, {
+
+    const response = await fetchWithErrorHandling(url, {
       method: "DELETE",
       headers: { Authorization: getAuthHeader(apiKey) },
     });
+
+    await sendLogEvent({
+      orgId,
+      message: EVENT_MESSAGES.CUSTOM_LOG_DELETE_YESPO_ORDERS_SUCCESS,
+      errorMessage: '',
+      data: {
+        domain,
+        requestBody: { externalOrderId },
+        responseBody: response.responseData,
+        statusCode: response.status
+      },
+      logLevel: 'INFO'
+    });
+    
   } catch (error) {
     const { message, status } = error as { message?: string; status?: number };
     console.error(`Error deleting order ${externalOrderId}:`, message);
