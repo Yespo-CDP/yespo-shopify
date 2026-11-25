@@ -213,22 +213,16 @@ const dataSyncWorker = new Worker<JobData>(
 const marketSyncWorker = new Worker<MarketSyncJobData>(
   "data-sync-market",
   async (job) => {
+    const { shop } = job?.data ?? {};
+
+    if (!shop) return;
+
     try {
-      const { shop } = job?.data ?? {};
-
-      if (!shop) return;
-
       // Taken first, so a request made from here on belongs to the next run. A
-      // stalled job already took its scope before the crash: run a full sync.
+      // stalled or retried job already took its scope before: run a full sync.
       const scope = await takeMarketSyncScope(shop);
-      const marketId = job.stalledCounter > 0 ? null : scope;
-
-      const tokenManager = createOfflineTokenManager(shop);
-      const accessToken = await tokenManager.getAccessToken();
-      if (!accessToken) {
-        console.error(`Market sync: no valid offline session for ${shop}`);
-        return;
-      }
+      const marketId =
+        job.stalledCounter > 0 || job.attemptsMade > 0 ? null : scope;
 
       const shopData = await shopRepository.getShop(shop);
       const apiKey = shopData?.apiKey;
@@ -236,6 +230,12 @@ const marketSyncWorker = new Worker<MarketSyncJobData>(
       if (!apiKey) {
         console.error(`Error market sync: Api key not found for ${shop}`);
         return;
+      }
+
+      const tokenManager = createOfflineTokenManager(shop);
+      const accessToken = await tokenManager.getAccessToken();
+      if (!accessToken) {
+        throw new Error("no valid offline session");
       }
 
       await marketSyncHandler(
@@ -249,7 +249,13 @@ const marketSyncWorker = new Worker<MarketSyncJobData>(
         tokenManager,
       );
     } catch (error: unknown) {
-      console.error(`Market sync worker error:`, error);
+      console.error(
+        `Market sync for ${shop} failed ` +
+          `(attempt ${job.attemptsMade + 1}/${job.opts.attempts ?? 1}):`,
+        // The SDK throws a Response when the token refresh fails.
+        error instanceof Response ? `HTTP ${error.status}` : error,
+      );
+      throw error;
     }
   },
   {

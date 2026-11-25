@@ -72,7 +72,12 @@ export async function webhookEventHandler(
 
       if (!purchasedItemsSent && shop.isOrderSyncEnabled) {
         await enqueueWebhookEvent(
-          { shop: data.shop, topic: "ORDERS_UPDATED", payload },
+          {
+            shop: data.shop,
+            topic: "ORDERS_UPDATED",
+            payload,
+            fromOrderCreate: true,
+          },
           `order-create-${(payload as OrderCreatePayload).id}`,
         );
       }
@@ -98,6 +103,7 @@ export async function webhookEventHandler(
           shop.domain || data.shop,
           shop.orgId,
           shopUrl,
+          data.fromOrderCreate,
         );
       }
       break;

@@ -38,6 +38,7 @@ const resolved = [
   { name: "primary only", locales: [uk], stored: null, expected: ["uk", []] },
   { name: "primary and a secondary", locales: [uk, locale("en")], stored: null, expected: ["uk", ["en"]] },
   { name: "an unpublished locale is skipped", locales: [uk, locale("en"), locale("pl", false, false)], stored: null, expected: ["uk", ["en"]] },
+  { name: "an empty stored language counts as none", locales: [uk, locale("en")], stored: "", expected: ["uk", ["en"]] },
   { name: "the stored language wins over the primary", locales: [uk, locale("pl")], stored: "en", expected: ["en", ["pl"]] },
   { name: "the stored language is not translated", locales: [uk, locale("en")], stored: "en", expected: ["en", []] },
 ] as const;
@@ -75,9 +76,10 @@ const failures = [
 for (const { name, response } of failures) {
   for (const { stored, expected } of [
     { stored: null, expected: "en" },
+    { stored: "", expected: "en" },
     { stored: "uk", expected: "uk" },
   ]) {
-    test(`failure: ${name}, stored ${stored} → ${expected}`, async () => {
+    test(`failure: ${name}, stored ${JSON.stringify(stored)} → ${expected}`, async () => {
       const result = await run(response, stored);
 
       assert.deepEqual(result, { languageCode: expected, secondaryLocales: [] });

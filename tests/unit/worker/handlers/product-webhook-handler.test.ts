@@ -143,21 +143,25 @@ beforeEach(() => {
   getProductTranslations.mock.resetCalls();
 });
 
-test("sends the shop primary locale and stores it after Yespo accepts", async () => {
-  await run();
+for (const stored of [null, ""]) {
+  test(`stored language ${JSON.stringify(stored)}: sends the shop primary locale and stores it after Yespo accepts`, async () => {
+    defaultLanguageCode = stored;
 
-  assert.equal(updateProductVariants.mock.calls[0].arguments[0].languageCode, "uk");
-  assert.deepEqual(getProductTranslations.mock.calls[0].arguments[0].locales, ["en"]);
-  assert.deepEqual(calls, [
-    "updateProductVariants",
-    "updateShop",
-    "markProductVariantSyncResults",
-  ]);
-  assert.deepEqual(updateShop.mock.calls[0].arguments, [
-    SHOP,
-    { defaultLanguageCode: "uk", defaultCurrency: "UAH" },
-  ]);
-});
+    await run();
+
+    assert.equal(updateProductVariants.mock.calls[0].arguments[0].languageCode, "uk");
+    assert.deepEqual(getProductTranslations.mock.calls[0].arguments[0].locales, ["en"]);
+    assert.deepEqual(calls, [
+      "updateProductVariants",
+      "updateShop",
+      "markProductVariantSyncResults",
+    ]);
+    assert.deepEqual(updateShop.mock.calls[0].arguments, [
+      SHOP,
+      { defaultLanguageCode: "uk", defaultCurrency: "UAH" },
+    ]);
+  });
+}
 
 test("does not store the language when the request to Yespo throws", async () => {
   sendError = new Error("409");

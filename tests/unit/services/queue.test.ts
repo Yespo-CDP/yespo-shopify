@@ -144,6 +144,29 @@ test("cron: shops without logs go first and do not push out the rest, oldest syn
   );
 });
 
+test("cron: shops are sorted by the oldest country, a country without a date is the oldest", async () => {
+  shops = [
+    shopCompletedAgo("24h.myshopify.com", 24 * HOUR),
+    shopWithLogs("one-market-1h.myshopify.com", [["COMPLETE", HOUR], ["COMPLETE", 48 * HOUR]]),
+    shopWithLogs("no-date.myshopify.com", [["COMPLETE", HOUR], ["COMPLETE", null]]),
+    shopWithLogs("36h.myshopify.com", [["COMPLETE", 36 * HOUR], ["ERROR", 30 * HOUR]]),
+    shopWithLogs("no-logs.myshopify.com", []),
+  ];
+
+  await enqueueMarketSyncTasks();
+
+  assert.deepEqual(
+    added.map((job) => job.data.shop),
+    [
+      "no-logs.myshopify.com",
+      "no-date.myshopify.com",
+      "one-market-1h.myshopify.com",
+      "36h.myshopify.com",
+      "24h.myshopify.com",
+    ],
+  );
+});
+
 test("cron: shops in progress are skipped and do not limit the others", async () => {
   const busy = Array.from({ length: 10 }, (_, i) =>
     shopWithLogs(`busy-${i}.myshopify.com`, [["IN_PROGRESS", HOUR]]),
@@ -195,6 +218,8 @@ for (const [label, options, member] of [
         data: { shop: SHOP },
         opts: {
           deduplication: { id: SHOP, keepLastIfActive: true },
+          attempts: 5,
+          backoff: { type: "exponential", delay: 60_000 },
           removeOnComplete: 1000,
           removeOnFail: 5000,
         },

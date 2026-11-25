@@ -106,7 +106,7 @@ test("ORDERS_CREATE queues the order as ORDERS_UPDATED when PurchasedItems was n
   assert.equal(updateOrderService.mock.callCount(), 0);
   assert.equal(enqueueWebhookEvent.mock.callCount(), 1);
   assert.deepEqual(enqueueWebhookEvent.mock.calls[0].arguments, [
-    { shop: SHOP, topic: "ORDERS_UPDATED", payload: orderPayload },
+    { shop: SHOP, topic: "ORDERS_UPDATED", payload: orderPayload, fromOrderCreate: true },
     "order-create-1",
   ]);
 });
@@ -145,8 +145,19 @@ test("ORDERS_UPDATED sends the order when order sync is enabled", async () => {
   await run("ORDERS_UPDATED");
 
   assert.equal(updateOrderService.mock.callCount(), 1);
-  assert.deepEqual(updateOrderService.mock.calls[0].arguments, [orderPayload, "key", 3, "demo.com", 5, SHOP]);
+  assert.deepEqual(updateOrderService.mock.calls[0].arguments, [orderPayload, "key", 3, "demo.com", 5, SHOP, undefined]);
   assert.equal(enqueueWebhookEvent.mock.callCount(), 0);
+});
+
+test("ORDERS_UPDATED queued by ORDERS_CREATE tells the service so", async () => {
+  await webhookEventHandler({
+    shop: SHOP,
+    topic: "ORDERS_UPDATED",
+    payload: orderPayload,
+    fromOrderCreate: true,
+  });
+
+  assert.deepEqual(updateOrderService.mock.calls[0].arguments, [orderPayload, "key", 3, "demo.com", 5, SHOP, true]);
 });
 
 test("ORDERS_UPDATED does not send the order when order sync is disabled", async () => {

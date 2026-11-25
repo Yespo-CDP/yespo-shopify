@@ -62,6 +62,8 @@ export interface WebhookEventJobData {
   shop: string;
   topic: string;
   payload: unknown;
+  /** The ORDERS_UPDATED job was queued by an orders/create job. */
+  fromOrderCreate?: boolean;
 }
 
 /**
@@ -328,8 +330,11 @@ async function enqueueMarketSyncJobIfEligible(
     { shop: shop.shopUrl },
     {
       // At most one active and one waiting job per shop. A job added during a
-      // run starts after it.
+      // run starts after it. A failed job keeps its place while it waits for a
+      // retry, so a job added then is merged into it.
       deduplication: { id: shop.shopUrl, keepLastIfActive: true },
+      attempts: 5,
+      backoff: { type: "exponential", delay: 60_000 },
       removeOnComplete: 1000,
       removeOnFail: 5000,
     },
@@ -347,7 +352,8 @@ async function enqueueMarketSyncJobIfEligible(
  *
  * Requests that reach Redis before the job starts are merged into one run: the
  * same market stays a single-market run, anything else becomes a full one. A
- * request made during a run starts another run after it.
+ * request made during a run starts another run after it. A request made while a
+ * failed job waits for its retry is merged into the retry, which is a full run.
  *
  * No-ops when the shop is missing, has no API key, or market sync is disabled.
  * Unlike the daily cron, this path does not apply MARKET_SYNC_MIN_INTERVAL_MS.
@@ -381,17 +387,20 @@ function isFreshInProgress(
 }
 
 /**
- * The shop's most recent market sync time = max(updatedAt) across its logs, or
- * null when it has never synced (highest priority to pick up).
+ * When the shop's longest unsynced country was synced = min(updatedAt) across
+ * its logs (a log without updatedAt is the oldest), or null when the shop has
+ * never synced (highest priority to pick up). A run of one market refreshes only
+ * that market's countries, so the newest log says nothing about the others.
  */
-function lastSyncedAt(shop: ShopWithMarketSyncLogs): Date | null {
-  let latest: Date | null = null;
+function oldestSyncedAt(shop: ShopWithMarketSyncLogs): Date | null {
+  let oldest: Date | null = null;
   for (const log of shop.marketSyncLogs) {
-    if (log.updatedAt && (latest === null || log.updatedAt > latest)) {
-      latest = log.updatedAt;
+    const updatedAt = log.updatedAt ?? new Date(0);
+    if (oldest === null || updatedAt < oldest) {
+      oldest = updatedAt;
     }
   }
-  return latest;
+  return oldest;
 }
 
 /**
@@ -416,18 +425,19 @@ function syncedRecently(
 
 /**
  * Daily cron entrypoint: enqueues a market sync job for every shop that is due,
- * shops that synced longest ago first (never-synced shops, then oldest
+ * never-synced shops first, then by the country synced longest ago (oldest
  * updatedAt). How many of them run at once is limited by the data-sync-market
  * worker (MARKET_SYNC_MAX_CONCURRENT_SHOPS), not here.
  *
- * Shops with a fresh IN_PROGRESS log are skipped. Shops where every country
- * finished (COMPLETE) less than MARKET_SYNC_MIN_INTERVAL_MS (20h) ago are
- * skipped too, so a shop synced off schedule later in the day waits for the
- * next day's tick, while a shop that finished shortly after the previous tick
- * is still picked up by this one. Never-synced shops and shops with a country
- * in ERROR are not throttled. This interval applies only to the daily cron
- * path; post data-sync triggers (enqueueMarketSyncTaskForShopUrl) bypass it,
- * but still require isMarketSyncEnabled.
+ * Shops with a fresh IN_PROGRESS log are skipped. Shops where every existing
+ * country log is COMPLETE and newer than MARKET_SYNC_MIN_INTERVAL_MS (20h) are
+ * skipped too (a country without a log is not counted), so a shop synced off
+ * schedule later in the day waits for the next day's tick, while a shop that
+ * finished shortly after the previous tick is still picked up by this one.
+ * Never-synced shops and shops with a country in ERROR are not throttled. This
+ * interval applies only to the daily cron path; post data-sync triggers
+ * (enqueueMarketSyncTaskForShopUrl) bypass it, but still require
+ * isMarketSyncEnabled.
  */
 export async function enqueueMarketSyncTasks(): Promise<number> {
   const staleBefore = new Date(Date.now() - MARKET_SYNC_STALE_AFTER_MS);
@@ -437,13 +447,13 @@ export async function enqueueMarketSyncTasks(): Promise<number> {
   const candidates = shops
     .filter((shop) => !isFreshInProgress(shop, staleBefore))
     .filter((shop) => !syncedRecently(shop, minIntervalBefore))
-    .map((shop) => ({ shop, lastSyncedAt: lastSyncedAt(shop) }))
+    .map((shop) => ({ shop, oldestSyncedAt: oldestSyncedAt(shop) }))
     .sort((a, b) => {
       // Never-synced shops (null) come first, then oldest updatedAt first.
-      if (a.lastSyncedAt === null && b.lastSyncedAt === null) return 0;
-      if (a.lastSyncedAt === null) return -1;
-      if (b.lastSyncedAt === null) return 1;
-      return a.lastSyncedAt.getTime() - b.lastSyncedAt.getTime();
+      if (a.oldestSyncedAt === null && b.oldestSyncedAt === null) return 0;
+      if (a.oldestSyncedAt === null) return -1;
+      if (b.oldestSyncedAt === null) return 1;
+      return a.oldestSyncedAt.getTime() - b.oldestSyncedAt.getTime();
     });
 
   let enqueued = 0;

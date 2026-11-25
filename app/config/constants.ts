@@ -103,7 +103,8 @@ export const MARKET_SYNC_STALE_AFTER_MS = 5 * 60 * 60 * 1000;
 
 /**
  * Minimum time between automatic (cron) market syncs for a shop. The cron skips
- * a shop where every country finished (COMPLETE) less than this ago.
+ * a shop where every existing country log is COMPLETE and newer than this. A
+ * country without a log is not counted.
  * It is shorter than a day because it counts from when the previous run
  * finished, not from the tick: a shop that finished at 03:20 is picked up again
  * by the next 03:00 tick. Never-synced shops and shops with a country in ERROR

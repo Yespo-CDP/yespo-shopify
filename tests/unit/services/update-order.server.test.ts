@@ -40,8 +40,16 @@ const payload = {
   line_items: [],
 } as unknown as OrderCreatePayload;
 
-const run = (data: unknown = payload) =>
-  updateOrderService(data as OrderCreatePayload, "key", 1, "demo.com");
+const run = (data: unknown = payload, fromOrderCreate?: boolean) =>
+  updateOrderService(
+    data as OrderCreatePayload,
+    "key",
+    1,
+    "demo.com",
+    undefined,
+    undefined,
+    fromOrderCreate,
+  );
 
 const yespoFails = (status?: number) =>
   createOrders.mock.mockImplementationOnce(async () => {
@@ -173,6 +181,37 @@ for (const [name, rows, updatedAt] of [
     assert.equal(createOrUpdateOrderSync.mock.callCount(), 1);
   });
 }
+
+// The order of an orders/create job is always the oldest state of the order.
+for (const [name, rows, updatedAt, sent] of [
+  ["same date", [{ updatedAt: STORED }], "2026-01-02T00:00:00Z", 0],
+  ["newer stored date", [{ updatedAt: new Date(STORED.getTime() + 1) }], "2026-01-02T00:00:00Z", 0],
+  ["older stored date", [{ updatedAt: new Date(STORED.getTime() - 1) }], "2026-01-02T00:00:00Z", 1],
+  ["stored row without a date", [{ updatedAt: null }], "2026-01-02T00:00:00Z", 1],
+  ["no stored row", [], "2026-01-02T00:00:00Z", 1],
+  ["updated_at missing", [{ updatedAt: STORED }], undefined, 1],
+] as const) {
+  test(`order of orders/create, ${name}: ${sent ? "sent" : "skipped"}`, async () => {
+    stored = [...rows];
+
+    await run({ ...payload, updated_at: updatedAt }, true);
+
+    assert.equal(createOrders.mock.callCount(), sent);
+    assert.equal(createOrUpdateOrderSync.mock.callCount(), sent);
+  });
+}
+
+test("order of orders/create is sent again when its marker was not written", async () => {
+  createOrUpdateOrderSync.mock.mockImplementationOnce(async () => {
+    throw new Error("db down");
+  });
+
+  await assert.rejects(run(payload, true), /db down/);
+  await run(payload, true);
+
+  assert.equal(createOrders.mock.callCount(), 2);
+  assert.equal(createOrUpdateOrderSync.mock.callCount(), 2);
+});
 
 test("failed OrderSync read is thrown and nothing is sent", async () => {
   getOrderSyncByOrderIds.mock.mockImplementationOnce(async () => {

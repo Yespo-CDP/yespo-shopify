@@ -17,7 +17,7 @@ interface ShopLocalesResponse {
  * return the locales, the stored language (or "en") is used without translations.
  *
  * @param client - Shopify GraphQL Admin API client
- * @param storedLanguageCode - `Shop.defaultLanguageCode`, null until the first accepted request
+ * @param storedLanguageCode - `Shop.defaultLanguageCode`, null (or empty) until the first accepted request
  * @returns `languageCode` (e.g. "uk") and the other published non-primary locales (e.g. ["en", "fr"])
  */
 export const getShopLanguages = async ({
@@ -49,7 +49,7 @@ export const getShopLanguages = async ({
       throw new Error("no primary locale in the response");
     }
 
-    const languageCode = storedLanguageCode ?? primary.locale;
+    const languageCode = storedLanguageCode || primary.locale;
     const secondaryLocales = locales
       .filter((l) => l.published && !l.primary && l.locale !== languageCode)
       .map((l) => l.locale);
@@ -60,6 +60,6 @@ export const getShopLanguages = async ({
       "[locales] Failed to fetch shop locales:",
       error instanceof Error ? error.message : error,
     );
-    return { languageCode: storedLanguageCode ?? "en", secondaryLocales: [] };
+    return { languageCode: storedLanguageCode || "en", secondaryLocales: [] };
   }
 };

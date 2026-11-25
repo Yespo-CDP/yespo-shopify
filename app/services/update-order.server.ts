@@ -19,6 +19,8 @@ import { presentmentAmount } from "~/services/presentment-money";
  *
  * Nothing is sent when the stored `OrderSync.updatedAt` is newer than
  * `payload.updated_at`: a retried or late webhook must not overwrite newer data.
+ * The order of an orders/create job is its oldest state and `updated_at` has
+ * seconds only, so it is not sent when the stored date is the same either.
  *
  * A permanent Yespo error (4xx except 429) is logged and the order is not
  * marked as synced. Any other error is thrown so the webhook job is retried.
@@ -62,6 +64,7 @@ import { presentmentAmount } from "~/services/presentment-money";
  * @param domain
  * @param orgId
  * @param shopUrl - myshopify domain used to load variant URL and image
+ * @param fromOrderCreate - the payload comes from an orders/create webhook
  * @returns {Promise<void>} A promise that resolves when the order creation completes.
  */
 export const updateOrderService = async (
@@ -71,19 +74,23 @@ export const updateOrderService = async (
   domain: string,
   orgId?: number | null,
   shopUrl?: string,
+  fromOrderCreate?: boolean,
 ) => {
   try {
     const [orderSync] = await orderSyncRepository.getOrderSyncByOrderIds(
       shopId,
       [payload.admin_graphql_api_id],
     );
-    // A missing or unparsable updated_at gives NaN, so the order is sent.
-    if (
-      orderSync?.updatedAt &&
-      orderSync.updatedAt.getTime() > Date.parse(String(payload.updated_at))
-    ) {
-      console.log(`Order ${payload.id} not sent: newer data was already synced`);
-      return;
+    if (orderSync?.updatedAt) {
+      const storedAt = orderSync.updatedAt.getTime();
+      // A missing or unparsable updated_at gives NaN, so the order is sent.
+      const updatedAt = Date.parse(String(payload.updated_at));
+      if (fromOrderCreate ? storedAt >= updatedAt : storedAt > updatedAt) {
+        console.log(
+          `Order ${payload.id} not sent: newer or the same data was already synced`,
+        );
+        return;
+      }
     }
 
     const formatAddress = (address: OrderCreatePayload["shipping_address"]) =>

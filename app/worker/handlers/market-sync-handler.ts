@@ -193,6 +193,9 @@ function hashMarketItem(item: MarketProductItem): string {
  * `marketId` limits the catalog send to that Shopify market. Cleanup of
  * removed countries still compares the full enabled set, so a single-market
  * run does not zero out the other markets.
+ *
+ * An error is logged as ERROR for every country. It is thrown only when there is
+ * no country to log it for.
  */
 export const marketSyncHandler = async (
   shop: string,
@@ -437,6 +440,12 @@ export const marketSyncHandler = async (
       message: EVENT_MESSAGES.CUSTOM_LOG_SEND_MARKET_PRODUCTS_ERROR,
       logLevel: "ERROR",
     });
+
+    // No country got an ERROR log (markets not read, or the last one removed),
+    // so nothing makes the cron run this again: let the job retry.
+    if (marketsConfig.countries.length === 0) {
+      throw error;
+    }
   }
 };
 

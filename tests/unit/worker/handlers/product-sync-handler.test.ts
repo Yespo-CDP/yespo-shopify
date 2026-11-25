@@ -260,24 +260,26 @@ const ukrainianShop = [
   { locale: "pl", primary: false, published: true },
 ];
 
-test("a new shop sends its primary locale and stores it", async () => {
-  defaultLanguageCode = null;
-  shopLocales = ukrainianShop;
+for (const stored of [null, ""]) {
+  test(`a new shop (stored language ${JSON.stringify(stored)}) sends its primary locale and stores it`, async () => {
+    defaultLanguageCode = stored;
+    shopLocales = ukrainianShop;
 
-  await run();
+    await run();
 
-  assert.equal(sentLanguageCode(), "uk");
-  assert.deepEqual(translatedLocales(), ["en", "pl"]);
-  assert.deepEqual(
-    updateShop.mock.calls.map((call) => call.arguments),
-    [
+    assert.equal(sentLanguageCode(), "uk");
+    assert.deepEqual(translatedLocales(), ["en", "pl"]);
+    assert.deepEqual(
+      updateShop.mock.calls.map((call) => call.arguments),
       [
-        "demo.myshopify.com",
-        { defaultLanguageCode: "uk", defaultCurrency: "USD" },
+        [
+          "demo.myshopify.com",
+          { defaultLanguageCode: "uk", defaultCurrency: "USD" },
+        ],
       ],
-    ],
-  );
-});
+    );
+  });
+}
 
 test("the language is not stored when the request to Yespo throws", async () => {
   defaultLanguageCode = null;

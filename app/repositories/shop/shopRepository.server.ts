@@ -70,7 +70,7 @@ export default interface ShopRepository {
   /**
    * Returns active shops eligible for market sync cron, each with the minimal
    * MarketSyncLog fields (status + updatedAt) needed to tell which shops are due
-   * and pick the shops that synced longest ago first.
+   * and pick first the shops with a country synced longest ago.
    */
   getShopsForMarketSync(): Promise<ShopWithMarketSyncLogs[]>;
 

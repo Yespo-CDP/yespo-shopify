@@ -228,7 +228,7 @@ test("MARKET_SYNC_MAX_CONCURRENT_SHOPS (10) limits only the data-sync-market wor
 });
 
 const runMarketSync = (job: { data: unknown; [key: string]: unknown }) =>
-  processors.get("data-sync-market")!(job);
+  processors.get("data-sync-market")!({ attemptsMade: 0, opts: { attempts: 5 }, ...job });
 const syncedMarket = () => marketSyncHandler.mock.calls.at(-1)?.arguments[6];
 
 test("market sync job: syncs the market taken from the scope", async () => {
@@ -261,15 +261,80 @@ test("market sync job restarted after a crash: full run, its first scope is alre
   assert.equal(syncedMarket(), null);
 });
 
-test("market sync job: the scope is taken before the session check", async () => {
+test("market sync job retried after a failure: full run, its first scope is already taken", async () => {
+  takeMarketSyncScope.mock.resetCalls();
+  takeMarketSyncScope.mock.mockImplementationOnce(
+    async () => "gid://shopify/Market/2",
+  );
+
+  await runMarketSync({ data: { shop: "demo.myshopify.com" }, stalledCounter: 0, attemptsMade: 1 });
+
+  assert.equal(takeMarketSyncScope.mock.callCount(), 1);
+  assert.equal(syncedMarket(), null);
+});
+
+for (const [label, shop] of [
+  ["without an API key", { id: 1, apiKey: "" }],
+  ["without a row", null],
+] as const) {
+  test(`market sync job: a shop ${label} is skipped, not retried, even without a session`, async () => {
+    shopData = shop;
+    accessToken = null;
+    takeMarketSyncScope.mock.resetCalls();
+    marketSyncHandler.mock.resetCalls();
+
+    await runMarketSync({ data: { shop: "demo.myshopify.com" }, stalledCounter: 0 });
+
+    assert.equal(takeMarketSyncScope.mock.callCount(), 1);
+    assert.equal(marketSyncHandler.mock.callCount(), 0);
+  });
+}
+
+const failedMarketSync = async (expected: object) => {
+  const errors: unknown[][] = [];
+  const consoleError = mock.method(console, "error", (...args: unknown[]) => {
+    errors.push(args);
+  });
+  await assert.rejects(
+    runMarketSync({ data: { shop: "demo.myshopify.com" }, stalledCounter: 0, attemptsMade: 1 }),
+    expected,
+  );
+  consoleError.mock.restore();
+  mock.method(console, "error", () => {});
+  return errors;
+};
+const MARKET_SYNC_FAILED = "Market sync for demo.myshopify.com failed (attempt 2/5):";
+
+test("market sync job: a shop with a key but without a session is logged once and retried", async () => {
   accessToken = null;
   takeMarketSyncScope.mock.resetCalls();
   marketSyncHandler.mock.resetCalls();
 
-  await runMarketSync({ data: { shop: "demo.myshopify.com" }, stalledCounter: 0 });
+  const errors = await failedMarketSync(/no valid offline session/);
 
   assert.equal(takeMarketSyncScope.mock.callCount(), 1);
   assert.equal(marketSyncHandler.mock.callCount(), 0);
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0][0], MARKET_SYNC_FAILED);
+});
+
+test("market sync job: a failure is logged and rethrown for a retry", async () => {
+  const failure = new Error("config read failed");
+  marketSyncHandler.mock.mockImplementationOnce(async () => {
+    throw failure;
+  });
+  assert.deepEqual(await failedMarketSync((error: unknown) => error === failure), [
+    [MARKET_SYNC_FAILED, failure],
+  ]);
+
+  // The SDK throws a Response when the token refresh fails.
+  const refreshFailure = new Response(undefined, { status: 503 });
+  marketSyncHandler.mock.mockImplementationOnce(async () => {
+    throw refreshFailure;
+  });
+  assert.deepEqual(await failedMarketSync((error: unknown) => error === refreshFailure), [
+    [MARKET_SYNC_FAILED, "HTTP 503"],
+  ]);
 });
 
 test("webhook-events job: handler gets job.data; a failure is logged without the payload and rethrown", async () => {

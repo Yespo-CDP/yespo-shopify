@@ -859,16 +859,16 @@ startup, `registerMarketSyncCron()` upserts a scheduler in Redis; BullMQ then en
 `cron-jobs` tick once per day at 03:00 UTC. Requires the `worker` process (`npm run worker` in
 `Procfile`) and `REDIS_URL`.
 
-A daily cron tick enqueues every shop that is due, the shops that synced longest ago
-first. The `data-sync-market` worker syncs at most **10 shops** at once; the rest wait in
+A daily cron tick enqueues every shop that is due, the shops with a country synced longest
+ago first. The `data-sync-market` worker syncs at most **10 shops** at once; the rest wait in
 the queue. The unit is a **shop** (a cron or
 full `marketSyncHandler` run syncs all of that shop's markets/countries; a
 `markets/create` while sync is already on syncs only the new market). The limit of 10
 counts shops, not countries.
 
 To avoid re-syncing the same shop too often, the cron also skips any shop
-where **every country is `COMPLETE`** and finished less than
-`MARKET_SYNC_MIN_INTERVAL_MS` (20 h) ago. One fresh country is not enough: a run of one
+where **every existing country log is `COMPLETE`** and newer than
+`MARKET_SYNC_MIN_INTERVAL_MS` (20 h). A country without a log is not counted. One fresh country is not enough: a run of one
 market refreshes only that market's countries. The interval is shorter than a day because it
 counts from when the previous run finished, not from the tick: a shop that finished at
 03:20 is still picked up by the next day's 03:00 tick. With a long queue, a shop that
@@ -877,8 +877,8 @@ Never-synced shops and shops
 with a country in `ERROR` are **not** throttled. This interval applies only to the cron path.
 Every `enqueueMarketSyncTaskForShopUrl` trigger bypasses it: the post
 data-sync chain (after historical products sync), the `markets/*` webhook, and the app home
-page when it turns market sync on. The run starts immediately, or after the shop's current
-run when one is in progress.
+page when it turns market sync on. The run starts immediately, after the shop's current
+run when one is in progress, or after the retry pause when a failed run waits for a retry.
 
 **Scheduler:** `app/worker/worker.ts` calls `registerMarketSyncCron()` on startup →
 `CronQueue.upsertJobScheduler()` in `app/services/queue.ts`.
@@ -894,7 +894,7 @@ worker.
 | `MARKET_SYNC_CRON_PATTERN`         | `"0 3 * * *"`              | BullMQ cron pattern — once per day at 03:00 UTC.                                                                                                       |
 | `MARKET_SYNC_MAX_CONCURRENT_SHOPS` | `10`                        | Max shops syncing at once: the concurrency of the `data-sync-market` worker.                                                                           |
 | `MARKET_SYNC_STALE_AFTER_MS`       | `5 * 60 * 60 * 1000` (5 h)  | `IN_PROGRESS` older than this is treated as stuck (e.g. crashed worker) and the shop becomes selectable again.                                         |
-| `MARKET_SYNC_MIN_INTERVAL_MS`      | `20 * 60 * 60 * 1000` (20 h) | Cron skips a shop where every country is `COMPLETE` and finished less than this ago. Never-synced shops and shops with a country in `ERROR` are not throttled; post-data-sync triggers bypass it. |
+| `MARKET_SYNC_MIN_INTERVAL_MS`      | `20 * 60 * 60 * 1000` (20 h) | Cron skips a shop where every existing country log is `COMPLETE` and newer than this. Never-synced shops and shops with a country in `ERROR` are not throttled; post-data-sync triggers bypass it. |
 
 **Algorithm (per tick):**
 
@@ -902,14 +902,15 @@ worker.
 2. Load eligible shops (`active`, `isMarketSyncEnabled`, `apiKey != null`) with their `MarketSyncLog` rows (`status`, `updatedAt`).
 3. Drop shops in progress: any of their logs has `status = IN_PROGRESS` and `updatedAt >= staleBefore`.
 4. Drop shops synced too recently: they have logs and **every** log is `COMPLETE` with `updatedAt >= minIntervalBefore`. A shop without logs, or with any other log (`ERROR`, stale `IN_PROGRESS`, older `COMPLETE`), stays eligible.
-5. Sort the remaining shops by last sync ascending: never-synced shops (no logs) first, then by `max(updatedAt)` across their logs.
+5. Sort the remaining shops by last sync ascending: never-synced shops (no logs) first, then by `min(updatedAt)` across their logs (a log without `updatedAt` is the oldest).
 6. Enqueue each via `enqueueMarketSyncJobIfEligible` (re-checks `isMarketSyncEnabled` + `apiKey`, saves the scope, then adds a `data-sync-market` job).
 
 **Notes:**
 
 - The tick has no limit on the number of shops. The `data-sync-market` BullMQ worker `concurrency: MARKET_SYNC_MAX_CONCURRENT_SHOPS` (`app/worker/worker.ts`) is the parallelism cap.
 - A shop has at most one active and one waiting `data-sync-market` job: BullMQ `deduplication: { id: <shop>, keepLastIfActive: true }`. A request made during a run starts one more run after it, so a run in progress never makes the `markets/*` webhook fail.
-- The scope of the next run is kept in the Redis set `market-sync:scope:<shop>` (market GIDs or `"all"`). It is written before the job is added and read and cleared when the job starts. Exactly one market → only that market is synced; several markets, `"all"` or an empty set → full sync. A job restarted after a worker crash, or one whose scope cannot be read, runs a full sync.
+- The scope of the next run is kept in the Redis set `market-sync:scope:<shop>` (market GIDs or `"all"`). It is written before the job is added and read and cleared when the job starts. Exactly one market → only that market is synced; several markets, `"all"` or an empty set → full sync. A job restarted after a worker crash, a retried job, or one whose scope cannot be read, runs a full sync.
+- A job that throws is retried: `attempts: 5`, exponential backoff from 1 minute. While it waits, it keeps its deduplication key and takes no worker slot. It throws, for example, when the shop has an API key but no valid offline session, and when the sync fails with no country to write an `ERROR` log for (the markets could not be read, or the cleanup of the last removed market failed). Other failures are `ERROR` logs and the next tick picks the shop up.
 - A run does not send `isInStock: 0` for `MarketSync` rows created after its bulk operation started (e.g. by a product webhook), because the bulk may not include them yet.
 - The daily schedule is defined in code (`MARKET_SYNC_CRON_PATTERN`) and stored in Redis by BullMQ.
 - A job is only `IN_PROGRESS` in the DB once the handler starts writing logs. A shop still waiting in the queue is enqueued again by the next tick, but deduplication keeps one waiting job.

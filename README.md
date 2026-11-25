@@ -349,7 +349,7 @@ Final synchronization status:
 
 Webhooks are triggered when orders are created, updated or deleted in Shopify:
 
-  - `orders/create` → when web tracking is enabled, the PurchasedItems event is sent (see [Backend Events](#backend-events)). If web tracking is off or the event was not sent (no cart token or tracking data, no `siteId`, request failed) and order sync is enabled, a separate `ORDERS_UPDATED` job (id from the order id, so it is queued once while it exists) sends the order with `POST /orders`. Its retries do not send PurchasedItems again.
+  - `orders/create` → when web tracking is enabled, the PurchasedItems event is sent (see [Backend Events](#backend-events)). If web tracking is off or the event was not sent (no cart token or tracking data, no `siteId`, request failed) and order sync is enabled, a separate `ORDERS_UPDATED` job (id from the order id, so it is queued once while it exists) sends the order with `POST /orders`. Its retries do not send PurchasedItems again. This job is skipped also when the last sent order has the same `updated_at`, because `orders/create` is the oldest state and the date has seconds only.
   - `orders/updated` → order created or updated in Yespo. Temporary Yespo errors are retried, and an order older than the last sent one is skipped (see [Real-time customers sync](#real-time-customers-sync)). Before sending, the worker asks Shopify for the order: if it no longer exists (`order: null` without errors), the job ends successfully and nothing is sent. If the check fails, the order is sent.
   - `orders/delete` → order deleted in Yespo (`DELETE /orders?externalOrderId=…`), only when order sync is enabled. Yespo deletes the order asynchronously. The order's `OrderSync` record is deleted as well.
 
@@ -583,7 +583,7 @@ When sync is enabled:
 - Market synchronization is enqueued automatically right after historical products synchronization completes (`enqueueMarketSyncTaskForShopUrl`)
 - A daily BullMQ repeatable job also paces ongoing market synchronization across shops (see scheduling below)
 - A dedicated `data-sync-market` worker (`concurrency: 10`) processes the job and calls `POST /v1/markets`
-- Each shop has at most one active and one waiting `data-sync-market` job (BullMQ `deduplication` by shop). Requests that arrive before the job starts are merged into it, and a request that arrives during a run starts one more run after it. What to sync is kept in the Redis set `market-sync:scope:<shop>`: one market → only that market, anything else → a full shop sync
+- Each shop has at most one active and one waiting `data-sync-market` job (BullMQ `deduplication` by shop). Requests that arrive before the job starts are merged into it, and a request that arrives during a run starts one more run after it. A job that throws is retried, up to 5 attempts, 1, 2, 4 and 8 minutes apart; a retry is a full shop sync and requests that arrive during the pause are merged into it. It throws, for example, when the shop has an API key but no valid offline session, and when a sync fails before any country can get an `ERROR` log (the markets could not be read, or the cleanup of the last removed market failed). What to sync is kept in the Redis set `market-sync:scope:<shop>`: one market → only that market, anything else → a full shop sync
 
 ---
 
@@ -652,10 +652,10 @@ Notes:
 A daily BullMQ repeatable job (`cron-jobs` queue → `enqueueMarketSyncTasks`) paces `POST /v1/markets` across shops. The schedule is registered on worker startup via `registerMarketSyncCron()` (`MARKET_SYNC_CRON_PATTERN = "0 3 * * *"` — once per day at 03:00 UTC). Requires the `worker` process and Redis.
 
 - Each tick enqueues every shop that is due. At most **10 shops** sync at once: the concurrency of the `data-sync-market` worker (`MARKET_SYNC_MAX_CONCURRENT_SHOPS`); the rest wait in the queue.
-- A shop is skipped when every country is `COMPLETE` and finished less than **20h** ago (`MARKET_SYNC_MIN_INTERVAL_MS`); never-synced shops and shops with a country in `ERROR` are not throttled.
+- A shop is skipped when every existing country log is `COMPLETE` and newer than **20h** (`MARKET_SYNC_MIN_INTERVAL_MS`; a country without a log is not counted); never-synced shops and shops with a country in `ERROR` are not throttled.
 - A shop with an `IN_PROGRESS` sync is skipped.
 - An `IN_PROGRESS` sync older than **5h** is treated as stuck and the shop becomes selectable again (`MARKET_SYNC_STALE_AFTER_MS`).
-- Eligible shops (`active`, `isMarketSyncEnabled`, `apiKey != null`) are ordered by oldest last sync (never-synced first). A shop whose API key cannot be decrypted is logged and skipped, so it does not stop the tick for other shops.
+- Eligible shops (`active`, `isMarketSyncEnabled`, `apiKey != null`) are ordered by the country synced longest ago (never-synced shops first). A shop whose API key cannot be decrypted is logged and skipped, so it does not stop the tick for other shops.
 - Only the daily cron applies the 20h interval. Market sync enqueued after historical products sync, by the `markets/*` webhook, or when the app home turns market sync on bypasses it.
 
 ---
@@ -758,7 +758,7 @@ Cart-to-session mappings (`EventData`: `cartToken` + Yespo cookie `sc`) expire a
 - Invalid signature (including only one of the two fields, malformed JSON or `signedData` over 4 KB): `400 { success: false, error: "Invalid signature" }` and one log line.
 - No signature, or the shop has no key yet: the cart is saved, the customer is ignored.
 
-The key is written on install and sign-in (`afterAuth`) and cleared in the database on uninstall. `npm run seed:shop-keys` enqueues a job per active shop without a key (queue `shop-public-key`, processed by the `worker`); the Heroku web process runs it on every start. The web process and the worker must use the same `SHOP_ENCRYPTION_KEY`. When the value changes, a shop gets a new key at its next `afterAuth` or seeding. To rotate all shops at once, set the new value on both, set `publicApiKey = null` for all shops and run the seeding; until then the carts of these shops are saved without the customer. After a shop's key changes, its storefront pages opened earlier get 400 until they are reloaded.
+The key is written on install and sign-in (`afterAuth`) and cleared in the database on uninstall. `npm run seed:shop-keys` enqueues a job per active shop without a key (queue `shop-public-key`, processed by the `worker`); the Heroku web process runs it on every start. The web process and the worker must use the same `SHOP_ENCRYPTION_KEY`. When the value changes, a shop gets a new key at its next `afterAuth`. The seeding takes only shops without a key, so on its own it does not update existing keys. To rotate all shops at once, set the new value on both, set `publicApiKey = null` for all shops and then run the seeding; until then the carts of these shops are saved without the customer. After a shop's key changes, its storefront pages opened earlier get 400 until they are reloaded.
 
 ### APP Inbox
 **Purpose:** Allows you to change the script initialization mode from or to [App Inbox](https://docs.esputnik.com/docs/app-inbox-setting-up)
@@ -924,7 +924,7 @@ Create a `.env` file with the following:
 | **HOST_URL**                   | **Required.** App host url metafield name  for the extension to work correctly                          | **Must be** `yespo-app-host`                       |
 | **REDIS_URL**                  | **Required.** Redis url for connecting and configuring the data synchronization worker                  | `redis://localhost:6379`                           |
 | **API_KEY_ENCRYPTION_KEY**     | **Required.** AES-256 key for `Shop.apiKey`, 32 bytes encoded as base64. One value per environment; do not rotate it after keys are encrypted. | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
-| **SHOP_ENCRYPTION_KEY**        | **Required** on web and worker. Key for creating the shop keys that sign storefront requests (see [Signed storefront requests](#signed-storefront-requests)), 32 bytes encoded as base64. One value per environment, the same on web and worker; do not change it without seeding the shop keys again. | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
+| **SHOP_ENCRYPTION_KEY**        | **Required** on web and worker. Key for creating the shop keys that sign storefront requests (see [Signed storefront requests](#signed-storefront-requests)), 32 bytes encoded as base64. One value per environment, the same on web and worker; do not change it without rotating the shop keys (set `publicApiKey = null`, then run the seeding). | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
 | **ESPUTNIK_URL**               | **Required** in production. Yespo API base URL for the App Inbox contact token; the app appends `/auth/contact/token` | — |
 | **LOGGING_URL**                | **Required** in production. Remote log endpoint that receives the app's Yespo log events               | — |
 | **CATEGORY_TYPE_HANDLE**       | Collection metafield key for the Category Settings mapping                                              | `yespo_category_type`                              |
