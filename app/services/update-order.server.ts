@@ -1,5 +1,6 @@
 import { createOrders } from "~/api/create-orders";
 import { convertDateToUTC } from "~/utils/convert-date-to-utc";
+import { isPermanentYespoError } from "~/utils/is-permanent-yespo-error";
 import { normalizeYespoItems } from "~/utils/normalize-yespo-items";
 import {
   eventDataRepository,
@@ -16,7 +17,11 @@ import { presentmentAmount } from "~/services/presentment-money";
 /**
  * Updates a order using the provided payload and API key.
  *
- * Any errors during the process are caught and logged.
+ * Nothing is sent when the stored `OrderSync.updatedAt` is newer than
+ * `payload.updated_at`: a retried or late webhook must not overwrite newer data.
+ *
+ * A permanent Yespo error (4xx except 429) is logged and the order is not
+ * marked as synced. Any other error is thrown so the webhook job is retried.
  *
  * **Shopify Order Webhook (REST):**
  * https://shopify.dev/docs/api/admin-rest/latest/resources/order#resource-object
@@ -68,6 +73,19 @@ export const updateOrderService = async (
   shopUrl?: string,
 ) => {
   try {
+    const [orderSync] = await orderSyncRepository.getOrderSyncByOrderIds(
+      shopId,
+      [payload.admin_graphql_api_id],
+    );
+    // A missing or unparsable updated_at gives NaN, so the order is sent.
+    if (
+      orderSync?.updatedAt &&
+      orderSync.updatedAt.getTime() > Date.parse(String(payload.updated_at))
+    ) {
+      console.log(`Order ${payload.id} not sent: newer data was already synced`);
+      return;
+    }
+
     const formatAddress = (address: OrderCreatePayload["shipping_address"]) =>
       [
         address?.first_name && address?.last_name
@@ -190,6 +208,9 @@ export const updateOrderService = async (
       },
     });
   } catch (error: any) {
-    console.error("Error occurred in Update Order Service", error);
+    if (!isPermanentYespoError(error)) throw error;
+    console.error(
+      `Yespo rejected order ${payload.id} with HTTP ${error.status}`,
+    );
   }
 };

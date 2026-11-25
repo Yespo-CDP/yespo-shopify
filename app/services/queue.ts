@@ -67,6 +67,11 @@ export interface WebhookEventJobData {
  * right away. The job id comes from X-Shopify-Webhook-Id, so a repeated
  * delivery is skipped while the first job is still in the queue. Failed jobs
  * are removed because the payload holds customer data; the worker logs them.
+ * The worker also queues the order of an orders/create job this way, with
+ * `order-create-<order id>` instead of the webhook id.
+ *
+ * Yespo answers a repeated `POST /contact` within 1 minute with 409, so
+ * customers/* jobs wait 65 s before every retry. Other jobs wait 5, 10, 20 and 40 s.
  */
 export async function enqueueWebhookEvent(
   data: WebhookEventJobData,
@@ -75,7 +80,9 @@ export async function enqueueWebhookEvent(
   await WebhookEventQueue.add(data.topic, data, {
     jobId: `webhook-${webhookId}`,
     attempts: 5,
-    backoff: { type: "exponential", delay: 5000 },
+    backoff: data.topic.startsWith("CUSTOMERS_")
+      ? { type: "fixed", delay: 65_000 }
+      : { type: "exponential", delay: 5000 },
     removeOnComplete: true,
     removeOnFail: true,
   });

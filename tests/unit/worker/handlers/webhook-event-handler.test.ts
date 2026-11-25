@@ -15,6 +15,7 @@ const sendStatusCartService = mock.fn(async (..._args: unknown[]) => {});
 const createContactService = mock.fn(async (..._args: unknown[]) => {});
 const updateContactService = mock.fn(async (..._args: unknown[]) => {});
 const deleteOrderService = mock.fn<(...args: unknown[]) => Promise<void>>(async () => {});
+const enqueueWebhookEvent = mock.fn<(...args: unknown[]) => Promise<void>>(async () => {});
 const services = [
   sendPurchasedItemsService,
   updateOrderService,
@@ -22,6 +23,7 @@ const services = [
   createContactService,
   updateContactService,
   deleteOrderService,
+  enqueueWebhookEvent,
 ];
 
 mock.module("../../../../app/repositories/repositories.server", {
@@ -44,6 +46,9 @@ mock.module("../../../../app/services/update-contact.service", {
 });
 mock.module("../../../../app/services/delete-order.server", {
   namedExports: { deleteOrderService },
+});
+mock.module("../../../../app/services/queue", {
+  namedExports: { enqueueWebhookEvent },
 });
 
 const { webhookEventHandler } = await import(
@@ -77,40 +82,59 @@ test("ORDERS_CREATE does not send the order when PurchasedItems was sent", async
   assert.equal(sendPurchasedItemsService.mock.callCount(), 1);
   assert.deepEqual(sendPurchasedItemsService.mock.calls[0].arguments, [orderPayload, store]);
   assert.equal(updateOrderService.mock.callCount(), 0);
+  assert.equal(enqueueWebhookEvent.mock.callCount(), 0);
 });
 
-test("ORDERS_CREATE sends the order like ORDERS_UPDATED when PurchasedItems was not sent", async () => {
+test("ORDERS_CREATE queues the order as ORDERS_UPDATED when PurchasedItems was not sent", async () => {
   purchasedItemsSent = false;
-
-  await run("ORDERS_UPDATED");
-  const updatedArgs = updateOrderService.mock.calls[0].arguments;
-  updateOrderService.mock.resetCalls();
 
   await run("ORDERS_CREATE");
 
-  assert.equal(updateOrderService.mock.callCount(), 1);
-  assert.deepEqual(updateOrderService.mock.calls[0].arguments, updatedArgs);
-  assert.deepEqual(updatedArgs, [orderPayload, "key", 3, "demo.com", 5, SHOP]);
+  assert.equal(sendPurchasedItemsService.mock.callCount(), 1);
+  assert.equal(updateOrderService.mock.callCount(), 0);
+  assert.equal(enqueueWebhookEvent.mock.callCount(), 1);
+  assert.deepEqual(enqueueWebhookEvent.mock.calls[0].arguments, [
+    { shop: SHOP, topic: "ORDERS_UPDATED", payload: orderPayload },
+    "order-create-1",
+  ]);
 });
 
-test("ORDERS_CREATE does not send the order when order sync is disabled", async () => {
+test("ORDERS_CREATE does not queue the order when order sync is disabled", async () => {
   purchasedItemsSent = false;
   store = { ...store, isOrderSyncEnabled: false };
 
   await run("ORDERS_CREATE");
 
   assert.equal(updateOrderService.mock.callCount(), 0);
+  assert.equal(enqueueWebhookEvent.mock.callCount(), 0);
 });
 
-test("ORDERS_CREATE does not send PurchasedItems but sends the order when web tracking is disabled", async () => {
+test("ORDERS_CREATE does not send PurchasedItems but queues the order when web tracking is disabled", async () => {
   purchasedItemsSent = true;
   store = { ...store, isWebTrackingEnabled: false };
 
   await run("ORDERS_CREATE");
 
   assert.equal(sendPurchasedItemsService.mock.callCount(), 0);
+  assert.equal(updateOrderService.mock.callCount(), 0);
+  assert.equal(enqueueWebhookEvent.mock.callCount(), 1);
+});
+
+test("ORDERS_CREATE fails when the order job cannot be queued", async () => {
+  purchasedItemsSent = false;
+  enqueueWebhookEvent.mock.mockImplementationOnce(async () => {
+    throw new Error("redis down");
+  });
+
+  await assert.rejects(run("ORDERS_CREATE"), /redis down/);
+});
+
+test("ORDERS_UPDATED sends the order when order sync is enabled", async () => {
+  await run("ORDERS_UPDATED");
+
   assert.equal(updateOrderService.mock.callCount(), 1);
   assert.deepEqual(updateOrderService.mock.calls[0].arguments, [orderPayload, "key", 3, "demo.com", 5, SHOP]);
+  assert.equal(enqueueWebhookEvent.mock.callCount(), 0);
 });
 
 test("ORDERS_UPDATED does not send the order when order sync is disabled", async () => {
@@ -178,13 +202,19 @@ test("CUSTOMERS_* do nothing when contact sync is disabled", async () => {
   assert.equal(updateContactService.mock.callCount(), 0);
 });
 
-test("CUSTOMERS_UPDATE error is rethrown so the job is retried", async () => {
-  updateContactService.mock.mockImplementationOnce(async () => {
-    throw new Error("HTTP 503");
-  });
+for (const [topic, service] of [
+  ["CUSTOMERS_CREATE", createContactService],
+  ["CUSTOMERS_UPDATE", updateContactService],
+  ["ORDERS_UPDATED", updateOrderService],
+] as const) {
+  test(`${topic} error is rethrown so the job is retried`, async () => {
+    service.mock.mockImplementationOnce(async () => {
+      throw new Error("HTTP 503");
+    });
 
-  await assert.rejects(run("CUSTOMERS_UPDATE", customerPayload), /HTTP 503/);
-});
+    await assert.rejects(run(topic, customerPayload), /HTTP 503/);
+  });
+}
 
 // Shop read at processing time.
 

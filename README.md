@@ -192,7 +192,16 @@ Webhooks are triggered immediately when events occur in Shopify:
   - `customers/update` → existing contact updated in Yespo.
   - `customers/redact` → contact removed from Yespo when an API key is set and contact sync is enabled. The local `Customer` record is deleted in any case. This GDPR webhook is handled in the request, not in the queue.
 
-`customers/*`, `orders/*` and `carts/update` webhooks are processed asynchronously. The route only adds a job to the `webhook-events` BullMQ queue and answers `200`. The `worker` process runs the job: up to 5 attempts, exponential backoff starting at 5 s. A job is retried only when it throws: `customers/update` and `orders/delete` rethrow Yespo errors, while `customers/create`, `orders/create`, `orders/updated` and `carts/update` log them and finish. An error outside those services, such as a failed shop lookup, is retried as well. The job id is the `X-Shopify-Webhook-Id`, so a repeated delivery is ignored while the first job still exists (until it completes or fails for the last time). The worker reads the shop again, so sync and tracking flags changed after the webhook arrived apply. Failed jobs are removed because the payload holds customer data; the worker logs the failure.
+`customers/*`, `orders/*` and `carts/update` webhooks are processed asynchronously. The route only adds a job to the `webhook-events` BullMQ queue and answers `200`. The `worker` process runs the job: up to 5 attempts. `customers/*` jobs wait 65 s before every retry, because Yespo answers a repeated `POST /contact` within 1 minute with 409; other jobs use exponential backoff starting at 5 s. A job is retried only when it throws:
+
+  - `customers/create`, `customers/update` and `orders/updated` throw temporary Yespo errors: 5xx, 429, network errors and timeouts. Other 4xx errors are logged and not retried, and the customer or order is not marked as synced. The exception is a "Duplicated request" error from `POST /contact`: it counts as success and the customer is marked as synced.
+  - `orders/delete` throws every Yespo error except 400.
+  - `carts/update` (StatusCart) and PurchasedItems log Yespo errors and are not retried.
+  - An error outside the Yespo request, such as a failed database query, is retried as well, except inside the StatusCart and PurchasedItems services, which only log it.
+
+A customer or order is not sent when its stored `CustomerSync.updatedAt` / `OrderSync.updatedAt` is newer than `updated_at` in the webhook, so a retried or late webhook does not overwrite newer data. With an equal date, no stored record or no valid `updated_at` it is sent.
+
+The job id is the `X-Shopify-Webhook-Id`, so a repeated delivery is ignored while the first job still exists (until it completes or fails for the last time). The worker reads the shop again, so sync and tracking flags changed after the webhook arrived apply. Failed jobs are removed because the payload holds customer data; the worker logs the failure.
 
 ---
 #### Shopify API methods:
@@ -340,8 +349,8 @@ Final synchronization status:
 
 Webhooks are triggered when orders are created, updated or deleted in Shopify:
 
-  - `orders/create` → when web tracking is enabled, the PurchasedItems event is sent (see [Backend Events](#backend-events)). If web tracking is off or the event was not sent (no cart token or tracking data, no `siteId`, request failed) and order sync is enabled, the order is sent with `POST /orders`.
-  - `orders/updated` → existing order updated in Yespo.
+  - `orders/create` → when web tracking is enabled, the PurchasedItems event is sent (see [Backend Events](#backend-events)). If web tracking is off or the event was not sent (no cart token or tracking data, no `siteId`, request failed) and order sync is enabled, a separate `ORDERS_UPDATED` job (id from the order id, so it is queued once while it exists) sends the order with `POST /orders`. Its retries do not send PurchasedItems again.
+  - `orders/updated` → order created or updated in Yespo. Temporary Yespo errors are retried, and an order older than the last sent one is skipped (see [Real-time customers sync](#real-time-customers-sync)).
   - `orders/delete` → order deleted in Yespo (`DELETE /orders?externalOrderId=…`), only when order sync is enabled. Yespo deletes the order asynchronously. The order's `OrderSync` record is deleted as well.
 
 ---

@@ -189,7 +189,7 @@ export const orderSyncHandler = async (
           cursor = null;
         }
       } catch (error: any) {
-        console.error("Error orders sync in chunk", error);
+        console.error("Error orders sync in chunk", error?.stack ?? error);
 
         await sendLogEvent({
           orgId,
