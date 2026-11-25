@@ -12,7 +12,7 @@ import {EVENT_MESSAGES} from "~/config/constants";
  * @param {Contact} params.contactData - The contact data to be created.
  * @returns {Promise<void>} A promise that resolves when the contact is created successfully.
  *
- * @throws Will re-throw errors unless the error message includes 'Duplicated request'.
+ * @throws Will re-throw the original error (with its HTTP `status`) unless the error message includes 'Duplicated request'.
  *
  * Uses `fetchWithErrorHandling` to perform the HTTP request and handle errors.
  */
@@ -38,12 +38,6 @@ export const createContact = async ({
     },
     body: JSON.stringify(contactData),
   };
-
-  console.log("[yespo] POST /contact", {
-    domain,
-    marketId: contactData.marketId ?? null,
-    requestBody: contactData,
-  });
 
   try {
     const response = await fetchWithErrorHandling(url, options);
@@ -78,7 +72,7 @@ export const createContact = async ({
     })
 
     if (!error?.message?.includes("Duplicated request")) {
-      throw new Error(error.message);
+      throw error;
     }
   }
 };

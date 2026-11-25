@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, mock, test } from "node:test";
+import { format } from "node:util";
 
 const orders = [1, 2, 3].map((id) => ({
   id: `gid://shopify/Order/${id}`,
@@ -77,4 +78,22 @@ test("no sync marker when Yespo request throws", async () => {
 
   assert.equal(createOrders.mock.callCount(), 1);
   assert.equal(createOrUpdateOrderSync.mock.callCount(), 0);
+});
+
+test("Yespo response body is not printed when the request throws", async (t) => {
+  const consoleError = t.mock.method(console, "error", () => {});
+  createOrders = mock.fn(async () => {
+    throw Object.assign(new Error("HTTP 400: Bad Request"), {
+      status: 400,
+      responseData: { email: "a@b.c" },
+    });
+  });
+
+  await orderSyncHandler("demo.myshopify.com", "token", "key", 1);
+
+  const printed = consoleError.mock.calls
+    .map((call) => format(...call.arguments))
+    .join("\n");
+  assert.match(printed, /Error orders sync in chunk.*HTTP 400: Bad Request/);
+  assert.doesNotMatch(printed, /a@b\.c/);
 });

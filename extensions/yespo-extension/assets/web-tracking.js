@@ -72,7 +72,6 @@ class EventTracker {
 
   sendPage404Event() {
     try {
-      //console.log('this.data', this.data)
       if (this.data.pageTemplate === '404') {
         this.sendTrackedEvent('NotFound');
       }
@@ -153,8 +152,6 @@ class EventTracker {
             console.error('Failed to parse category mapping:', e);
           }
         }
-
-        //console.log('categoryKey',categoryKey)
 
         if (categoryKey) {
           this.sendTrackedEvent('CategoryPage', {
@@ -284,11 +281,13 @@ class EventTracker {
           sc: data.sc,
           cartToken: data.token,
           customer: data.customer,
-          marketId: data.marketId || null
+          marketId: data.marketId || null,
+          // Made in yespo-script.liquid; null until the shop has a key
+          signedData: this.data.signedData || null,
+          signature: this.data.signature || null
         }),
         keepalive: true
       });
-      //console.log('✅ Tracking sent:', res);
     } catch (error) {
       console.error('❌ Tracking failed:', error);
     }
@@ -370,7 +369,6 @@ class EventTracker {
 
 
   async run() {
-    //console.log('Web tracking run')
     if (!this.data) return;
 
     await this.interceptCartCreateFetch()
@@ -390,7 +388,6 @@ class EventTracker {
 
 // 👇 Execute the tracker
 (async () => {
-  //console.log("EVENT SCRIPT STARTED");
   const tracker = new EventTracker(document);
   await tracker.run();
 })();

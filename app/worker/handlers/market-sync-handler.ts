@@ -193,6 +193,9 @@ function hashMarketItem(item: MarketProductItem): string {
  * `marketId` limits the catalog send to that Shopify market. Cleanup of
  * removed countries still compares the full enabled set, so a single-market
  * run does not zero out the other markets.
+ *
+ * An error is logged as ERROR for every country. It is thrown only when there is
+ * no country to log it for.
  */
 export const marketSyncHandler = async (
   shop: string,
@@ -319,6 +322,7 @@ export const marketSyncHandler = async (
     const queryChunks = buildBulkQueryChunks(marketsConfig);
 
     for (const chunk of queryChunks) {
+      const bulkStartedAt = new Date();
       const batchId = await runBulkQuery({
         client,
         query: chunk.query,
@@ -343,7 +347,7 @@ export const marketSyncHandler = async (
         // No url means Shopify found no products: nothing is staged, so every
         // synced variant of these countries is cleared as removed from catalog.
         if (bulkResult.url) {
-          const outputPath = await streamBulkJsonlToTmpMarketSync({
+          await streamBulkJsonlToTmpMarketSync({
             url: bulkResult.url,
             shop,
             batchId,
@@ -352,7 +356,6 @@ export const marketSyncHandler = async (
             countries: chunk.countries,
             previousLocalesByMarketId,
           });
-          console.log(`Bulk JSONL saved to ${outputPath}`);
         }
 
         const presentByCountry = await processBatch({
@@ -375,6 +378,7 @@ export const marketSyncHandler = async (
           siteId,
           countries: chunk.countries,
           presentByCountry,
+          bulkStartedAt,
         });
 
         for (const countryCode of chunk.countries) {
@@ -435,6 +439,12 @@ export const marketSyncHandler = async (
       message: EVENT_MESSAGES.CUSTOM_LOG_SEND_MARKET_PRODUCTS_ERROR,
       logLevel: "ERROR",
     });
+
+    // No country got an ERROR log (markets not read, or the last one removed),
+    // so nothing makes the cron run this again: let the job retry.
+    if (marketsConfig.countries.length === 0) {
+      throw error;
+    }
   }
 };
 
@@ -665,7 +675,9 @@ async function processBatch({
  * absent from that bulk are no longer in the catalog. Yespo has no market
  * delete, so they are removed from recommendations with isInStock: 0.
  * Runs only for countries in this successful batch, so a failed bulk never
- * zeroes a market.
+ * zeroes a market. Rows created after the bulk started (a product webhook added
+ * the variant) are kept: the bulk may be older than the variant. `updatedAt`
+ * can't be used here, it holds the Shopify variant date.
  */
 async function clearProductsRemovedFromCatalog({
   shopId,
@@ -676,6 +688,7 @@ async function clearProductsRemovedFromCatalog({
   siteId,
   countries,
   presentByCountry,
+  bulkStartedAt,
 }: {
   shopId: number;
   apiKey: string;
@@ -685,6 +698,7 @@ async function clearProductsRemovedFromCatalog({
   siteId?: string | null;
   countries: string[];
   presentByCountry: Map<string, Set<string>>;
+  bulkStartedAt: Date;
 }): Promise<void> {
   for (const countryCode of countries) {
     const present = presentByCountry.get(countryCode) ?? new Set<string>();
@@ -703,7 +717,9 @@ async function clearProductsRemovedFromCatalog({
       }
       afterId = rows[rows.length - 1].id;
 
-      const removed = marketSyncRowsRemovedFromCatalog(rows, present);
+      const removed = marketSyncRowsRemovedFromCatalog(rows, present).filter(
+        (row) => row.createdAt < bulkStartedAt,
+      );
       if (removed.length === 0) {
         continue;
       }

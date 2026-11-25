@@ -5,6 +5,7 @@ import {
   eventDataRepository,
   shopRepository,
 } from "~/repositories/repositories.server";
+import { isValidSignature } from "~/services/event-data-signature.server";
 import { readMarketId } from "~/services/market-tracking";
 
 // Shared CORS headers
@@ -30,6 +31,7 @@ const jsonResponse = (data: object, status: number = 200): Response =>
   });
 
 const MAX_LENGTH = 255;
+const MAX_SIGNED_DATA_BYTES = 4096;
 
 // A string of reasonable length, else undefined (the field is not saved).
 const readString = (value: unknown): string | undefined =>
@@ -60,12 +62,38 @@ const readCustomer = (value: unknown) => {
 };
 
 /**
+ * Parses the JSON string that yespo-script.liquid signs. Its content is not
+ * trusted until the signature is checked.
+ * Returns null when it is too long or not a JSON object with a shop.
+ */
+const readSignedData = (value: unknown) => {
+  if (
+    typeof value !== "string" ||
+    Buffer.byteLength(value) > MAX_SIGNED_DATA_BYTES
+  ) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(value);
+    const shop = readString(parsed.shop);
+    return shop
+      ? { shop, marketId: parsed.marketId, customer: parsed.customer }
+      : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
  * Handles incoming HTTP requests to create or update event data.
  *
  * Supports CORS preflight with OPTIONS method.
  * Expects a POST request with JSON body containing at least `shop`, `sc`, and `cartToken`.
  * Silently accepts incomplete data or unknown shops without error.
- * If customer data is present, upserts only its expected fields.
+ * A customer is accepted only from `signedData` with a valid `signature`; then `shop`
+ * and `marketId` come from `signedData` too. An invalid signature is answered with 400.
+ * Without a signature, or when the shop has no key yet, the cart is saved without a customer.
+ * If a signed customer is present, upserts only its expected fields.
  * Creates or updates event data with a TTL of 14 days.
  *
  * @async
@@ -80,11 +108,9 @@ const readCustomer = (value: unknown) => {
  *   "shop": "example-shop.myshopify.com",
  *   "sc": "...",
  *   "cartToken": "token123",
- *   "customer": {
- *     "id": 123,
- *     "email": "customer@example.com",
- *     ...,
- *   }
+ *   "marketId": "ua",
+ *   "signedData": "{\"shop\":\"example-shop.myshopify.com\",\"marketId\":\"ua\",\"customer\":{\"id\":123,...}}",
+ *   "signature": "<HMAC-SHA256 hex of signedData>"
  * }
  */
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -97,7 +123,10 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     const data = await request.json();
     const sc = readString(data.sc);
     const cartToken = readString(data.cartToken);
-    const shopDomain = readString(data.shop);
+    // null is the same as absent: the page sends it until the shop has a key
+    const isSigned = data.signedData != null || data.signature != null;
+    const signedData = isSigned ? readSignedData(data.signedData) : null;
+    const shopDomain = signedData?.shop ?? readString(data.shop);
     if (!shopDomain || !sc || !cartToken) {
       return jsonResponse({ success: true, error: null }); // early return if data is incomplete
     }
@@ -110,7 +139,24 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       }); // silently accept even if shop not found
     }
 
-    const customerData = readCustomer(data.customer);
+    // Stays null unless the signature is checked and valid.
+    let trusted: ReturnType<typeof readSignedData> = null;
+    if (isSigned && shop.publicApiKey) {
+      if (
+        !signedData ||
+        !isValidSignature(data.signedData, data.signature, shop.publicApiKey)
+      ) {
+        const domain = shopDomain.replace(/[\p{C}\s]/gu, "").slice(0, 100);
+        const reason = signedData
+          ? "the signature does not match"
+          : "signedData is missing or malformed";
+        console.error(`Event data refused for ${domain}: ${reason}`);
+        return jsonResponse({ success: false, error: "Invalid signature" }, 400);
+      }
+      trusted = signedData;
+    }
+
+    const customerData = readCustomer(trusted?.customer);
     const customer = customerData
       ? await customerRepository.upsertCustomer(customerData)
       : null;
@@ -118,7 +164,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     await eventDataRepository.createEventData({
       cartToken,
       sc,
-      marketId: readMarketId(data.marketId),
+      marketId: readMarketId((trusted ?? data).marketId),
       ttl: addDays(new Date(), 14),
       shopId: shop.id,
       customerId: customer?.customerId,

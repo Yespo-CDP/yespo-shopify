@@ -58,7 +58,6 @@ export const sendLogEvent = async ({
   const url = `${process.env.LOGGING_URL}`;
 
   if (!orgId) {
-    console.log("OrgId is not provided for logging");
     return;
   }
 
@@ -79,9 +78,7 @@ export const sendLogEvent = async ({
   };
 
   try {
-    const res = await fetchWithErrorHandling(url, options);
-
-    console.log(`SEND LOG ${message}`, res);
+    await fetchWithErrorHandling(url, options);
   } catch (error: any) {
     console.error("Error sending log event:", error?.message);
   }

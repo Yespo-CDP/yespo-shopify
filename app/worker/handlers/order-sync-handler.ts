@@ -51,14 +51,12 @@ export const orderSyncHandler = async (
   tokenManager?: OfflineTokenManager,
 ) => {
   console.log(`⏳ Synchronizing orders start for ${shop}`);
-  console.log("shop", shop);
 
   const shopRecord = await shopRepository.getShop(shop);
   const logDomain = shopRecord?.domain || shop;
 
   const client = createClient({ shop, accessToken, tokenManager });
   const ordersCount = await getOrdersCount({ client });
-  console.log("Total orders count", ordersCount, "\n");
 
   let cursor: string | null | undefined = null;
   let totalSkippedCount = 0;
@@ -68,7 +66,6 @@ export const orderSyncHandler = async (
   try {
     do {
       try {
-        console.log("\n", "Chunk start:");
         const shopData = await shopRepository.getShop(shop);
 
         if (shopData?.isOrderSyncEnabled) {
@@ -167,11 +164,6 @@ export const orderSyncHandler = async (
             logLevel: "INFO",
           });
 
-          console.log("Total orders in chunk:", orders?.length);
-          console.log("Total skipped orders in chunk:", chunkSkippedCount);
-          console.log("Total sent orders to sync:", ordersData?.length);
-          console.log("Total failed orders sync:", chunkFailedCount);
-
           await orderSyncLogRepository.createOrUpdateOrderSyncLog({
             status: "IN_PROGRESS",
             skippedCount: totalSkippedCount,
@@ -189,7 +181,7 @@ export const orderSyncHandler = async (
           cursor = null;
         }
       } catch (error: any) {
-        console.error("Error orders sync in chunk", error);
+        console.error("Error orders sync in chunk", error?.stack ?? error);
 
         await sendLogEvent({
           orgId,

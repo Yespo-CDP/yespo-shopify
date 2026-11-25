@@ -21,8 +21,7 @@ import { fetchShopMarketsConfig } from "../services/fetch-shop-markets-config";
 import { getPublishedInAnyMarket } from "../services/get-product-market-publication";
 import { fetchAllProductVariants } from "../services/get-product-variants";
 import { getProductById } from "../services/get-products";
-import { getShopPrimaryLocale } from "../services/get-shop-primary-locale";
-import { getShopSecondaryLocales } from "../services/get-shop-locales";
+import { getShopLanguages } from "../services/get-shop-locales";
 import { getProductTranslations } from "../services/get-product-translations";
 import { yespoProductAction } from "../services/yespo-product-action";
 
@@ -91,21 +90,11 @@ async function syncProductFromAdmin(
   }
 
   const storedLanguageCode = shopData.defaultLanguageCode ?? null;
-  const currentLocale = await getShopPrimaryLocale({ client });
-  const languageCode = currentLocale ?? storedLanguageCode ?? "en";
-  const resolvedCurrency = shopCurrency ?? shopData.defaultCurrency ?? "";
-
-  if (languageCode !== storedLanguageCode) {
-    await shopRepository.updateShop(data.shop, {
-      defaultLanguageCode: languageCode,
-      ...(resolvedCurrency ? { defaultCurrency: resolvedCurrency } : {}),
-    });
-  }
-
-  const secondaryLocales = await getShopSecondaryLocales({
+  const { languageCode, secondaryLocales } = await getShopLanguages({
     client,
-    primaryLocale: languageCode,
+    storedLanguageCode,
   });
+  const resolvedCurrency = shopCurrency ?? shopData.defaultCurrency ?? "";
 
   const variants = await fetchAllProductVariants({ client, product });
   const shopDomain = shopData.domain || data.shop;
@@ -201,6 +190,14 @@ async function syncProductFromAdmin(
         domain: shopData.domain || data.shop,
         orgId: shopData.orgId,
       });
+
+      // Store the language only after Yespo accepted the request.
+      if (languageCode !== storedLanguageCode) {
+        await shopRepository.updateShop(data.shop, {
+          defaultLanguageCode: languageCode,
+          ...(resolvedCurrency ? { defaultCurrency: resolvedCurrency } : {}),
+        });
+      }
 
       await markProductVariantSyncResults(
         shopData.id,

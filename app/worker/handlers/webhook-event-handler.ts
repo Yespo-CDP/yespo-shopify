@@ -2,11 +2,12 @@ import { shopRepository } from "~/repositories/repositories.server";
 import { createContactService } from "~/services/create-contact.server";
 import { updateContactService } from "~/services/update-contact.service";
 import { sendPurchasedItemsService } from "~/services/send-purchased-items.server";
+import { isOrderDeleted } from "~/services/is-order-deleted.server";
 import { updateOrderService } from "~/services/update-order.server";
 import { sendStatusCartService } from "~/services/send-status-cart.server";
 import { deleteOrderService } from "~/services/delete-order.server";
-import type { OrderDeletePayload } from "~/@types/order";
-import type { WebhookEventJobData } from "~/services/queue";
+import type { OrderCreatePayload, OrderDeletePayload } from "~/@types/order";
+import { enqueueWebhookEvent, type WebhookEventJobData } from "~/services/queue";
 
 /**
  * Processes a customers, orders or carts webhook queued by its route.
@@ -17,12 +18,18 @@ import type { WebhookEventJobData } from "~/services/queue";
  *   `isContactSyncEnabled` is on.
  * - "ORDERS_CREATE": sends PurchasedItems if `isWebTrackingEnabled` is on. If the
  *   event was not sent (web tracking disabled, no cart token or tracking data,
- *   or sending failed) and `isOrderSyncEnabled` is on, creates the order through
- *   `updateOrderService` (`POST /orders` upserts by `externalOrderId`).
- * - "ORDERS_UPDATED": updates the order if `isOrderSyncEnabled` is on.
+ *   or sending failed) and `isOrderSyncEnabled` is on, queues the order as a
+ *   separate "ORDERS_UPDATED" job, so its retries do not send PurchasedItems again.
+ * - "ORDERS_UPDATED": creates or updates the order if `isOrderSyncEnabled` is on
+ *   (`POST /orders` upserts by `externalOrderId`). An order Shopify no longer has
+ *   is skipped: a late event must not create it in Yespo again. If that cannot be
+ *   checked, the order is sent.
  * - "ORDERS_DELETE": deletes the order in Yespo and its `OrderSync` record if
  *   `isOrderSyncEnabled` is on.
  * - "CARTS_UPDATE": sends StatusCart if `isWebTrackingEnabled` is on.
+ *
+ * An error thrown by a service fails the job, so BullMQ retries it. PurchasedItems
+ * and StatusCart errors are only logged and are not retried.
  */
 export async function webhookEventHandler(
   data: WebhookEventJobData,
@@ -64,13 +71,14 @@ export async function webhookEventHandler(
         : false;
 
       if (!purchasedItemsSent && shop.isOrderSyncEnabled) {
-        await updateOrderService(
-          payload as any,
-          shop.apiKey,
-          shop.id,
-          shop.domain || data.shop,
-          shop.orgId,
-          shop.shopUrl || data.shop,
+        await enqueueWebhookEvent(
+          {
+            shop: data.shop,
+            topic: "ORDERS_UPDATED",
+            payload,
+            fromOrderCreate: true,
+          },
+          `order-create-${(payload as OrderCreatePayload).id}`,
         );
       }
       break;
@@ -78,13 +86,24 @@ export async function webhookEventHandler(
 
     case "ORDERS_UPDATED":
       if (shop?.isOrderSyncEnabled) {
+        const { id, admin_graphql_api_id: orderGid } =
+          payload as OrderCreatePayload;
+        const shopUrl = shop.shopUrl || data.shop;
+        if (await isOrderDeleted({ shopUrl, orderGid })) {
+          console.log(
+            `Order ${id} not found in Shopify, orders/updated skipped for ${shopUrl}`,
+          );
+          return;
+        }
+
         await updateOrderService(
           payload as any,
           shop.apiKey,
           shop.id,
           shop.domain || data.shop,
           shop.orgId,
-          shop.shopUrl || data.shop,
+          shopUrl,
+          data.fromOrderCreate,
         );
       }
       break;

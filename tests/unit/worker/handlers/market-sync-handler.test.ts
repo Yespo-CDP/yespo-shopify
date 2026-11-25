@@ -14,6 +14,7 @@ interface SyncedRow {
   productId: string;
   variantId: string;
   countryCode: string;
+  createdAt: Date;
 }
 
 interface MarketsCall {
@@ -42,11 +43,17 @@ const staged = (id: number, variant: number, countryCode: string, priced = true)
     : { type: "pricing" },
 });
 
-const synced = (id: number, variant: number, countryCode: string): SyncedRow => ({
+const synced = (
+  id: number,
+  variant: number,
+  countryCode: string,
+  createdAt = new Date("2026-01-01T00:00:00Z"),
+): SyncedRow => ({
   id,
   productId: `gid://shopify/Product/${variant}`,
   variantId: variantGid(variant),
   countryCode,
+  createdAt,
 });
 
 const range = (from: number, to: number, countryCode: string) =>
@@ -57,10 +64,14 @@ let pages: StagedRow[][] = [];
 let syncedRows: SyncedRow[] = [];
 let bulkUrl: string | null = null;
 let bulkCount = 0;
+let onBulkRun = async () => {};
+let onBulkWait = async () => {};
 let streamImpl = async () => "/tmp/bulk.jsonl";
 let updateImpl = async (_args: MarketsCall, _call: number) => ({ failedItems: [] as string[] });
 let deleteByBatchImpl = async () => {};
 let marketsConfigError: Error | null = null;
+// Countries with MarketSync rows; by default the same as the enabled ones.
+let syncedCountries: string[] | null = null;
 
 const writeLog = mock.fn(async (_data: { countryCode: string; status: string }) => ({}));
 const sendLogEvent = mock.fn(async (_event: { data: unknown; message: string }) => {});
@@ -72,6 +83,9 @@ const getPage = mock.fn(
   async (_shopId: number, _batchId: string, afterId: number, _take: number) =>
     pages.find((page) => page[0].id > afterId) ?? [],
 );
+const deleteManyByKeys = mock.fn<
+  (shopId: number, keys: { variantId: string }[]) => Promise<void>
+>(async () => {});
 const deleteByBatch = mock.fn(async (_shopId: number, _batchId: string) => deleteByBatchImpl());
 const consoleError = mock.method(console, "error", () => {});
 mock.method(console, "log", () => {});
@@ -84,11 +98,11 @@ mock.module("../../../../app/repositories/repositories.server", {
     },
     marketSyncLogRepository: { createOrUpdate: writeLog },
     marketSyncRepository: {
-      getSyncedCountryCodes: async () => countries,
+      getSyncedCountryCodes: async () => syncedCountries ?? countries,
       getByCountryPage: async (_shopId: number, countryCode: string, afterId: number) =>
         syncedRows.filter((row) => row.countryCode === countryCode && row.id > afterId),
       getByKeys: async () => [],
-      deleteManyByKeys: async () => {},
+      deleteManyByKeys,
       createOrUpdate: async () => ({}),
     },
     shopMarketRepository: {
@@ -129,9 +143,14 @@ mock.module("../../../../app/worker/services/fetch-shop-markets-config", {
 });
 mock.module("../../../../app/worker/services/bulk-operation.server", {
   namedExports: {
-    runBulkQuery: async () => `gid://shopify/BulkOperation/${++bulkCount}`,
-    waitForBulkOperation: async () =>
-      bulkUrl ? { url: bulkUrl, objectCount: 1 } : { url: null, objectCount: 0 },
+    runBulkQuery: async () => {
+      await onBulkRun();
+      return `gid://shopify/BulkOperation/${++bulkCount}`;
+    },
+    waitForBulkOperation: async () => {
+      await onBulkWait();
+      return bulkUrl ? { url: bulkUrl, objectCount: 1 } : { url: null, objectCount: 0 };
+    },
   },
 });
 mock.module("../../../../app/worker/services/parse-bulk-jsonl", {
@@ -171,15 +190,19 @@ beforeEach(() => {
   syncedRows = [];
   bulkUrl = "https://bulk.example/result.jsonl";
   bulkCount = 0;
+  onBulkRun = async () => {};
+  onBulkWait = async () => {};
   streamImpl = async () => "/tmp/bulk.jsonl";
   updateImpl = async () => ({ failedItems: [] });
   deleteByBatchImpl = async () => {};
   marketsConfigError = null;
+  syncedCountries = null;
   writeLog.mock.resetCalls();
   sendLogEvent.mock.resetCalls();
   updateMarketProducts.mock.resetCalls();
   streamBulkJsonlToTmpMarketSync.mock.resetCalls();
   getPage.mock.resetCalls();
+  deleteManyByKeys.mock.resetCalls();
   deleteByBatch.mock.resetCalls();
   consoleError.mock.resetCalls();
 });
@@ -244,6 +267,38 @@ test("catalog cleanup sees variants staged on every page", async () => {
   await runSync();
 
   assert.deepEqual(outOfStockCalls(), [{ marketId: "DE", ids: ["3"] }]);
+});
+
+test("a variant synced after the bulk started is kept even though the bulk does not have it", async () => {
+  pages = [[staged(1, 1, "DE")]];
+  syncedRows = [synced(1, 1, "DE"), synced(2, 2, "DE")];
+  // A product webhook adds variant 3 while the bulk is being started.
+  onBulkRun = async () => {
+    syncedRows.push(synced(3, 3, "DE", new Date()));
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  };
+
+  await runSync();
+
+  assert.deepEqual(outOfStockCalls(), [{ marketId: "DE", ids: ["2"] }]);
+  assert.deepEqual(
+    deleteManyByKeys.mock.calls.flatMap((call) => call.arguments[1].map((key) => key.variantId)),
+    [variantGid(2)],
+  );
+});
+
+test("a variant synced during an earlier bulk is cleared by the next bulk of the run", async () => {
+  countries = Array.from({ length: 16 }, (_, index) => `C${index}`);
+  onBulkWait = async () => {
+    if (bulkCount !== 1) return;
+    syncedRows.push(synced(1, 1, "C0", new Date()), synced(2, 2, "C15", new Date()));
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  };
+
+  await runSync();
+
+  assert.equal(bulkCount, 2);
+  assert.deepEqual(outOfStockCalls(), [{ marketId: "C15", ids: ["2"] }]);
 });
 
 test("items are buffered across pages and sent in chunks of 500", async () => {
@@ -365,7 +420,7 @@ test("a failed markets read removes no market and sends nothing to Yespo", async
   syncedRows = [synced(1, 1, "DE")];
   marketsConfigError = new Error("Failed to fetch markets");
 
-  await runSync();
+  await assert.rejects(runSync(), (error) => error === marketsConfigError);
 
   assert.equal(updateMarketProducts.mock.callCount(), 0);
   assert.equal(writeLog.mock.callCount(), 0);
@@ -373,4 +428,33 @@ test("a failed markets read removes no market and sends nothing to Yespo", async
     sendLogEvent.mock.calls.map((call) => call.arguments[0].message),
     ["CUSTOM_LOG_SEND_MARKET_PRODUCTS_ERROR"],
   );
+});
+
+test("a failed cleanup of the last removed market is thrown after it is logged, so the job is retried", async () => {
+  countries = [];
+  syncedCountries = ["DE"];
+  syncedRows = [synced(1, 1, "DE")];
+  updateImpl = async () => {
+    throw new Error("HTTP 502");
+  };
+
+  await assert.rejects(runSync(), /HTTP 502/);
+
+  assert.equal(writeLog.mock.callCount(), 0);
+  assert.deepEqual(
+    sendLogEvent.mock.calls.map((call) => call.arguments[0].message),
+    ["CUSTOM_LOG_SEND_MARKET_PRODUCTS_ERROR"],
+  );
+});
+
+test("a failed cleanup of one removed market is not thrown: the ERROR logs make the cron retry", async () => {
+  syncedCountries = ["DE", "PL"];
+  syncedRows = [synced(1, 1, "PL")];
+  updateImpl = async () => {
+    throw new Error("HTTP 502");
+  };
+
+  await runSync();
+
+  assert.equal(lastStatus("DE"), "ERROR");
 });
