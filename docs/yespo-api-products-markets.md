@@ -418,6 +418,8 @@ Used in the `remove` field of a Product to explicitly delete specific fields, ta
 
 ### Language Change Procedure
 
+> **Integration note:** the app does not do this automatically. It sends the stored `Shop.defaultLanguageCode` (saved after the first accepted request) even when the Shopify primary locale changes later. The stored language is reset when the Yespo account is disconnected or the app is uninstalled.
+
 If the Shopify primary locale changes (e.g. from `uk` to `en`):
 
 1. Send subsequent Add products batches with the new `languageCode`. Do **not** send `languageChanged` — the field is not in the request schema.

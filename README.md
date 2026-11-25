@@ -143,6 +143,7 @@ When sync is enabled:
      * `email`
      * `phone`
    * If a customer exists in Yespo, it is **updated**, not duplicated.
+   * Customers Yespo rejected (`failedContacts`) are not saved as synced, so the next historical sync sends them again. Yespo returns them without `externalCustomerId`, so they are matched by `email`, then by `phone`. If a rejected contact matches nothing, or fewer contacts are matched than rejected, no customer of that batch is saved as synced. The same applies when the response has an `errorMessage`.
 
 5. **Repeat until completion**
 
@@ -616,7 +617,7 @@ When sync is enabled:
 
 If a network error or unknown error occurs during sync, the affected countries receive status ERROR (per-country `MarketSyncLog`). Items that were successfully synchronized are not re-sent on the next run, because change detection skips unchanged items. During cleanup, items Yespo rejected keep their local records so they are retried next time.
 
-If the market configuration cannot be read from Shopify (GraphQL `errors`), the run stops before cleanup and sends nothing. No per-country status is written in that case, because the country list is unknown.
+If the market configuration cannot be read from Shopify (GraphQL `errors`), the run stops before cleanup and sends nothing. No per-country status is written in that case, because the country list is unknown; the job is retried instead (see [Enabling market sync](#enabling-market-sync)).
 
 ---
 
@@ -686,7 +687,7 @@ After a `products/create` or `products/update` webhook is processed (when market
   - Skips variants not published in a given market.
   - Builds market items, compares hashes against stored `MarketSync` records, and sends **only changed** items via `POST /v1/markets`. Clearing follows the field mapping above: missing `oldPrice` and missing URLs go in `remove`, not `null`.
   - For an enabled country where this product is no longer published, sends `isInStock: 0` and prunes the accepted `MarketSync` rows.
-  - For countries removed since the last sync, sends `isInStock: 0` for that product's variants and prunes the local records.
+  - For countries removed since the last sync, sends `isInStock: 0` for that product's variants and prunes the local records Yespo accepted; rejected ones stay and are retried.
   - A full Shopify product or variant delete calls `DELETE /v1/products` and removes the local `MarketSync` rows of the variants Yespo accepted (rejected ones stay and are retried). It does not send a market `isInStock: 0`, because deleting the base product already drops its market data.
 
 ---
