@@ -6,7 +6,7 @@ import { EVENT_MESSAGES } from "~/config/constants";
 /**
  * Deletes one order in Yespo by its external order ID (`DELETE /orders`, removeHistoryOrders).
  *
- * Yespo only accepts the job (HTTP 200) and deletes the order asynchronously.
+ * Yespo only accepts the job (HTTP 200, logged as success) and deletes the order asynchronously.
  * On HTTP 400 (invalid request) the error is logged and not retried. Any other
  * error is logged and rethrown so the webhook job is retried.
  *
@@ -31,7 +31,6 @@ export const deleteYespoOrder = async ({
   const url = `${process.env.API_URL}/orders?${new URLSearchParams({ externalOrderId })}`;
 
   try {
-
     const response = await fetchWithErrorHandling(url, {
       method: "DELETE",
       headers: { Authorization: getAuthHeader(apiKey) },
@@ -39,17 +38,16 @@ export const deleteYespoOrder = async ({
 
     await sendLogEvent({
       orgId,
-      message: EVENT_MESSAGES.CUSTOM_LOG_DELETE_YESPO_ORDERS_SUCCESS,
-      errorMessage: '',
+      errorMessage: "",
       data: {
         domain,
         requestBody: { externalOrderId },
         responseBody: response.responseData,
-        statusCode: response.status
+        statusCode: response.status,
       },
-      logLevel: 'INFO'
+      message: EVENT_MESSAGES.CUSTOM_LOG_DELETE_YESPO_ORDERS_SUCCESS,
+      logLevel: "INFO",
     });
-    
   } catch (error) {
     const { message, status } = error as { message?: string; status?: number };
     console.error(`Error deleting order ${externalOrderId}:`, message);
