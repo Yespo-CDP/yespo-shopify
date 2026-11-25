@@ -34,7 +34,6 @@ const run = () =>
     orgId: 5,
   });
 
-mock.method(console, "log", () => {});
 mock.method(console, "error", () => {});
 
 beforeEach(() => {

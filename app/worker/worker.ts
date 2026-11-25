@@ -65,8 +65,6 @@ const cronWorker = new Worker(
   "cron-jobs",
   async (job) => {
     if (job.name === MARKET_SYNC_CRON_JOB_NAME) {
-      console.log(`Market sync started`);
-
       const enqueued = await enqueueMarketSyncTasks();
       console.log(`Market sync cron tick: enqueued ${enqueued} shop(s)`);
     }

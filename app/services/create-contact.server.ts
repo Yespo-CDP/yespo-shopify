@@ -86,12 +86,6 @@ export const createContactService = async (
       countryCode,
       whenCountryMissing: "backup",
     });
-    console.log("[contact marketId] create", {
-      shop: myshopifyDomain || shopUrl,
-      customerId: payload.id,
-      countryCode,
-      marketId: marketId ?? null,
-    });
 
     const contactData = {
       firstName: payload.first_name || "",

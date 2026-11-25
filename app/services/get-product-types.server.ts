@@ -37,15 +37,7 @@ export const getAllProductTypesService = async ({
       // Update pagination state
       hasNextPage = result.pageInfo.hasNextPage;
       cursor = result.pageInfo.endCursor || null;
-
-      console.log(
-        `[getAllProductTypes] Fetched ${result.types.length} types, total: ${allTypes.length}, hasNextPage: ${hasNextPage}`
-      );
     }
-
-    console.log(
-      `[getAllProductTypes] Completed. Total product types: ${allTypes.length}`
-    );
 
     return allTypes;
   } catch (error) {

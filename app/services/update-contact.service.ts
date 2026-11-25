@@ -112,12 +112,6 @@ export const updateContactService = async (
     countryCode,
     whenCountryMissing: "omit",
   });
-  console.log("[contact marketId] update", {
-    shop: myshopifyDomain || shopUrl,
-    customerId: payload.id,
-    countryCode,
-    marketId: marketId ?? null,
-  });
 
   const contactData: Contact = {
     firstName: payload.first_name || "",

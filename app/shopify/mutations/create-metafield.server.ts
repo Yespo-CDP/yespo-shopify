@@ -97,7 +97,6 @@ async function createMetafield({
       console.error("metafieldsSet userErrors", userErrors);
       return null;
     }
-    console.log('metafieldData', JSON.stringify(metafieldData, null, 2))
     const metafield = metafieldData?.metafieldsSet?.metafields[0];
 
     return metafield ?? null;

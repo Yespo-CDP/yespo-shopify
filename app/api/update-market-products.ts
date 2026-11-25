@@ -125,11 +125,6 @@ export const updateMarketProducts = async ({
     const requestBody = { markets: normalizedMarkets };
     const url = `${process.env.API_URL}/markets`;
 
-    console.log(
-      `POST /v1/markets ${domain}: ${itemCount} item(s), markets ${normalizedMarkets.map((market) => market.marketId).join(", ")}`,
-    );
-    console.log(JSON.stringify(requestBody, null, 2));
-
     const response = await fetchWithErrorHandling(url, {
       method: "POST",
       headers: {
@@ -146,11 +141,6 @@ export const updateMarketProducts = async ({
       (item) => item.status === "rejected",
     );
     const failedItems = deriveFailedItems(responseData);
-
-    console.log(
-      `POST /v1/markets ${domain} response:`,
-      JSON.stringify(responseData, null, 2),
-    );
 
     if (rejectedItems.length > 0) {
       console.warn(

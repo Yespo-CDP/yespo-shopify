@@ -115,7 +115,6 @@ export const customerSyncHandler = async (
   tokenManager?: OfflineTokenManager,
 ) => {
   console.log(`⏳ Synchronizing customers start for ${shop}`);
-  console.log("shop", shop);
 
   const shopRecord = await shopRepository.getShop(shop);
   const logDomain = shopRecord?.domain || shop;
@@ -123,7 +122,6 @@ export const customerSyncHandler = async (
 
   const client = createClient({ shop, accessToken, tokenManager });
   const customersCount = await getCustomersCount({ client });
-  console.log("Total customers count", customersCount, "\n");
 
   let cursor: string | null | undefined = null;
   let totalSkippedCount = 0;
@@ -133,7 +131,6 @@ export const customerSyncHandler = async (
   try {
     do {
       try {
-        console.log("\n", "Chunk start:");
         const shopData = await shopRepository.getShop(shop);
 
         if (shopData?.isContactSyncEnabled) {
@@ -178,16 +175,6 @@ export const customerSyncHandler = async (
           }
 
           if (contactsData?.length > 0) {
-            console.log("[contact marketId] bulk chunk", {
-              shop,
-              sent: contactsData.length,
-              markets: contactsData
-                .filter((contact) => contact.marketId)
-                .map((contact) => ({
-                  externalCustomerId: contact.externalCustomerId,
-                  marketId: contact.marketId,
-                })),
-            });
             const contactsUpdateResponse = await updateContacts({
               apiKey,
               contactsData,
@@ -239,11 +226,6 @@ export const customerSyncHandler = async (
           totalFailedCount += chunkFailedCount;
           totalSkippedCount += chunkSkippedCount;
           totalSyncedCount += contactsData?.length - chunkFailedCount;
-
-          console.log("Total customers in chunk:", customers?.length);
-          console.log("Total skipped customers in chunk:", chunkSkippedCount);
-          console.log("Total sent customers to sync:", contactsData?.length);
-          console.log("Total failed customers sync:", chunkFailedCount);
 
           await sendLogEvent({
             orgId,

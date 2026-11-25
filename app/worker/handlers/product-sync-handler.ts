@@ -49,8 +49,6 @@ export const productSyncHandler = async (
   const client = createClient({ shop, accessToken, tokenManager });
   const variantsCount = await getProductVariantsCount({ client });
 
-  console.log("Total product variants count", variantsCount, "\n");
-
   const shopData = await shopRepository.getShop(shop);
   const logDomain = shopData?.domain || shop;
   const storedLanguageCode = shopData?.defaultLanguageCode ?? null;
@@ -81,7 +79,6 @@ export const productSyncHandler = async (
         // Read once, inside the chunk try: a failure is logged to Yespo and
         // ends the sync with ERROR like any other chunk error.
         marketsConfig ??= await fetchShopMarketsConfig({ client });
-        console.log("\n", "Chunk start:");
 
         if (shopData?.isProductVariantSyncEnabled) {
           const response = await getProducts({
@@ -205,12 +202,6 @@ export const productSyncHandler = async (
             }
           }
 
-          if (productVariantsData.length === 0) {
-            console.log(
-              `[product-sync] No variants to POST for ${shop} in this chunk (skipped ${chunkSkippedCount}; already in ProductVariantSync)`,
-            );
-          }
-
           for (
             let index = 0;
             index < productVariantsData.length;
@@ -262,14 +253,6 @@ export const productSyncHandler = async (
           totalFailedCount += chunkFailedCount;
           totalSkippedCount += chunkSkippedCount;
           totalSyncedCount += productVariantsData.length - chunkFailedCount;
-
-          console.log("Total products in chunk:", products?.length);
-          console.log("Total skipped variants in chunk:", chunkSkippedCount);
-          console.log(
-            "Total sent variants to sync:",
-            productVariantsData?.length,
-          );
-          console.log("Total failed variants sync:", chunkFailedCount);
 
           await productVariantSyncLogRepository.createOrUpdateProductVariantSyncLog(
             {
