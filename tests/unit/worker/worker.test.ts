@@ -48,6 +48,9 @@ mock.module("bullmq", {
 mock.module("../../../app/config/redis", {
   namedExports: { bullmqConnection: {} },
 });
+const takeMarketSyncScope = mock.fn<(shop: string) => Promise<string | null>>(
+  async () => null,
+);
 mock.module("../../../app/services/queue", {
   namedExports: {
     DB_CLEANER_CRON_JOB_NAME: "db-cleaner-tick",
@@ -58,6 +61,7 @@ mock.module("../../../app/services/queue", {
     enqueueMarketSyncTasks: async () => 0,
     registerDbCleanerCron: async () => {},
     registerMarketSyncCron: async () => {},
+    takeMarketSyncScope,
   },
 });
 const bulkDeleteEventsData = mock.fn(async () => {});
@@ -104,8 +108,9 @@ mock.module("../../../app/worker/handlers/product-sync-handler", {
     productSyncHandler: async () => productLog.set({ status: "COMPLETE" }),
   },
 });
+const marketSyncHandler = mock.fn<(...args: unknown[]) => Promise<void>>(async () => {});
 mock.module("../../../app/worker/handlers/market-sync-handler", {
-  namedExports: { marketSyncHandler: async () => {} },
+  namedExports: { marketSyncHandler },
 });
 mock.module("../../../app/worker/handlers/product-webhook-handler", {
   namedExports: { productWebhookHandler: async () => {} },
@@ -186,6 +191,51 @@ test("db-cleaner-tick deletes expired EventData and TmpMarketSync rows older tha
   const cutoff = deleteOlderThan.mock.calls[0].arguments[0].getTime();
   const day = 24 * 60 * 60 * 1000;
   assert.ok(cutoff >= before - day && cutoff <= after - day);
+});
+
+const runMarketSync = (job: { data: unknown; [key: string]: unknown }) =>
+  processors.get("data-sync-market")!(job);
+const syncedMarket = () => marketSyncHandler.mock.calls.at(-1)?.arguments[6];
+
+test("market sync job: syncs the market taken from the scope", async () => {
+  takeMarketSyncScope.mock.mockImplementationOnce(
+    async () => "gid://shopify/Market/1",
+  );
+
+  await runMarketSync({ data: { shop: "demo.myshopify.com" }, stalledCounter: 0 });
+
+  assert.deepEqual(takeMarketSyncScope.mock.calls.at(-1)?.arguments, ["demo.myshopify.com"]);
+  assert.equal(syncedMarket(), "gid://shopify/Market/1");
+});
+
+test("market sync job: an empty scope is a full run, a market in the data of an old job is ignored", async () => {
+  await runMarketSync({
+    data: { shop: "demo.myshopify.com", marketId: "gid://shopify/Market/1" },
+    stalledCounter: 0,
+  });
+
+  assert.equal(syncedMarket(), null);
+});
+
+test("market sync job restarted after a crash: full run, its first scope is already taken", async () => {
+  takeMarketSyncScope.mock.mockImplementationOnce(
+    async () => "gid://shopify/Market/2",
+  );
+
+  await runMarketSync({ data: { shop: "demo.myshopify.com" }, stalledCounter: 1 });
+
+  assert.equal(syncedMarket(), null);
+});
+
+test("market sync job: the scope is taken before the session check", async () => {
+  accessToken = null;
+  takeMarketSyncScope.mock.resetCalls();
+  marketSyncHandler.mock.resetCalls();
+
+  await runMarketSync({ data: { shop: "demo.myshopify.com" }, stalledCounter: 0 });
+
+  assert.equal(takeMarketSyncScope.mock.callCount(), 1);
+  assert.equal(marketSyncHandler.mock.callCount(), 0);
 });
 
 test("webhook-events job: handler gets job.data; a failure is logged without the payload and rethrown", async () => {

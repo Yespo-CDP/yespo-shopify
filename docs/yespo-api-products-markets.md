@@ -871,9 +871,10 @@ whose **last successful (`COMPLETE`) sync** finished less than
 counts from when the previous run finished, not from the tick: a shop that finished at
 03:20 is still picked up by the next day's 03:00 tick. Never-synced shops and shops whose last sync
 ended in `ERROR` are **not** throttled. This interval applies only to the cron path.
-Every `enqueueMarketSyncTaskForShopUrl` trigger bypasses it and runs immediately: the post
+Every `enqueueMarketSyncTaskForShopUrl` trigger bypasses it: the post
 data-sync chain (after historical products sync), the `markets/*` webhook, and the app home
-page when it turns market sync on.
+page when it turns market sync on. The run starts immediately, or after the shop's current
+run when one is in progress.
 
 **Scheduler:** `app/worker/worker.ts` calls `registerMarketSyncCron()` on startup →
 `CronQueue.upsertJobScheduler()` in `app/services/queue.ts`.
@@ -899,10 +900,13 @@ worker.
 4. `budget = 10 - (in-progress shops)`. If `budget <= 0`, enqueue nothing.
 5. Drop shops synced too recently: keep a shop only if it has no `COMPLETE` log, or its newest `COMPLETE` log's `updatedAt < minIntervalBefore` (shops whose last sync ended in `ERROR` keep no fresh `COMPLETE`, so they stay eligible).
 6. Candidates = remaining shops not in progress, sorted by last sync ascending: never-synced shops (no logs) first, then by `max(updatedAt)` across their logs. Take the first `budget`.
-7. Enqueue each via `enqueueMarketSyncJobIfEligible` (re-checks `apiKey` + fresh `IN_PROGRESS` + offline token, then adds a `data-sync-market` job).
+7. Enqueue each via `enqueueMarketSyncJobIfEligible` (re-checks `isMarketSyncEnabled` + `apiKey`, saves the scope, then adds a `data-sync-market` job).
 
 **Notes:**
 
 - The `data-sync-market` BullMQ worker `concurrency: 10` (`app/worker/worker.ts`) is the real parallelism cap; `marketSyncHandler` itself is unchanged.
+- A shop has at most one active and one waiting `data-sync-market` job: BullMQ `deduplication: { id: <shop>, keepLastIfActive: true }`. A request made during a run starts one more run after it, so a run in progress never makes the `markets/*` webhook fail.
+- The scope of the next run is kept in the Redis set `market-sync:scope:<shop>` (market GIDs or `"all"`). It is written before the job is added and read and cleared when the job starts. Exactly one market → only that market is synced; several markets, `"all"` or an empty set → full sync. A job restarted after a worker crash, or one whose scope cannot be read, runs a full sync.
+- A run does not send `isInStock: 0` for `MarketSync` rows created after its bulk operation started (e.g. by a product webhook), because the bulk may not include them yet.
 - The daily schedule is defined in code (`MARKET_SYNC_CRON_PATTERN`) and stored in Redis by BullMQ.
 - A job is only `IN_PROGRESS` in the DB once the handler starts writing logs; with a daily cron and `concurrency: 10`, long-running syncs are counted via fresh `IN_PROGRESS` logs on the next day's tick.

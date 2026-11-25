@@ -1,6 +1,6 @@
 import { Queue } from "bullmq";
 
-import { bullmqConnection } from "~/config/redis";
+import { bullmqConnection, redisConnection } from "~/config/redis";
 import {
   DB_CLEANER_CRON_PATTERN,
   MARKET_SYNC_CRON_PATTERN,
@@ -12,7 +12,6 @@ import {
 } from "~/config/constants";
 import {
   customerSyncLogRepository,
-  marketSyncLogRepository,
   orderSyncLogRepository,
   productVariantSyncLogRepository,
   shopRepository,
@@ -232,6 +231,44 @@ export async function enqueueDataSyncTasks({
   );
 }
 
+/** Scope member of a full shop sync; the other members are market GIDs. */
+const MARKET_SYNC_SCOPE_ALL = "all";
+
+/** Redis set of what the shop's next market sync has to cover. */
+function marketSyncScopeKey(shopUrl: string): string {
+  return `market-sync:scope:${shopUrl}`;
+}
+
+/**
+ * Reads and clears the scope of the shop's market sync. Returns the market GID
+ * when that one market is all that was asked for. Returns null for a full
+ * sync: several markets, a full request, no scope, or Redis failed to read it.
+ */
+export async function takeMarketSyncScope(
+  shopUrl: string,
+): Promise<string | null> {
+  const key = marketSyncScopeKey(shopUrl);
+
+  try {
+    const results = await redisConnection.multi().smembers(key).del(key).exec();
+    const [error, members] = results?.[0] ?? [new Error("no reply"), null];
+    if (error) {
+      throw error;
+    }
+
+    const scope = members as string[];
+    return scope.length === 1 && scope[0] !== MARKET_SYNC_SCOPE_ALL
+      ? scope[0]
+      : null;
+  } catch (error: unknown) {
+    console.error(
+      `Market sync: failed to read the scope for ${shopUrl}, running a full sync:`,
+      (error as Error)?.message,
+    );
+    return null;
+  }
+}
+
 async function enqueueMarketSyncJobIfEligible(
   shop: Shop,
   options?: { marketId?: string },
@@ -245,27 +282,24 @@ async function enqueueMarketSyncJobIfEligible(
     return false;
   }
 
-  // Re-check right before enqueuing, ignoring stale IN_PROGRESS rows so a
-  // crashed/restarted worker doesn't block the shop forever.
-  const staleBefore = new Date(Date.now() - MARKET_SYNC_STALE_AFTER_MS);
-  const inProgress = await marketSyncLogRepository.hasFreshInProgressByShop(
-    shop.shopUrl,
-    staleBefore,
+  // Saved before the job is added: a run that starts after this reads it, and a
+  // run without a scope is a full one. It is not in the job data because BullMQ
+  // drops the data of a duplicate job.
+  await redisConnection.sadd(
+    marketSyncScopeKey(shop.shopUrl),
+    options?.marketId ?? MARKET_SYNC_SCOPE_ALL,
   );
-  if (inProgress) {
-    return false;
-  }
 
   // The access token is fetched fresh inside the worker right before the job
   // runs (see worker.ts), so a token captured here can't go stale while the
   // job waits in the queue.
   await DataSyncMarketQueue.add(
     "data-sync-market",
+    { shop: shop.shopUrl },
     {
-      shop: shop.shopUrl,
-      ...(options?.marketId ? { marketId: options.marketId } : {}),
-    },
-    {
+      // At most one active and one waiting job per shop. A job added during a
+      // run starts after it.
+      deduplication: { id: shop.shopUrl, keepLastIfActive: true },
       removeOnComplete: 1000,
       removeOnFail: 5000,
     },
@@ -281,9 +315,12 @@ async function enqueueMarketSyncJobIfEligible(
  * `marketId` limits the run to that market. Omit it for a full shop sync
  * (first enable, removal cleanup, post-product sync, daily cron).
  *
- * No-ops when the shop is missing, market sync is disabled, or a fresh
- * IN_PROGRESS run already exists. Unlike the daily cron, this path does not
- * apply MARKET_SYNC_MIN_INTERVAL_MS.
+ * Requests that reach Redis before the job starts are merged into one run: the
+ * same market stays a single-market run, anything else becomes a full one. A
+ * request made during a run starts another run after it.
+ *
+ * No-ops when the shop is missing, has no API key, or market sync is disabled.
+ * Unlike the daily cron, this path does not apply MARKET_SYNC_MIN_INTERVAL_MS.
  */
 export async function enqueueMarketSyncTaskForShopUrl(
   shopUrl: string,

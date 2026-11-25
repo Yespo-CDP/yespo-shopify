@@ -582,6 +582,7 @@ When sync is enabled:
 - Market synchronization is enqueued automatically right after historical products synchronization completes (`enqueueMarketSyncTaskForShopUrl`)
 - A daily BullMQ repeatable job also paces ongoing market synchronization across shops (see scheduling below)
 - A dedicated `data-sync-market` worker (`concurrency: 10`) processes the job and calls `POST /v1/markets`
+- Each shop has at most one active and one waiting `data-sync-market` job (BullMQ `deduplication` by shop). Requests that arrive before the job starts are merged into it, and a request that arrives during a run starts one more run after it. What to sync is kept in the Redis set `market-sync:scope:<shop>`: one market → only that market, anything else → a full shop sync
 
 ---
 
@@ -605,7 +606,7 @@ When sync is enabled:
 4. **Mapping & bulk sending to Yespo**
 
    * Staged rows are read in pages of **1,000** (`STAGING_PAGE_SIZE`), so a batch is never loaded into memory at once. They are mapped to market product items (`price`, `currency`, `isInStock`, `oldPrice`, `urls`), unchanged items are skipped via a content-hash comparison, and the rest are grouped by `marketId` (country code) and sent in **chunks of 500** (`API_CHUNK_SIZE`) using [Markets](https://docs.yespo.io/reference/setmarkets) (`POST /v1/markets`). Items are buffered per country across pages, so each market gets the same request bodies as with a single read (the order of requests across markets may differ). Envelope is `{ markets }` — do **not** send `siteId` (the site is resolved from the API key).
-   * After a country's bulk succeeds, `MarketSync` rows for that country whose variant was not in the staging set are marked `isInStock: 0` and the accepted local rows are deleted. This is how a product removed from the catalog leaves that market's recommendations. A failed bulk does not run this pass.
+   * After a country's bulk succeeds, `MarketSync` rows for that country whose variant was not in the staging set are marked `isInStock: 0` and the accepted local rows are deleted, except rows created after that bulk started (a product webhook may add a variant the bulk does not have yet). This is how a product removed from the catalog leaves that market's recommendations. A failed bulk does not run this pass.
    * After each batch the per-country log is updated and the batch's staged rows are removed from `TmpMarketSync`, also when the batch fails. Rows left by a crashed or killed worker are deleted by the daily DB cleaner (see below).
 
 ---

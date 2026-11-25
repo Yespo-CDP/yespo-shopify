@@ -27,6 +27,7 @@ import {
   type ProductWebhookJobData,
   registerDbCleanerCron,
   registerMarketSyncCron,
+  takeMarketSyncScope,
   WEBHOOK_EVENT_QUEUE_NAME,
   type WebhookEventJobData,
 } from "~/services/queue";
@@ -38,8 +39,6 @@ interface JobData {
 
 interface MarketSyncJobData {
   shop?: string;
-  /** When set, the run syncs only this market. Omit for a full shop sync. */
-  marketId?: string;
 }
 
 interface TokenMigrationJobData {
@@ -204,9 +203,14 @@ const marketSyncWorker = new Worker<MarketSyncJobData>(
   "data-sync-market",
   async (job) => {
     try {
-      const { shop, marketId } = job?.data ?? {};
+      const { shop } = job?.data ?? {};
 
       if (!shop) return;
+
+      // Taken first, so a request made from here on belongs to the next run. A
+      // stalled job already took its scope before the crash: run a full sync.
+      const scope = await takeMarketSyncScope(shop);
+      const marketId = job.stalledCounter > 0 ? null : scope;
 
       const tokenManager = createOfflineTokenManager(shop);
       const accessToken = await tokenManager.getAccessToken();
