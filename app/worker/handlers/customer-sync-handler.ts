@@ -17,6 +17,70 @@ import { normalizeYespoItems } from "~/utils/normalize-yespo-items";
 
 const CUSTOMERS_CHUNK_SIZE = 200; // Shopify max limit 250
 
+type FailedContacts = Partial<Contact> | Partial<Contact>[] | undefined;
+
+const getChannelKeys = (contact: Partial<Contact> | null | undefined) => {
+  const channels = normalizeYespoItems(contact?.channels)
+    .map((channel) => ({
+      type: channel?.type,
+      value: String(channel?.value ?? "").trim(),
+    }))
+    .filter((channel) => channel.value);
+
+  return {
+    hasChannels: channels.length > 0,
+    emails: channels
+      .filter((channel) => channel.type === "email")
+      .map((channel) => channel.value.toLowerCase()),
+    phones: channels
+      .filter((channel) => channel.type === "sms")
+      .map((channel) => channel.value.replace(/\D/g, ""))
+      .filter(Boolean),
+  };
+};
+
+/**
+ * Yespo returns rejected contacts without externalCustomerId, so match them by
+ * email, then by phone. A contact rejected without channels matches every sent
+ * contact without an email or phone digits. If any rejected contact matches
+ * nothing, or fewer contacts are matched than rejected, all sent contacts are
+ * returned, because any of them could be the rejected one.
+ */
+const getRejectedIndexes = (
+  contactsData: Contact[],
+  failedContacts: FailedContacts,
+): Set<number> => {
+  const failedItems = normalizeYespoItems(failedContacts || undefined);
+  const sentKeys = contactsData.map(getChannelKeys);
+  const rejectedIndexes = new Set<number>();
+  const findSent = (isMatch: (sent: (typeof sentKeys)[number]) => boolean) =>
+    [...sentKeys.keys()].filter((index) => isMatch(sentKeys[index]));
+
+  for (const failedContact of failedItems) {
+    const failed = getChannelKeys(failedContact);
+
+    let matched = failed.hasChannels
+      ? findSent((sent) => sent.emails.some((val) => failed.emails.includes(val)))
+      : findSent((sent) => !sent.emails.length && !sent.phones.length);
+
+    if (matched.length === 0) {
+      matched = findSent((sent) =>
+        sent.phones.some((val) => failed.phones.includes(val)),
+      );
+    }
+
+    if (matched.length === 0) {
+      return new Set(contactsData.keys());
+    }
+
+    matched.forEach((index) => rejectedIndexes.add(index));
+  }
+
+  return rejectedIndexes.size < failedItems.length
+    ? new Set(contactsData.keys())
+    : rejectedIndexes;
+};
+
 /**
  * Syncs customer list from Shopify with contact list in Yespo.
  *
@@ -140,27 +204,22 @@ export const customerSyncHandler = async (
               }
             }
 
-            // Yespo returns rejected contacts without externalCustomerId,
-            // so match them by email. A contact without email is marked.
-            const failedEmails = new Set(
-              normalizeYespoItems(
-                contactsUpdateResponse?.failedContacts as
-                  | Partial<Contact>
-                  | Partial<Contact>[]
-                  | undefined,
-              )
-                .flatMap((failed) => normalizeYespoItems(failed?.channels))
-                .filter((channel) => channel?.type === "email")
-                .map((channel) => String(channel.value).trim().toLowerCase()),
+            let rejectedIndexes = getRejectedIndexes(
+              contactsData,
+              contactsUpdateResponse?.failedContacts as FailedContacts,
             );
 
-            for (const [index, customer] of sentCustomers.entries()) {
-              const email = contactsData[index].channels
-                .find((channel) => channel.type === "email")
-                ?.value.trim()
-                .toLowerCase();
+            if (contactsUpdateResponse?.errorMessage) {
+              console.error(
+                "Error customers sync in chunk, Yespo errorMessage:",
+                contactsUpdateResponse.errorMessage,
+              );
+              chunkFailedCount = contactsData.length;
+              rejectedIndexes = new Set(contactsData.keys());
+            }
 
-              if (email && failedEmails.has(email)) {
+            for (const [index, customer] of sentCustomers.entries()) {
+              if (rejectedIndexes.has(index)) {
                 continue;
               }
 
