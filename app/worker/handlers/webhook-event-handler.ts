@@ -2,6 +2,7 @@ import { shopRepository } from "~/repositories/repositories.server";
 import { createContactService } from "~/services/create-contact.server";
 import { updateContactService } from "~/services/update-contact.service";
 import { sendPurchasedItemsService } from "~/services/send-purchased-items.server";
+import { isOrderDeleted } from "~/services/is-order-deleted.server";
 import { updateOrderService } from "~/services/update-order.server";
 import { sendStatusCartService } from "~/services/send-status-cart.server";
 import { deleteOrderService } from "~/services/delete-order.server";
@@ -20,7 +21,9 @@ import { enqueueWebhookEvent, type WebhookEventJobData } from "~/services/queue"
  *   or sending failed) and `isOrderSyncEnabled` is on, queues the order as a
  *   separate "ORDERS_UPDATED" job, so its retries do not send PurchasedItems again.
  * - "ORDERS_UPDATED": creates or updates the order if `isOrderSyncEnabled` is on
- *   (`POST /orders` upserts by `externalOrderId`).
+ *   (`POST /orders` upserts by `externalOrderId`). An order Shopify no longer has
+ *   is skipped: a late event must not create it in Yespo again. If that cannot be
+ *   checked, the order is sent.
  * - "ORDERS_DELETE": deletes the order in Yespo and its `OrderSync` record if
  *   `isOrderSyncEnabled` is on.
  * - "CARTS_UPDATE": sends StatusCart if `isWebTrackingEnabled` is on.
@@ -78,13 +81,23 @@ export async function webhookEventHandler(
 
     case "ORDERS_UPDATED":
       if (shop?.isOrderSyncEnabled) {
+        const { id, admin_graphql_api_id: orderGid } =
+          payload as OrderCreatePayload;
+        const shopUrl = shop.shopUrl || data.shop;
+        if (await isOrderDeleted({ shopUrl, orderGid })) {
+          console.log(
+            `Order ${id} not found in Shopify, orders/updated skipped for ${shopUrl}`,
+          );
+          return;
+        }
+
         await updateOrderService(
           payload as any,
           shop.apiKey,
           shop.id,
           shop.domain || data.shop,
           shop.orgId,
-          shop.shopUrl || data.shop,
+          shopUrl,
         );
       }
       break;

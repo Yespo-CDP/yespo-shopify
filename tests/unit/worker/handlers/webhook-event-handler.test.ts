@@ -2,14 +2,21 @@ import assert from "node:assert/strict";
 import { beforeEach, mock, test } from "node:test";
 
 const SHOP = "demo.myshopify.com";
-const orderPayload = { id: 1, note_attributes: [], line_items: [] };
+const orderPayload = {
+  id: 1,
+  admin_graphql_api_id: "gid://shopify/Order/1",
+  note_attributes: [],
+  line_items: [],
+};
 const cartPayload = { token: "cart-1" };
 const customerPayload = { id: 7, email: "a@example.com" };
 
 let purchasedItemsSent = false;
+let orderDeleted = false;
 let store: Record<string, unknown> | null = {};
 
 const sendPurchasedItemsService = mock.fn(async (..._args: unknown[]) => purchasedItemsSent);
+const isOrderDeleted = mock.fn<(...args: unknown[]) => Promise<boolean>>(async () => orderDeleted);
 const updateOrderService = mock.fn(async (..._args: unknown[]) => {});
 const sendStatusCartService = mock.fn(async (..._args: unknown[]) => {});
 const createContactService = mock.fn(async (..._args: unknown[]) => {});
@@ -18,6 +25,7 @@ const deleteOrderService = mock.fn<(...args: unknown[]) => Promise<void>>(async 
 const enqueueWebhookEvent = mock.fn<(...args: unknown[]) => Promise<void>>(async () => {});
 const services = [
   sendPurchasedItemsService,
+  isOrderDeleted,
   updateOrderService,
   sendStatusCartService,
   createContactService,
@@ -31,6 +39,9 @@ mock.module("../../../../app/repositories/repositories.server", {
 });
 mock.module("../../../../app/services/send-purchased-items.server", {
   namedExports: { sendPurchasedItemsService },
+});
+mock.module("../../../../app/services/is-order-deleted.server", {
+  namedExports: { isOrderDeleted },
 });
 mock.module("../../../../app/services/update-order.server", {
   namedExports: { updateOrderService },
@@ -60,6 +71,7 @@ const run = (topic: string, payload: unknown = orderPayload) =>
 
 beforeEach(() => {
   for (const service of services) service.mock.resetCalls();
+  orderDeleted = false;
   store = {
     id: 3,
     apiKey: "key",
@@ -144,6 +156,63 @@ test("ORDERS_UPDATED does not send the order when order sync is disabled", async
 
   assert.equal(updateOrderService.mock.callCount(), 0);
 });
+
+// Order already deleted in Shopify (improv2 task 11).
+
+test("ORDERS_UPDATED of an order deleted in Shopify sends nothing and succeeds", async (t) => {
+  const log = t.mock.method(console, "log", () => {});
+  orderDeleted = true;
+  store = { ...store, shopUrl: "stored.myshopify.com" };
+
+  await run("ORDERS_UPDATED");
+
+  for (const service of services) {
+    if (service === isOrderDeleted) continue;
+    assert.equal(service.mock.callCount(), 0);
+  }
+  assert.deepEqual(isOrderDeleted.mock.calls.map((call) => call.arguments), [
+    [{ shopUrl: "stored.myshopify.com", orderGid: "gid://shopify/Order/1" }],
+  ]);
+  assert.deepEqual(log.mock.calls.map((call) => call.arguments), [
+    ["Order 1 not found in Shopify, orders/updated skipped for stored.myshopify.com"],
+  ]);
+});
+
+test("ORDERS_UPDATED checks the order in the webhook's shop when shopUrl is empty", async () => {
+  store = { ...store, shopUrl: "" };
+
+  await run("ORDERS_UPDATED");
+
+  assert.deepEqual(isOrderDeleted.mock.calls[0]?.arguments, [
+    { shopUrl: SHOP, orderGid: "gid://shopify/Order/1" },
+  ]);
+  assert.equal(updateOrderService.mock.callCount(), 1);
+});
+
+test("ORDERS_UPDATED does not check the order when order sync is disabled", async () => {
+  store = { ...store, isOrderSyncEnabled: false };
+
+  await run("ORDERS_UPDATED");
+
+  assert.equal(isOrderDeleted.mock.callCount(), 0);
+});
+
+for (const [topic, payload] of [
+  ["ORDERS_CREATE", orderPayload],
+  ["ORDERS_DELETE", { id: 1 }],
+  ["CUSTOMERS_CREATE", customerPayload],
+  ["CUSTOMERS_UPDATE", customerPayload],
+  ["CARTS_UPDATE", cartPayload],
+] as const) {
+  test(`${topic} does not check whether the order is deleted`, async () => {
+    orderDeleted = true;
+    purchasedItemsSent = false;
+
+    await run(topic, payload);
+
+    assert.equal(isOrderDeleted.mock.callCount(), 0);
+  });
+}
 
 // Order deletion (task 44).
 

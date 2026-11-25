@@ -350,7 +350,7 @@ Final synchronization status:
 Webhooks are triggered when orders are created, updated or deleted in Shopify:
 
   - `orders/create` → when web tracking is enabled, the PurchasedItems event is sent (see [Backend Events](#backend-events)). If web tracking is off or the event was not sent (no cart token or tracking data, no `siteId`, request failed) and order sync is enabled, a separate `ORDERS_UPDATED` job (id from the order id, so it is queued once while it exists) sends the order with `POST /orders`. Its retries do not send PurchasedItems again.
-  - `orders/updated` → order created or updated in Yespo. Temporary Yespo errors are retried, and an order older than the last sent one is skipped (see [Real-time customers sync](#real-time-customers-sync)).
+  - `orders/updated` → order created or updated in Yespo. Temporary Yespo errors are retried, and an order older than the last sent one is skipped (see [Real-time customers sync](#real-time-customers-sync)). Before sending, the worker asks Shopify for the order: if it no longer exists (`order: null` without errors), the job ends successfully and nothing is sent. If the check fails, the order is sent.
   - `orders/delete` → order deleted in Yespo (`DELETE /orders?externalOrderId=…`), only when order sync is enabled. Yespo deletes the order asynchronously. The order's `OrderSync` record is deleted as well.
 
 ---
@@ -359,6 +359,7 @@ Webhooks are triggered when orders are created, updated or deleted in Shopify:
 
 - [query /ordersCount](https://shopify.dev/docs/api/admin-graphql/latest/queries/orderscount) – returns the count of orders for the given shop.
 - [query /orders](https://shopify.dev/docs/api/admin-graphql/latest/queries/orders) – returns a list of orders placed in the stores.
+- [query /order](https://shopify.dev/docs/api/admin-graphql/latest/queries/order) – checks that the order still exists before `orders/updated` is sent.
 
 #### Yespo API methods:
 
