@@ -75,11 +75,12 @@ export const stripCategoryIdsFromProduct = (
 /**
  * Sends a batch of product variants to the Yespo POST /v1/products API.
  *
- * languageCode = Shopify shop.primaryLocale (also cached as shop.defaultLanguageCode).
+ * languageCode = stored shop.defaultLanguageCode, otherwise the Shopify primary locale
+ * from shopLocales ("en" when it cannot be read); see getShopLanguages.
  *
  * @param params.apiKey - Basic-auth API key. The Yespo site is resolved from the key, not the body.
  * @param params.siteId - Yespo site/account identifier; used for rate limiting, not sent in the body.
- * @param params.languageCode - BCP 47 language tag (e.g. "uk", "en"). Must match shop.primaryLocale.
+ * @param params.languageCode - BCP 47 language tag (e.g. "uk", "en"). Must match the language of the Yespo site.
  * @param params.productVariants - Product variant array to sync (max 500 per call).
  * @param params.domain - Shop domain used for logging.
  * @param params.orgId - Yespo organisation id used for logging.

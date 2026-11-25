@@ -18,6 +18,21 @@ const createOrUpdateProductVariantSync = mock.fn(async (_data: unknown) => ({}))
 let updateProductVariants = mock.fn(
   async (_args: unknown): Promise<unknown> => ({}),
 );
+let defaultLanguageCode: string | null = "en";
+let shopLocales: { locale: string; primary: boolean; published: boolean }[] = [];
+let localesFail = false;
+// `shop.primaryLocale` does not exist in the Admin API: anything but
+// `shopLocales` answers with errors, as Shopify does.
+const request = async (query: string) =>
+  query.includes("shopLocales") && !localesFail
+    ? { data: { shopLocales } }
+    : { errors: { message: "Shopify failed" } };
+const updateShop = mock.fn<(shop: string, data: unknown) => Promise<unknown>>(
+  async () => ({}),
+);
+const getProductTranslations = mock.fn<
+  (args: { locales: string[] }) => Promise<unknown>
+>(async () => ({ product: {}, variants: {} }));
 let trackedVariantIds: string[] = [];
 let acceptedDeleteIds: string[] = [];
 const deleteVariantSyncs = mock.fn(async (_shopId: number, _ids: string[]) => {});
@@ -36,10 +51,10 @@ mock.module("../../../../app/repositories/repositories.server", {
     shopRepository: {
       getShop: async () => ({
         domain: "demo.com",
-        defaultLanguageCode: "en",
+        defaultLanguageCode,
         isProductVariantSyncEnabled: true,
       }),
-      updateShop: async () => ({}),
+      updateShop,
     },
     marketSyncRepository: { deleteByVariantIds: deleteMarketSyncs },
     productVariantSyncRepository: {
@@ -62,7 +77,7 @@ mock.module("../../../../app/api/delete-product-variants", {
   namedExports: { deleteProductVariants: async () => acceptedDeleteIds },
 });
 mock.module("../../../../app/worker/services/create-client", {
-  namedExports: { createClient: () => ({}) },
+  namedExports: { createClient: () => ({ request }) },
 });
 mock.module("../../../../app/worker/services/get-products", {
   namedExports: {
@@ -90,14 +105,8 @@ mock.module("../../../../app/worker/services/fetch-shop-markets-config", {
 mock.module("../../../../app/worker/services/get-product-market-publication", {
   namedExports: { getPublishedInAnyMarket: async () => new Map() },
 });
-mock.module("../../../../app/worker/services/get-shop-primary-locale", {
-  namedExports: { getShopPrimaryLocale: async () => "en" },
-});
-mock.module("../../../../app/worker/services/get-shop-locales", {
-  namedExports: { getShopSecondaryLocales: async () => [] },
-});
 mock.module("../../../../app/worker/services/get-product-translations", {
-  namedExports: { getProductTranslations: async () => ({ product: {}, variants: {} }) },
+  namedExports: { getProductTranslations },
 });
 mock.module("../../../../app/api/send-log-event", {
   namedExports: { sendLogEvent },
@@ -115,6 +124,11 @@ const run = () =>
 
 beforeEach(() => {
   syncRows = [];
+  defaultLanguageCode = "en";
+  shopLocales = [{ locale: "en", primary: true, published: true }];
+  localesFail = false;
+  updateShop.mock.resetCalls();
+  getProductTranslations.mock.resetCalls();
   trackedVariantIds = [];
   acceptedDeleteIds = [];
   createOrUpdateProductVariantSync.mock.resetCalls();
@@ -233,4 +247,69 @@ test("a failed products page ends the sync with ERROR and deletes nothing", asyn
   );
   assert.equal(deleteVariantSyncs.mock.callCount(), 0);
   assert.equal(deleteMarketSyncs.mock.callCount(), 0);
+});
+
+const sentLanguageCode = () =>
+  (updateProductVariants.mock.calls[0].arguments[0] as { languageCode: string })
+    .languageCode;
+const translatedLocales = () =>
+  getProductTranslations.mock.calls[0]?.arguments[0].locales ?? [];
+const ukrainianShop = [
+  { locale: "uk", primary: true, published: true },
+  { locale: "en", primary: false, published: true },
+  { locale: "pl", primary: false, published: true },
+];
+
+test("a new shop sends its primary locale and stores it", async () => {
+  defaultLanguageCode = null;
+  shopLocales = ukrainianShop;
+
+  await run();
+
+  assert.equal(sentLanguageCode(), "uk");
+  assert.deepEqual(translatedLocales(), ["en", "pl"]);
+  assert.deepEqual(
+    updateShop.mock.calls.map((call) => call.arguments),
+    [
+      [
+        "demo.myshopify.com",
+        { defaultLanguageCode: "uk", defaultCurrency: "USD" },
+      ],
+    ],
+  );
+});
+
+test("the language is not stored when the request to Yespo throws", async () => {
+  defaultLanguageCode = null;
+  shopLocales = ukrainianShop;
+  updateProductVariants = mock.fn(async () => {
+    throw new Error("409");
+  });
+
+  await run();
+
+  assert.equal(updateProductVariants.mock.callCount(), 1);
+  assert.equal(updateShop.mock.callCount(), 0);
+});
+
+test("a shop with a stored language keeps it", async () => {
+  shopLocales = ukrainianShop;
+
+  await run();
+
+  assert.equal(sentLanguageCode(), "en");
+  assert.deepEqual(translatedLocales(), ["pl"]);
+  assert.equal(updateShop.mock.callCount(), 0);
+});
+
+test("failed shop locales: a new shop syncs in English without translations", async () => {
+  defaultLanguageCode = null;
+  localesFail = true;
+
+  await run();
+
+  assert.equal(sentLanguageCode(), "en");
+  assert.equal(getProductTranslations.mock.callCount(), 0);
+  assert.equal(updateShop.mock.callCount(), 1);
+  assert.equal(writeSyncLog.mock.calls.at(-1)?.arguments[0].status, "COMPLETE");
 });

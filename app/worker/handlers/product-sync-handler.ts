@@ -17,8 +17,7 @@ import { createProductVariantPayload } from "../services/create-product-variant-
 import { yespoProductAction } from "../services/yespo-product-action";
 import { fetchShopMarketsConfig } from "../services/fetch-shop-markets-config";
 import { getPublishedInAnyMarket } from "../services/get-product-market-publication";
-import { getShopPrimaryLocale } from "../services/get-shop-primary-locale";
-import { getShopSecondaryLocales } from "../services/get-shop-locales";
+import { getShopLanguages } from "../services/get-shop-locales";
 import {
   getProductTranslations,
   type ProductTranslationsResult,
@@ -52,24 +51,19 @@ export const productSyncHandler = async (
 
   console.log("Total product variants count", variantsCount, "\n");
 
-  // Determine languageCode from the live Shopify primary locale.
-  // Fetch the current Shopify primary locale and all secondary locales once at the start.
-  const [currentLocale, shopData] = await Promise.all([
-    getShopPrimaryLocale({ client }),
-    shopRepository.getShop(shop),
-  ]);
+  const shopData = await shopRepository.getShop(shop);
   const logDomain = shopData?.domain || shop;
   const storedLanguageCode = shopData?.defaultLanguageCode ?? null;
-  const languageCode = currentLocale ?? storedLanguageCode ?? "en";
 
-  const secondaryLocales = await getShopSecondaryLocales({
+  // Resolve languageCode and the locales to translate once at the start.
+  const { languageCode, secondaryLocales } = await getShopLanguages({
     client,
-    primaryLocale: languageCode,
+    storedLanguageCode,
   });
   const hasTranslations = secondaryLocales.length > 0;
   let marketsConfig: ShopMarketsConfig | undefined;
 
-  // Persist defaultLanguageCode after the first batch when it differs from DB.
+  // Persist defaultLanguageCode after the first batch when none is stored yet.
   let needsLanguageCodePersist = languageCode !== storedLanguageCode;
 
   let cursor: string | null | undefined = null;

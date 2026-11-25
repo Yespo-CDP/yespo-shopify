@@ -373,7 +373,7 @@ App requests access to the following scopes:
   - `read_products` – read products, variants, prices, inventory and collections
   - `read_publications` – filter products by `published_status:published`
   - `read_translations` – read product, collection and variant translations
-  - `read_locales` – read the shop primary and secondary locales (used to resolve the Yespo `languageCode` and which translations to send)
+  - `read_locales` – read the shop primary and secondary locales with one `shopLocales` query (used to resolve the Yespo `languageCode` and which translations to send)
   - `unauthenticated_read_product_listings` – create a Storefront access token and read localized taxonomy categories (Admin `TaxonomyCategory` has no locale)
 
 Shopify webhooks used:
@@ -428,7 +428,7 @@ After the merchant grants `read_products`, `read_publications`, `read_translatio
 4. **Bulk sending to Yespo**
 
    * Variants are grouped and sent to Yespo in **chunks of 500** using [Products](https://docs.yespo.io/reference/createorupdateproducts) (`POST /v1/products`).
-   * Envelope is `{ languageCode, products }`. `languageCode` is the Shopify primary locale. Do **not** send `siteId` or `languageChanged` (the site is resolved from the API key).
+   * Envelope is `{ languageCode, products }`. `languageCode` is the stored `Shop.defaultLanguageCode`; when it is empty — the Shopify primary locale, or `en` if Shopify does not return it. If the locales cannot be read, products are sent without translations. The language is stored after the first request Yespo accepts, so a later change of the Shopify primary locale does not change it. It is reset when the Yespo account is disconnected or the app is uninstalled. Do **not** send `siteId` or `languageChanged` (the site is resolved from the API key).
    * HTTP `207` partial success is treated as OK; items with `status: "rejected"` increment `failedCount` (e.g. `INVALID_URL` when `imageUrl` is empty).
 
 5. **Deleting orphaned variants**
@@ -950,7 +950,7 @@ Shopify webhooks (API version: 2026-04, `api_version` in `[webhooks]`) used by t
 | **customers/create**       | Triggered when a new customer account is created in the store.                | `/webhooks/app/customers`     |
 | **customers/update**       | Triggered when an existing customer’s data is updated.                        | `/webhooks/app/customers`     |
 | **app/scopes_update**      | Triggered when the app's permission scopes are updated by the merchant.       | `/webhooks/app/scopes_update` |
-| **app/uninstalled**        | Triggered when a merchant uninstalls the app. Revokes the Yespo access token, marks the shop inactive, clears its API key, sync flags, web tracking flag, `siteId` and `orgId`, resets `domain` to the `*.myshopify.com` host, and deletes local sync rows, sync logs and sessions. Data in Yespo is kept. | `/webhooks/app/uninstalled`   |
+| **app/uninstalled**        | Triggered when a merchant uninstalls the app. Revokes the Yespo access token, marks the shop inactive, clears its API key, sync flags, web tracking flag, `siteId`, `orgId` and stored product language, resets `domain` to the `*.myshopify.com` host, and deletes local sync rows, sync logs and sessions. Data in Yespo is kept. | `/webhooks/app/uninstalled`   |
 | **shop/update**            | Triggered when shop details change. Updates the stored shop email, name and `domain` (see [Store domains](#store-domains)). | `/webhooks/app/shop_update`   |
 | **orders/create**          | Triggered when an order is created.                                           | `/webhook/app/orders`         |
 | **orders/updated**         | Triggered when an existing order’s data is updated.                           | `/webhook/app/orders`         |
@@ -1084,7 +1084,7 @@ Make sure you're authenticated via Shopify CLI and connected to the correct Part
 - 📜 Connect the general and web push scripts in the `Scripts integration` section.
 - 👀 Enable or disable web tracking on your site in the `Web tracking` section.
 - 🔄 Enable or disable customers, orders, products and markets synchronization in the `Data sync` section.
-- Disconnecting the Yespo account turns off sync and tracking, deletes the script metafields and clears the local customer, order, product and market sync rows and logs, so the next connected account gets a full import. Data already sent to Yespo is not deleted. Uninstalling the app clears this local data as well (see `app/uninstalled` in [Webhooks](#webhooks)).
+- Disconnecting the Yespo account turns off sync and tracking, deletes the script metafields and clears the stored product language and the local customer, order, product and market sync rows and logs, so the next connected account gets a full import. Data already sent to Yespo is not deleted. Uninstalling the app clears this local data as well (see `app/uninstalled` in [Webhooks](#webhooks)).
 
 ## Contributing
 
