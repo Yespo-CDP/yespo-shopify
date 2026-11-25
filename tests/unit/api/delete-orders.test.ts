@@ -51,7 +51,17 @@ test("sends DELETE /orders with externalOrderId in the query", async () => {
   assert.equal(url, "https://yespo.test/api/v1/orders?externalOrderId=820982911946154508");
   assert.equal(options.method, "DELETE");
   assert.equal(options.body, undefined);
-  assert.equal(sendLogEvent.mock.callCount(), 0);
+
+  assert.equal(sendLogEvent.mock.callCount(), 1);
+  const event = sendLogEvent.mock.calls[0].arguments[0];
+  assert.equal(event.message, "CUSTOM_LOG_DELETE_YESPO_ORDERS_SUCCESS");
+  assert.equal(event.logLevel, "INFO");
+  assert.deepEqual(event.data, {
+    domain: "demo.com",
+    requestBody: { externalOrderId: "820982911946154508" },
+    responseBody: "ok",
+    statusCode: 200,
+  });
 });
 
 test("HTTP 400 is logged and not thrown", async (t) => {

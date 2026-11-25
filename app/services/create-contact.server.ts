@@ -1,6 +1,7 @@
 import { createContact } from "~/api/create-contact";
 import { customerSyncRepository } from "~/repositories/repositories.server";
 import { resolveShopContactMarketId } from "~/services/fetch-contact-market-context.server";
+import { isPermanentYespoError } from "~/utils/is-permanent-yespo-error";
 
 /**
  * Creates a contact using the provided payload and API key.
@@ -9,7 +10,13 @@ import { resolveShopContactMarketId } from "~/services/fetch-contact-market-cont
  * constructs contact data with first and last names and external customer ID,
  * and calls `createContact` service to create the contact in the system.
  *
- * Any errors during the process are caught and logged.
+ * Nothing is sent when the stored `CustomerSync.updatedAt` is newer than
+ * `payload.updated_at`: a retried or late webhook must not overwrite newer data.
+ *
+ * A permanent Yespo error (4xx except 429) is logged and the customer is not
+ * marked as synced. Any other error is thrown so the webhook job is retried.
+ * "Duplicated request" is not thrown by `createContact`: it counts as success and
+ * the customer is marked as synced.
  *
  * **Shopify Customer Webhook (REST):**
  * https://shopify.dev/docs/api/admin-rest/latest/resources/customer#resource-object
@@ -42,6 +49,21 @@ export const createContactService = async (
   myshopifyDomain?: string,
 ) => {
   try {
+    const [customerSync] =
+      await customerSyncRepository.getCustomerSyncByCustomerIds(shopId, [
+        payload.admin_graphql_api_id,
+      ]);
+    // A missing or unparsable updated_at gives NaN, so the contact is sent.
+    if (
+      customerSync?.updatedAt &&
+      customerSync.updatedAt.getTime() > Date.parse(payload.updated_at)
+    ) {
+      console.log(
+        `Customer ${payload.id} not sent: newer data was already synced`,
+      );
+      return;
+    }
+
     const channels = [];
 
     if (payload.email) {
@@ -63,12 +85,6 @@ export const createContactService = async (
       shopUrl: myshopifyDomain || "",
       countryCode,
       whenCountryMissing: "backup",
-    });
-    console.log("[contact marketId] create", {
-      shop: myshopifyDomain || shopUrl,
-      customerId: payload.id,
-      countryCode,
-      marketId: marketId ?? null,
     });
 
     const contactData = {
@@ -97,6 +113,9 @@ export const createContactService = async (
       },
     });
   } catch (error: any) {
-    console.error("Error occurred in Create Contact Service", error);
+    if (!isPermanentYespoError(error)) throw error;
+    console.error(
+      `Yespo rejected contact ${payload.id} with HTTP ${error.status}`,
+    );
   }
 };

@@ -41,8 +41,7 @@ export const deleteAccessToken = async ({
     },
   };
   try {
-    const res = await fetchWithErrorHandling(url, options);
-    console.log('DELETE access token', res)
+    await fetchWithErrorHandling(url, options);
   } catch (error: any) {
     console.error("Error deleting access token:", error);
     await sendLogEvent({

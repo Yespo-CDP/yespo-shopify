@@ -72,6 +72,15 @@ test("clears every sync table and log of the shop by Shop.id", async () => {
   }
 });
 
+test("resets the stored product language, so the next account gets its own", async () => {
+  await run();
+
+  const { data } = calls.find((c) => c.name === "updateShop")?.args as {
+    data: { defaultLanguageCode?: string | null };
+  };
+  assert.equal(data.defaultLanguageCode, null);
+});
+
 test("clears sync state only after the sync flags are turned off", async () => {
   await run();
 

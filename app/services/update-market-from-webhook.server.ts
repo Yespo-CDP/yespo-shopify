@@ -140,15 +140,24 @@ export async function updateMarketFromWebhook({
       const orphanMarkets = Array.from(orphansByCountry.entries()).map(
         ([marketId, products]) => ({ marketId, products }),
       );
-      await updateMarketProducts({ apiKey, siteId, markets: orphanMarkets, domain, orgId });
-
+      const { failedItems } = await updateMarketProducts({
+        apiKey,
+        siteId,
+        markets: orphanMarkets,
+        domain,
+        orgId,
+      });
+      // Rows of rejected variants stay, so the next webhook or full sync retries them.
+      const failed = new Set(failedItems);
       await marketSyncRepository.deleteManyByKeys(
         shopId,
-        orphanedRecords.map((r) => ({
-          productId: r.productId,
-          variantId: r.variantId,
-          countryCode: r.countryCode,
-        })),
+        orphanedRecords
+          .filter((r) => !failed.has(r.variantId.split("/").pop() ?? r.variantId))
+          .map((r) => ({
+            productId: r.productId,
+            variantId: r.variantId,
+            countryCode: r.countryCode,
+          })),
       );
     }
   }

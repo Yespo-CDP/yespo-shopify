@@ -112,3 +112,16 @@ test("getAllShops selects only shopUrl and does not decrypt", async () => {
   });
   assert.deepEqual(shops, rows);
 });
+
+test("getShopUrlsWithoutPublicApiKey: active shops without a key, only shopUrl", async () => {
+  const rows = [{ shopUrl: "a.myshopify.com" }];
+  const { repository, shop } = createRepository(rows);
+
+  const shops = await repository.getShopUrlsWithoutPublicApiKey();
+
+  assert.deepEqual(shop.findMany.mock.calls[0].arguments[0], {
+    where: { active: true, publicApiKey: null },
+    select: { shopUrl: true },
+  });
+  assert.deepEqual(shops, rows);
+});

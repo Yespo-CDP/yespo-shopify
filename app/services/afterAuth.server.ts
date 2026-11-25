@@ -7,6 +7,7 @@ import shopify from "~/shopify.server";
 import getMetafieldDefinition from "~/shopify/queries/get-metafield-definition";
 import deleteMetafields from "~/shopify/mutations/delete-metafields.server";
 import { ensureWebPushMultiDomain } from "~/services/ensure-web-push-multi-domain.server";
+import { ensureShopPublicApiKey } from "~/services/ensure-shop-public-api-key.server";
 
 const GENERAL_SCRIPT_HANDLE =
   process.env.GENERAL_SCRIPT_HANDLE ?? "yespo-script";
@@ -29,6 +30,7 @@ const HOST_URL =
  * - Registers metafield definitions for Yespo scripts if they do not exist
  * - Deletes Yespo-related metafields if the shop has no API key
  * - Registers webhooks
+ * - Saves the shop's key for signing event data (a failure is only logged)
  *
  * @function afterAuth
  * @param {Object} params - Parameters object
@@ -162,6 +164,19 @@ admin,
     shopUrl: session.shop,
     scopes: session.scope,
   });
+
+  try {
+    await ensureShopPublicApiKey({
+      admin,
+      shopUrl: session.shop,
+      shopGid: shop.id,
+    });
+  } catch (error: unknown) {
+    console.error(
+      `Event key setup failed for ${session.shop}:`,
+      (error as Error)?.message,
+    );
+  }
 };
 
 export default afterAuth;

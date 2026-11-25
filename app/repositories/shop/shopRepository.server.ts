@@ -69,8 +69,8 @@ export default interface ShopRepository {
 
   /**
    * Returns active shops eligible for market sync cron, each with the minimal
-   * MarketSyncLog fields (status + updatedAt) needed to compute the concurrency
-   * budget and pick the shops that synced longest ago.
+   * MarketSyncLog fields (status + updatedAt) needed to tell which shops are due
+   * and pick first the shops with a country synced longest ago.
    */
   getShopsForMarketSync(): Promise<ShopWithMarketSyncLogs[]>;
 
@@ -79,4 +79,10 @@ export default interface ShopRepository {
    * token migration to enqueue a job per shop.
    */
   getAllShops(): Promise<{ shopUrl: string }[]>;
+
+  /**
+   * Returns the URL of every active shop without a key for signing event data.
+   * Used by the seeding script to enqueue a job per shop.
+   */
+  getShopUrlsWithoutPublicApiKey(): Promise<{ shopUrl: string }[]>;
 }

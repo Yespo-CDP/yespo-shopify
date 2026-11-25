@@ -51,8 +51,7 @@ export const sendAccessToken = async ({
     body: JSON.stringify(requestBody),
   };
   try {
-   const res = await fetchWithErrorHandling(url, options);
-    console.log('SEND access token', res)
+    await fetchWithErrorHandling(url, options);
   } catch (error: any) {
     console.error("Error sending access token:", error);
     await sendLogEvent({

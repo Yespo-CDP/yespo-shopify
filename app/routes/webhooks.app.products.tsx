@@ -54,10 +54,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
     productGid,
   });
 
-  console.log(
-    `Queued ${topic} for ${session.shop} product ${productGid} webhookId ${webhookId}`,
-  );
-
   return new Response("Success", { status: 200 });
 };
 

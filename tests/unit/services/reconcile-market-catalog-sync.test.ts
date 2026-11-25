@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  MarketCatalogSyncBusyError,
-  reconcileMarketCatalogSync,
-} from "../../../app/services/reconcile-market-catalog-sync";
+import { reconcileMarketCatalogSync } from "../../../app/services/reconcile-market-catalog-sync";
 
 function shop(overrides: {
   productSyncEnabled?: boolean;
@@ -27,7 +24,6 @@ test("enables market sync and enqueues a full shop run when a second market appe
     },
     enqueueMarketSync: async () => {
       calls.push("enqueue");
-      return true;
     },
   });
 
@@ -45,7 +41,6 @@ test("keeps market sync on and enqueues a full shop run when one market remains"
     },
     enqueueMarketSync: async () => {
       calls.push("enqueue");
-      return true;
     },
   });
 
@@ -63,7 +58,6 @@ test("enqueues a full shop run for every enabled market when sync is already on"
     },
     enqueueMarketSync: async () => {
       calls.push("enqueue");
-      return true;
     },
   });
 
@@ -82,7 +76,6 @@ test("syncs only the updated market when market sync is already on", async () =>
     },
     enqueueMarketSync: async (scope) => {
       calls.push(scope?.marketId ? `enqueue:${scope.marketId}` : "enqueue");
-      return true;
     },
   });
 
@@ -101,7 +94,6 @@ test("syncs only the created market when market sync is already on", async () =>
     },
     enqueueMarketSync: async (scope) => {
       calls.push(scope?.marketId ? `enqueue:${scope.marketId}` : "enqueue");
-      return true;
     },
   });
 
@@ -120,7 +112,6 @@ test("full-syncs every market when the second market turns sync on", async () =>
     },
     enqueueMarketSync: async (scope) => {
       calls.push(scope?.marketId ? `enqueue:${scope.marketId}` : "enqueue");
-      return true;
     },
   });
 
@@ -138,7 +129,6 @@ test("enables market sync and enqueues a full shop run for a single market", asy
     },
     enqueueMarketSync: async () => {
       calls.push("enqueue");
-      return true;
     },
   });
 
@@ -156,7 +146,6 @@ test("does not start market sync while product sync is off", async () => {
     },
     enqueueMarketSync: async () => {
       calls.push("enqueue");
-      return true;
     },
   });
 
@@ -174,36 +163,13 @@ test("enqueues cleanup before turning market sync off", async () => {
     },
     enqueueMarketSync: async () => {
       calls.push("enqueue");
-      return true;
     },
   });
 
   assert.deepEqual(calls, ["enqueue", "flag:false"]);
 });
 
-test("retries later when a run is already in progress", async () => {
-  const calls: string[] = [];
-
-  await assert.rejects(
-    () =>
-      reconcileMarketCatalogSync({
-        shop: shop({ marketSyncEnabled: false }),
-        enabledMarketCount: 2,
-        updateMarketSyncEnabled: async (enabled) => {
-          calls.push(`flag:${enabled}`);
-        },
-        enqueueMarketSync: async () => {
-          calls.push("enqueue");
-          return false;
-        },
-      }),
-    MarketCatalogSyncBusyError,
-  );
-
-  assert.deepEqual(calls, ["flag:true", "enqueue"]);
-});
-
-test("keeps market sync enabled when cleanup cannot be queued yet", async () => {
+test("keeps market sync enabled when cleanup cannot be queued", async () => {
   const calls: string[] = [];
 
   await assert.rejects(
@@ -216,11 +182,39 @@ test("keeps market sync enabled when cleanup cannot be queued yet", async () => 
         },
         enqueueMarketSync: async () => {
           calls.push("enqueue");
-          return false;
+          throw new Error("redis down");
         },
       }),
-    MarketCatalogSyncBusyError,
+    /redis down/,
   );
 
   assert.deepEqual(calls, ["enqueue"]);
 });
+
+for (const [label, marketSyncEnabled, expected] of [
+  ["turning sync on", false, ["flag:true", "enqueue"]],
+  ["syncing one market", true, ["enqueue"]],
+] as const) {
+  test(`${label}: an error while queuing the job is passed to the caller`, async () => {
+    const calls: string[] = [];
+
+    await assert.rejects(
+      () =>
+        reconcileMarketCatalogSync({
+          shop: shop({ marketSyncEnabled }),
+          enabledMarketCount: 2,
+          marketId: "gid://shopify/Market/188558248",
+          updateMarketSyncEnabled: async (enabled) => {
+            calls.push(`flag:${enabled}`);
+          },
+          enqueueMarketSync: async () => {
+            calls.push("enqueue");
+            throw new Error("redis down");
+          },
+        }),
+      /redis down/,
+    );
+
+    assert.deepEqual(calls, expected);
+  });
+}

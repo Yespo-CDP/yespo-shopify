@@ -270,3 +270,23 @@ test("removed market: sends isInStock 0 once for GID and numeric rows and drops 
   );
   assert.deepEqual(state.rows.map((row) => row.countryCode), ["US"]);
 });
+
+test("removed market: keeps the rows of a variant Yespo rejected", async () => {
+  state.variants = ["1", "2"];
+  state.failedItems = ["1"];
+  const rejected = [
+    { productId: PRODUCT_GID, variantId: VARIANT_1, countryCode: "DE", contentHash: "a" },
+    { productId: LEGACY_ID, variantId: VARIANT_1, countryCode: "DE", contentHash: "b" },
+  ];
+  state.rows = [
+    ...rejected,
+    { productId: PRODUCT_GID, variantId: "gid://shopify/ProductVariant/2", countryCode: "DE", contentHash: "c" },
+  ];
+
+  await runWebhook();
+
+  assert.deepEqual(
+    state.rows.filter((row) => row.countryCode === "DE"),
+    rejected,
+  );
+});

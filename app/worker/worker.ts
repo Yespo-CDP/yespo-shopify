@@ -1,6 +1,10 @@
+import { SessionNotFoundError } from "@shopify/shopify-app-react-router/server";
 import { Worker } from "bullmq";
 
-import { TMP_MARKET_SYNC_TTL_MS } from "~/config/constants";
+import {
+  MARKET_SYNC_MAX_CONCURRENT_SHOPS,
+  TMP_MARKET_SYNC_TTL_MS,
+} from "~/config/constants";
 import { bullmqConnection } from "~/config/redis";
 import {
   customerSyncLogRepository,
@@ -10,6 +14,7 @@ import {
   shopRepository,
   tmpMarketSyncRepository,
 } from "~/repositories/repositories.server";
+import { ensureShopPublicApiKey } from "~/services/ensure-shop-public-api-key.server";
 import { migrateOfflineTokenToExpiring } from "~/services/migrate-offline-token.server";
 import { customerSyncHandler } from "./handlers/customer-sync-handler";
 import { orderSyncHandler } from "./handlers/order-sync-handler";
@@ -27,9 +32,12 @@ import {
   type ProductWebhookJobData,
   registerDbCleanerCron,
   registerMarketSyncCron,
+  SHOP_PUBLIC_KEY_QUEUE_NAME,
+  takeMarketSyncScope,
   WEBHOOK_EVENT_QUEUE_NAME,
   type WebhookEventJobData,
 } from "~/services/queue";
+import { unauthenticated } from "~/shopify.server";
 
 interface JobData {
   shop?: string;
@@ -38,11 +46,13 @@ interface JobData {
 
 interface MarketSyncJobData {
   shop?: string;
-  /** When set, the run syncs only this market. Omit for a full shop sync. */
-  marketId?: string;
 }
 
 interface TokenMigrationJobData {
+  shop?: string;
+}
+
+interface ShopPublicKeyJobData {
   shop?: string;
 }
 
@@ -55,8 +65,6 @@ const cronWorker = new Worker(
   "cron-jobs",
   async (job) => {
     if (job.name === MARKET_SYNC_CRON_JOB_NAME) {
-      console.log(`Market sync started`);
-
       const enqueued = await enqueueMarketSyncTasks();
       console.log(`Market sync cron tick: enqueued ${enqueued} shop(s)`);
     }
@@ -203,17 +211,16 @@ const dataSyncWorker = new Worker<JobData>(
 const marketSyncWorker = new Worker<MarketSyncJobData>(
   "data-sync-market",
   async (job) => {
+    const { shop } = job?.data ?? {};
+
+    if (!shop) return;
+
     try {
-      const { shop, marketId } = job?.data ?? {};
-
-      if (!shop) return;
-
-      const tokenManager = createOfflineTokenManager(shop);
-      const accessToken = await tokenManager.getAccessToken();
-      if (!accessToken) {
-        console.error(`Market sync: no valid offline session for ${shop}`);
-        return;
-      }
+      // Taken first, so a request made from here on belongs to the next run. A
+      // stalled or retried job already took its scope before: run a full sync.
+      const scope = await takeMarketSyncScope(shop);
+      const marketId =
+        job.stalledCounter > 0 || job.attemptsMade > 0 ? null : scope;
 
       const shopData = await shopRepository.getShop(shop);
       const apiKey = shopData?.apiKey;
@@ -221,6 +228,12 @@ const marketSyncWorker = new Worker<MarketSyncJobData>(
       if (!apiKey) {
         console.error(`Error market sync: Api key not found for ${shop}`);
         return;
+      }
+
+      const tokenManager = createOfflineTokenManager(shop);
+      const accessToken = await tokenManager.getAccessToken();
+      if (!accessToken) {
+        throw new Error("no valid offline session");
       }
 
       await marketSyncHandler(
@@ -234,12 +247,18 @@ const marketSyncWorker = new Worker<MarketSyncJobData>(
         tokenManager,
       );
     } catch (error: unknown) {
-      console.error(`Market sync worker error:`, error);
+      console.error(
+        `Market sync for ${shop} failed ` +
+          `(attempt ${job.attemptsMade + 1}/${job.opts.attempts ?? 1}):`,
+        // The SDK throws a Response when the token refresh fails.
+        error instanceof Response ? `HTTP ${error.status}` : error,
+      );
+      throw error;
     }
   },
   {
     connection: bullmqConnection,
-    concurrency: 10,
+    concurrency: MARKET_SYNC_MAX_CONCURRENT_SHOPS,
   },
 );
 
@@ -264,6 +283,47 @@ const tokenMigrationWorker = new Worker<TokenMigrationJobData>(
 
     const result = await migrateOfflineTokenToExpiring(shop);
     console.log(`Token migration ${shop}: ${result}`);
+  },
+  {
+    connection: bullmqConnection,
+    concurrency: 5,
+  },
+);
+
+// Failed jobs are removed so that the next seeding can queue the shop again, so
+// the failure is logged here.
+const shopPublicKeyWorker = new Worker<ShopPublicKeyJobData>(
+  SHOP_PUBLIC_KEY_QUEUE_NAME,
+  async (job) => {
+    const { shop } = job?.data ?? {};
+    if (!shop) return;
+
+    try {
+      const shopData = await shopRepository.getShop(shop);
+      if (!shopData) return;
+
+      const { admin } = await unauthenticated.admin(shop);
+      await ensureShopPublicApiKey({
+        admin,
+        shopUrl: shop,
+        shopGid: shopData.shopId,
+      });
+      console.log(`[shop-public-key] ${shop}: saved`);
+    } catch (error: unknown) {
+      if (error instanceof SessionNotFoundError) {
+        console.log(`[shop-public-key] ${shop}: skipped, no offline session`);
+        return;
+      }
+      console.error(
+        `[shop-public-key] ${shop} failed ` +
+          `(attempt ${job.attemptsMade + 1}/${job.opts.attempts ?? 1}):`,
+        // The SDK throws a Response when the token refresh fails.
+        error instanceof Response
+          ? `HTTP ${error.status}`
+          : (error as Error)?.message,
+      );
+      throw error;
+    }
   },
   {
     connection: bullmqConnection,
@@ -298,6 +358,7 @@ const workers = [
   dataSyncWorker,
   marketSyncWorker,
   productWebhookWorker,
+  shopPublicKeyWorker,
   tokenMigrationWorker,
   webhookEventWorker,
 ];

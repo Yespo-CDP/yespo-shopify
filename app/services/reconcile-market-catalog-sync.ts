@@ -1,18 +1,6 @@
 import { shouldEnableMarketSync } from "./market-tracking";
 
 /**
- * Thrown when a shop-wide market sync should run but a fresh run is already
- * in progress. Callers answer with HTTP 500 so Shopify retries the webhook
- * after the current run finishes.
- */
-export class MarketCatalogSyncBusyError extends Error {
-  constructor() {
-    super("Market catalog sync is already in progress");
-    this.name = "MarketCatalogSyncBusyError";
-  }
-}
-
-/**
  * Starts or stops market catalog sync after a markets webhook.
  *
  * The first time a shop has at least one enabled market, the queued job
@@ -23,7 +11,7 @@ export class MarketCatalogSyncBusyError extends Error {
  *
  * Turning sync off (no enabled markets left) queues a full job first, while
  * the flag is still on, so removed countries are cleared. The flag flips
- * only after the job is queued.
+ * only after the job is queued: `enqueueMarketSync` throws when it is not.
  */
 export async function reconcileMarketCatalogSync({
   shop,
@@ -43,7 +31,7 @@ export async function reconcileMarketCatalogSync({
    */
   marketId?: string | null;
   updateMarketSyncEnabled: (enabled: boolean) => Promise<void>;
-  enqueueMarketSync: (scope?: { marketId: string }) => Promise<boolean>;
+  enqueueMarketSync: (scope?: { marketId: string }) => Promise<void>;
 }): Promise<void> {
   if (!shop.isProductVariantSyncEnabled) {
     return;
@@ -54,19 +42,11 @@ export async function reconcileMarketCatalogSync({
   if (enable) {
     if (!shop.isMarketSyncEnabled) {
       await updateMarketSyncEnabled(true);
-      if (!(await enqueueMarketSync())) {
-        throw new MarketCatalogSyncBusyError();
-      }
+      await enqueueMarketSync();
       return;
     }
 
-    if (
-      !(await enqueueMarketSync(
-        marketId ? { marketId } : undefined,
-      ))
-    ) {
-      throw new MarketCatalogSyncBusyError();
-    }
+    await enqueueMarketSync(marketId ? { marketId } : undefined);
     return;
   }
 
@@ -74,8 +54,6 @@ export async function reconcileMarketCatalogSync({
     return;
   }
 
-  if (!(await enqueueMarketSync())) {
-    throw new MarketCatalogSyncBusyError();
-  }
+  await enqueueMarketSync();
   await updateMarketSyncEnabled(false);
 }

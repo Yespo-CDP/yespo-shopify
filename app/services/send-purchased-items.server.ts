@@ -103,7 +103,6 @@ export const sendPurchasedItemsService = async (
       return false;
     }
 
-    console.log("SUCCESSFULLY SEND PURCHASED ITEMS");
     return true;
   } catch (error) {
     console.error("Error occurred in Send Purchased Items Service", error);

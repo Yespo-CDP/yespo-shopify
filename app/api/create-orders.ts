@@ -12,7 +12,7 @@ import { EVENT_MESSAGES } from "~/config/constants";
  * @param {Order} params.orders - The orders data array to be created.
  * @returns {Promise<OrdersCreateResponse>} A promise that resolves when the orders is created successfully.
  *
- * @throws Will re-throw errors unless the error message includes 'Duplicated request'.
+ * @throws Will re-throw the original error (with its HTTP `status`).
  *
  * Uses `fetchWithErrorHandling` to perform the HTTP request and handle errors.
  */
@@ -59,10 +59,6 @@ export const createOrders = async ({
       logLevel: "ERROR",
     });
 
-    if (!error?.message?.includes("Duplicated request")) {
-      throw new Error(error.message);
-    } else {
-      throw new Error("Error updating contacts");
-    }
+    throw error;
   }
 };

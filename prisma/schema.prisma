@@ -44,6 +44,7 @@ model Shop {
   apiKey                      String?
   apiKeyIv                    String?
   apiKeyAuthTag               String?
+  publicApiKey                String?
   orgId                       Int?
   siteId                      String?
   defaultCurrency             String?

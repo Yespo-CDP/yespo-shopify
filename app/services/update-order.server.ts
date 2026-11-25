@@ -1,5 +1,6 @@
 import { createOrders } from "~/api/create-orders";
 import { convertDateToUTC } from "~/utils/convert-date-to-utc";
+import { isPermanentYespoError } from "~/utils/is-permanent-yespo-error";
 import { normalizeYespoItems } from "~/utils/normalize-yespo-items";
 import {
   eventDataRepository,
@@ -16,7 +17,13 @@ import { presentmentAmount } from "~/services/presentment-money";
 /**
  * Updates a order using the provided payload and API key.
  *
- * Any errors during the process are caught and logged.
+ * Nothing is sent when the stored `OrderSync.updatedAt` is newer than
+ * `payload.updated_at`: a retried or late webhook must not overwrite newer data.
+ * The order of an orders/create job is its oldest state and `updated_at` has
+ * seconds only, so it is not sent when the stored date is the same either.
+ *
+ * A permanent Yespo error (4xx except 429) is logged and the order is not
+ * marked as synced. Any other error is thrown so the webhook job is retried.
  *
  * **Shopify Order Webhook (REST):**
  * https://shopify.dev/docs/api/admin-rest/latest/resources/order#resource-object
@@ -57,6 +64,7 @@ import { presentmentAmount } from "~/services/presentment-money";
  * @param domain
  * @param orgId
  * @param shopUrl - myshopify domain used to load variant URL and image
+ * @param fromOrderCreate - the payload comes from an orders/create webhook
  * @returns {Promise<void>} A promise that resolves when the order creation completes.
  */
 export const updateOrderService = async (
@@ -66,8 +74,25 @@ export const updateOrderService = async (
   domain: string,
   orgId?: number | null,
   shopUrl?: string,
+  fromOrderCreate?: boolean,
 ) => {
   try {
+    const [orderSync] = await orderSyncRepository.getOrderSyncByOrderIds(
+      shopId,
+      [payload.admin_graphql_api_id],
+    );
+    if (orderSync?.updatedAt) {
+      const storedAt = orderSync.updatedAt.getTime();
+      // A missing or unparsable updated_at gives NaN, so the order is sent.
+      const updatedAt = Date.parse(String(payload.updated_at));
+      if (fromOrderCreate ? storedAt >= updatedAt : storedAt > updatedAt) {
+        console.log(
+          `Order ${payload.id} not sent: newer or the same data was already synced`,
+        );
+        return;
+      }
+    }
+
     const formatAddress = (address: OrderCreatePayload["shipping_address"]) =>
       [
         address?.first_name && address?.last_name
@@ -190,6 +215,9 @@ export const updateOrderService = async (
       },
     });
   } catch (error: any) {
-    console.error("Error occurred in Update Order Service", error);
+    if (!isPermanentYespoError(error)) throw error;
+    console.error(
+      `Yespo rejected order ${payload.id} with HTTP ${error.status}`,
+    );
   }
 };

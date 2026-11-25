@@ -1,10 +1,9 @@
 import { Queue } from "bullmq";
 
-import { bullmqConnection } from "~/config/redis";
+import { bullmqConnection, redisConnection } from "~/config/redis";
 import {
   DB_CLEANER_CRON_PATTERN,
   MARKET_SYNC_CRON_PATTERN,
-  MARKET_SYNC_MAX_CONCURRENT_SHOPS,
   MARKET_SYNC_MIN_INTERVAL_MS,
   MARKET_SYNC_STALE_AFTER_MS,
   PRODUCT_WEBHOOK_DEBOUNCE_MS,
@@ -12,7 +11,6 @@ import {
 } from "~/config/constants";
 import {
   customerSyncLogRepository,
-  marketSyncLogRepository,
   orderSyncLogRepository,
   productVariantSyncLogRepository,
   shopRepository,
@@ -35,6 +33,10 @@ export const DataSyncMarketQueue = createQueue("data-sync-market");
 export const CronQueue = createQueue("cron-jobs");
 
 export const TokenMigrationQueue = createQueue("token-migration");
+
+export const SHOP_PUBLIC_KEY_QUEUE_NAME = "shop-public-key";
+
+export const ShopPublicKeyQueue = createQueue(SHOP_PUBLIC_KEY_QUEUE_NAME);
 
 export const PRODUCT_WEBHOOK_QUEUE_NAME = "product-webhooks";
 export const PRODUCT_WEBHOOK_JOB_NAME = "product-webhook";
@@ -60,6 +62,8 @@ export interface WebhookEventJobData {
   shop: string;
   topic: string;
   payload: unknown;
+  /** The ORDERS_UPDATED job was queued by an orders/create job. */
+  fromOrderCreate?: boolean;
 }
 
 /**
@@ -67,6 +71,11 @@ export interface WebhookEventJobData {
  * right away. The job id comes from X-Shopify-Webhook-Id, so a repeated
  * delivery is skipped while the first job is still in the queue. Failed jobs
  * are removed because the payload holds customer data; the worker logs them.
+ * The worker also queues the order of an orders/create job this way, with
+ * `order-create-<order id>` instead of the webhook id.
+ *
+ * Yespo answers a repeated `POST /contact` within 1 minute with 409, so
+ * customers/* jobs wait 65 s before every retry. Other jobs wait 5, 10, 20 and 40 s.
  */
 export async function enqueueWebhookEvent(
   data: WebhookEventJobData,
@@ -75,7 +84,9 @@ export async function enqueueWebhookEvent(
   await WebhookEventQueue.add(data.topic, data, {
     jobId: `webhook-${webhookId}`,
     attempts: 5,
-    backoff: { type: "exponential", delay: 5000 },
+    backoff: data.topic.startsWith("CUSTOMERS_")
+      ? { type: "fixed", delay: 65_000 }
+      : { type: "exponential", delay: 5000 },
     removeOnComplete: true,
     removeOnFail: true,
   });
@@ -84,6 +95,7 @@ export async function enqueueWebhookEvent(
 export const MARKET_SYNC_CRON_JOB_NAME = "market-sync-tick";
 export const DB_CLEANER_CRON_JOB_NAME = "db-cleaner-tick";
 export const TOKEN_MIGRATION_JOB_NAME = "migrate-token";
+export const SHOP_PUBLIC_KEY_JOB_NAME = "create-public-key";
 
 /**
  * One-time migration entrypoint: enqueues a token-migration job per shop so the
@@ -104,6 +116,32 @@ export async function enqueueTokenMigration(): Promise<number> {
         backoff: { type: "exponential", delay: 5000 },
         removeOnComplete: 1000,
         removeOnFail: 5000,
+      },
+    );
+  }
+
+  return shops.length;
+}
+
+/**
+ * Enqueues a job per active shop without a key for signing event data (see
+ * ensure-shop-public-api-key.server.ts). Safe to run on every start: shops that
+ * have a key are skipped, and a job is removed once it is done, so a failed shop
+ * is queued again by the next run. The key itself is never put in a job.
+ */
+export async function enqueueShopPublicKeys(): Promise<number> {
+  const shops = await shopRepository.getShopUrlsWithoutPublicApiKey();
+
+  for (const shop of shops) {
+    await ShopPublicKeyQueue.add(
+      SHOP_PUBLIC_KEY_JOB_NAME,
+      { shop: shop.shopUrl },
+      {
+        jobId: `public-key-${shop.shopUrl}`,
+        attempts: 5,
+        backoff: { type: "exponential", delay: 5000 },
+        removeOnComplete: true,
+        removeOnFail: true,
       },
     );
   }
@@ -225,6 +263,44 @@ export async function enqueueDataSyncTasks({
   );
 }
 
+/** Scope member of a full shop sync; the other members are market GIDs. */
+const MARKET_SYNC_SCOPE_ALL = "all";
+
+/** Redis set of what the shop's next market sync has to cover. */
+function marketSyncScopeKey(shopUrl: string): string {
+  return `market-sync:scope:${shopUrl}`;
+}
+
+/**
+ * Reads and clears the scope of the shop's market sync. Returns the market GID
+ * when that one market is all that was asked for. Returns null for a full
+ * sync: several markets, a full request, no scope, or Redis failed to read it.
+ */
+export async function takeMarketSyncScope(
+  shopUrl: string,
+): Promise<string | null> {
+  const key = marketSyncScopeKey(shopUrl);
+
+  try {
+    const results = await redisConnection.multi().smembers(key).del(key).exec();
+    const [error, members] = results?.[0] ?? [new Error("no reply"), null];
+    if (error) {
+      throw error;
+    }
+
+    const scope = members as string[];
+    return scope.length === 1 && scope[0] !== MARKET_SYNC_SCOPE_ALL
+      ? scope[0]
+      : null;
+  } catch (error: unknown) {
+    console.error(
+      `Market sync: failed to read the scope for ${shopUrl}, running a full sync:`,
+      (error as Error)?.message,
+    );
+    return null;
+  }
+}
+
 async function enqueueMarketSyncJobIfEligible(
   shop: Shop,
   options?: { marketId?: string },
@@ -238,27 +314,27 @@ async function enqueueMarketSyncJobIfEligible(
     return false;
   }
 
-  // Re-check right before enqueuing, ignoring stale IN_PROGRESS rows so a
-  // crashed/restarted worker doesn't block the shop forever.
-  const staleBefore = new Date(Date.now() - MARKET_SYNC_STALE_AFTER_MS);
-  const inProgress = await marketSyncLogRepository.hasFreshInProgressByShop(
-    shop.shopUrl,
-    staleBefore,
+  // Saved before the job is added: a run that starts after this reads it, and a
+  // run without a scope is a full one. It is not in the job data because BullMQ
+  // drops the data of a duplicate job.
+  await redisConnection.sadd(
+    marketSyncScopeKey(shop.shopUrl),
+    options?.marketId ?? MARKET_SYNC_SCOPE_ALL,
   );
-  if (inProgress) {
-    return false;
-  }
 
   // The access token is fetched fresh inside the worker right before the job
   // runs (see worker.ts), so a token captured here can't go stale while the
   // job waits in the queue.
   await DataSyncMarketQueue.add(
     "data-sync-market",
+    { shop: shop.shopUrl },
     {
-      shop: shop.shopUrl,
-      ...(options?.marketId ? { marketId: options.marketId } : {}),
-    },
-    {
+      // At most one active and one waiting job per shop. A job added during a
+      // run starts after it. A failed job keeps its place while it waits for a
+      // retry, so a job added then is merged into it.
+      deduplication: { id: shop.shopUrl, keepLastIfActive: true },
+      attempts: 5,
+      backoff: { type: "exponential", delay: 60_000 },
       removeOnComplete: 1000,
       removeOnFail: 5000,
     },
@@ -274,9 +350,13 @@ async function enqueueMarketSyncJobIfEligible(
  * `marketId` limits the run to that market. Omit it for a full shop sync
  * (first enable, removal cleanup, post-product sync, daily cron).
  *
- * No-ops when the shop is missing, market sync is disabled, or a fresh
- * IN_PROGRESS run already exists. Unlike the daily cron, this path does not
- * apply MARKET_SYNC_MIN_INTERVAL_MS.
+ * Requests that reach Redis before the job starts are merged into one run: the
+ * same market stays a single-market run, anything else becomes a full one. A
+ * request made during a run starts another run after it. A request made while a
+ * failed job waits for its retry is merged into the retry, which is a full run.
+ *
+ * No-ops when the shop is missing, has no API key, or market sync is disabled.
+ * Unlike the daily cron, this path does not apply MARKET_SYNC_MIN_INTERVAL_MS.
  */
 export async function enqueueMarketSyncTaskForShopUrl(
   shopUrl: string,
@@ -307,54 +387,56 @@ function isFreshInProgress(
 }
 
 /**
- * The shop's most recent market sync time = max(updatedAt) across its logs, or
- * null when it has never synced (highest priority to pick up).
+ * When the shop's longest unsynced country was synced = min(updatedAt) across
+ * its logs (a log without updatedAt is the oldest), or null when the shop has
+ * never synced (highest priority to pick up). A run of one market refreshes only
+ * that market's countries, so the newest log says nothing about the others.
  */
-function lastSyncedAt(shop: ShopWithMarketSyncLogs): Date | null {
-  let latest: Date | null = null;
+function oldestSyncedAt(shop: ShopWithMarketSyncLogs): Date | null {
+  let oldest: Date | null = null;
   for (const log of shop.marketSyncLogs) {
-    if (log.updatedAt && (latest === null || log.updatedAt > latest)) {
-      latest = log.updatedAt;
+    const updatedAt = log.updatedAt ?? new Date(0);
+    if (oldest === null || updatedAt < oldest) {
+      oldest = updatedAt;
     }
   }
-  return latest;
+  return oldest;
 }
 
 /**
- * The shop's most recent successful market sync time = max(updatedAt) across its
- * COMPLETE logs, or null when it has never completed one. Used to throttle the
- * cron so a shop is not re-synced more than once per MARKET_SYNC_MIN_INTERVAL_MS.
- * Logs ending in ERROR are intentionally ignored so failures can retry sooner.
+ * Whether the cron can skip the shop: it has MarketSyncLog rows and every one
+ * is COMPLETE and fresh (updatedAt >= minIntervalBefore). A run of one market
+ * refreshes only that market's countries, so one fresh row is not enough.
  */
-function lastCompletedAt(shop: ShopWithMarketSyncLogs): Date | null {
-  let latest: Date | null = null;
-  for (const log of shop.marketSyncLogs) {
-    if (
-      log.status === "COMPLETE" &&
-      log.updatedAt &&
-      (latest === null || log.updatedAt > latest)
-    ) {
-      latest = log.updatedAt;
-    }
-  }
-  return latest;
+function syncedRecently(
+  shop: ShopWithMarketSyncLogs,
+  minIntervalBefore: Date,
+): boolean {
+  return (
+    shop.marketSyncLogs.length > 0 &&
+    shop.marketSyncLogs.every(
+      (log) =>
+        log.status === "COMPLETE" &&
+        log.updatedAt != null &&
+        log.updatedAt >= minIntervalBefore,
+    )
+  );
 }
 
 /**
- * Daily cron entrypoint: enqueues market sync jobs while keeping at most
- * MARKET_SYNC_MAX_CONCURRENT_SHOPS shops in progress at once.
+ * Daily cron entrypoint: enqueues a market sync job for every shop that is due,
+ * never-synced shops first, then by the country synced longest ago (oldest
+ * updatedAt). How many of them run at once is limited by the data-sync-market
+ * worker (MARKET_SYNC_MAX_CONCURRENT_SHOPS), not here.
  *
- * Counts shops already syncing (fresh IN_PROGRESS), then enqueues up to the
- * remaining budget, preferring shops that synced longest ago (never-synced
- * shops first, then oldest updatedAt).
- *
- * Shops whose last successful (COMPLETE) sync finished less than
- * MARKET_SYNC_MIN_INTERVAL_MS (20h) ago are skipped, so a shop synced off
+ * Shops with a fresh IN_PROGRESS log are skipped. Shops where every existing
+ * country log is COMPLETE and newer than MARKET_SYNC_MIN_INTERVAL_MS (20h) are
+ * skipped too (a country without a log is not counted), so a shop synced off
  * schedule later in the day waits for the next day's tick, while a shop that
  * finished shortly after the previous tick is still picked up by this one.
- * Never-synced shops and shops whose last sync ended in ERROR are not
- * throttled. This interval applies only to the daily cron path; post data-sync
- * triggers (enqueueMarketSyncTaskForShopUrl) bypass it, but still require
+ * Never-synced shops and shops with a country in ERROR are not throttled. This
+ * interval applies only to the daily cron path; post data-sync triggers
+ * (enqueueMarketSyncTaskForShopUrl) bypass it, but still require
  * isMarketSyncEnabled.
  */
 export async function enqueueMarketSyncTasks(): Promise<number> {
@@ -362,30 +444,17 @@ export async function enqueueMarketSyncTasks(): Promise<number> {
   const minIntervalBefore = new Date(Date.now() - MARKET_SYNC_MIN_INTERVAL_MS);
   const shops = await shopRepository.getShopsForMarketSync();
 
-  const inProgressCount = shops.filter((shop) =>
-    isFreshInProgress(shop, staleBefore),
-  ).length;
-
-  const budget = MARKET_SYNC_MAX_CONCURRENT_SHOPS - inProgressCount;
-  if (budget <= 0) {
-    return 0;
-  }
-
   const candidates = shops
     .filter((shop) => !isFreshInProgress(shop, staleBefore))
-    .filter((shop) => {
-      const completedAt = lastCompletedAt(shop);
-      return completedAt === null || completedAt < minIntervalBefore;
-    })
-    .map((shop) => ({ shop, lastSyncedAt: lastSyncedAt(shop) }))
+    .filter((shop) => !syncedRecently(shop, minIntervalBefore))
+    .map((shop) => ({ shop, oldestSyncedAt: oldestSyncedAt(shop) }))
     .sort((a, b) => {
       // Never-synced shops (null) come first, then oldest updatedAt first.
-      if (a.lastSyncedAt === null && b.lastSyncedAt === null) return 0;
-      if (a.lastSyncedAt === null) return -1;
-      if (b.lastSyncedAt === null) return 1;
-      return a.lastSyncedAt.getTime() - b.lastSyncedAt.getTime();
-    })
-    .slice(0, budget);
+      if (a.oldestSyncedAt === null && b.oldestSyncedAt === null) return 0;
+      if (a.oldestSyncedAt === null) return -1;
+      if (b.oldestSyncedAt === null) return 1;
+      return a.oldestSyncedAt.getTime() - b.oldestSyncedAt.getTime();
+    });
 
   let enqueued = 0;
   for (const { shop } of candidates) {

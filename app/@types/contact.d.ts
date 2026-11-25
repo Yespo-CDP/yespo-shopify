@@ -27,5 +27,6 @@ export interface AppInboxContactData {
 export interface ContactsResponse {
   failedContacts?: object | object[];
   asyncSessionId?: string;
+  errorMessage?: string;
   id?: number;
 }

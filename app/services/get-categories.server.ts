@@ -48,15 +48,7 @@ export const getAllCategoriesService = async ({
       // Update pagination state
       hasNextPage = result.pageInfo.hasNextPage;
       cursor = result.pageInfo.endCursor || null;
-
-      console.log(
-        `[getAllCategories] Fetched ${result.categories.length} categories, total: ${allCategories.length}, hasNextPage: ${hasNextPage}`
-      );
     }
-
-    console.log(
-      `[getAllCategories] Completed. Total categories: ${allCategories.length}`
-    );
 
     return allCategories;
   } catch (error) {

@@ -1,7 +1,7 @@
 # Yespo API — незавершена реалізація
 
 > Документ сформовано на основі аудиту кодової бази відносно специфікації `docs/yespo-api-products-markets.md`.
-> Останнє оновлення статусів: 2026-09-18.
+> Останнє оновлення статусів: 2026-09-18 (пункт 6 — 2026-11-25).
 
 ---
 
@@ -14,7 +14,7 @@
 | 3 | HTTP 207 — часткова помилка | ✅ Готово (products live; rejected items логуються) |
 | 4 | HTTP 429 — retry | ✅ Готово |
 | 5 | HTTP 500+ — retry з backoff | ❌ Відкрито |
-| 6 | HTTP 409 — LANGUAGE_CODE_MISMATCH | ✅ Не актуально (`languageChanged` / `409` прибрані з контракту `final_new`) |
+| 6 | HTTP 409 — мова запиту | ❓ Питання до Yespo (публічна документація описує `409`, `final_new` — ні) |
 | 7 | Translations у вебхуках | ✅ Готово |
 | 8 | Translation categories | ✅ Готово |
 | 9 | Category `type` та `path` | 🟡 Частково (`type:"category"`+`path` через таксономію; метафілд-override не підключено) |
@@ -26,7 +26,7 @@
 | 15 | Rate limiter для кількох процесів | ✅ Готово (Redis) |
 | 16 | Прибрати/сховати debug-дампи URL | ✅ Готово |
 
-**Залишилось зробити:** #5 + дозакрити #9 (метафілд-override). Пункт #14 свідомо пропущено. #6 знято: `languageChanged` більше не шлемо. #10 виконано (`Uncategorized` fallback). #1 і #16 виконано: `POST /v1/markets` викликає Yespo, debug-дампи прибрані.
+**Залишилось зробити:** #5 + дозакрити #9 (метафілд-override). Пункт #14 свідомо пропущено. #6: `languageChanged` більше не шлемо; чи діє `409`, має відповісти Yespo. #10 виконано (`Uncategorized` fallback). #1 і #16 виконано: `POST /v1/markets` викликає Yespo, debug-дампи прибрані.
 
 ---
 
@@ -77,11 +77,11 @@
 
 ---
 
-## ~~6. HTTP 409 — LANGUAGE_CODE_MISMATCH~~ ✅ Не актуально
+## 6. HTTP 409 — мова запиту ❓ Питання до Yespo
 
-За `final_new.pdf` поля `languageChanged` немає в envelope, HTTP `409` / `LANGUAGE_CODE_MISMATCH` немає в кодах помилок.
+За `final_new.pdf` поля `languageChanged` немає в envelope, HTTP `409` / `LANGUAGE_CODE_MISMATCH` немає в кодах помилок. Публічна [документація Yespo](https://docs.yespo.io/reference/addproducts.md) описує `409` / `PRODUCT_LANGUAGE_MISMATCH`, коли `languageCode` запиту відрізняється від мови сайту. На реальному Yespo не перевірено.
 
-Код більше не шле `languageChanged`, не ретраїть 409 і не виставляє `languageChangedConfirmed`. `languageCode` лишається в body (`Shopify shop.primaryLocale`); `shop.defaultLanguageCode` — лише наш кеш.
+Код більше не шле `languageChanged`, не ретраїть 409 і не виставляє `languageChangedConfirmed`. `languageCode` лишається в body: збережена `Shop.defaultLanguageCode`, а якщо її немає — основна мова Shopify, якщо й її немає — `en`. Мова зберігається після першого прийнятого запиту й скидається при від'єднанні акаунта або видаленні застосунку.
 
 ---
 

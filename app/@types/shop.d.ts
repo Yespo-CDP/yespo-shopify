@@ -27,7 +27,8 @@ export type ShopUpdate = Prisma.ShopUpdateInput;
 
 /**
  * A shop together with the minimal MarketSyncLog fields the market-sync cron
- * needs to compute concurrency and ordering (status + updatedAt per country).
+ * needs to tell which shops are due and in which order (status + updatedAt per
+ * country).
  */
 export type ShopWithMarketSyncLogs = Shop & {
   marketSyncLogs: Array<{

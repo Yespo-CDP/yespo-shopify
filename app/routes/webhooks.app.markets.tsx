@@ -32,7 +32,8 @@ const MARKET_WEBHOOK_TOPICS = new Set([
  * removed countries are cleared, then turns market sync off.
  *
  * Returns 500 so Shopify retries when a new host cannot be registered or
- * the catalog sync job cannot be queued yet.
+ * the catalog sync job cannot be queued. A run in progress is not an error:
+ * the next one starts after it.
  */
 export const action = async ({ request }: ActionFunctionArgs) => {
   const { topic, shop, session, admin, payload } =
@@ -98,11 +99,16 @@ export const action = async ({ request }: ActionFunctionArgs) => {
               isMarketSyncEnabled: enabled,
             });
           },
-          enqueueMarketSync: async (scope) =>
-            (await enqueueMarketSyncTaskForShopUrl(
+          enqueueMarketSync: async (scope) => {
+            const queued = await enqueueMarketSyncTaskForShopUrl(
               shopRecord.shopUrl,
               scope?.marketId ? { marketId: scope.marketId } : undefined,
-            )) > 0,
+            );
+            // The shop lost its API key or its sync flag since it was read above.
+            if (queued === 0) {
+              throw new Error("Market catalog sync was not queued");
+            }
+          },
         });
       }
     }

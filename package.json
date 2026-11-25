@@ -24,6 +24,7 @@
     "docs": "npm run docs:html && npm run docs:md",
     "worker": "tsx ./app/worker/worker.ts",
     "migrate:tokens": "tsx ./app/scripts/migrate-tokens.ts",
+    "seed:shop-keys": "tsx ./app/scripts/seed-shop-public-keys.ts",
     "encrypt:api-keys": "tsx ./app/scripts/encrypt-api-keys.ts"
   },
   "type": "module",
