@@ -185,4 +185,11 @@ export default class ShopRepositoryImpl implements IShopRepository {
   async getAllShops(): Promise<{ shopUrl: string }[]> {
     return this.database.shop.findMany({ select: { shopUrl: true } });
   }
+
+  async getShopUrlsWithoutPublicApiKey(): Promise<{ shopUrl: string }[]> {
+    return this.database.shop.findMany({
+      where: { active: true, publicApiKey: null },
+      select: { shopUrl: true },
+    });
+  }
 }

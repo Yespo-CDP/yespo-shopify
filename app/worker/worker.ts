@@ -1,3 +1,4 @@
+import { SessionNotFoundError } from "@shopify/shopify-app-react-router/server";
 import { Worker } from "bullmq";
 
 import {
@@ -13,6 +14,7 @@ import {
   shopRepository,
   tmpMarketSyncRepository,
 } from "~/repositories/repositories.server";
+import { ensureShopPublicApiKey } from "~/services/ensure-shop-public-api-key.server";
 import { migrateOfflineTokenToExpiring } from "~/services/migrate-offline-token.server";
 import { customerSyncHandler } from "./handlers/customer-sync-handler";
 import { orderSyncHandler } from "./handlers/order-sync-handler";
@@ -30,10 +32,12 @@ import {
   type ProductWebhookJobData,
   registerDbCleanerCron,
   registerMarketSyncCron,
+  SHOP_PUBLIC_KEY_QUEUE_NAME,
   takeMarketSyncScope,
   WEBHOOK_EVENT_QUEUE_NAME,
   type WebhookEventJobData,
 } from "~/services/queue";
+import { unauthenticated } from "~/shopify.server";
 
 interface JobData {
   shop?: string;
@@ -45,6 +49,10 @@ interface MarketSyncJobData {
 }
 
 interface TokenMigrationJobData {
+  shop?: string;
+}
+
+interface ShopPublicKeyJobData {
   shop?: string;
 }
 
@@ -278,6 +286,47 @@ const tokenMigrationWorker = new Worker<TokenMigrationJobData>(
   },
 );
 
+// Failed jobs are removed so that the next seeding can queue the shop again, so
+// the failure is logged here.
+const shopPublicKeyWorker = new Worker<ShopPublicKeyJobData>(
+  SHOP_PUBLIC_KEY_QUEUE_NAME,
+  async (job) => {
+    const { shop } = job?.data ?? {};
+    if (!shop) return;
+
+    try {
+      const shopData = await shopRepository.getShop(shop);
+      if (!shopData) return;
+
+      const { admin } = await unauthenticated.admin(shop);
+      await ensureShopPublicApiKey({
+        admin,
+        shopUrl: shop,
+        shopGid: shopData.shopId,
+      });
+      console.log(`[shop-public-key] ${shop}: saved`);
+    } catch (error: unknown) {
+      if (error instanceof SessionNotFoundError) {
+        console.log(`[shop-public-key] ${shop}: skipped, no offline session`);
+        return;
+      }
+      console.error(
+        `[shop-public-key] ${shop} failed ` +
+          `(attempt ${job.attemptsMade + 1}/${job.opts.attempts ?? 1}):`,
+        // The SDK throws a Response when the token refresh fails.
+        error instanceof Response
+          ? `HTTP ${error.status}`
+          : (error as Error)?.message,
+      );
+      throw error;
+    }
+  },
+  {
+    connection: bullmqConnection,
+    concurrency: 5,
+  },
+);
+
 // Customers, orders and carts webhooks. Failed jobs are removed (their payload
 // holds customer data), so the failure is logged here, without the payload.
 const webhookEventWorker = new Worker<WebhookEventJobData>(
@@ -305,6 +354,7 @@ const workers = [
   dataSyncWorker,
   marketSyncWorker,
   productWebhookWorker,
+  shopPublicKeyWorker,
   tokenMigrationWorker,
   webhookEventWorker,
 ];

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { beforeEach, mock, test } from "node:test";
+import { SessionNotFoundError } from "@shopify/shopify-app-react-router/server";
 
 type Kind = "customer" | "order" | "product";
 type Processor = (job: { data: unknown; [key: string]: unknown }) => Promise<unknown>;
@@ -8,7 +9,7 @@ const processors = new Map<string, Processor>();
 const concurrencies = new Map<string, number | undefined>();
 const statuses: Partial<Record<Kind, string>> = {};
 const errorWrites: Kind[] = [];
-let shopData: { id: number; apiKey: string } | null = null;
+let shopData: { id: number; apiKey: string; shopId?: string } | null = null;
 let accessToken: string | null = null;
 let customerSyncHandler = async () => {};
 const closedQueues: string[] = [];
@@ -64,6 +65,7 @@ mock.module("../../../app/services/queue", {
     DB_CLEANER_CRON_JOB_NAME: "db-cleaner-tick",
     MARKET_SYNC_CRON_JOB_NAME: "market-sync-tick",
     PRODUCT_WEBHOOK_QUEUE_NAME: "product-webhook",
+    SHOP_PUBLIC_KEY_QUEUE_NAME: "shop-public-key",
     WEBHOOK_EVENT_QUEUE_NAME: "webhook-events",
     enqueueMarketSyncTaskForShopUrl: async () => 0,
     enqueueMarketSyncTasks: async () => 0,
@@ -95,6 +97,17 @@ mock.module("../../../app/repositories/repositories.server", {
 });
 mock.module("../../../app/services/migrate-offline-token.server", {
   namedExports: { migrateOfflineTokenToExpiring: async () => "skipped" },
+});
+const ADMIN = {};
+const unauthenticatedAdmin = mock.fn<(shop: string) => Promise<{ admin: object }>>(
+  async () => ({ admin: ADMIN }),
+);
+mock.module("../../../app/shopify.server", {
+  namedExports: { unauthenticated: { admin: unauthenticatedAdmin } },
+});
+const ensureShopPublicApiKey = mock.fn<(args: unknown) => Promise<void>>(async () => {});
+mock.module("../../../app/services/ensure-shop-public-api-key.server", {
+  namedExports: { ensureShopPublicApiKey },
 });
 mock.module("../../../app/worker/services/offline-token-manager", {
   namedExports: {
@@ -208,6 +221,7 @@ test("MARKET_SYNC_MAX_CONCURRENT_SHOPS (10) limits only the data-sync-market wor
     "data-sync": 10,
     "data-sync-market": 7,
     "product-webhook": 1,
+    "shop-public-key": 5,
     "token-migration": 5,
     "webhook-events": 5,
   });
@@ -282,6 +296,74 @@ test("webhook-events job: handler gets job.data; a failure is logged without the
   ]);
 });
 
+const runPublicKey = (data: unknown) =>
+  processors.get("shop-public-key")!({
+    name: "create-public-key",
+    data,
+    attemptsMade: 0,
+    opts: { attempts: 5 },
+  });
+
+test("shop-public-key job: writes the key of the shop with its offline session, returns nothing", async () => {
+  shopData = { id: 1, apiKey: "key", shopId: "gid://shopify/Shop/42" };
+
+  assert.equal(await runPublicKey({ shop: "demo.myshopify.com" }), undefined);
+
+  assert.deepEqual(unauthenticatedAdmin.mock.calls[0].arguments, ["demo.myshopify.com"]);
+  assert.deepEqual(
+    ensureShopPublicApiKey.mock.calls.map((call) => call.arguments),
+    [[{ admin: ADMIN, shopUrl: "demo.myshopify.com", shopGid: "gid://shopify/Shop/42" }]],
+  );
+});
+
+test("shop-public-key job: a shop without a session or a row is skipped, not retried", async () => {
+  shopData = { id: 1, apiKey: "key", shopId: "gid://shopify/Shop/42" };
+  ensureShopPublicApiKey.mock.resetCalls();
+  unauthenticatedAdmin.mock.mockImplementationOnce(async () => {
+    throw new SessionNotFoundError("no session");
+  });
+
+  await runPublicKey({ shop: "demo.myshopify.com" });
+  shopData = null;
+  await runPublicKey({ shop: "demo.myshopify.com" });
+
+  assert.equal(ensureShopPublicApiKey.mock.callCount(), 0);
+});
+
+test("shop-public-key job: any other failure is logged and rethrown for a retry", async () => {
+  shopData = { id: 1, apiKey: "key", shopId: "gid://shopify/Shop/42" };
+  const errors: unknown[][] = [];
+  const consoleError = mock.method(console, "error", (...args: unknown[]) => {
+    errors.push(args);
+  });
+
+  unauthenticatedAdmin.mock.mockImplementationOnce(async () => {
+    throw new Error("refresh failed");
+  });
+  await assert.rejects(runPublicKey({ shop: "demo.myshopify.com" }), /refresh failed/);
+  ensureShopPublicApiKey.mock.mockImplementationOnce(async () => {
+    throw new Error("Throttled");
+  });
+  await assert.rejects(runPublicKey({ shop: "demo.myshopify.com" }), /Throttled/);
+  // The SDK throws a Response when the token refresh fails.
+  const refreshFailure = new Response(undefined, { status: 500 });
+  unauthenticatedAdmin.mock.mockImplementationOnce(async () => {
+    throw refreshFailure;
+  });
+  await assert.rejects(
+    runPublicKey({ shop: "demo.myshopify.com" }),
+    (error) => error === refreshFailure,
+  );
+  consoleError.mock.restore();
+  mock.method(console, "error", () => {});
+
+  assert.deepEqual(errors, [
+    ["[shop-public-key] demo.myshopify.com failed (attempt 1/5):", "refresh failed"],
+    ["[shop-public-key] demo.myshopify.com failed (attempt 1/5):", "Throttled"],
+    ["[shop-public-key] demo.myshopify.com failed (attempt 1/5):", "HTTP 500"],
+  ]);
+});
+
 test("SIGTERM twice: every worker closed once, exit(0) once after close resolves", async (t) => {
   const exit = t.mock.method(process, "exit", () => undefined as never);
   const flush = () => new Promise((resolve) => setImmediate(resolve));
@@ -295,6 +377,7 @@ test("SIGTERM twice: every worker closed once, exit(0) once after close resolves
     "data-sync",
     "data-sync-market",
     "product-webhook",
+    "shop-public-key",
     "token-migration",
     "webhook-events",
   ]);

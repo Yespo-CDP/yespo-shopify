@@ -79,4 +79,10 @@ export default interface ShopRepository {
    * token migration to enqueue a job per shop.
    */
   getAllShops(): Promise<{ shopUrl: string }[]>;
+
+  /**
+   * Returns the URL of every active shop without a key for signing event data.
+   * Used by the seeding script to enqueue a job per shop.
+   */
+  getShopUrlsWithoutPublicApiKey(): Promise<{ shopUrl: string }[]>;
 }

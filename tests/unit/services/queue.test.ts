@@ -3,6 +3,7 @@ import { beforeEach, mock, test } from "node:test";
 
 const HOUR = 60 * 60 * 1000;
 const added: {
+  queue: string;
   name: string;
   data: { shop: string };
   opts?: Record<string, unknown>;
@@ -16,13 +17,14 @@ let execResult: () => Promise<[Error | null, unknown][] | null> = async () => []
 mock.module("bullmq", {
   namedExports: {
     Queue: class {
+      constructor(readonly name: string) {}
       on() {}
       async add(
         name: string,
         data: { shop: string },
         opts?: Record<string, unknown>,
       ) {
-        added.push({ name, data, opts });
+        added.push({ queue: this.name, name, data, opts });
       }
     },
   },
@@ -58,6 +60,7 @@ mock.module("../../../app/repositories/repositories.server", {
     shopRepository: {
       getShopsForMarketSync: async () => shops,
       getShop: async () => shop,
+      getShopUrlsWithoutPublicApiKey: async () => shops,
     },
     customerSyncLogRepository: {},
     orderSyncLogRepository: {},
@@ -68,6 +71,7 @@ mock.module("../../../app/repositories/repositories.server", {
 const {
   enqueueMarketSyncTaskForShopUrl,
   enqueueMarketSyncTasks,
+  enqueueShopPublicKeys,
   enqueueWebhookEvent,
   takeMarketSyncScope,
 } = await import("../../../app/services/queue");
@@ -186,6 +190,7 @@ for (const [label, options, member] of [
     assert.deepEqual(redisCalls, [["sadd", SCOPE_KEY, member]]);
     assert.deepEqual(added, [
       {
+        queue: "data-sync-market",
         name: "data-sync-market",
         data: { shop: SHOP },
         opts: {
@@ -268,6 +273,7 @@ for (const [topic, backoff] of [
 
     assert.deepEqual(added, [
       {
+        queue: "webhook-events",
         name: topic,
         data,
         opts: {
@@ -281,3 +287,32 @@ for (const [topic, backoff] of [
     ]);
   });
 }
+
+test("event key jobs: own queue, only the shop in the data, nothing kept after the run", async () => {
+  shops = [{ shopUrl: "a.myshopify.com" }, { shopUrl: "b.myshopify.com" }];
+
+  assert.equal(await enqueueShopPublicKeys(), 2);
+  assert.deepEqual(
+    added,
+    ["a.myshopify.com", "b.myshopify.com"].map((shopUrl) => ({
+      queue: "shop-public-key",
+      name: "create-public-key",
+      data: { shop: shopUrl },
+      opts: {
+        jobId: `public-key-${shopUrl}`,
+        attempts: 5,
+        backoff: { type: "exponential", delay: 5000 },
+        removeOnComplete: true,
+        removeOnFail: true,
+      },
+    })),
+  );
+  assert.ok(added.every((job) => !String(job.opts?.jobId).includes(":")));
+});
+
+test("event key jobs: nothing is added when every shop has a key", async () => {
+  shops = [];
+
+  assert.equal(await enqueueShopPublicKeys(), 0);
+  assert.deepEqual(added, []);
+});

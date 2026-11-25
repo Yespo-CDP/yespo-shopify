@@ -98,6 +98,7 @@ test("without a session: revokes the key, cleans up in one transaction, then del
           apiKey: null,
           apiKeyIv: null,
           apiKeyAuthTag: null,
+          publicApiKey: null,
           active: false,
           isWebTrackingEnabled: false,
           isContactSyncEnabled: false,

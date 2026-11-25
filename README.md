@@ -748,6 +748,18 @@ occurs when ORDERS_CREATE webhook is triggered  and sends payload with purchased
 
 Cart-to-session mappings (`EventData`: `cartToken` + Yespo cookie `sc`) expire after 14 days. A daily BullMQ repeatable job (`cron-jobs` → `db-cleaner-tick`, `DB_CLEANER_CRON_PATTERN = "0 0 * * *"` UTC) deletes rows whose `ttl` is in the past. The same job also deletes `TmpMarketSync` staging rows older than `TMP_MARKET_SYNC_TTL_MS` (24 h), left by a market sync whose worker crashed or was killed. The scheduler is registered on worker startup via `registerDbCleanerCron()`. Requires the `worker` process and Redis.
 
+#### Signed storefront requests:
+
+`web-tracking.js` sends the cart-to-session mapping to `POST /public/event-data`. A customer from this request is saved only when the request is signed, so nobody can overwrite another customer:
+
+- Each shop has its own key: HMAC-SHA256 (hex) of the numeric Shopify shop id with `SHOP_ENCRYPTION_KEY`. It is stored in the app-data metafield `yespo.yespo-event-key` (owner `AppInstallation`, no definition, read in Liquid as `app.metafields`) and then in `Shop.publicApiKey`. Despite its name the key is secret: it is never logged or sent to the browser.
+- `yespo-script.liquid` builds the JSON string `signedData` (`shop`, `marketId`, `customer`) and signs it with `hmac_sha256`. `web-tracking.js` sends `signedData` and `signature` unchanged. `sc` and `cartToken` are not signed: Liquid does not know them.
+- Valid signature: `shop`, `marketId` and `customer` are taken only from `signedData`.
+- Invalid signature (including only one of the two fields, malformed JSON or `signedData` over 4 KB): `400 { success: false, error: "Invalid signature" }` and one log line.
+- No signature, or the shop has no key yet: the cart is saved, the customer is ignored.
+
+The key is written on install and sign-in (`afterAuth`) and cleared in the database on uninstall. `npm run seed:shop-keys` enqueues a job per active shop without a key (queue `shop-public-key`, processed by the `worker`); the Heroku web process runs it on every start. The web process and the worker must use the same `SHOP_ENCRYPTION_KEY`. When the value changes, a shop gets a new key at its next `afterAuth` or seeding. To rotate all shops at once, set the new value on both, set `publicApiKey = null` for all shops and run the seeding; until then the carts of these shops are saved without the customer. After a shop's key changes, its storefront pages opened earlier get 400 until they are reloaded.
+
 ### APP Inbox
 **Purpose:** Allows you to change the script initialization mode from or to [App Inbox](https://docs.esputnik.com/docs/app-inbox-setting-up)
 
@@ -912,6 +924,7 @@ Create a `.env` file with the following:
 | **HOST_URL**                   | **Required.** App host url metafield name  for the extension to work correctly                          | **Must be** `yespo-app-host`                       |
 | **REDIS_URL**                  | **Required.** Redis url for connecting and configuring the data synchronization worker                  | `redis://localhost:6379`                           |
 | **API_KEY_ENCRYPTION_KEY**     | **Required.** AES-256 key for `Shop.apiKey`, 32 bytes encoded as base64. One value per environment; do not rotate it after keys are encrypted. | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
+| **SHOP_ENCRYPTION_KEY**        | **Required** on web and worker. Key for creating the shop keys that sign storefront requests (see [Signed storefront requests](#signed-storefront-requests)), 32 bytes encoded as base64. One value per environment, the same on web and worker; do not change it without seeding the shop keys again. | `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
 | **ESPUTNIK_URL**               | **Required** in production. Yespo API base URL for the App Inbox contact token; the app appends `/auth/contact/token` | — |
 | **LOGGING_URL**                | **Required** in production. Remote log endpoint that receives the app's Yespo log events               | — |
 | **CATEGORY_TYPE_HANDLE**       | Collection metafield key for the Category Settings mapping                                              | `yespo_category_type`                              |
@@ -960,7 +973,7 @@ Shopify webhooks (API version: 2026-04, `api_version` in `[webhooks]`) used by t
 | **customers/create**       | Triggered when a new customer account is created in the store.                | `/webhooks/app/customers`     |
 | **customers/update**       | Triggered when an existing customer’s data is updated.                        | `/webhooks/app/customers`     |
 | **app/scopes_update**      | Triggered when the app's permission scopes are updated by the merchant.       | `/webhooks/app/scopes_update` |
-| **app/uninstalled**        | Triggered when a merchant uninstalls the app. Revokes the Yespo access token, marks the shop inactive, clears its API key, sync flags, web tracking flag, `siteId`, `orgId` and stored product language, resets `domain` to the `*.myshopify.com` host, and deletes local sync rows, sync logs and sessions. Data in Yespo is kept. | `/webhooks/app/uninstalled`   |
+| **app/uninstalled**        | Triggered when a merchant uninstalls the app. Revokes the Yespo access token, marks the shop inactive, clears its API key, event data key (`publicApiKey`), sync flags, web tracking flag, `siteId`, `orgId` and stored product language, resets `domain` to the `*.myshopify.com` host, and deletes local sync rows, sync logs and sessions. Data in Yespo is kept. | `/webhooks/app/uninstalled`   |
 | **shop/update**            | Triggered when shop details change. Updates the stored shop email, name and `domain` (see [Store domains](#store-domains)). | `/webhooks/app/shop_update`   |
 | **orders/create**          | Triggered when an order is created.                                           | `/webhook/app/orders`         |
 | **orders/updated**         | Triggered when an existing order’s data is updated.                           | `/webhook/app/orders`         |
@@ -1043,7 +1056,7 @@ npm run worker  # BullMQ worker
 ```
 
 ### Docker:
-The `Dockerfile` builds a Node 22 image: `npm ci --omit=dev`, removes `@shopify/cli`, then `npm run build`. `.env` and `.git` are excluded by `.dockerignore`, so pass the environment variables to the container. The container command is `npm run docker-start` (`npm run setup` + `npm run start`): it runs the web process on port 3000 only and is the only step that runs `prisma generate` and the migrations. The image itself has no generated Prisma client (`npm ci` runs before the schema is copied, and `npm run build` does not generate it), so a worker container from the same image must generate it first, with the same environment: `sh -c "npx prisma generate && npm run worker"`. Migrations are applied by the web container only. `docker-start` does not run `migrate:tokens`.
+The `Dockerfile` builds a Node 22 image: `npm ci --omit=dev`, removes `@shopify/cli`, then `npm run build`. `.env` and `.git` are excluded by `.dockerignore`, so pass the environment variables to the container. The container command is `npm run docker-start` (`npm run setup` + `npm run start`): it runs the web process on port 3000 only and is the only step that runs `prisma generate` and the migrations. The image itself has no generated Prisma client (`npm ci` runs before the schema is copied, and `npm run build` does not generate it), so a worker container from the same image must generate it first, with the same environment: `sh -c "npx prisma generate && npm run worker"`. Migrations are applied by the web container only. `docker-start` does not run `migrate:tokens` or `seed:shop-keys`.
 
 ### App Deployment:
 
@@ -1062,7 +1075,7 @@ heroku create your-app-name
   - Use the Heroku Postgres add-on
   - Recommended: A plan with at least 10 GB storage
 4. Ensure the Procfile is present. The repository already includes one, so no action should be needed here. It defines two processes:
-   - `web: npm run build && npm run setup && npm run migrate:tokens && npm run start`. On every start the web process applies database migrations and runs `migrate:tokens`, which enqueues a token-migration job per shop. The worker then exchanges a non-expiring offline token for an expiring one; shops already migrated are skipped.
+   - `web: npm run build && npm run setup && npm run migrate:tokens && (npm run seed:shop-keys || true) && npm run start`. On every start the web process applies database migrations and runs `migrate:tokens`, which enqueues a token-migration job per shop. The worker then exchanges a non-expiring offline token for an expiring one; shops already migrated are skipped. Then `seed:shop-keys` enqueues a job per active shop without a key for [signed storefront requests](#signed-storefront-requests); if it fails, the web process still starts.
    - `worker: npm run worker` – the BullMQ worker. Make sure a worker dyno is running, for example `heroku ps:scale worker=1`.
 5. Commit your changes and push to Heroku:
 ```shell
@@ -1070,6 +1083,8 @@ git add .
 git commit -m "Prepare for Heroku deployment"
 git push heroku main
 ```
+
+   To deploy the request signing for the first time: set `SHOP_ENCRYPTION_KEY` on web and worker; release the `publicApiKey` migration on its own; release the code and check that no active shop is left without a key (`SELECT count(*) FROM "Shop" WHERE active AND "publicApiKey" IS NULL`); then deploy the theme extension right away. Until the extension is deployed, carts are saved without the customer. To roll back, start with the extension.
 
 #### Deployment of Theme Extension & .toml Configuration:
 After deploying your app backend, you need to deploy the Shopify Theme Extension and app configuration (shopify.app.toml).

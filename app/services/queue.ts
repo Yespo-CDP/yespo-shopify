@@ -34,6 +34,10 @@ export const CronQueue = createQueue("cron-jobs");
 
 export const TokenMigrationQueue = createQueue("token-migration");
 
+export const SHOP_PUBLIC_KEY_QUEUE_NAME = "shop-public-key";
+
+export const ShopPublicKeyQueue = createQueue(SHOP_PUBLIC_KEY_QUEUE_NAME);
+
 export const PRODUCT_WEBHOOK_QUEUE_NAME = "product-webhooks";
 export const PRODUCT_WEBHOOK_JOB_NAME = "product-webhook";
 
@@ -89,6 +93,7 @@ export async function enqueueWebhookEvent(
 export const MARKET_SYNC_CRON_JOB_NAME = "market-sync-tick";
 export const DB_CLEANER_CRON_JOB_NAME = "db-cleaner-tick";
 export const TOKEN_MIGRATION_JOB_NAME = "migrate-token";
+export const SHOP_PUBLIC_KEY_JOB_NAME = "create-public-key";
 
 /**
  * One-time migration entrypoint: enqueues a token-migration job per shop so the
@@ -109,6 +114,32 @@ export async function enqueueTokenMigration(): Promise<number> {
         backoff: { type: "exponential", delay: 5000 },
         removeOnComplete: 1000,
         removeOnFail: 5000,
+      },
+    );
+  }
+
+  return shops.length;
+}
+
+/**
+ * Enqueues a job per active shop without a key for signing event data (see
+ * ensure-shop-public-api-key.server.ts). Safe to run on every start: shops that
+ * have a key are skipped, and a job is removed once it is done, so a failed shop
+ * is queued again by the next run. The key itself is never put in a job.
+ */
+export async function enqueueShopPublicKeys(): Promise<number> {
+  const shops = await shopRepository.getShopUrlsWithoutPublicApiKey();
+
+  for (const shop of shops) {
+    await ShopPublicKeyQueue.add(
+      SHOP_PUBLIC_KEY_JOB_NAME,
+      { shop: shop.shopUrl },
+      {
+        jobId: `public-key-${shop.shopUrl}`,
+        attempts: 5,
+        backoff: { type: "exponential", delay: 5000 },
+        removeOnComplete: true,
+        removeOnFail: true,
       },
     );
   }

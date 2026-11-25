@@ -107,6 +107,25 @@
 
 {% assign current_variant = product.selected_or_first_available_variant %}
 
+{%- comment -%}
+  Signature for POST /public/event-data. yespo_event_key is a secret: never output it.
+  The server checks the signature of this exact string, so web-tracking.js sends it unchanged.
+{%- endcomment -%}
+{%- assign yespo_event_key = app.metafields.yespo.yespo-event-key.value -%}
+{%- if yespo_event_key != blank -%}
+  {%- capture yespo_signed_data -%}
+    {"shop":{{ shop.domain | json }},"marketId":
+    {%- if localization.country.iso_code != blank -%}{{ localization.country.iso_code | downcase | json }}{%- else -%}null{%- endif -%}
+    ,"customer":
+    {%- if customer -%}
+      {"id":{{ customer.id | json }},"email":{{ customer.email | json }},"firstName":{{ customer.first_name | json }},"lastName":{{ customer.last_name | json }},"phone":{{ customer.phone | json -}} }
+    {%- else -%}
+      null
+    {%- endif -%}
+    }
+  {%- endcapture -%}
+  {%- assign yespo_signature = yespo_signed_data | hmac_sha256: yespo_event_key -%}
+{%- endif -%}
 
 <script id="yespo_data" type="application/json">
   {
@@ -139,7 +158,9 @@
         }
       {% else %}
         null
-      {% endif %}
+      {% endif %},
+    "signedData": {{ yespo_signed_data | json }},
+    "signature": {{ yespo_signature | json }}
   }
 </script>
 

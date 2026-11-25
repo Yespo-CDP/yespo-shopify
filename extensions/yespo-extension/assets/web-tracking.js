@@ -284,7 +284,10 @@ class EventTracker {
           sc: data.sc,
           cartToken: data.token,
           customer: data.customer,
-          marketId: data.marketId || null
+          marketId: data.marketId || null,
+          // Made in yespo-script.liquid; null until the shop has a key
+          signedData: this.data.signedData || null,
+          signature: this.data.signature || null
         }),
         keepalive: true
       });

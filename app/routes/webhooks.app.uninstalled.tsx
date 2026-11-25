@@ -10,8 +10,8 @@ import {deleteAccessTokenService} from "~/services/delete-access-token.server";
  *
  * Authenticates the webhook request and logs the received topic and shop.
  * If the shop exists, revokes its Yespo access token, then in one transaction
- * marks the shop inactive, clears its Yespo key, sync flags and stored product
- * language, frees its primary domain (sets `domain` to the shop's own myshopify URL), and deletes
+ * marks the shop inactive, clears its Yespo key, event data key, sync flags and stored
+ * product language, frees its primary domain (sets `domain` to the shop's own myshopify URL), and deletes
  * local customer, order, product, and market sync rows. Sessions are deleted
  * last, so a failed cleanup is retried by Shopify. The Yespo catalog is left as-is.
  *
@@ -42,6 +42,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           apiKey: null,
           apiKeyIv: null,
           apiKeyAuthTag: null,
+          publicApiKey: null,
           active: false,
           isWebTrackingEnabled: false,
           isContactSyncEnabled: false,
