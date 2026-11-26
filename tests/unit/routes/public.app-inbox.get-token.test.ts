@@ -132,3 +132,41 @@ test("OPTIONS is answered with 204", async () => {
   assert.equal(response.status, 204);
   assert.equal(response.headers.get("Access-Control-Allow-Origin"), "*");
 });
+
+test("an internal error is answered with a generic text and logged without its message", async () => {
+  getContactToken.mock.mockImplementationOnce(async () => {
+    throw Object.assign(new Error("Yespo refused buyer@example.com"), { code: "ECONNRESET" });
+  });
+  const error = mock.method(console, "error", () => {});
+  try {
+    const response = await post(signed());
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { success: false, error: "Bad request" });
+    assert.deepEqual(error.mock.calls.map((call) => call.arguments), [
+      ["Failed to get contact auth token: Error ECONNRESET"],
+    ]);
+  } finally {
+    error.mock.restore();
+  }
+});
+
+test("a body that is not JSON is answered with a generic text", async () => {
+  const error = mock.method(console, "error", () => {});
+  try {
+    const response = await action({
+      request: new Request("https://app.example/public/app-inbox/get-token", {
+        method: "POST",
+        body: "{buyer@example.com",
+      }),
+    } as Parameters<typeof action>[0]);
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { success: false, error: "Bad request" });
+    assert.deepEqual(error.mock.calls.map((call) => call.arguments), [
+      ["Failed to get contact auth token: SyntaxError"],
+    ]);
+  } finally {
+    error.mock.restore();
+  }
+});
