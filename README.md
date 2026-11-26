@@ -758,6 +758,7 @@ Cart-to-session mappings (`EventData`: `cartToken` + Yespo cookie `sc`) expire a
 - Valid signature: `shop`, `marketId` and `customer` are taken only from `signedData`.
 - Invalid signature (including only one of the two fields, malformed JSON or `signedData` over 4 KB): `400 { success: false, error: "Invalid signature" }` and one log line.
 - No signature, or the shop has no key yet: the cart is saved, the customer is ignored.
+- Any other error (a body that is not JSON, a database error): `400 { success: false, error: "Bad request" }`. The log line has only the error name and code, because the message can contain personal data from the request. `POST /public/app-inbox/get-token` answers the same way.
 
 The same `signedData` and `signature` are sent by `yespoAppAuthCallback` to `POST /public/app-inbox/get-token` (see [APP Inbox](#app-inbox)).
 
@@ -1079,7 +1080,7 @@ heroku create your-app-name
   - Use the Heroku Postgres add-on
   - Recommended: A plan with at least 10 GB storage
 4. Ensure the Procfile is present. The repository already includes one, so no action should be needed here. It defines two processes:
-   - `web: npm run build && npm run setup && npm run migrate:tokens && (npm run seed:shop-keys || true) && npm run start`. On every start the web process applies database migrations and runs `migrate:tokens`, which enqueues a token-migration job per shop. The worker then exchanges a non-expiring offline token for an expiring one; shops already migrated are skipped. Then `seed:shop-keys` enqueues a job per active shop without a key for [signed storefront requests](#signed-storefront-requests); if it fails, the web process still starts.
+   - `web: npm run build && npm run setup && (npm run migrate:tokens || true) && (npm run seed:shop-keys || true) && npm run start`. On every start the web process applies database migrations and runs `migrate:tokens`, which enqueues a token-migration job per shop. The worker then exchanges a non-expiring offline token for an expiring one; shops already migrated are skipped. Then `seed:shop-keys` enqueues a job per active shop without a key for [signed storefront requests](#signed-storefront-requests). Each of the two scripts gives up after 15 seconds (for example, while Redis is unavailable), and if either fails, the web process still starts; the next start enqueues the jobs again.
    - `worker: npm run worker` – the BullMQ worker. Make sure a worker dyno is running, for example `heroku ps:scale worker=1`.
 5. Commit your changes and push to Heroku:
 ```shell
@@ -1179,7 +1180,7 @@ docs(readme): update installation instructions
    npm test            # Unit tests in tests/ (node:test via tsx)
    npm run build       # Ensure project builds correctly
    ```
-   Tests live in `tests/unit/`, mirroring the `app/` paths. CI (`.github/workflows/ci.yml`) runs `npm ci`, `npx prisma generate`, `npm run typecheck` and `npm test` on pull requests to `dev` and `main`, with placeholder `DATABASE_URL` and `REDIS_URL` values that point to no running service.
+   Tests live in `tests/unit/`, mirroring the `app/` paths. CI (`.github/workflows/ci.yml`) runs `npm ci`, `npx prisma generate`, `npm run typecheck` and `npm test` on pull requests to `dev`, `staging` and `main`, with placeholder `DATABASE_URL` and `REDIS_URL` values that point to no running service.
 
 4. **Submit Pull Request to `dev`**
    - Push to your fork: `git push origin feature/your-feature-name`

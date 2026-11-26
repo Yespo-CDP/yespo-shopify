@@ -9,6 +9,7 @@ const added: {
   opts?: Record<string, unknown>;
 }[] = [];
 let shops: unknown[] = [];
+let addBulkCalls = 0;
 let shop: unknown = null;
 const redisCalls: unknown[][] = [];
 let saddError: Error | null = null;
@@ -25,6 +26,16 @@ mock.module("bullmq", {
         opts?: Record<string, unknown>,
       ) {
         added.push({ queue: this.name, name, data, opts });
+      }
+      async addBulk(
+        jobs: {
+          name: string;
+          data: { shop: string };
+          opts?: Record<string, unknown>;
+        }[],
+      ) {
+        addBulkCalls++;
+        for (const job of jobs) added.push({ queue: this.name, ...job });
       }
     },
   },
@@ -58,6 +69,7 @@ mock.module("../../../app/config/redis", {
 mock.module("../../../app/repositories/repositories.server", {
   namedExports: {
     shopRepository: {
+      getAllShops: async () => shops,
       getShopsForMarketSync: async () => shops,
       getShop: async () => shop,
       getShopUrlsWithoutPublicApiKey: async () => shops,
@@ -72,6 +84,7 @@ const {
   enqueueMarketSyncTaskForShopUrl,
   enqueueMarketSyncTasks,
   enqueueShopPublicKeys,
+  enqueueTokenMigration,
   enqueueWebhookEvent,
   takeMarketSyncScope,
 } = await import("../../../app/services/queue");
@@ -83,6 +96,7 @@ const USA = "gid://shopify/Market/2";
 
 beforeEach(() => {
   added.length = 0;
+  addBulkCalls = 0;
   redisCalls.length = 0;
   saddError = null;
   shop = { shopUrl: SHOP, isMarketSyncEnabled: true, apiKey: "key" };
@@ -317,6 +331,7 @@ test("event key jobs: own queue, only the shop in the data, nothing kept after t
   shops = [{ shopUrl: "a.myshopify.com" }, { shopUrl: "b.myshopify.com" }];
 
   assert.equal(await enqueueShopPublicKeys(), 2);
+  assert.equal(addBulkCalls, 1);
   assert.deepEqual(
     added,
     ["a.myshopify.com", "b.myshopify.com"].map((shopUrl) => ({
@@ -339,5 +354,28 @@ test("event key jobs: nothing is added when every shop has a key", async () => {
   shops = [];
 
   assert.equal(await enqueueShopPublicKeys(), 0);
+  assert.equal(addBulkCalls, 0);
   assert.deepEqual(added, []);
+});
+
+test("token migration jobs: one request for all shops, deduplicated by shop", async () => {
+  shops = [{ shopUrl: "a.myshopify.com" }, { shopUrl: "b.myshopify.com" }];
+
+  assert.equal(await enqueueTokenMigration(), 2);
+  assert.equal(addBulkCalls, 1);
+  assert.deepEqual(
+    added,
+    ["a.myshopify.com", "b.myshopify.com"].map((shopUrl) => ({
+      queue: "token-migration",
+      name: "migrate-token",
+      data: { shop: shopUrl },
+      opts: {
+        jobId: `migrate-token-${shopUrl}`,
+        attempts: 5,
+        backoff: { type: "exponential", delay: 5000 },
+        removeOnComplete: 1000,
+        removeOnFail: 5000,
+      },
+    })),
+  );
 });
