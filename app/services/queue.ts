@@ -101,22 +101,25 @@ export const SHOP_PUBLIC_KEY_JOB_NAME = "create-public-key";
  * One-time migration entrypoint: enqueues a token-migration job per shop so the
  * worker can exchange each shop's non-expiring offline token for an expiring one
  * (see migrate-offline-token.server.ts). Safe to run multiple times — jobs are
- * deduplicated by jobId and the migration itself is idempotent.
+ * deduplicated by jobId and the migration itself is idempotent. All jobs are
+ * added in one Redis request.
  */
 export async function enqueueTokenMigration(): Promise<number> {
   const shops = await shopRepository.getAllShops();
 
-  for (const shop of shops) {
-    await TokenMigrationQueue.add(
-      TOKEN_MIGRATION_JOB_NAME,
-      { shop: shop.shopUrl },
-      {
-        jobId: `migrate-token-${shop.shopUrl}`,
-        attempts: 5,
-        backoff: { type: "exponential", delay: 5000 },
-        removeOnComplete: 1000,
-        removeOnFail: 5000,
-      },
+  if (shops.length) {
+    await TokenMigrationQueue.addBulk(
+      shops.map((shop) => ({
+        name: TOKEN_MIGRATION_JOB_NAME,
+        data: { shop: shop.shopUrl },
+        opts: {
+          jobId: `migrate-token-${shop.shopUrl}`,
+          attempts: 5,
+          backoff: { type: "exponential", delay: 5000 },
+          removeOnComplete: 1000,
+          removeOnFail: 5000,
+        },
+      })),
     );
   }
 
@@ -127,22 +130,25 @@ export async function enqueueTokenMigration(): Promise<number> {
  * Enqueues a job per active shop without a key for signing event data (see
  * ensure-shop-public-api-key.server.ts). Safe to run on every start: shops that
  * have a key are skipped, and a job is removed once it is done, so a failed shop
- * is queued again by the next run. The key itself is never put in a job.
+ * is queued again by the next run. The key itself is never put in a job. All
+ * jobs are added in one Redis request.
  */
 export async function enqueueShopPublicKeys(): Promise<number> {
   const shops = await shopRepository.getShopUrlsWithoutPublicApiKey();
 
-  for (const shop of shops) {
-    await ShopPublicKeyQueue.add(
-      SHOP_PUBLIC_KEY_JOB_NAME,
-      { shop: shop.shopUrl },
-      {
-        jobId: `public-key-${shop.shopUrl}`,
-        attempts: 5,
-        backoff: { type: "exponential", delay: 5000 },
-        removeOnComplete: true,
-        removeOnFail: true,
-      },
+  if (shops.length) {
+    await ShopPublicKeyQueue.addBulk(
+      shops.map((shop) => ({
+        name: SHOP_PUBLIC_KEY_JOB_NAME,
+        data: { shop: shop.shopUrl },
+        opts: {
+          jobId: `public-key-${shop.shopUrl}`,
+          attempts: 5,
+          backoff: { type: "exponential", delay: 5000 },
+          removeOnComplete: true,
+          removeOnFail: true,
+        },
+      })),
     );
   }
 
