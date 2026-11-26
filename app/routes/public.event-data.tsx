@@ -123,10 +123,9 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
     return jsonResponse({ success: true, error: null });
   } catch (error: any) {
-    console.error("Failed to save event data:", error);
-    return jsonResponse(
-      { success: false, error: error.message || "Unknown error" },
-      400,
-    );
+    // name and code only: the message may contain personal data from the request
+    const code = error?.code ? ` ${error.code}` : "";
+    console.error(`Failed to save event data: ${error?.name}${code}`);
+    return jsonResponse({ success: false, error: "Bad request" }, 400);
   }
 };

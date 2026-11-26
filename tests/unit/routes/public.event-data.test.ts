@@ -344,3 +344,44 @@ test("OPTIONS and CORS headers stay as they were", async () => {
     assert.equal(headers.get("Access-Control-Allow-Headers"), "Content-Type");
   }
 });
+
+test("an internal error is answered with a generic text and logged without its message", async () => {
+  createEventData.mock.mockImplementationOnce(async () => {
+    throw Object.assign(new Error("Unique constraint failed on buyer@example.com"), {
+      name: "PrismaClientKnownRequestError",
+      code: "P2002",
+    });
+  });
+  const error = mock.method(console, "error", () => {});
+  try {
+    const response = await post({ ...base, ...signed() });
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { success: false, error: "Bad request" });
+    assert.deepEqual(error.mock.calls.map((call) => call.arguments), [
+      ["Failed to save event data: PrismaClientKnownRequestError P2002"],
+    ]);
+  } finally {
+    error.mock.restore();
+  }
+});
+
+test("a body that is not JSON is answered with a generic text", async () => {
+  const error = mock.method(console, "error", () => {});
+  try {
+    const response = await action({
+      request: new Request("https://app.example/public/event-data", {
+        method: "POST",
+        body: "{buyer@example.com",
+      }),
+    } as Parameters<typeof action>[0]);
+
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), { success: false, error: "Bad request" });
+    assert.deepEqual(error.mock.calls.map((call) => call.arguments), [
+      ["Failed to save event data: SyntaxError"],
+    ]);
+  } finally {
+    error.mock.restore();
+  }
+});
