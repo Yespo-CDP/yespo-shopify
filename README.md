@@ -758,6 +758,8 @@ Cart-to-session mappings (`EventData`: `cartToken` + Yespo cookie `sc`) expire a
 - Invalid signature (including only one of the two fields, malformed JSON or `signedData` over 4 KB): `400 { success: false, error: "Invalid signature" }` and one log line.
 - No signature, or the shop has no key yet: the cart is saved, the customer is ignored.
 
+The same `signedData` and `signature` are sent by `yespoAppAuthCallback` to `POST /public/app-inbox/get-token` (see [APP Inbox](#app-inbox)).
+
 The key is written on install and sign-in (`afterAuth`) and cleared in the database on uninstall. `npm run seed:shop-keys` enqueues a job per active shop without a key (queue `shop-public-key`, processed by the `worker`); the Heroku web process runs it on every start. The web process and the worker must use the same `SHOP_ENCRYPTION_KEY`. When the value changes, a shop gets a new key at its next `afterAuth`. The seeding takes only shops without a key, so on its own it does not update existing keys. To rotate all shops at once, set the new value on both, set `publicApiKey = null` for all shops and then run the seeding; until then the carts of these shops are saved without the customer. After a shop's key changes, its storefront pages opened earlier get 400 until they are reloaded.
 
 ### APP Inbox
@@ -769,6 +771,7 @@ The key is written on install and sign-in (`afterAuth`) and cleared in the datab
 
 - Changes the script initialization mode in the `yespo-script` metafield to enable or disable App Inbox mode.
 - Then stores the enable flag in the database (`isAppInboxEnabled`). If the metafield update fails, the flag is not changed.
+- The Yespo SDK gets the customer's App Inbox token from `yespoAppAuthCallback` (`yespo-script.liquid`), which calls `POST /public/app-inbox/get-token` with `signedData` and `signature` (see [Signed storefront requests](#signed-storefront-requests)). `shop` and the customer (`externalCustomerId`, `email`, `phone`) come only from a validly signed `signedData`. An invalid signature gets `400`; no signature, a guest, an unknown shop, a shop without `apiKey`, without a key (`publicApiKey`) or with App Inbox disabled (`isAppInboxEnabled`) get an empty token.
 
 #### Enabling App Inbox mode:
 

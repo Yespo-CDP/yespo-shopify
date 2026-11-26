@@ -5,7 +5,12 @@ import {
   eventDataRepository,
   shopRepository,
 } from "~/repositories/repositories.server";
-import { isValidSignature } from "~/services/event-data-signature.server";
+import {
+  isValidSignature,
+  readCustomer,
+  readSignedData,
+  readString,
+} from "~/services/event-data-signature.server";
 import { readMarketId } from "~/services/market-tracking";
 
 // Shared CORS headers
@@ -29,60 +34,6 @@ const jsonResponse = (data: object, status: number = 200): Response =>
     status,
     headers: CORS_HEADERS,
   });
-
-const MAX_LENGTH = 255;
-const MAX_SIGNED_DATA_BYTES = 4096;
-
-// A string of reasonable length, else undefined (the field is not saved).
-const readString = (value: unknown): string | undefined =>
-  typeof value === "string" && value.length <= MAX_LENGTH ? value : undefined;
-
-/**
- * Takes only the expected customer fields from the storefront body.
- * A field that is not a short string or null is dropped, so it is not updated.
- * Returns null when `id` is not a Shopify customer id (number or digits).
- */
-const readCustomer = (value: unknown) => {
-  if (!value || typeof value !== "object") return null;
-  const raw = value as Record<string, unknown>;
-  const id =
-    typeof raw.id === "number" && Number.isSafeInteger(raw.id)
-      ? String(raw.id)
-      : raw.id;
-  if (typeof id !== "string" || !/^\d{1,20}$/.test(id)) return null;
-  const field = (key: string) =>
-    raw[key] === null ? null : readString(raw[key]);
-  return {
-    customerId: id,
-    email: field("email"),
-    phone: field("phone"),
-    firstName: field("firstName"),
-    lastName: field("lastName"),
-  };
-};
-
-/**
- * Parses the JSON string that yespo-script.liquid signs. Its content is not
- * trusted until the signature is checked.
- * Returns null when it is too long or not a JSON object with a shop.
- */
-const readSignedData = (value: unknown) => {
-  if (
-    typeof value !== "string" ||
-    Buffer.byteLength(value) > MAX_SIGNED_DATA_BYTES
-  ) {
-    return null;
-  }
-  try {
-    const parsed = JSON.parse(value);
-    const shop = readString(parsed.shop);
-    return shop
-      ? { shop, marketId: parsed.marketId, customer: parsed.customer }
-      : null;
-  } catch {
-    return null;
-  }
-};
 
 /**
  * Handles incoming HTTP requests to create or update event data.
